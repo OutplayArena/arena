@@ -1,4 +1,7 @@
 import random 
+import re
+import ast
+from transformers import pipeline
 
 class Agent:
     def __init__(self, name):
@@ -60,3 +63,76 @@ class GreedyAgent(Agent):
             total += 1
         
         return allocation
+
+class LLMAgent(Agent):
+    def __init__(self, 
+                 num_battlefields=5, 
+                 total_resources=100, 
+                 model_name="Qwen/Qwen3.5-0.8B"):
+        super().__init__("LLMAgent")
+        self.num_battlefields = num_battlefields
+        self.total_resources = total_resources
+        
+        self.generator = pipeline(
+            "text-generation",
+            model=model_name,
+            device_map="auto"
+        )
+
+    def build_prompt(self, history):
+        return f"""
+                You are playing Colonel Blotto.
+
+                Rules:
+                - There are 5 battlefields.
+                - You have exactly 100 troops.
+                - Return only a Python list of 5 nonnegative integers.
+                - The list must sum to 100.
+                - Do not explain.
+
+                History:
+                {history}
+
+                Your allocation:
+                """
+    
+    def parse_allocation(self, text):
+        match = re.search(r"\[[^\]]+\]", text)
+
+        if match is None:
+            return [20, 20, 20, 20, 20]
+
+        try:
+            allocation = ast.literal_eval(match.group())
+        except:
+            return [20, 20, 20, 20, 20]
+
+        if not isinstance(allocation, list):
+            return [20, 20, 20, 20, 20]
+
+        if len(allocation) != 5:
+            return [20, 20, 20, 20, 20]
+
+        if not all(isinstance(x, int) for x in allocation):
+            return [20, 20, 20, 20, 20]
+
+        if not all(x >= 0 for x in allocation):
+            return [20, 20, 20, 20, 20]
+
+        if sum(allocation) != 100:
+            return [20, 20, 20, 20, 20]
+
+        return allocation
+
+    def act(self, history):
+        prompt = self.build_prompt(history)
+        
+        output = self.generator(
+            prompt,
+            max_new_tokens=50,
+            do_sample=True,
+            temperature=0.7
+        )[0]["generated_text"]
+        
+        response = output[len(prompt):]
+        return self.parse_allocation(response)
