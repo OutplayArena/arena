@@ -1,13 +1,14 @@
 import argparse
 
 from api import BlottoGame
-from agent import Agent, UniformAgent, RandomAgent, GreedyAgent, LLMAgent
+from agent import Agent, UniformAgent, RandomAgent, GreedyAgent, LLMAgent, LiteLLMAgent
 
 AGENTS = {
     "uniform": UniformAgent,
     "random": RandomAgent,
     "greedy": GreedyAgent,
-    "llm": LLMAgent
+    "llm-local": LLMAgent,
+    "llm-api": LiteLLMAgent
 }
 
 def run_experiment(agent_a:Agent, agent_b:Agent, num_rounds=10):

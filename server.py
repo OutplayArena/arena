@@ -3,20 +3,24 @@ import json
 import mimetypes
 import os
 import re
+import secrets
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import Request, urlopen
 
-from agent import GreedyAgent, LLMAgent, RandomAgent
+from agent import GreedyAgent, LLMAgent, LiteLLMAgent, RandomAgent
 from api import BlottoGame
 
 
 ROOT = Path(__file__).resolve().parent
 STATIC_ROOT = ROOT / "static"
 
-AGENTS = ["uniform", "random", "greedy", "llm"]
+AGENTS = ["uniform", "random", "greedy", "llm-local", "llm-api"]
 DEFAULT_LLM_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
+DEFAULT_API_MODEL = "opencode/go"
 
 
 class ParameterizedUniformAgent:
@@ -92,6 +96,10 @@ Your allocation:
         ).act([])
 
 
+class ParameterizedLiteLLMAgent(LiteLLMAgent):
+    pass
+
+
 def search_huggingface_models(query, limit=8):
     params = urlencode(
         {
@@ -141,11 +149,17 @@ def make_agent(agent_key, num_battlefields, total_resources, model_name=None):
         return RandomAgent(num_battlefields, total_resources)
     if agent_key == "greedy":
         return ParameterizedGreedyAgent(num_battlefields, total_resources)
-    if agent_key == "llm":
+    if agent_key == "llm-local":
         return ParameterizedLLMAgent(
             num_battlefields,
             total_resources,
             model_name=model_name or DEFAULT_LLM_MODEL,
+        )
+    if agent_key == "llm-api":
+        return ParameterizedLiteLLMAgent(
+            num_battlefields,
+            total_resources,
+            model_name=model_name or DEFAULT_API_MODEL,
         )
     raise ValueError(f"Unknown agent: {agent_key}")
 
@@ -158,6 +172,7 @@ def simulate_match(
     total_resources,
     llm_model_a=None,
     llm_model_b=None,
+    run_id=None,
 ):
     if agent_a_key not in AGENTS:
         raise ValueError(f"Unknown agent_a: {agent_a_key}")
@@ -178,8 +193,12 @@ def simulate_match(
     total_score_b = 0
 
     for round_idx in range(num_rounds):
-        action_a = agent_a.act(history_a)
-        action_b = agent_b.act(history_b)
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            future_a = executor.submit(agent_a.act, history_a)
+            future_b = executor.submit(agent_b.act, history_b)
+            action_a = future_a.result()
+            action_b = future_b.result()
+
         result = game.play_round(action_a, action_b)
 
         total_score_a += result["score_a"]
@@ -190,8 +209,8 @@ def simulate_match(
                 "round": round_idx + 1,
                 "agent_a": agent_a_key,
                 "agent_b": agent_b_key,
-                "llm_model_a": llm_model_a if agent_a_key == "llm" else None,
-                "llm_model_b": llm_model_b if agent_b_key == "llm" else None,
+                "llm_model_a": llm_model_a if agent_a_key in ("llm-local", "llm-api") else None,
+                "llm_model_b": llm_model_b if agent_b_key in ("llm-local", "llm-api") else None,
                 "num_battlefields": num_battlefields,
                 "total_resources": total_resources,
                 "action_a": action_a,
@@ -223,6 +242,15 @@ def simulate_match(
             }
         )
 
+        if run_id:
+            RUNS[run_id] = {
+                "status": "running",
+                "round": round_idx + 1,
+                "total_rounds": num_rounds,
+                "total_score_a": total_score_a,
+                "total_score_b": total_score_b,
+            }
+
     if total_score_a > total_score_b:
         match_winner = "agent_a"
     elif total_score_b > total_score_a:
@@ -233,8 +261,8 @@ def simulate_match(
     return {
         "agent_a": agent_a_key,
         "agent_b": agent_b_key,
-        "llm_model_a": llm_model_a if agent_a_key == "llm" else None,
-        "llm_model_b": llm_model_b if agent_b_key == "llm" else None,
+        "llm_model_a": llm_model_a if agent_a_key in ("llm-local", "llm-api") else None,
+        "llm_model_b": llm_model_b if agent_b_key in ("llm-local", "llm-api") else None,
         "num_rounds": num_rounds,
         "num_battlefields": num_battlefields,
         "total_resources": total_resources,
@@ -243,6 +271,17 @@ def simulate_match(
         "match_winner": match_winner,
         "history": full_history,
     }
+
+
+RUNS = {}
+
+
+def _run_async(run_id, *sim_args, **sim_kwargs):
+    try:
+        result = simulate_match(*sim_args, run_id=run_id, **sim_kwargs)
+        RUNS[run_id] = {"status": "done", "result": result}
+    except Exception as exc:
+        RUNS[run_id] = {"status": "error", "error": str(exc)}
 
 
 class BlottoHandler(SimpleHTTPRequestHandler):
@@ -265,6 +304,14 @@ class BlottoHandler(SimpleHTTPRequestHandler):
             except Exception as exc:
                 self.send_json({"error": str(exc)}, status=502)
             return
+        if path.startswith("/api/run/"):
+            run_id = path.split("/api/run/", 1)[1]
+            run = RUNS.get(run_id)
+            if run is None:
+                self.send_json({"error": "not found"}, status=404)
+                return
+            self.send_json(run)
+            return
 
         if path == "/":
             path = "/index.html"
@@ -285,8 +332,12 @@ class BlottoHandler(SimpleHTTPRequestHandler):
             num_rounds = int(payload.get("num_rounds", 10))
             num_battlefields = int(payload.get("num_battlefields", 5))
             total_resources = int(payload.get("total_resources", 100))
-            llm_model_a = payload.get("llm_model_a") or DEFAULT_LLM_MODEL
-            llm_model_b = payload.get("llm_model_b") or DEFAULT_LLM_MODEL
+            llm_model_a = payload.get("llm_model_a") or (
+                DEFAULT_API_MODEL if agent_a == "llm-api" else DEFAULT_LLM_MODEL
+            )
+            llm_model_b = payload.get("llm_model_b") or (
+                DEFAULT_API_MODEL if agent_b == "llm-api" else DEFAULT_LLM_MODEL
+            )
 
             if num_rounds < 1 or num_rounds > 50:
                 raise ValueError("num_rounds must be between 1 and 50")
@@ -295,17 +346,15 @@ class BlottoHandler(SimpleHTTPRequestHandler):
             if total_resources < num_battlefields or total_resources > 1000:
                 raise ValueError("total_resources must be between num_battlefields and 1000")
 
-            self.send_json(
-                simulate_match(
-                    agent_a,
-                    agent_b,
-                    num_rounds,
-                    num_battlefields,
-                    total_resources,
-                    llm_model_a,
-                    llm_model_b,
-                )
-            )
+            run_id = secrets.token_hex(8)
+            RUNS[run_id] = {"status": "running"}
+            threading.Thread(
+                target=_run_async,
+                args=(run_id, agent_a, agent_b, num_rounds, num_battlefields, total_resources),
+                kwargs={"llm_model_a": llm_model_a, "llm_model_b": llm_model_b},
+                daemon=True,
+            ).start()
+            self.send_json({"run_id": run_id, "status": "running"})
         except Exception as exc:
             self.send_json({"error": str(exc)}, status=400)
 

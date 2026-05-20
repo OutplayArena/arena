@@ -1,7 +1,9 @@
+import os
 import random 
 import re
 import ast
 from transformers import pipeline
+import litellm
 
 class Agent:
     def __init__(self, name):
@@ -136,3 +138,79 @@ class LLMAgent(Agent):
         
         response = output[len(prompt):]
         return self.parse_allocation(response)
+
+
+class LiteLLMAgent(Agent):
+    def __init__(self,
+                 num_battlefields=5,
+                 total_resources=100,
+                 model_name=None,
+                 api_base=None,
+                 api_key=None):
+        super().__init__("LiteLLMAgent")
+        self.num_battlefields = num_battlefields
+        self.total_resources = total_resources
+        self.model_name = model_name or os.environ.get("LLM_MODEL", "opencode/go")
+        self.api_base = api_base or os.environ.get("LLM_API_BASE", "http://127.0.0.1:11434/v1")
+        raw_key = api_key or os.environ.get("LLM_API_KEY") or os.environ.get("OPENCODE_GO_API_KEY") or ""
+        self.api_key = raw_key.strip()
+
+    def build_prompt(self, history):
+        return f"""
+You are playing Colonel Blotto.
+
+Rules:
+- There are {self.num_battlefields} battlefields.
+- You have exactly {self.total_resources} troops.
+- Return only a Python list of {self.num_battlefields} nonnegative integers.
+- The list must sum to {self.total_resources}.
+- Do not explain.
+
+History:
+{history}
+
+Your allocation:
+"""
+
+    def _fallback_allocation(self):
+        base = self.total_resources // self.num_battlefields
+        allocation = [base] * self.num_battlefields
+        for index in range(self.total_resources - sum(allocation)):
+            allocation[index] += 1
+        return allocation
+
+    def parse_allocation(self, text):
+        match = re.search(r"\[[^\]]+\]", text)
+        if match is None:
+            return self._fallback_allocation()
+
+        try:
+            allocation = ast.literal_eval(match.group())
+        except (SyntaxError, ValueError):
+            return self._fallback_allocation()
+
+        if (
+            isinstance(allocation, list)
+            and len(allocation) == self.num_battlefields
+            and all(isinstance(x, int) for x in allocation)
+            and all(x >= 0 for x in allocation)
+            and sum(allocation) == self.total_resources
+        ):
+            return allocation
+
+        return self._fallback_allocation()
+
+    def act(self, history):
+        prompt = self.build_prompt(history)
+        kwargs = dict(
+            model=f"openai/{self.model_name}",
+            messages=[{"role": "user", "content": prompt}],
+            api_base=self.api_base,
+            max_tokens=50,
+            temperature=0.7,
+        )
+        if self.api_key:
+            kwargs["api_key"] = self.api_key
+        response = litellm.completion(**kwargs)
+        text = response.choices[0].message.content
+        return self.parse_allocation(text)

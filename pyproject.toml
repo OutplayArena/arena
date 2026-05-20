@@ -1,0 +1,18 @@
+[project]
+name = "blotto"
+version = "0.1.0"
+description = "Colonel Blotto game simulation with heuristic and LLM-powered agents"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name = "Ryan Zhang", email = "ryan.zhang@yale.edu" },
+    { name = "Herbert Woisetschlaeger", email = "herbert@woisetschlaeger.fyi" },
+]
+dependencies = [
+    "transformers>=4.45.0",
+    "litellm>=1.50.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

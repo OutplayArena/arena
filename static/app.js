@@ -87,9 +87,27 @@ function requestJson(path, options = {}) {
   });
 }
 
+const LLM_LOCAL_TYPES = ["llm", "llm-local"];
+const LLM_API_TYPES = ["llm-api"];
+const ALL_LLM_TYPES = LLM_LOCAL_TYPES.concat(LLM_API_TYPES);
+
 function updateLlmModelPanels() {
-  llmModelAPanel.hidden = agentASelect.value !== "llm";
-  llmModelBPanel.hidden = agentBSelect.value !== "llm";
+  updateLlmModelSide(agentASelect.value, llmModelAPanel, llmModelAInput, hfSearchAInput, hfResultsA);
+  updateLlmModelSide(agentBSelect.value, llmModelBPanel, llmModelBInput, hfSearchBInput, hfResultsB);
+}
+
+function updateLlmModelSide(agentType, panel, modelInput, searchInput, results) {
+  const isLocal = LLM_LOCAL_TYPES.includes(agentType);
+  const isAPI = LLM_API_TYPES.includes(agentType);
+  panel.hidden = !(isLocal || isAPI);
+  searchInput.parentElement.hidden = !isLocal;
+  results.hidden = !isLocal;
+
+  if (isAPI && !modelInput.dataset.userSet) {
+    modelInput.value = "deepseek-v4-pro";
+  } else if (isLocal && !modelInput.dataset.userSet) {
+    modelInput.value = "Qwen/Qwen2.5-0.5B-Instruct";
+  }
 }
 
 function modelSearchConfig(side) {
@@ -709,8 +727,8 @@ form.addEventListener("submit", async (event) => {
   const payload = {
     agent_a: agentASelect.value,
     agent_b: agentBSelect.value,
-    llm_model_a: agentASelect.value === "llm" ? llmModelAInput.value.trim() : null,
-    llm_model_b: agentBSelect.value === "llm" ? llmModelBInput.value.trim() : null,
+    llm_model_a: ALL_LLM_TYPES.includes(agentASelect.value) ? llmModelAInput.value.trim() : null,
+    llm_model_b: ALL_LLM_TYPES.includes(agentBSelect.value) ? llmModelBInput.value.trim() : null,
     num_rounds: Number(numRoundsInput.value),
     num_battlefields: Number(numBattlefieldsInput.value),
     total_resources: Number(totalResourcesInput.value),
@@ -722,15 +740,47 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
+  let pollTimer = null;
+  const startTime = Date.now();
+
   try {
-    const data = await requestJson("/api/run-experiment", {
+    const { run_id } = await requestJson("/api/run-experiment", {
       method: "POST",
       body: JSON.stringify(payload),
     });
-    startReplay(data);
+
+    const poll = async () => {
+      try {
+        const run = await requestJson(`/api/run/${run_id}`);
+        if (run.status === "done") {
+          clearInterval(pollTimer);
+          runButton.disabled = false;
+          startReplay(run.result);
+          return;
+        }
+        if (run.status === "error") {
+          clearInterval(pollTimer);
+          setStatus(`error=${run.error}`);
+          runButton.disabled = false;
+          return;
+        }
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        if (run.round) {
+          setStatus(`Round ${run.round}/${run.total_rounds}  (${elapsed}s)`);
+        } else {
+          setStatus(`Running experiment... ${elapsed}s`);
+        }
+      } catch (err) {
+        clearInterval(pollTimer);
+        setStatus(`error=${err.message}`);
+        runButton.disabled = false;
+      }
+    };
+
+    pollTimer = setInterval(poll, 1000);
+    poll();
   } catch (error) {
     setStatus(`error=${error.message}`);
-  } finally {
     runButton.disabled = false;
   }
 });
@@ -772,6 +822,14 @@ agentASelect.addEventListener("change", () => {
 
 agentBSelect.addEventListener("change", () => {
   updateLlmModelPanels();
+});
+
+llmModelAInput.addEventListener("input", () => {
+  llmModelAInput.dataset.userSet = "1";
+});
+
+llmModelBInput.addEventListener("input", () => {
+  llmModelBInput.dataset.userSet = "1";
 });
 
 hfSearchAInput.addEventListener("input", () => debounceModelSearch("a"));
