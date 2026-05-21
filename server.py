@@ -11,8 +11,8 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import Request, urlopen
 
-from agent import GreedyAgent, LLMAgent, LiteLLMAgent, RandomAgent
-from api import BlottoGame
+from blotto.agent import GreedyAgent, LLMAgent, LiteLLMAgent, RandomAgent
+from blotto.api import BlottoGame
 
 
 ROOT = Path(__file__).resolve().parent

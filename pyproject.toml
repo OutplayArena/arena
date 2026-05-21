@@ -3,7 +3,7 @@ name = "blotto"
 version = "0.1.0"
 description = "Colonel Blotto game simulation with heuristic and LLM-powered agents"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 authors = [
     { name = "Ryan Zhang", email = "ryan.zhang@yale.edu" },
     { name = "Herbert Woisetschlaeger", email = "herbert@woisetschlaeger.fyi" },

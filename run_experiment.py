@@ -1,7 +1,7 @@
 import argparse
 
-from api import BlottoGame
-from agent import Agent, UniformAgent, RandomAgent, GreedyAgent, LLMAgent, LiteLLMAgent
+from blotto.api import BlottoGame
+from blotto.agent import Agent, UniformAgent, RandomAgent, GreedyAgent, LLMAgent, LiteLLMAgent
 
 AGENTS = {
     "uniform": UniformAgent,
