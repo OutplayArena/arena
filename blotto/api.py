@@ -84,7 +84,7 @@ class BlottoGame:
                 "own_action": action_a,
                 "opponent_action": action_b,
                 "own_score": result["score_a"],
-                "oppoenent_score": result["score_b"],
+                "opponent_score": result["score_b"],
                 "winner": result["winner"]
             })
             
@@ -92,12 +92,12 @@ class BlottoGame:
                 "own_action": action_b,
                 "opponent_action": action_a,
                 "own_score": result["score_b"],
-                "oppoenent_score": result["score_a"],
+                "opponent_score": result["score_a"],
                 "winner": result["winner"]
             })
         
         if total_score_a > total_score_b: match_winner = agent_a.name
-        elif total_score_b < total_score_a: match_winner = agent_b.name
+        elif total_score_b > total_score_a: match_winner = agent_b.name
         else: match_winner = "Tie"
             
         return {
