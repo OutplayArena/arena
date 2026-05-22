@@ -2,8 +2,14 @@ import os
 import random 
 import re
 import ast
-from transformers import pipeline
-import litellm
+
+
+def balanced_allocation(num_battlefields, total_resources):
+    base = total_resources // num_battlefields
+    allocation = [base] * num_battlefields
+    for index in range(total_resources - sum(allocation)):
+        allocation[index] += 1
+    return allocation
 
 class Agent:
     def __init__(self, name):
@@ -14,11 +20,13 @@ class Agent:
         return allocation
     
 class UniformAgent(Agent):
-    def __init__(self):
+    def __init__(self, num_battlefields=5, total_resources=100):
         super().__init__("UniformAgent")
+        self.num_battlefields = num_battlefields
+        self.total_resources = total_resources
         
     def act(self, history):
-        return [20,20,20,20,20]
+        return balanced_allocation(self.num_battlefields, self.total_resources)
 
 class RandomAgent(Agent):
     def __init__(self, num_battlefields=5, total_resources=100):
@@ -46,7 +54,8 @@ class GreedyAgent(Agent):
         self.total_resources = total_resources
     
     def act(self, history):
-        if len(history) == 0: return [20,20,20,20,20]
+        if len(history) == 0:
+            return balanced_allocation(self.num_battlefields, self.total_resources)
         
         last_round = history[-1]
         opponent_action = last_round["opponent_action"]
@@ -74,7 +83,9 @@ class LLMAgent(Agent):
         super().__init__("LLMAgent")
         self.num_battlefields = num_battlefields
         self.total_resources = total_resources
-        
+
+        from transformers import pipeline
+
         self.generator = pipeline(
             "text-generation",
             model=model_name,
@@ -86,10 +97,10 @@ class LLMAgent(Agent):
                 You are playing Colonel Blotto.
 
                 Rules:
-                - There are 5 battlefields.
-                - You have exactly 100 troops.
-                - Return only a Python list of 5 nonnegative integers.
-                - The list must sum to 100.
+                - There are {self.num_battlefields} battlefields.
+                - You have exactly {self.total_resources} troops.
+                - Return only a Python list of {self.num_battlefields} nonnegative integers.
+                - The list must sum to {self.total_resources}.
                 - Do not explain.
 
                 History:
@@ -102,27 +113,27 @@ class LLMAgent(Agent):
         match = re.search(r"\[[^\]]+\]", text)
 
         if match is None:
-            return [20, 20, 20, 20, 20]
+            return balanced_allocation(self.num_battlefields, self.total_resources)
 
         try:
             allocation = ast.literal_eval(match.group())
-        except:
-            return [20, 20, 20, 20, 20]
+        except (SyntaxError, ValueError):
+            return balanced_allocation(self.num_battlefields, self.total_resources)
 
         if not isinstance(allocation, list):
-            return [20, 20, 20, 20, 20]
+            return balanced_allocation(self.num_battlefields, self.total_resources)
 
-        if len(allocation) != 5:
-            return [20, 20, 20, 20, 20]
+        if len(allocation) != self.num_battlefields:
+            return balanced_allocation(self.num_battlefields, self.total_resources)
 
-        if not all(isinstance(x, int) for x in allocation):
-            return [20, 20, 20, 20, 20]
+        if not all(isinstance(x, int) and not isinstance(x, bool) for x in allocation):
+            return balanced_allocation(self.num_battlefields, self.total_resources)
 
         if not all(x >= 0 for x in allocation):
-            return [20, 20, 20, 20, 20]
+            return balanced_allocation(self.num_battlefields, self.total_resources)
 
-        if sum(allocation) != 100:
-            return [20, 20, 20, 20, 20]
+        if sum(allocation) != self.total_resources:
+            return balanced_allocation(self.num_battlefields, self.total_resources)
 
         return allocation
 
@@ -173,11 +184,7 @@ Your allocation:
 """
 
     def _fallback_allocation(self):
-        base = self.total_resources // self.num_battlefields
-        allocation = [base] * self.num_battlefields
-        for index in range(self.total_resources - sum(allocation)):
-            allocation[index] += 1
-        return allocation
+        return balanced_allocation(self.num_battlefields, self.total_resources)
 
     def parse_allocation(self, text):
         match = re.search(r"\[[^\]]+\]", text)
@@ -201,6 +208,8 @@ Your allocation:
         return self._fallback_allocation()
 
     def act(self, history):
+        import litellm
+
         prompt = self.build_prompt(history)
         kwargs = dict(
             model=f"openai/{self.model_name}",

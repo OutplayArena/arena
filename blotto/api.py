@@ -12,6 +12,11 @@ from .agent import Agent
 #          winner of round is whoever wins more battlefield points!
 class BlottoGame:
     def __init__(self, num_battlefields=5, total_resources=100):
+        if num_battlefields < 1:
+            raise ValueError("num_battlefields must be at least 1")
+        if total_resources < num_battlefields:
+            raise ValueError("total_resources must be at least num_battlefields")
+
         self.num_battlefields = num_battlefields
         self.total_resources = total_resources
         
@@ -19,10 +24,14 @@ class BlottoGame:
         if not isinstance(action, list):
             return False
 
-        if len(action) != self.num_battlefields: return False
-        if not all(isinstance(x, int) for x in action): return False
-        if not all(x >= 0 for x in action): return False
-        if sum(action) != self.total_resources:return False
+        if len(action) != self.num_battlefields:
+            return False
+        if not all(isinstance(x, int) and not isinstance(x, bool) for x in action):
+            return False
+        if not all(x >= 0 for x in action):
+            return False
+        if sum(action) != self.total_resources:
+            return False
 
         return True
         
@@ -56,7 +65,7 @@ class BlottoGame:
             "winner": winner
         }
         
-    def play_match(self, agent_a:Agent, agent_b:Agent, num_rounds=10):
+    def play_match(self, agent_a: Agent, agent_b: Agent, num_rounds=10):
         history_a = []
         history_b = []
         full_history = []
