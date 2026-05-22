@@ -38,7 +38,7 @@ class RandomAgent(Agent):
 
 # ** GREEDY AGENT **
 #
-# Copies or slightly beats oppoenent's last move
+# Copies or slightly beats opponent's last move
 class GreedyAgent(Agent):
     def __init__(self, num_battlefields=5, total_resources=100):
         super().__init__("GreedyAgent")

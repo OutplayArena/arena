@@ -228,7 +228,7 @@ def simulate_match(
                 "own_action": action_a,
                 "opponent_action": action_b,
                 "own_score": result["score_a"],
-                "oppoenent_score": result["score_b"],
+                "opponent_score": result["score_b"],
                 "winner": result["winner"],
             }
         )
@@ -237,7 +237,7 @@ def simulate_match(
                 "own_action": action_b,
                 "opponent_action": action_a,
                 "own_score": result["score_b"],
-                "oppoenent_score": result["score_a"],
+                "opponent_score": result["score_a"],
                 "winner": result["winner"],
             }
         )
