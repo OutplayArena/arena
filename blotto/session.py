@@ -13,7 +13,7 @@
 from dataclasses import dataclass
 import uuid
 
-from blotto.api import BlottoGame, BlottoState
+from blotto.engine import BlottoGame, BlottoState
 from blotto.config import BlottoExperimentConfig 
 
 @dataclass

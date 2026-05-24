@@ -1,6 +1,6 @@
 import pytest
 
-from blotto.api import BlottoGame
+from blotto.engine import BlottoGame
 from blotto.config import BattlefieldConfig, BlottoExperimentConfig
 
 

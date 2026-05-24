@@ -1,6 +1,6 @@
 import argparse
 
-from blotto.api import BlottoGame
+from blotto.engine import BlottoGame
 from blotto.agent import Agent, UniformAgent, RandomAgent, GreedyAgent, LLMAgent, LiteLLMAgent
 
 AGENTS = {

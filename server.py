@@ -12,7 +12,7 @@ from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import Request, urlopen
 
 from blotto.agent import GreedyAgent, LLMAgent, LiteLLMAgent, RandomAgent
-from blotto.api import BlottoGame
+from blotto.engine import BlottoGame
 
 
 ROOT = Path(__file__).resolve().parent
