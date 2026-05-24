@@ -102,7 +102,7 @@ class BlottoExperimentConfig:
             "seed": self.seed,
         }
         
-    # Hashing for easy config/setup identificatoin
+    # Hashing for easy config/setup identification
     def config_hash(self) -> str:
         canonical = json.dumps(
             self.to_dict(),
