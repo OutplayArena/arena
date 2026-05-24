@@ -19,6 +19,13 @@ class BlottoGame:
 
         self.num_battlefields = num_battlefields
         self.total_resources = total_resources
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(
+            num_battlefields=len(config.battlefields),
+            total_resources=config.budget[0],
+        )
         
     def validate_action(self, action):
         if not isinstance(action, list):
