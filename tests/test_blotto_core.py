@@ -116,3 +116,113 @@ def test_builtin_agents_support_variable_game_parameters():
     assert len(random_action) == 3
     assert sum(random_action) == 10
     assert all(isinstance(value, int) and value >= 0 for value in random_action)
+
+
+def test_initial_state_starts_awaiting_both_players():
+    game = BlottoGame(num_battlefields=3, total_resources=9, num_rounds=2)
+
+    state = game.initial_state()
+
+    assert state.round_number == 1
+    assert state.phase == "awaiting_action"
+    assert state.awaiting == ["A", "B"]
+    assert state.pending_actions == {}
+    assert state.history == []
+    assert state.total_scores == {"A": 0, "B": 0}
+
+
+def test_apply_first_action_returns_new_waiting_state_without_mutating_original():
+    game = BlottoGame(num_battlefields=3, total_resources=9, num_rounds=2)
+    state = game.initial_state()
+
+    next_state = game.apply_action(state, "A", [9, 0, 0])
+
+    assert state.awaiting == ["A", "B"]
+    assert state.pending_actions == {}
+    assert next_state.awaiting == ["B"]
+    assert next_state.pending_actions == {"A": [9, 0, 0]}
+    assert next_state.history == []
+    assert next_state.round_number == 1
+
+
+def test_apply_second_action_resolves_round_and_advances():
+    game = BlottoGame(num_battlefields=3, total_resources=9, num_rounds=2)
+    state = game.initial_state()
+
+    state = game.apply_action(state, "A", [9, 0, 0])
+    state = game.apply_action(state, "B", [0, 9, 0])
+
+    assert state.round_number == 2
+    assert state.phase == "awaiting_action"
+    assert state.awaiting == ["A", "B"]
+    assert state.pending_actions == {}
+    assert state.total_scores == {"A": 1.5, "B": 1.5}
+    assert state.history == [
+        {
+            "round": 1,
+            "allocations": {"A": [9, 0, 0], "B": [0, 9, 0]},
+            "scores": {"A": 1.5, "B": 1.5},
+            "winner": "Tie",
+            "total_scores": {"A": 1.5, "B": 1.5},
+        }
+    ]
+
+
+def test_apply_final_round_marks_terminal():
+    game = BlottoGame(num_battlefields=3, total_resources=9, num_rounds=1)
+    state = game.initial_state()
+
+    state = game.apply_action(state, "A", [9, 0, 0])
+    state = game.apply_action(state, "B", [0, 9, 0])
+
+    assert game.is_terminal(state)
+    assert state.phase == "complete"
+    assert state.awaiting == []
+    assert state.pending_actions == {}
+    assert state.round_number == 1
+
+
+def test_apply_action_rejects_complete_state_duplicate_player_and_bad_input():
+    game = BlottoGame(num_battlefields=3, total_resources=9, num_rounds=1)
+    state = game.initial_state()
+
+    with pytest.raises(ValueError, match="unknown player"):
+        game.apply_action(state, "C", [9, 0, 0])
+
+    with pytest.raises(ValueError, match="invalid action"):
+        game.apply_action(state, "A", [9, 0])
+
+    state = game.apply_action(state, "A", [9, 0, 0])
+
+    with pytest.raises(ValueError, match="already submitted"):
+        game.apply_action(state, "A", [0, 9, 0])
+
+    state = game.apply_action(state, "B", [0, 9, 0])
+
+    with pytest.raises(ValueError, match="already complete"):
+        game.apply_action(state, "A", [9, 0, 0])
+
+
+def test_compute_results_requires_terminal_state_and_reports_winner():
+    game = BlottoGame(num_battlefields=3, total_resources=9, num_rounds=1)
+    state = game.initial_state()
+
+    with pytest.raises(ValueError, match="complete"):
+        game.compute_results(state)
+
+    state = game.apply_action(state, "A", [9, 0, 0])
+    state = game.apply_action(state, "B", [0, 5, 4])
+
+    assert game.compute_results(state) == {
+        "total_scores": {"A": 1, "B": 2},
+        "winner": "B",
+        "history": [
+            {
+                "round": 1,
+                "allocations": {"A": [9, 0, 0], "B": [0, 5, 4]},
+                "scores": {"A": 1, "B": 2},
+                "winner": "B",
+                "total_scores": {"A": 1, "B": 2},
+            }
+        ],
+    }
