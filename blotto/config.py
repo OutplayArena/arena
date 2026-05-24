@@ -3,6 +3,7 @@ import hashlib
 import json
 
 
+# Allow for named Battlefield objects
 @dataclass(frozen=True)
 class BattlefieldConfig:
     id: str
@@ -16,6 +17,8 @@ class BattlefieldConfig:
         if self.value <= 0:
             raise ValueError("battlefield value must be positive")
     
+# Experiment becomes one object
+# POST / experiment will accept almost exactly this shape as JSON
 @dataclass(frozen=True)
 class BlottoExperimentConfig:
     game: str
@@ -84,6 +87,7 @@ class BlottoExperimentConfig:
             seed=seed,
         )
         
+    # Serialization
     def to_dict(self):
         return {
             "game": self.game,
@@ -98,6 +102,7 @@ class BlottoExperimentConfig:
             "seed": self.seed,
         }
         
+    # Hashing for easy config/setup identificatoin
     def config_hash(self) -> str:
         canonical = json.dumps(
             self.to_dict(),
