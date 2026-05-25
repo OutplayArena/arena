@@ -225,4 +225,11 @@ def test_compute_results_requires_terminal_state_and_reports_winner():
                 "total_scores": {"A": 1, "B": 2},
             }
         ],
+        "metrics": {
+            "total_payoff": {"A": 1, "B": 2},
+            "average_payoff": {"A": 1.0, "B": 2.0},
+            "round_win_counts": {"A": 0, "B": 1, "Tie": 0},
+            "round_win_rate": {"A": 0.0, "B": 1.0, "Tie": 0.0},
+            "allocation_concentration": {"A": 1.0, "B": pytest.approx(5 / 9)},
+        },
     }

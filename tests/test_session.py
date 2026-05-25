@@ -98,6 +98,13 @@ def test_session_results_add_session_metadata():
         "total_scores": {"A": 1, "B": 2},
         "winner": "B",
         "history": session.state.history,
+        "metrics": {
+            "total_payoff": {"A": 1, "B": 2},
+            "average_payoff": {"A": 1.0, "B": 2.0},
+            "round_win_counts": {"A": 0, "B": 1, "Tie": 0},
+            "round_win_rate": {"A": 0.0, "B": 1.0, "Tie": 0.0},
+            "allocation_concentration": {"A": 1.0, "B": 0.5},
+        },
     }
 
 
