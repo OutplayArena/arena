@@ -171,3 +171,24 @@ def test_unknown_session_returns_not_found():
 
     assert response.status_code == 404
     assert response.json()["detail"] == "session not found"
+
+
+def test_fastapi_serves_visualizer_index():
+    client = TestClient(app)
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "Blotto Experiment Visualizer" in response.text
+    assert "/app.js" in response.text
+
+
+def test_fastapi_serves_visualizer_javascript():
+    client = TestClient(app)
+
+    response = client.get("/app.js")
+
+    assert response.status_code == 200
+    assert "POST" in response.text
+    assert "/experiment" in response.text
+    assert "/api/run-experiment" not in response.text
