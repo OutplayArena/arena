@@ -9,6 +9,9 @@ authors = [
     { name = "Herbert Woisetschlaeger", email = "herbert@woisetschlaeger.fyi" },
 ]
 dependencies = [
+    "fastapi>=0.111.0",
+    "httpx>=0.27.0",
+    "uvicorn[standard]>=0.30.0",
     "transformers>=4.45.0",
     "litellm>=1.50.0",
 ]
