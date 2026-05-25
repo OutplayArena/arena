@@ -1,6 +1,8 @@
 from copy import deepcopy
 from dataclasses import dataclass
 
+from blotto.metrics import compute_blotto_metrics
+
 from .agent import Agent
 
 
@@ -149,7 +151,12 @@ class BlottoGame:
             "total_scores": dict(state.total_scores),
             "winner": winner,
             "history": list(state.history),
+            "metrics": compute_blotto_metrics(
+                history=state.history,
+                total_scores=state.total_scores
+            )
         }
+        
         if session_id is not None:
             results["session_id"] = session_id
         if config_hash is not None:
