@@ -11,6 +11,7 @@
 #   -> session.results()
 
 from dataclasses import dataclass
+import secrets
 import uuid
 
 from blotto.engine import BlottoGame, BlottoState
@@ -23,18 +24,24 @@ class GameSession:
     config_hash: str
     game: BlottoGame
     state: BlottoState
+    player_tokens: dict[str, str]
     
     # Future POST /experiment behavior minus HTTP
     @classmethod
     def create(cls, config):
         game = BlottoGame.from_config(config)
+        player_tokens = {
+            "A": secrets.token_urlsafe(32),
+            "B": secrets.token_urlsafe(32),
+        }
         
         return cls(
             session_id=str(uuid.uuid4()),
             config=config,
             config_hash=config.config_hash(),
             game=game,
-            state=game.initial_state()
+            state=game.initial_state(),
+            player_tokens=player_tokens,
         )
         
     # Equivalent of: GET /session/{id}/state
@@ -67,3 +74,22 @@ class GameSession:
             session_id=self.session_id,
             config_hash=self.config_hash,
         )
+        
+    def creation_response(self):
+        return {
+            "session_id": self.session_id,
+            "config_hash": self.config_hash,
+            "player_tokens": dict(self.player_tokens),
+        }
+        
+    def player_for_token(self, token):
+        for player, player_token in self.player_tokens.items():
+            if secrets.compare_digest(token, player_token):
+                return player
+            
+        raise ValueError("invalid player token")
+    
+    def submit_action_with_token(self, token, allocation):
+        player = self.player_for_token(token)
+        self.submit_action(player, allocation)
+        
