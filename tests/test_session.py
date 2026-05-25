@@ -34,6 +34,10 @@ def test_create_session_stores_game_and_initial_state():
     assert session.state.round_number == 1
     assert session.state.phase == "awaiting_action"
     assert session.state.awaiting == ["A", "B"]
+    assert set(session.player_tokens) == {"A", "B"}
+    assert session.player_tokens["A"]
+    assert session.player_tokens["B"]
+    assert session.player_tokens["A"] != session.player_tokens["B"]
 
 
 def test_public_state_reads_from_game_state():
@@ -58,6 +62,7 @@ def test_public_state_reads_from_game_state():
         "total_scores": {"A": 0, "B": 0},
         "history": [],
     }
+    assert "player_tokens" not in state
 
 
 def test_submit_action_delegates_to_engine_state_machine():
@@ -114,3 +119,55 @@ def test_session_rejects_invalid_and_duplicate_actions_via_engine():
 
     with pytest.raises(ValueError, match="already complete"):
         session.submit_action("A", [10, 0, 0])
+
+
+def test_creation_response_includes_scoped_player_tokens():
+    session = GameSession.create(make_config())
+
+    assert session.creation_response() == {
+        "session_id": session.session_id,
+        "config_hash": session.config_hash,
+        "player_tokens": session.player_tokens,
+    }
+
+
+def test_player_for_token_resolves_player_identity():
+    session = GameSession.create(make_config())
+
+    assert session.player_for_token(session.player_tokens["A"]) == "A"
+    assert session.player_for_token(session.player_tokens["B"]) == "B"
+
+
+def test_invalid_player_token_is_rejected():
+    session = GameSession.create(make_config())
+
+    with pytest.raises(ValueError, match="invalid player token"):
+        session.player_for_token("bad-token")
+
+
+def test_submit_action_with_token_uses_token_identity():
+    session = GameSession.create(make_config(rounds=2))
+
+    session.submit_action_with_token(session.player_tokens["A"], [10, 0, 0])
+
+    assert session.state.awaiting == ["B"]
+    assert session.state.pending_actions == {"A": [10, 0, 0]}
+
+    session.submit_action_with_token(session.player_tokens["B"], [0, 10, 0])
+
+    assert session.state.round_number == 2
+    assert session.state.pending_actions == {}
+    assert session.state.total_scores == {"A": 1.5, "B": 1.5}
+
+
+def test_submit_action_with_token_rejects_invalid_and_duplicate_tokens():
+    session = GameSession.create(make_config())
+    token_a = session.player_tokens["A"]
+
+    with pytest.raises(ValueError, match="invalid player token"):
+        session.submit_action_with_token("bad-token", [10, 0, 0])
+
+    session.submit_action_with_token(token_a, [10, 0, 0])
+
+    with pytest.raises(ValueError, match="already submitted"):
+        session.submit_action_with_token(token_a, [0, 10, 0])
