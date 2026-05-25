@@ -60,11 +60,123 @@ function battlefieldName(index) {
   return `battlefield_${index + 1}`;
 }
 
+function buildBattlefields(count) {
+  return Array.from({ length: count }, (_, index) => ({
+    id: battlefieldName(index),
+    value: 1.0,
+  }));
+}
+
+function balancedAllocation(count, total) {
+  const base = Math.floor(total / count);
+  const allocation = Array(count).fill(base);
+  for (let index = 0; index < total - base * count; index += 1) {
+    allocation[index] += 1;
+  }
+  return allocation;
+}
+
+function randomAllocation(count, total) {
+  const cuts = [];
+  for (let index = 0; index < count - 1; index += 1) {
+    cuts.push(Math.floor(Math.random() * (total + 1)));
+  }
+  cuts.sort((a, b) => a - b);
+
+  const allocation = [];
+  let previous = 0;
+  cuts.forEach((cut) => {
+    allocation.push(cut - previous);
+    previous = cut;
+  });
+  allocation.push(total - previous);
+  return allocation;
+}
+
+function normalizeAllocation(allocation, total) {
+  const next = allocation.slice();
+  let currentTotal = next.reduce((sum, value) => sum + value, 0);
+
+  while (currentTotal > total) {
+    const maxValue = Math.max(...next);
+    const maxIndex = next.indexOf(maxValue);
+    next[maxIndex] -= 1;
+    currentTotal -= 1;
+  }
+
+  while (currentTotal < total) {
+    const minValue = Math.min(...next);
+    const minIndex = next.indexOf(minValue);
+    next[minIndex] += 1;
+    currentTotal += 1;
+  }
+
+  return next;
+}
+
+function greedyAllocation(player, state) {
+  if (!state.history.length) {
+    return balancedAllocation(state.battlefields.length, state.budgets[player]);
+  }
+
+  const opponent = player === "A" ? "B" : "A";
+  const lastRound = state.history[state.history.length - 1];
+  const opponentAction = lastRound.allocations[opponent];
+  return normalizeAllocation(
+    opponentAction.map((value) => value + 1),
+    state.budgets[player],
+  );
+}
+
+function chooseAction(agent, player, state) {
+  const count = state.battlefields.length;
+  const total = state.budgets[player];
+
+  if (agent === "uniform") return balancedAllocation(count, total);
+  if (agent === "random") return randomAllocation(count, total);
+  if (agent === "greedy") return greedyAllocation(player, state);
+
+  throw new Error(`unsupported client agent=${agent}`);
+}
+
+function resultToMatch(result, runConfig) {
+  return {
+    agent_a: runConfig.agent_a,
+    agent_b: runConfig.agent_b,
+    session_id: runConfig.session_id,
+    config_hash: result.config_hash,
+    num_rounds: runConfig.num_rounds,
+    num_battlefields: runConfig.num_battlefields,
+    total_resources: runConfig.total_resources,
+    total_score_a: result.total_scores.A,
+    total_score_b: result.total_scores.B,
+    match_winner: result.winner,
+    metrics: result.metrics,
+    history: result.history.map((round) => ({
+      round: round.round,
+      agent_a: runConfig.agent_a,
+      agent_b: runConfig.agent_b,
+      action_a: round.allocations.A,
+      action_b: round.allocations.B,
+      score_a: round.scores.A,
+      score_b: round.scores.B,
+      total_score_a: round.total_scores.A,
+      total_score_b: round.total_scores.B,
+      winner: round.winner,
+    })),
+  };
+}
+
 function requestJson(path, options = {}) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open(options.method || "GET", path);
     xhr.setRequestHeader("Accept", "application/json");
+    if (options.headers) {
+      Object.entries(options.headers).forEach(([key, value]) => {
+        xhr.setRequestHeader(key, value);
+      });
+    }
     if (options.body) {
       xhr.setRequestHeader("Content-Type", "application/json");
     }
@@ -77,7 +189,7 @@ function requestJson(path, options = {}) {
         return;
       }
       if (xhr.status < 200 || xhr.status >= 300) {
-        reject(new Error(data.error || `HTTP ${xhr.status}`));
+        reject(new Error(data.detail || data.error || `HTTP ${xhr.status}`));
         return;
       }
       resolve(data);
@@ -90,6 +202,7 @@ function requestJson(path, options = {}) {
 const LLM_LOCAL_TYPES = ["llm", "llm-local"];
 const LLM_API_TYPES = ["llm-api"];
 const ALL_LLM_TYPES = LLM_LOCAL_TYPES.concat(LLM_API_TYPES);
+const CLIENT_AGENTS = ["uniform", "random", "greedy"];
 
 function updateLlmModelPanels() {
   updateLlmModelSide(agentASelect.value, llmModelAPanel, llmModelAInput, hfSearchAInput, hfResultsA);
@@ -704,10 +817,9 @@ function startReplay(match) {
 }
 
 async function loadAgents() {
-  const data = await requestJson("/api/agents");
   [agentASelect, agentBSelect].forEach((select) => {
     select.innerHTML = "";
-    data.agents.forEach((agent) => {
+    CLIENT_AGENTS.forEach((agent) => {
       const option = document.createElement("option");
       option.value = agent;
       option.textContent = agent;
@@ -727,8 +839,6 @@ form.addEventListener("submit", async (event) => {
   const payload = {
     agent_a: agentASelect.value,
     agent_b: agentBSelect.value,
-    llm_model_a: ALL_LLM_TYPES.includes(agentASelect.value) ? llmModelAInput.value.trim() : null,
-    llm_model_b: ALL_LLM_TYPES.includes(agentBSelect.value) ? llmModelBInput.value.trim() : null,
     num_rounds: Number(numRoundsInput.value),
     num_battlefields: Number(numBattlefieldsInput.value),
     total_resources: Number(totalResourcesInput.value),
@@ -740,45 +850,48 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
-  let pollTimer = null;
   const startTime = Date.now();
 
   try {
-    const { run_id } = await requestJson("/api/run-experiment", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-
-    const poll = async () => {
-      try {
-        const run = await requestJson(`/api/run/${run_id}`);
-        if (run.status === "done") {
-          clearInterval(pollTimer);
-          runButton.disabled = false;
-          startReplay(run.result);
-          return;
-        }
-        if (run.status === "error") {
-          clearInterval(pollTimer);
-          setStatus(`error=${run.error}`);
-          runButton.disabled = false;
-          return;
-        }
-        const elapsed = Math.floor((Date.now() - startTime) / 1000);
-        if (run.round) {
-          setStatus(`Round ${run.round}/${run.total_rounds}  (${elapsed}s)`);
-        } else {
-          setStatus(`Running experiment... ${elapsed}s`);
-        }
-      } catch (err) {
-        clearInterval(pollTimer);
-        setStatus(`error=${err.message}`);
-        runButton.disabled = false;
-      }
+    const experiment = {
+      game: "blotto",
+      variant: "classic",
+      players: 2,
+      budget: [payload.total_resources, payload.total_resources],
+      battlefields: buildBattlefields(payload.num_battlefields),
+      rounds: payload.num_rounds,
+      seed: null,
     };
 
-    pollTimer = setInterval(poll, 1000);
-    poll();
+    const created = await requestJson("/experiment", {
+      method: "POST",
+      body: JSON.stringify(experiment),
+    });
+
+    payload.session_id = created.session_id;
+    let state = await requestJson(`/session/${created.session_id}/state`);
+
+    while (state.phase !== "complete") {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      setStatus(`session=${created.session_id} | round=${state.round}/${state.round_total} | awaiting=${state.awaiting.join(",")} (${elapsed}s)`);
+
+      for (const player of ["A", "B"]) {
+        if (!state.awaiting.includes(player)) continue;
+        const agent = player === "A" ? payload.agent_a : payload.agent_b;
+        const action = chooseAction(agent, player, state);
+        state = await requestJson(`/session/${created.session_id}/action`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${created.player_tokens[player]}`,
+          },
+          body: JSON.stringify({ allocation: action }),
+        });
+      }
+    }
+
+    const result = await requestJson(`/session/${created.session_id}/results`);
+    runButton.disabled = false;
+    startReplay(resultToMatch(result, payload));
   } catch (error) {
     setStatus(`error=${error.message}`);
     runButton.disabled = false;

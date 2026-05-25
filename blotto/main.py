@@ -1,4 +1,7 @@
+from pathlib import Path
+
 from fastapi import FastAPI, Header, HTTPException
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from blotto.config import BattlefieldConfig, BlottoExperimentConfig
@@ -7,6 +10,7 @@ from blotto.session import GameSession
 
 app = FastAPI(title="Blotto Agent Arena")
 SESSIONS: dict[str, GameSession] = {}
+STATIC_ROOT = Path(__file__).resolve().parent.parent / "static"
 
 
 class BattlefieldRequest(BaseModel):
@@ -116,3 +120,6 @@ def get_results(session_id: str):
         return session.results()
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+app.mount("/", StaticFiles(directory=STATIC_ROOT, html=True), name="static")
