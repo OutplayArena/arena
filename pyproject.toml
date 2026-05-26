@@ -14,6 +14,7 @@ dependencies = [
     "uvicorn[standard]>=0.30.0",
     "transformers>=4.45.0",
     "litellm>=1.50.0",
+    "mcp>=1.0.0",
 ]
 
 [build-system]
