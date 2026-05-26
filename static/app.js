@@ -4,14 +4,6 @@ const ctx = canvas.getContext("2d");
 const form = document.getElementById("experiment-form");
 const agentASelect = document.getElementById("agent-a");
 const agentBSelect = document.getElementById("agent-b");
-const llmModelAPanel = document.getElementById("llm-model-a-panel");
-const llmModelBPanel = document.getElementById("llm-model-b-panel");
-const llmModelAInput = document.getElementById("llm-model-a");
-const llmModelBInput = document.getElementById("llm-model-b");
-const hfSearchAInput = document.getElementById("hf-search-a");
-const hfSearchBInput = document.getElementById("hf-search-b");
-const hfResultsA = document.getElementById("hf-results-a");
-const hfResultsB = document.getElementById("hf-results-b");
 const numRoundsInput = document.getElementById("num-rounds");
 const numBattlefieldsInput = document.getElementById("num-battlefields");
 const totalResourcesInput = document.getElementById("total-resources");
@@ -44,7 +36,6 @@ let particles = [];
 let displayedScoreA = 0;
 let displayedScoreB = 0;
 const roundDuration = 3200;
-const searchDebounceTimers = {};
 
 function currentBattlefieldCount() {
   if (activeMatch) return activeMatch.num_battlefields;
@@ -199,126 +190,7 @@ function requestJson(path, options = {}) {
   });
 }
 
-const LLM_LOCAL_TYPES = ["llm", "llm-local"];
-const LLM_API_TYPES = ["llm-api"];
-const ALL_LLM_TYPES = LLM_LOCAL_TYPES.concat(LLM_API_TYPES);
 const CLIENT_AGENTS = ["uniform", "random", "greedy"];
-
-function updateLlmModelPanels() {
-  updateLlmModelSide(agentASelect.value, llmModelAPanel, llmModelAInput, hfSearchAInput, hfResultsA);
-  updateLlmModelSide(agentBSelect.value, llmModelBPanel, llmModelBInput, hfSearchBInput, hfResultsB);
-}
-
-function updateLlmModelSide(agentType, panel, modelInput, searchInput, results) {
-  const isLocal = LLM_LOCAL_TYPES.includes(agentType);
-  const isAPI = LLM_API_TYPES.includes(agentType);
-  panel.hidden = !(isLocal || isAPI);
-  searchInput.parentElement.hidden = !isLocal;
-  results.hidden = !isLocal;
-
-  if (isAPI && !modelInput.dataset.userSet) {
-    modelInput.value = "deepseek-v4-pro";
-  } else if (isLocal && !modelInput.dataset.userSet) {
-    modelInput.value = "Qwen/Qwen2.5-0.5B-Instruct";
-  }
-}
-
-function modelSearchConfig(side) {
-  if (side === "a") {
-    return {
-      modelInput: llmModelAInput,
-      searchInput: hfSearchAInput,
-      results: hfResultsA,
-    };
-  }
-  return {
-    modelInput: llmModelBInput,
-    searchInput: hfSearchBInput,
-    results: hfResultsB,
-  };
-}
-
-function renderModelResults(side, models) {
-  const { modelInput, results } = modelSearchConfig(side);
-  results.innerHTML = "";
-
-  if (!models.length) {
-    const empty = document.createElement("div");
-    empty.className = "model-result-empty";
-    const title = document.createElement("strong");
-    title.textContent = "No models found";
-    const detail = document.createElement("span");
-    detail.textContent = "Try a broader query.";
-    empty.append(title, detail);
-    results.appendChild(empty);
-    return;
-  }
-
-  models.forEach((model) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "model-result";
-
-    const title = document.createElement("strong");
-    title.className = "model-result-title";
-    title.textContent = model.id;
-
-    const detail = document.createElement("span");
-    detail.className = "model-result-meta";
-    detail.textContent = `downloads=${model.downloads || 0}  likes=${model.likes || 0}`;
-
-    const tag = document.createElement("span");
-    tag.className = "model-result-tag";
-    tag.textContent = model.pipeline_tag || "model";
-
-    button.append(title, detail, tag);
-    button.addEventListener("click", () => {
-      modelInput.value = model.id;
-      results.innerHTML = "";
-    });
-    results.appendChild(button);
-  });
-}
-
-async function searchHuggingFaceModels(side) {
-  const { modelInput, searchInput, results } = modelSearchConfig(side);
-  const query = (searchInput.value || modelInput.value || "text generation").trim();
-  if (!query) return;
-
-  results.innerHTML = "";
-  const pending = document.createElement("div");
-  pending.className = "model-result-empty";
-  const pendingTitle = document.createElement("strong");
-  pendingTitle.textContent = "Searching Hugging Face...";
-  const pendingDetail = document.createElement("span");
-  pendingDetail.textContent = `query=${query}`;
-  pending.append(pendingTitle, pendingDetail);
-  results.appendChild(pending);
-
-  try {
-    const data = await requestJson(
-      `/api/huggingface-models?q=${encodeURIComponent(query)}&limit=8`,
-    );
-    renderModelResults(side, data.models || []);
-  } catch (error) {
-    results.innerHTML = "";
-    const failed = document.createElement("div");
-    failed.className = "model-result-empty";
-    const failedTitle = document.createElement("strong");
-    failedTitle.textContent = "Search failed";
-    const failedDetail = document.createElement("span");
-    failedDetail.textContent = error.message;
-    failed.append(failedTitle, failedDetail);
-    results.appendChild(failed);
-  }
-}
-
-function debounceModelSearch(side) {
-  clearTimeout(searchDebounceTimers[side]);
-  searchDebounceTimers[side] = setTimeout(() => {
-    searchHuggingFaceModels(side);
-  }, 420);
-}
 
 function resizeCanvas() {
   const rect = canvas.getBoundingClientRect();
@@ -928,31 +800,6 @@ roundScrubber.addEventListener("input", () => {
 });
 
 downloadHistoryButton.addEventListener("click", downloadHistoryJson);
-
-agentASelect.addEventListener("change", () => {
-  updateLlmModelPanels();
-});
-
-agentBSelect.addEventListener("change", () => {
-  updateLlmModelPanels();
-});
-
-llmModelAInput.addEventListener("input", () => {
-  llmModelAInput.dataset.userSet = "1";
-});
-
-llmModelBInput.addEventListener("input", () => {
-  llmModelBInput.dataset.userSet = "1";
-});
-
-hfSearchAInput.addEventListener("input", () => debounceModelSearch("a"));
-hfSearchBInput.addEventListener("input", () => debounceModelSearch("b"));
-hfSearchAInput.addEventListener("focus", () => {
-  if (!hfResultsA.children.length) searchHuggingFaceModels("a");
-});
-hfSearchBInput.addEventListener("focus", () => {
-  if (!hfResultsB.children.length) searchHuggingFaceModels("b");
-});
 
 numBattlefieldsInput.addEventListener("input", () => {
   if (!activeMatch) return;
