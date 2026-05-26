@@ -192,3 +192,5 @@ def test_fastapi_serves_visualizer_javascript():
     assert "POST" in response.text
     assert "/experiment" in response.text
     assert "/api/run-experiment" not in response.text
+    assert "/api/huggingface-models" not in response.text
+    assert "llm-model" not in response.text
