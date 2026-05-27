@@ -80,10 +80,12 @@ class LLMAgent(Agent):
                  num_battlefields=5, 
                  total_resources=100, 
                  model_name="Qwen/Qwen3.5-0.8B",
+                 temperature=0.7,
                  reasoning=None):
         super().__init__("LLMAgent")
         self.num_battlefields = num_battlefields
         self.total_resources = total_resources
+        self.temperature = temperature
 
         from transformers import pipeline
 
@@ -150,7 +152,7 @@ class LLMAgent(Agent):
             prompt,
             max_new_tokens=limits["max_tokens"],
             do_sample=True,
-            temperature=0.7
+            temperature=self.temperature
         )[0]["generated_text"]
         
         response = output[len(prompt):]
@@ -164,6 +166,7 @@ class LiteLLMAgent(Agent):
                  model_name=None,
                  api_base=None,
                  api_key=None,
+                 temperature=0.7,
                  reasoning=None):
         super().__init__("LiteLLMAgent")
         self.num_battlefields = num_battlefields
@@ -172,6 +175,7 @@ class LiteLLMAgent(Agent):
         self.api_base = api_base or os.environ.get("LLM_API_BASE", "http://127.0.0.1:11434/v1")
         raw_key = api_key or os.environ.get("LLM_API_KEY") or os.environ.get("OPENCODE_GO_API_KEY") or ""
         self.api_key = raw_key.strip()
+        self.temperature = temperature
 
         from blotto.reasoning import ReasoningControlEngine
         self.reasoning = reasoning or ReasoningControlEngine(self.model_name)
@@ -224,7 +228,7 @@ Your allocation:
         prompt = self.build_prompt(history)
         messages = [{"role": "user", "content": prompt}]
         
-        body = self.reasoning.prepare_request_body(messages, temperature=0.7)
+        body = self.reasoning.prepare_request_body(messages, temperature=self.temperature)
         limits = self.reasoning.get_limits()
         
         kwargs = dict(
@@ -232,7 +236,7 @@ Your allocation:
             messages=messages,
             api_base=self.api_base,
             max_tokens=limits["max_tokens"],
-            temperature=body["temperature"],
+            temperature=self.temperature,
             **self.reasoning.get_api_params(),
         )
         if self.api_key:

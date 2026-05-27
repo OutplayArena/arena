@@ -22,11 +22,12 @@ OPENCODE_GO_API_BASE = "https://opencode.ai/zen/go/v1"
 PLAYER_A_MODEL = "deepseek-v4-flash"
 PLAYER_B_MODEL = "kimi-k2.5"
 
-REASONING_EFFORT = ReasoningEffort.MEDIUM
+REASONING_EFFORT = ReasoningEffort.NONE
+TEMPERATURE = 0.9
 
 NUM_BATTLEFIELDS = 5
 TOTAL_RESOURCES = 100
-NUM_ROUNDS = 5
+NUM_ROUNDS = 20
 
 
 def balanced_allocation(num_battlefields, total_resources):
@@ -87,7 +88,7 @@ def llm_allocate(model, prompt):
         {"role": "system", "content": system_msg},
         {"role": "user", "content": prompt},
     ]
-    request_body = engine.prepare_request_body(messages)
+    request_body = engine.prepare_request_body(messages, temperature=TEMPERATURE)
 
     for attempt in range(3):
         try:
