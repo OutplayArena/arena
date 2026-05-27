@@ -79,7 +79,8 @@ class LLMAgent(Agent):
     def __init__(self, 
                  num_battlefields=5, 
                  total_resources=100, 
-                 model_name="Qwen/Qwen3.5-0.8B"):
+                 model_name="Qwen/Qwen3.5-0.8B",
+                 reasoning=None):
         super().__init__("LLMAgent")
         self.num_battlefields = num_battlefields
         self.total_resources = total_resources
@@ -92,8 +93,11 @@ class LLMAgent(Agent):
             device_map="auto"
         )
 
+        from blotto.reasoning import ReasoningControlEngine
+        self.reasoning = reasoning or ReasoningControlEngine(model_name)
+
     def build_prompt(self, history):
-        return f"""
+        base_prompt = f"""
                 You are playing Colonel Blotto.
 
                 Rules:
@@ -108,6 +112,7 @@ class LLMAgent(Agent):
 
                 Your allocation:
                 """
+        return self.reasoning.build_system_prompt(base_prompt)
     
     def parse_allocation(self, text):
         match = re.search(r"\[[^\]]+\]", text)
@@ -139,10 +144,11 @@ class LLMAgent(Agent):
 
     def act(self, history):
         prompt = self.build_prompt(history)
+        limits = self.reasoning.get_limits()
         
         output = self.generator(
             prompt,
-            max_new_tokens=50,
+            max_new_tokens=limits["max_tokens"],
             do_sample=True,
             temperature=0.7
         )[0]["generated_text"]
@@ -157,7 +163,8 @@ class LiteLLMAgent(Agent):
                  total_resources=100,
                  model_name=None,
                  api_base=None,
-                 api_key=None):
+                 api_key=None,
+                 reasoning=None):
         super().__init__("LiteLLMAgent")
         self.num_battlefields = num_battlefields
         self.total_resources = total_resources
@@ -166,8 +173,11 @@ class LiteLLMAgent(Agent):
         raw_key = api_key or os.environ.get("LLM_API_KEY") or os.environ.get("OPENCODE_GO_API_KEY") or ""
         self.api_key = raw_key.strip()
 
+        from blotto.reasoning import ReasoningControlEngine
+        self.reasoning = reasoning or ReasoningControlEngine(self.model_name)
+
     def build_prompt(self, history):
-        return f"""
+        base_prompt = f"""
 You are playing Colonel Blotto.
 
 Rules:
@@ -182,6 +192,7 @@ History:
 
 Your allocation:
 """
+        return self.reasoning.build_system_prompt(base_prompt)
 
     def _fallback_allocation(self):
         return balanced_allocation(self.num_battlefields, self.total_resources)
@@ -211,15 +222,24 @@ Your allocation:
         import litellm
 
         prompt = self.build_prompt(history)
+        messages = [{"role": "user", "content": prompt}]
+        
+        body = self.reasoning.prepare_request_body(messages, temperature=0.7)
+        limits = self.reasoning.get_limits()
+        
         kwargs = dict(
             model=f"openai/{self.model_name}",
-            messages=[{"role": "user", "content": prompt}],
+            messages=messages,
             api_base=self.api_base,
-            max_tokens=50,
-            temperature=0.7,
+            max_tokens=limits["max_tokens"],
+            temperature=body["temperature"],
+            **self.reasoning.get_api_params(),
         )
         if self.api_key:
             kwargs["api_key"] = self.api_key
+        
         response = litellm.completion(**kwargs)
-        text = response.choices[0].message.content
-        return self.parse_allocation(text)
+        response_data = {"choices": [{"message": {"content": response.choices[0].message.content}}]}
+        content, reasoning = self.reasoning.extract_response_text(response_data)
+        
+        return self.parse_allocation(content or reasoning)
