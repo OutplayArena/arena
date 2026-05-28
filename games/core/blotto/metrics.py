@@ -1,7 +1,8 @@
 from nash_arena.game_components.game_metrics import GameMetrics
 
+
 class BlottoMetrics(GameMetrics):
-    
+
     def compute(self, history, total_scores):
         payoff_average = self.average_payoff(history, total_scores)
         win_counts = self.round_win_counts(history)
@@ -55,3 +56,23 @@ class BlottoMetrics(GameMetrics):
             player: (totals[player] / counts[player] if counts[player] else 0)
             for player in totals
         }
+
+
+def compute_blotto_metrics(history, total_scores):
+    return BlottoMetrics().compute(history, total_scores)
+
+
+def average_payoff(history, total_scores):
+    return BlottoMetrics().average_payoff(history, total_scores)
+
+
+def round_win_counts(history):
+    return BlottoMetrics().round_win_counts(history)
+
+
+def round_win_rate(history, win_counts):
+    return BlottoMetrics().round_win_rate(history, win_counts)
+
+
+def allocation_concentration(history):
+    return BlottoMetrics().allocation_concentration(history)
