@@ -1,7 +1,7 @@
 import pytest
 
-from blotto.config import BattlefieldConfig, BlottoExperimentConfig
-from blotto.session import GameSession
+from games.core.blotto.config import BattlefieldConfig, BlottoExperimentConfig
+from arena.session import GameSession
 
 
 def make_config(rounds=2):

@@ -3,8 +3,8 @@ import json
 import httpx
 import pytest
 
-from blotto.client import ArenaClient
-from blotto.config import BlottoExperimentConfig
+from arena.client import ArenaClient
+from games.core.blotto.config import BlottoExperimentConfig
 
 
 def mock_client(handler):
@@ -114,6 +114,28 @@ def test_get_results_gets_results_endpoint():
     assert client.get_results() == {"winner": "A"}
     assert requests[0].method == "GET"
     assert requests[0].url.path == "/session/s1/results"
+
+
+def test_game_directory_methods_get_expected_endpoints():
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(200, json={"ok": request.url.path})
+
+    client = ArenaClient("http://arena.test", http_client=mock_client(handler))
+
+    assert client.list_games() == {"ok": "/games"}
+    assert client.get_game_details("blotto") == {"ok": "/games/blotto"}
+    assert client.get_game_metrics("blotto") == {"ok": "/games/blotto/metrics"}
+    assert client.get_game_prompts("blotto") == {"ok": "/games/blotto/prompts"}
+
+    assert [request.url.path for request in requests] == [
+        "/games",
+        "/games/blotto",
+        "/games/blotto/metrics",
+        "/games/blotto/prompts",
+    ]
 
 
 def test_for_player_builds_session_bound_client():

@@ -1,7 +1,7 @@
 import pytest
 
-from blotto import mcp_server
-from blotto.client import ArenaClient
+from arena import mcp_server
+from arena.client import ArenaClient
 
 
 class FakeClient:
@@ -17,6 +17,18 @@ class FakeClient:
 
     def get_results(self):
         return {"winner": "A"}
+
+    def list_games(self):
+        return [{"name": "blotto"}]
+
+    def get_game_details(self, game):
+        return {"name": game}
+
+    def get_game_metrics(self, game):
+        return {"game": game, "metrics": []}
+
+    def get_game_prompts(self, game):
+        return {"game": game, "action_format": {"type": "json_array"}}
 
 
 def test_required_env_returns_value(monkeypatch):
@@ -75,3 +87,16 @@ def test_get_results_calls_client(monkeypatch):
     monkeypatch.setattr(mcp_server, "arena_client", lambda: fake)
 
     assert mcp_server.get_results() == {"winner": "A"}
+
+
+def test_game_directory_tools_call_client(monkeypatch):
+    fake = FakeClient()
+    monkeypatch.setattr(mcp_server, "arena_client", lambda: fake)
+
+    assert mcp_server.list_games() == [{"name": "blotto"}]
+    assert mcp_server.get_game_details("blotto") == {"name": "blotto"}
+    assert mcp_server.get_game_metrics("blotto") == {"game": "blotto", "metrics": []}
+    assert mcp_server.get_game_prompts("blotto") == {
+        "game": "blotto",
+        "action_format": {"type": "json_array"},
+    }

@@ -1,7 +1,6 @@
 from fastapi.testclient import TestClient
 
-from blotto.main import SESSIONS, app, bearer_token, config_from_request
-from blotto.main import ExperimentRequest
+from arena.main import SESSIONS, app, bearer_token, config_from_request
 
 
 def valid_payload(rounds=1):
@@ -25,7 +24,7 @@ def setup_function():
 
 
 def test_config_from_request_builds_experiment_config():
-    config = config_from_request(ExperimentRequest(**valid_payload(rounds=3)))
+    config = config_from_request(valid_payload(rounds=3))
 
     assert config.game == "blotto"
     assert config.rounds == 3
@@ -194,3 +193,38 @@ def test_fastapi_serves_visualizer_javascript():
     assert "/api/run-experiment" not in response.text
     assert "/api/huggingface-models" not in response.text
     assert "llm-model" not in response.text
+
+
+def test_list_games_returns_registered_blotto_game():
+    client = TestClient(app)
+
+    response = client.get("/games")
+
+    assert response.status_code == 200
+    games = response.json()
+    assert games[0]["name"] == "blotto"
+    assert games[0]["players"] == {"min": 2, "max": 2}
+
+
+def test_get_game_directory_details_metrics_and_prompts():
+    client = TestClient(app)
+
+    details = client.get("/games/blotto")
+    metrics = client.get("/games/blotto/metrics")
+    prompts = client.get("/games/blotto/prompts")
+
+    assert details.status_code == 200
+    assert details.json()["name"] == "blotto"
+    assert metrics.status_code == 200
+    assert metrics.json()["metrics"][0]["name"] == "total_payoff"
+    assert prompts.status_code == 200
+    assert prompts.json()["action_format"]["type"] == "json_array"
+
+
+def test_get_unknown_game_returns_not_found():
+    client = TestClient(app)
+
+    response = client.get("/games/missing")
+
+    assert response.status_code == 404
+    assert "game not found" in response.json()["detail"]
