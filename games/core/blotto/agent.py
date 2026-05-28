@@ -8,8 +8,7 @@ from pathlib import Path
 
 import yaml
 
-from nash_arena.game_components.game_agent import GameAgent 
-
+from nash_arena.game_components.game_agent import GameAgent
 
 PROMPTS_PATH = Path(__file__).with_name("prompts.yaml")
 LLM_AGENT_PROMPT_KEY = "llm_agent"
