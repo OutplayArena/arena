@@ -1,0 +1,67 @@
+name: blotto
+version: "1.0.0"
+status: stable
+author: "Blotto Agent Arena maintainers"
+description: >
+  Colonel Blotto resource allocation game. Two players allocate fixed
+  resources across battlefields; each battlefield is won by the higher
+  allocation, with ties split evenly.
+tags:
+  - resource-allocation
+  - zero-sum
+  - simultaneous
+  - multi-round
+ontology:
+  action_space: discrete_allocation
+  information_structure: simultaneous
+  payoff_structure: zero_sum
+  timing: multi_round
+players:
+  min: 2
+  max: 2
+config_schema:
+  game:
+    type: string
+    const: blotto
+  variant:
+    type: string
+    const: classic
+  players:
+    type: integer
+    const: 2
+  budget:
+    type: array
+    minItems: 2
+    maxItems: 2
+    items:
+      type: integer
+      minimum: 1
+  battlefields:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      properties:
+        id:
+          type: string
+        value:
+          type: number
+          minimum: 0
+  rounds:
+    type: integer
+    minimum: 1
+  seed:
+    type:
+      - integer
+      - "null"
+example_config:
+  game: blotto
+  variant: classic
+  players: 2
+  budget: [10, 10]
+  battlefields:
+    - {id: left, value: 1.0}
+    - {id: center, value: 1.0}
+    - {id: right, value: 1.0}
+  rounds: 3
+  seed: 42
