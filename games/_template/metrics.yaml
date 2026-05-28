@@ -1,0 +1,5 @@
+metrics:
+  - name: final/winner
+    when: terminal
+    type: categorical
+    description: "Winner of the completed game."
