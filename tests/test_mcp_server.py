@@ -52,7 +52,7 @@ def test_arena_client_uses_default_base_url(monkeypatch):
 
     client = mcp_server.arena_client()
 
-    assert client.base_url == "http://127.0.0.1:8000"
+    assert client.base_url == "http://127.0.0.1:8000/api"
 
 
 def test_get_game_state_calls_client(monkeypatch):
