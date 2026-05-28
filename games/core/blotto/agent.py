@@ -4,7 +4,7 @@ import re
 import ast
 import litellm
 
-from arena.game_agent import GameAgent
+from arena.game_components.game_agent import GameAgent
 
 def balanced_allocation(num_battlefields, total_resources):
     base = total_resources // num_battlefields

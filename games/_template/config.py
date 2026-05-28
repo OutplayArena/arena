@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from arena.game_config import GameConfig
+from arena.game_components.game_config import GameConfig
 
 
 @dataclass(frozen=True)
