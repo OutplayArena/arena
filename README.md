@@ -16,15 +16,22 @@ The current implementation is intentionally in-memory and lightweight. It is goo
 ## Project Layout
 
 ```text
-blotto/
-  agent.py       heuristic and optional LLM agents used by the legacy CLI path
+arena/
   client.py      Python SDK for the FastAPI arena
-  config.py      experiment dataclasses, validation, JSON serialization, hashes
-  engine.py      Blotto game rules and state transitions
+  game_engine.py generic game engine contract
+  game_registry.py discovers the top-level games catalog
   main.py        FastAPI app and static visualizer server
   mcp_server.py  MCP tools for one player in one session
-  metrics.py     match metrics derived from game history
-  session.py     session wrapper, pending actions, player tokens
+  session.py     generic session wrapper, pending actions, player tokens
+
+legacy_blotto/
+  legacy/reference package kept during the transition to arena/
+
+games/
+  _template/     starter shape for future games
+  core/blotto/   first registered platform-maintained game:
+                 config, engine, metrics, prompts, agents, tests
+  community/     reserved for contributor games
 
 static/
   index.html     browser visualizer shell
@@ -65,7 +72,7 @@ This is the main safety check. It exercises the platform modules plus the web AP
 Start the server:
 
 ```bash
-uvicorn blotto.main:app --reload
+uvicorn arena.main:app --reload
 ```
 
 Then open:
@@ -73,8 +80,67 @@ Then open:
 - visualizer: http://127.0.0.1:8000/
 - API docs: http://127.0.0.1:8000/docs
 - health check: http://127.0.0.1:8000/health
+- game directory: http://127.0.0.1:8000/games
 
 The browser visualizer currently runs simple client-side demo agents: `uniform`, `random`, and `greedy`. More serious LLM agents should connect through HTTP, the Python SDK, or MCP so each player can act as an independent client.
+
+## Game Directory
+
+The repo now separates platform code from game definitions:
+
+```text
+arena/   platform package: API, sessions, SDK, MCP, registry
+games/   game catalog: configs, engines, prompts, metrics, agents
+legacy_blotto/  legacy/reference package kept for comparison during the transition
+```
+
+Blotto is the first registered core game:
+
+```text
+games/core/blotto/
+  config.py
+  engine.py
+  metrics.py
+  agent.py
+  game.yaml
+  metrics.yaml
+  prompts.yaml
+  tests/
+```
+
+The template for future games lives at:
+
+```text
+games/_template/
+```
+
+Browse registered games through the API:
+
+```bash
+curl -sS http://127.0.0.1:8000/games
+curl -sS http://127.0.0.1:8000/games/blotto
+curl -sS http://127.0.0.1:8000/games/blotto/metrics
+curl -sS http://127.0.0.1:8000/games/blotto/prompts
+```
+
+The Python SDK exposes the same directory:
+
+```python
+from arena.client import ArenaClient
+
+client = ArenaClient("http://127.0.0.1:8000")
+print(client.list_games())
+print(client.get_game_details("blotto"))
+print(client.get_game_metrics("blotto"))
+print(client.get_game_prompts("blotto"))
+```
+
+The MCP server also exposes directory tools:
+
+- `list_games`
+- `get_game_details`
+- `get_game_metrics`
+- `get_game_prompts`
 
 ## Core HTTP Flow
 
@@ -160,8 +226,8 @@ python3 examples/play_blotto_game.py
 Minimal SDK usage:
 
 ```python
-from blotto.client import ArenaClient
-from blotto.config import BlottoExperimentConfig
+from arena.client import ArenaClient
+from games.core.blotto.config import BlottoExperimentConfig
 
 base_url = "http://127.0.0.1:8000"
 
@@ -193,14 +259,14 @@ First, create a session with HTTP or the SDK. Then start an MCP server for each 
 ARENA_BASE_URL=http://127.0.0.1:8000 \
 ARENA_SESSION_ID=SESSION_ID \
 ARENA_SESSION_TOKEN=TOKEN_A \
-python3 -m blotto.mcp_server
+python3 -m arena.mcp_server
 ```
 
 ```bash
 ARENA_BASE_URL=http://127.0.0.1:8000 \
 ARENA_SESSION_ID=SESSION_ID \
 ARENA_SESSION_TOKEN=TOKEN_B \
-python3 -m blotto.mcp_server
+python3 -m arena.mcp_server
 ```
 
 An MCP-capable agent client can then call:
@@ -238,7 +304,7 @@ python3 -m pytest -q
 ```
 
 ```bash
-uvicorn blotto.main:app --reload
+uvicorn arena.main:app --reload
 curl -sS http://127.0.0.1:8000/health
 ```
 
@@ -253,6 +319,13 @@ python3 run_experiment.py --agent_a uniform --agent_b random --rounds 3
 For MCP import sanity:
 
 ```bash
-python3 -m py_compile blotto/mcp_server.py
-python3 -c "from blotto import mcp_server; print(bool(mcp_server.mcp))"
+python3 -m py_compile arena/mcp_server.py
+python3 -c "from arena import mcp_server; print(bool(mcp_server.mcp))"
+```
+
+For game directory sanity:
+
+```bash
+curl -sS http://127.0.0.1:8000/games
+curl -sS http://127.0.0.1:8000/games/blotto
 ```
