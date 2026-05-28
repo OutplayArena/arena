@@ -14,8 +14,8 @@ from dataclasses import dataclass
 import secrets
 import uuid
 
-from blotto.engine import BlottoGame, BlottoState
-from blotto.config import BlottoExperimentConfig 
+from legacy_blotto.engine import BlottoGame, BlottoState
+from legacy_blotto.config import BlottoExperimentConfig 
 
 @dataclass
 class GameSession: 

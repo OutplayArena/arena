@@ -1,30 +1,42 @@
-# Blotto Agent Arena
+# NashArena: Benchmarking Cooperative & Competitive Behavior of LLM Agents
 
-Blotto Agent Arena is a small research platform for running Colonel Blotto games between agents. The project started as a single game simulator and now has the pieces you need for a reusable game arena:
+NashArena is an open platform for studying how LLM-powered agents behave under strategic pressure — from purely competitive zero-sum games to cooperative public-goods dilemmas and everything in between. Researchers can register new games, pit agents against each other, and measure not just who won but *how* they played: did the agent cooperate then defect at the critical moment? Did it honor its promises? Did it exploit trust?
 
-- typed experiment configuration
-- a deterministic game engine
-- session state with per-player tokens
-- metrics and final results
-- a FastAPI server
-- a browser visualizer
-- a Python SDK
-- an MCP server so LLM agents can play through tools
+The platform treats games along a cooperative-to-competitive spectrum via its game ontology:
 
-The current implementation is intentionally in-memory and lightweight. It is good for local experiments, demos, smoke tests, and learning the platform shape before adding persistence, queues, auth, or hosted deployment.
+| Payoff structure | Example games | What it reveals |
+|---|---|---|
+| **Zero-sum** | Colonel Blotto | Strategic reasoning, resource allocation, exploitability |
+| **Mixed-motive** | Prisoner's Dilemma, Ultimatum Game | Trust, reciprocity, fairness, defection thresholds |
+| **Cooperative** | Public Goods Game | Free riding, contribution behavior, group welfare vs. self-interest |
+
+Behavioral metrics capture process, not just outcomes — commitment gaps, cooperative drift, free-rider scores, promise-break rates, role adherence under pressure, and more. Every session is fully reproducible with config hashing and seeded determinism.
+
+- pluggable game catalog with typed experiment configuration
+- a deterministic game engine supporting simultaneous, sequential, and multi-round play
+- process-level behavioral metrics alongside outcome metrics
+- session state with per-player tokens (agents are external HTTP clients, not framework-locked)
+- a FastAPI server, browser visualizer, Python SDK, and MCP server
+- safety-mode role assignments to probe alignment under competitive pressure
+
+The current implementation is intentionally in-memory and lightweight, designed for local experiments, demos, smoke tests, and understanding the platform before adding persistence, queues, auth, or hosted deployment.
 
 ## Project Layout
 
 ```text
-blotto/
-  agent.py       heuristic and optional LLM agents used by the legacy CLI path
+nash_arena/
   client.py      Python SDK for the FastAPI arena
-  config.py      experiment dataclasses, validation, JSON serialization, hashes
-  engine.py      Blotto game rules and state transitions
+  game_engine.py generic game engine contract
+  game_registry.py discovers the top-level games catalog
   main.py        FastAPI app and static visualizer server
   mcp_server.py  MCP tools for one player in one session
-  metrics.py     match metrics derived from game history
-  session.py     session wrapper, pending actions, player tokens
+  session.py     generic session wrapper, pending actions, player tokens
+
+games/
+  _template/     starter shape for future games
+  core/blotto/   first registered platform-maintained game:
+                 config, engine, metrics, prompts, agents, tests
+  community/     reserved for contributor games
 
 static/
   index.html     browser visualizer shell
@@ -46,7 +58,6 @@ planning/             planning notes for the broader platform
 From the repository root:
 
 ```bash
-cd ~/SciRes/blotto
 python3 -m pip install -e .
 ```
 
@@ -65,7 +76,7 @@ This is the main safety check. It exercises the platform modules plus the web AP
 Start the server:
 
 ```bash
-uvicorn blotto.main:app --reload
+uvicorn nash_arena.main:app --reload
 ```
 
 Then open:
@@ -73,8 +84,67 @@ Then open:
 - visualizer: http://127.0.0.1:8000/
 - API docs: http://127.0.0.1:8000/docs
 - health check: http://127.0.0.1:8000/health
+- game directory: http://127.0.0.1:8000/games
 
 The browser visualizer currently runs simple client-side demo agents: `uniform`, `random`, and `greedy`. More serious LLM agents should connect through HTTP, the Python SDK, or MCP so each player can act as an independent client.
+
+## Game Directory
+
+The repo separates platform code from game definitions:
+
+```text
+nash_arena/   platform package: API, sessions, SDK, MCP, registry
+games/        game catalog: configs, engines, prompts, metrics, agents
+legacy_blotto/ legacy/reference package kept for reference
+```
+
+Blotto is the first registered core game:
+
+```text
+games/core/blotto/
+  config.py
+  engine.py
+  metrics.py
+  agent.py
+  game.yaml
+  metrics.yaml
+  prompts.yaml
+  tests/
+```
+
+The template for future games lives at:
+
+```text
+games/_template/
+```
+
+Browse registered games through the API:
+
+```bash
+curl -sS http://127.0.0.1:8000/games
+curl -sS http://127.0.0.1:8000/games/blotto
+curl -sS http://127.0.0.1:8000/games/blotto/metrics
+curl -sS http://127.0.0.1:8000/games/blotto/prompts
+```
+
+The Python SDK exposes the same directory:
+
+```python
+from nash_arena.client import ArenaClient
+
+client = ArenaClient("http://127.0.0.1:8000")
+print(client.list_games())
+print(client.get_game_details("blotto"))
+print(client.get_game_metrics("blotto"))
+print(client.get_game_prompts("blotto"))
+```
+
+The MCP server also exposes directory tools:
+
+- `list_games`
+- `get_game_details`
+- `get_game_metrics`
+- `get_game_prompts`
 
 ## Core HTTP Flow
 
@@ -160,8 +230,8 @@ python3 examples/play_blotto_game.py
 Minimal SDK usage:
 
 ```python
-from blotto.client import ArenaClient
-from blotto.config import BlottoExperimentConfig
+from nash_arena.client import ArenaClient
+from games.core.blotto.config import BlottoExperimentConfig
 
 base_url = "http://127.0.0.1:8000"
 
@@ -193,14 +263,14 @@ First, create a session with HTTP or the SDK. Then start an MCP server for each 
 ARENA_BASE_URL=http://127.0.0.1:8000 \
 ARENA_SESSION_ID=SESSION_ID \
 ARENA_SESSION_TOKEN=TOKEN_A \
-python3 -m blotto.mcp_server
+python3 -m nash_arena.mcp_server
 ```
 
 ```bash
 ARENA_BASE_URL=http://127.0.0.1:8000 \
 ARENA_SESSION_ID=SESSION_ID \
 ARENA_SESSION_TOKEN=TOKEN_B \
-python3 -m blotto.mcp_server
+python3 -m nash_arena.mcp_server
 ```
 
 An MCP-capable agent client can then call:
@@ -238,7 +308,7 @@ python3 -m pytest -q
 ```
 
 ```bash
-uvicorn blotto.main:app --reload
+uvicorn nash_arena.main:app --reload
 curl -sS http://127.0.0.1:8000/health
 ```
 
@@ -253,6 +323,13 @@ python3 run_experiment.py --agent_a uniform --agent_b random --rounds 3
 For MCP import sanity:
 
 ```bash
-python3 -m py_compile blotto/mcp_server.py
-python3 -c "from blotto import mcp_server; print(bool(mcp_server.mcp))"
+python3 -m py_compile nash_arena/mcp_server.py
+python3 -c "from nash_arena import mcp_server; print(bool(mcp_server.mcp))"
+```
+
+For game directory sanity:
+
+```bash
+curl -sS http://127.0.0.1:8000/games
+curl -sS http://127.0.0.1:8000/games/blotto
 ```

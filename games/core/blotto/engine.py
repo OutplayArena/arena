@@ -1,7 +1,8 @@
 from copy import deepcopy
 from dataclasses import dataclass
 
-from blotto.metrics import compute_blotto_metrics
+from nash_arena.game_engine import GameEngine
+from .metrics import BlottoMetrics
 
 from .agent import Agent
 
@@ -26,7 +27,7 @@ class BlottoState:
 # Scoring: higher allocation wins that battlefield, 
 #          tie gives both 0.5 pts, 
 #          winner of round is whoever wins more battlefield points!
-class BlottoGame:
+class BlottoGame(GameEngine):
     def __init__(self, num_battlefields=5, total_resources=100, num_rounds=10):
         if num_battlefields < 1:
             raise ValueError("num_battlefields must be at least 1")
@@ -38,6 +39,8 @@ class BlottoGame:
         self.num_battlefields = num_battlefields
         self.total_resources = total_resources
         self.num_rounds = num_rounds
+        
+        self.metrics_engine = BlottoMetrics()
 
     @classmethod
     def from_config(cls, config):
@@ -151,7 +154,7 @@ class BlottoGame:
             "total_scores": dict(state.total_scores),
             "winner": winner,
             "history": list(state.history),
-            "metrics": compute_blotto_metrics(
+            "metrics": self.metrics_engine.compute(
                 history=state.history,
                 total_scores=state.total_scores
             )
@@ -163,6 +166,23 @@ class BlottoGame:
             results["config_hash"] = config_hash
 
         return results
+
+    def public_state(self, state, config, session_id, config_hash):
+        return {
+            "session_id": session_id,
+            "config_hash": config_hash,
+            "round": state.round_number,
+            "round_total": config.rounds,
+            "phase": state.phase,
+            "awaiting": list(state.awaiting),
+            "battlefields": [
+                {"id": b.id, "value": b.value}
+                for b in config.battlefields
+            ],
+            "budgets": {"A": config.budget[0], "B": config.budget[1]},
+            "total_scores": dict(state.total_scores),
+            "history": list(state.history),
+        }
         
     def play_round(self, action_a, action_b):
         if not self.validate_action(action_a):
@@ -246,6 +266,3 @@ class BlottoGame:
             "match_winner": match_winner,
             "history": full_history
         }
-    
-    
-    

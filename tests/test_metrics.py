@@ -1,7 +1,8 @@
 import pytest
 
-from blotto.engine import BlottoGame
-from blotto.metrics import (
+from games.core.blotto.engine import BlottoGame
+from games.core.blotto.metrics import (
+    BlottoMetrics,
     allocation_concentration,
     average_payoff,
     compute_blotto_metrics,
@@ -91,6 +92,12 @@ def test_compute_blotto_metrics_combines_all_metrics():
             "B": pytest.approx(0.6),
         },
     }
+
+
+def test_blotto_metrics_class_matches_function_wrapper():
+    assert BlottoMetrics().compute(sample_history(), {"A": 4.5, "B": 4.5}) == (
+        compute_blotto_metrics(sample_history(), {"A": 4.5, "B": 4.5})
+    )
 
 
 def test_compute_results_includes_metrics():

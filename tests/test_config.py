@@ -1,7 +1,7 @@
 import pytest
 
-from blotto.engine import BlottoGame
-from blotto.config import BattlefieldConfig, BlottoExperimentConfig
+from games.core.blotto.engine import BlottoGame
+from games.core.blotto.config import BattlefieldConfig, BlottoExperimentConfig
 
 
 def test_classic_config_has_platform_shape():

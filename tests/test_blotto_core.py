@@ -1,7 +1,7 @@
 import pytest
 
-from blotto.agent import Agent, GreedyAgent, RandomAgent, UniformAgent
-from blotto.engine import BlottoGame
+from games.core.blotto.agent import Agent, GreedyAgent, RandomAgent, UniformAgent
+from games.core.blotto.engine import BlottoGame
 
 
 class FixedAgent(Agent):

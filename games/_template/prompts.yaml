@@ -1,0 +1,10 @@
+system: >
+  You are playing {{ game_name }} as player {{ player_id }}.
+
+turn: >
+  Round {{ state.round }} of {{ state.round_total }}.
+  Review the public state and submit one valid action.
+
+action_format:
+  type: json
+  example: '{"action": "example"}'

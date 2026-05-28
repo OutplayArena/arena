@@ -1,0 +1,26 @@
+name: example_game
+version: "0.1.0"
+status: experimental
+author: "@your-handle"
+description: "Short description of the strategic game."
+tags:
+  - example
+ontology:
+  action_space: discrete
+  information_structure: simultaneous
+  payoff_structure: mixed_motive
+  timing: multi_round
+players:
+  min: 2
+  max: 2
+config_schema:
+  rounds:
+    type: integer
+    minimum: 1
+    default: 10
+example_config:
+  game: example_game
+  variant: default
+  players: 2
+  rounds: 10
+  seed: 42
