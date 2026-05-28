@@ -3,7 +3,7 @@ import json
 import httpx
 import pytest
 
-from arena.client import ArenaClient
+from nash_arena.client import ArenaClient
 from games.core.blotto.config import BlottoExperimentConfig
 
 

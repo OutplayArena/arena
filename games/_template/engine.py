@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from arena.game_engine import GameEngine
+from nash_arena.game_engine import GameEngine
 
 
 @dataclass

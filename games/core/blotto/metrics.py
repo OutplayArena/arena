@@ -1,4 +1,4 @@
-from arena.game_components.game_metrics import GameMetrics
+from nash_arena.game_components.game_metrics import GameMetrics
 
 class BlottoMetrics(GameMetrics):
     

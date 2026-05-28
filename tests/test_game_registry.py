@@ -3,7 +3,7 @@ import importlib.util
 
 import pytest
 
-from arena.game_registry import CATALOG_ROOT, GameRegistry, GameRegistryError
+from nash_arena.game_registry import CATALOG_ROOT, GameRegistry, GameRegistryError
 from games.core.blotto.engine import BlottoGame
 
 

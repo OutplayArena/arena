@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from arena.main import SESSIONS, app, bearer_token, config_from_request
+from nash_arena.main import SESSIONS, app, bearer_token, config_from_request
 
 
 def valid_payload(rounds=1):

@@ -1,7 +1,7 @@
 from copy import deepcopy
 from dataclasses import dataclass
 
-from arena.game_engine import GameEngine
+from nash_arena.game_engine import GameEngine
 from .metrics import BlottoMetrics
 
 from .agent import Agent

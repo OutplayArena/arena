@@ -1,7 +1,7 @@
 import pytest
 
 from games.core.blotto.config import BattlefieldConfig, BlottoExperimentConfig
-from arena.session import GameSession
+from nash_arena.session import GameSession
 
 
 def make_config(rounds=2):

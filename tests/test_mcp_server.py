@@ -1,7 +1,7 @@
 import pytest
 
-from arena import mcp_server
-from arena.client import ArenaClient
+from nash_arena import mcp_server
+from nash_arena.client import ArenaClient
 
 
 class FakeClient:

@@ -1,9 +1,9 @@
 import pytest
 
-from arena.game_components.game_agent import GameAgent
-from arena.game_components.game_config import GameConfig
-from arena.game_engine import GameEngine
-from arena.game_components.game_metrics import GameMetrics
+from nash_arena.game_components.game_agent import GameAgent
+from nash_arena.game_components.game_config import GameConfig
+from nash_arena.game_engine import GameEngine
+from nash_arena.game_components.game_metrics import GameMetrics
 from games.core.blotto.agent import Agent, UniformAgent
 from games.core.blotto.config import BlottoExperimentConfig
 from games.core.blotto.engine import BlottoGame

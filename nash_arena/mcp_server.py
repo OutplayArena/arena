@@ -1,8 +1,8 @@
 import os
 from mcp.server.fastmcp import FastMCP
-from arena.client import ArenaClient
+from nash_arena.client import ArenaClient
 
-mcp = FastMCP("blotto-arena")
+mcp = FastMCP("nash-arena")
 
 def required_env(name):
     value = os.environ.get(name)

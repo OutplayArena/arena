@@ -5,8 +5,8 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from arena.game_registry import GameRegistry, GameRegistryError
-from arena.session import GameSession
+from nash_arena.game_registry import GameRegistry, GameRegistryError
+from nash_arena.session import GameSession
 
 
 app = FastAPI(title="Blotto Agent Arena")

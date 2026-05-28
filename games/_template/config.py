@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from arena.game_components.game_config import GameConfig
+from nash_arena.game_components.game_config import GameConfig
 
 
 @dataclass(frozen=True)
