@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import hashlib
 import json
 
-from arena.game_config import GameConfig
+from arena.game_components.game_config import GameConfig
 
 
 # Allow for named Battlefield objects
