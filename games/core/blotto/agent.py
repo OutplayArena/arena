@@ -1,10 +1,31 @@
 import os
-import random 
+import random
 import re
 import ast
 import litellm
+from functools import lru_cache
+from pathlib import Path
+
+import yaml
 
 from arena.game_components.game_agent import GameAgent
+
+PROMPTS_PATH = Path(__file__).with_name("prompts.yaml")
+LLM_AGENT_PROMPT_KEY = "llm_agent"
+
+
+@lru_cache(maxsize=1)
+def load_prompt_templates():
+    with PROMPTS_PATH.open(encoding="utf-8") as prompt_file:
+        return yaml.safe_load(prompt_file) or {}
+
+
+def render_prompt_template(template, variables):
+    rendered = template
+    for name, value in variables.items():
+        rendered = rendered.replace(f"{{{{ {name} }}}}", str(value))
+        rendered = rendered.replace(f"{{{{{name}}}}}", str(value))
+    return rendered
 
 def balanced_allocation(num_battlefields, total_resources):
     base = total_resources // num_battlefields
@@ -95,21 +116,15 @@ class LLMAgent(Agent):
         )
 
     def build_prompt(self, history):
-        return f"""
-                You are playing Colonel Blotto.
-
-                Rules:
-                - There are {self.num_battlefields} battlefields.
-                - You have exactly {self.total_resources} troops.
-                - Return only a Python list of {self.num_battlefields} nonnegative integers.
-                - The list must sum to {self.total_resources}.
-                - Do not explain.
-
-                History:
-                {history}
-
-                Your allocation:
-                """
+        template = load_prompt_templates()[LLM_AGENT_PROMPT_KEY]
+        return render_prompt_template(
+            template,
+            {
+                "num_battlefields": self.num_battlefields,
+                "total_resources": self.total_resources,
+                "history": history,
+            },
+        )
     
     def parse_allocation(self, text):
         match = re.search(r"\[[^\]]+\]", text)
@@ -168,23 +183,16 @@ class LiteLLMAgent(Agent):
         raw_key = api_key or os.environ.get("LLM_API_KEY") or os.environ.get("OPENCODE_GO_API_KEY") or ""
         self.api_key = raw_key.strip()
 
-    # TODO: The prompt below should be part of the prompts.yaml. Variables should be parsed either via "replace" or by using jinja2.
     def build_prompt(self, history):
-        return f"""
-You are playing Colonel Blotto.
-
-Rules:
-- There are {self.num_battlefields} battlefields.
-- You have exactly {self.total_resources} troops.
-- Return only a Python list of {self.num_battlefields} nonnegative integers.
-- The list must sum to {self.total_resources}.
-- Do not explain.
-
-History:
-{history}
-
-Your allocation:
-"""
+        template = load_prompt_templates()[LLM_AGENT_PROMPT_KEY]
+        return render_prompt_template(
+            template,
+            {
+                "num_battlefields": self.num_battlefields,
+                "total_resources": self.total_resources,
+                "history": history,
+            },
+        )
 
     def _fallback_allocation(self):
         return balanced_allocation(self.num_battlefields, self.total_resources)

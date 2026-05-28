@@ -20,3 +20,18 @@ turn: >
 action_format:
   type: json_array
   example: "[4, 3, 3]"
+
+llm_agent: |
+  You are playing Colonel Blotto.
+
+  Rules:
+  - There are {{ num_battlefields }} battlefields.
+  - You have exactly {{ total_resources }} troops.
+  - Return only a Python list of {{ num_battlefields }} nonnegative integers.
+  - The list must sum to {{ total_resources }}.
+  - Do not explain.
+
+  History:
+  {{ history }}
+
+  Your allocation:
