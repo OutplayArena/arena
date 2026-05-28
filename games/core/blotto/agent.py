@@ -168,6 +168,7 @@ class LiteLLMAgent(Agent):
         raw_key = api_key or os.environ.get("LLM_API_KEY") or os.environ.get("OPENCODE_GO_API_KEY") or ""
         self.api_key = raw_key.strip()
 
+    # TODO: The prompt below should be part of the prompts.yaml. Variables should be parsed either via "replace" or by using jinja2.
     def build_prompt(self, history):
         return f"""
 You are playing Colonel Blotto.

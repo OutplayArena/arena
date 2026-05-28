@@ -1,11 +1,12 @@
 from arena.game_components.game_metrics import GameMetrics
 
 class BlottoMetrics(GameMetrics):
+    
     def compute(self, history, total_scores):
-        payoff_average = average_payoff(history, total_scores)
-        win_counts = round_win_counts(history)
-        win_rate = round_win_rate(history, win_counts)
-        concentration = allocation_concentration(history)
+        payoff_average = self.average_payoff(history, total_scores)
+        win_counts = self.round_win_counts(history)
+        win_rate = self.round_win_rate(history, win_counts)
+        concentration = self.allocation_concentration(history)
 
         return {
             "total_payoff": dict(total_scores),
@@ -15,17 +16,14 @@ class BlottoMetrics(GameMetrics):
             "allocation_concentration": concentration,
         }
 
-    def compute_blotto_metrics(history, total_scores):
-        return BlottoMetrics().compute(history, total_scores)
-
-    def average_payoff(history, total_scores):
+    def average_payoff(self, history, total_scores):
         num_rounds = len(history)
         if num_rounds == 0:
             return {player: 0 for player in total_scores}
 
         return {player: score / num_rounds for player, score in total_scores.items()}
 
-    def round_win_counts(history):
+    def round_win_counts(self, history):
         counts = {"A": 0, "B": 0, "Tie": 0}
         for entry in history:
             winner = entry.get("winner")
@@ -35,14 +33,14 @@ class BlottoMetrics(GameMetrics):
 
         return counts
 
-    def round_win_rate(history, round_win_counts):
+    def round_win_rate(self, history, round_win_counts):
         num_rounds = len(history)
         if num_rounds == 0:
             return {player: 0 for player in round_win_counts}
 
         return {player: count / num_rounds for player, count in round_win_counts.items()}
 
-    def allocation_concentration(history):
+    def allocation_concentration(self, history):
         totals = {"A": 0.0, "B": 0.0}
         counts = {"A": 0, "B": 0}
 

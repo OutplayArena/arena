@@ -2,7 +2,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 
 from arena.game_engine import GameEngine
-from .metrics import compute_blotto_metrics
+from .metrics import BlottoMetrics
 
 from .agent import Agent
 
@@ -39,6 +39,8 @@ class BlottoGame(GameEngine):
         self.num_battlefields = num_battlefields
         self.total_resources = total_resources
         self.num_rounds = num_rounds
+        
+        self.metrics_engine = BlottoMetrics()
 
     @classmethod
     def from_config(cls, config):
@@ -152,7 +154,7 @@ class BlottoGame(GameEngine):
             "total_scores": dict(state.total_scores),
             "winner": winner,
             "history": list(state.history),
-            "metrics": compute_blotto_metrics(
+            "metrics": self.metrics_engine.compute(
                 history=state.history,
                 total_scores=state.total_scores
             )
@@ -264,6 +266,3 @@ class BlottoGame(GameEngine):
             "match_winner": match_winner,
             "history": full_history
         }
-    
-    
-    
