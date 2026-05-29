@@ -9,16 +9,21 @@ class ArenaClient:
         token=None,
         timeout=10.0,
         http_client=None,
+        game_api_prefix: str="",
+        internal_api_token: str | None=None,
     ):
         self.base_url = base_url.rstrip("/")
         self.session_id = session_id
         self.token = token
         self.timeout = timeout
         self.http_client = http_client or httpx.Client(timeout=timeout)
+        self.game_api_prefix = game_api_prefix.rstrip("/")
+        self.internal_api_token = internal_api_token
 
     def create_experiment(self, config):
         response = self.http_client.post(
-            f"{self.base_url}/experiment",
+            f"{self.base_url}{self._game_path('/experiment')}",
+            headers=self._internal_headers(),
             json=self._config_payload(config),
             timeout=self.timeout,
         )
@@ -27,7 +32,8 @@ class ArenaClient:
     def get_state(self):
         session_id = self._require_session_id()
         response = self.http_client.get(
-            f"{self.base_url}/session/{session_id}/state",
+            f"{self.base_url}{self._game_path(f'/session/{session_id}/state')}",
+            headers=self._internal_headers(),
             timeout=self.timeout,
         )
         return self._json_or_raise(response)
@@ -36,8 +42,11 @@ class ArenaClient:
         session_id = self._require_session_id()
         token = self._require_token()
         response = self.http_client.post(
-            f"{self.base_url}/session/{session_id}/action",
-            headers={"Authorization": f"Bearer {token}"},
+            f"{self.base_url}{self._game_path(f'/session/{session_id}/action')}",
+            headers={
+                **self._internal_headers(),
+                "Authorization": f"Bearer {token}",
+            },
             json={"allocation": allocation},
             timeout=self.timeout,
         )
@@ -46,7 +55,8 @@ class ArenaClient:
     def get_results(self):
         session_id = self._require_session_id()
         response = self.http_client.get(
-            f"{self.base_url}/session/{session_id}/results",
+            f"{self.base_url}{self._game_path(f'/session/{session_id}/results')}",
+            headers=self._internal_headers(),
             timeout=self.timeout,
         )
         return self._json_or_raise(response)
@@ -117,3 +127,11 @@ class ArenaClient:
     def _json_or_raise(self, response):
         response.raise_for_status()
         return response.json()
+
+    def _game_path(self, path: str) -> str:
+        return f"{self.game_api_prefix}{path}"
+
+    def _internal_headers(self) -> dict[str, str]:
+        if not self.internal_api_token:
+            return {}
+        return {"X-Nash-Arena-Internal-Token": self.internal_api_token}

@@ -28,6 +28,29 @@ def test_create_experiment_posts_config_dict_to_endpoint():
     assert json.loads(requests[0].content) == {"game": "blotto"}
 
 
+def test_internal_client_posts_config_to_prefixed_endpoint_with_token():
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(200, json={"session_id": "s1"})
+
+    client = ArenaClient(
+        "http://arena.test/",
+        http_client=mock_client(handler),
+        game_api_prefix="/api/game",
+        internal_api_token="secret",
+    )
+
+    result = client.create_experiment({"game": "blotto"})
+
+    assert result == {"session_id": "s1"}
+    assert requests[0].method == "POST"
+    assert requests[0].url.path == "/api/game/experiment"
+    assert requests[0].headers["X-Nash-Arena-Internal-Token"] == "secret"
+    assert json.loads(requests[0].content) == {"game": "blotto"}
+
+
 def test_create_experiment_serializes_config_object():
     requests = []
     config = BlottoExperimentConfig.classic(
@@ -69,6 +92,27 @@ def test_get_state_requires_session_id_and_gets_state_endpoint():
     assert requests[0].url.path == "/session/s1/state"
 
 
+def test_internal_client_gets_prefixed_state_with_token():
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(200, json={"phase": "awaiting_action"})
+
+    client = ArenaClient(
+        "http://arena.test",
+        session_id="s1",
+        http_client=mock_client(handler),
+        game_api_prefix="/api/game",
+        internal_api_token="secret",
+    )
+
+    assert client.get_state() == {"phase": "awaiting_action"}
+    assert requests[0].method == "GET"
+    assert requests[0].url.path == "/api/game/session/s1/state"
+    assert requests[0].headers["X-Nash-Arena-Internal-Token"] == "secret"
+
+
 def test_submit_action_requires_token_and_posts_bearer_action():
     requests = []
 
@@ -98,6 +142,30 @@ def test_submit_action_requires_token_and_posts_bearer_action():
     assert json.loads(requests[0].content) == {"allocation": [10, 0, 0]}
 
 
+def test_internal_client_posts_prefixed_action_with_internal_and_bearer_tokens():
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(200, json={"awaiting": ["B"]})
+
+    client = ArenaClient(
+        "http://arena.test",
+        session_id="s1",
+        token="tok_a",
+        http_client=mock_client(handler),
+        game_api_prefix="/api/game",
+        internal_api_token="secret",
+    )
+
+    assert client.submit_action([10, 0, 0]) == {"awaiting": ["B"]}
+    assert requests[0].method == "POST"
+    assert requests[0].url.path == "/api/game/session/s1/action"
+    assert requests[0].headers["X-Nash-Arena-Internal-Token"] == "secret"
+    assert requests[0].headers["Authorization"] == "Bearer tok_a"
+    assert json.loads(requests[0].content) == {"allocation": [10, 0, 0]}
+
+
 def test_get_results_gets_results_endpoint():
     requests = []
 
@@ -114,6 +182,27 @@ def test_get_results_gets_results_endpoint():
     assert client.get_results() == {"winner": "A"}
     assert requests[0].method == "GET"
     assert requests[0].url.path == "/session/s1/results"
+
+
+def test_internal_client_gets_prefixed_results_with_token():
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(200, json={"winner": "A"})
+
+    client = ArenaClient(
+        "http://arena.test",
+        session_id="s1",
+        http_client=mock_client(handler),
+        game_api_prefix="/api/game",
+        internal_api_token="secret",
+    )
+
+    assert client.get_results() == {"winner": "A"}
+    assert requests[0].method == "GET"
+    assert requests[0].url.path == "/api/game/session/s1/results"
+    assert requests[0].headers["X-Nash-Arena-Internal-Token"] == "secret"
 
 
 def test_game_directory_methods_get_expected_endpoints():

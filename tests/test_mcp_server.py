@@ -48,6 +48,7 @@ def test_arena_client_reads_environment(monkeypatch):
     monkeypatch.setenv("ARENA_BASE_URL", "http://arena.test")
     monkeypatch.setenv("ARENA_SESSION_ID", "session-1")
     monkeypatch.setenv("ARENA_SESSION_TOKEN", "tok-a")
+    monkeypatch.setenv("NASH_ARENA_INTERNAL_API_TOKEN", "secret")
 
     client = mcp_server.arena_client()
 
@@ -55,16 +56,43 @@ def test_arena_client_reads_environment(monkeypatch):
     assert client.base_url == "http://arena.test"
     assert client.session_id == "session-1"
     assert client.token == "tok-a"
+    assert client.game_api_prefix == "/api/game"
+    assert client.internal_api_token == "secret"
+
+
+def test_arena_client_allows_game_api_prefix_override(monkeypatch):
+    monkeypatch.setenv("ARENA_BASE_URL", "http://arena.test")
+    monkeypatch.setenv("ARENA_SESSION_ID", "session-1")
+    monkeypatch.setenv("ARENA_SESSION_TOKEN", "tok-a")
+    monkeypatch.setenv("NASH_ARENA_GAME_API_PREFIX", "/custom/game")
+    monkeypatch.setenv("NASH_ARENA_INTERNAL_API_TOKEN", "secret")
+
+    client = mcp_server.arena_client()
+
+    assert client.game_api_prefix == "/custom/game"
+    assert client.internal_api_token == "secret"
 
 
 def test_arena_client_uses_default_base_url(monkeypatch):
     monkeypatch.delenv("ARENA_BASE_URL", raising=False)
+    monkeypatch.delenv("NASH_ARENA_GAME_API_PREFIX", raising=False)
     monkeypatch.setenv("ARENA_SESSION_ID", "session-1")
     monkeypatch.setenv("ARENA_SESSION_TOKEN", "tok-a")
+    monkeypatch.setenv("NASH_ARENA_INTERNAL_API_TOKEN", "secret")
 
     client = mcp_server.arena_client()
 
     assert client.base_url == "http://127.0.0.1:8000"
+    assert client.game_api_prefix == "/api/game"
+
+
+def test_arena_client_requires_internal_api_token(monkeypatch):
+    monkeypatch.setenv("ARENA_SESSION_ID", "session-1")
+    monkeypatch.setenv("ARENA_SESSION_TOKEN", "tok-a")
+    monkeypatch.delenv("NASH_ARENA_INTERNAL_API_TOKEN", raising=False)
+
+    with pytest.raises(RuntimeError, match="NASH_ARENA_INTERNAL_API_TOKEN is required"):
+        mcp_server.arena_client()
 
 
 def test_get_game_state_calls_client(monkeypatch):
