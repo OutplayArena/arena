@@ -89,6 +89,13 @@ class ArenaClient:
         )
         return self._json_or_raise(response)
 
+    def get_game_skill(self, game):
+        response = self.http_client.get(
+            f"{self.base_url}/games/{game}/skill",
+            timeout=self.timeout,
+        )
+        return self._json_or_raise(response)
+
     @classmethod
     def for_player(
         cls,

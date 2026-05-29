@@ -34,4 +34,11 @@ def create_catalog_router(game_registry):
         except GameRegistryError as exc:
             raise game_registry_error(exc) from exc
 
+    @router.get("/games/{name}/skill")
+    def get_game_skill(name: str):
+        try:
+            return {"game": name, "skill": game_registry.get_game_skill(name)}
+        except GameRegistryError as exc:
+            raise game_registry_error(exc) from exc
+
     return router

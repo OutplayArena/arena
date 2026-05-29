@@ -63,5 +63,10 @@ def get_game_prompts(game: str) -> dict:
     """Get default prompt templates and action format for a game."""
     return arena_client().get_game_prompts(game)
 
+@mcp.tool()
+def download_game_skill(game: str) -> dict:
+    """Download agent instructions for playing a game through MCP tools."""
+    return arena_client().get_game_skill(game)
+
 if __name__ == "__main__":
     mcp.run()
