@@ -66,7 +66,7 @@ Optional local or API LLM agents use the `transformers` and `litellm` dependenci
 ## Run Tests
 
 ```bash
-python3 -m pytest -q
+uv run pytest # Add -q for lower verbosity
 ```
 
 This is the main safety check. It exercises the platform modules plus the web API and SDK.

@@ -61,10 +61,10 @@ def test_registry_builds_blotto_config_and_game_from_catalog():
 
 
 def test_arena_package_does_not_own_blotto_specific_modules():
-    assert importlib.util.find_spec("arena.config") is None
-    assert importlib.util.find_spec("arena.engine") is None
-    assert importlib.util.find_spec("arena.metrics") is None
-    assert importlib.util.find_spec("arena.agent") is None
+    assert importlib.util.find_spec("nash_arena.config") is None
+    assert importlib.util.find_spec("nash_arena.engine") is None
+    assert importlib.util.find_spec("nash_arena.metrics") is None
+    assert importlib.util.find_spec("nash_arena.agent") is None
 
 
 def test_registry_rejects_unknown_game():

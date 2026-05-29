@@ -5,10 +5,13 @@ import ast
 import litellm
 from functools import lru_cache
 from pathlib import Path
+from transformers import pipeline
 
 import yaml
 
 from nash_arena.game_components.game_agent import GameAgent
+from nash_arena.reasoning import ReasoningModerator
+
 
 PROMPTS_PATH = Path(__file__).with_name("prompts.yaml")
 LLM_AGENT_PROMPT_KEY = "llm_agent"
@@ -27,6 +30,19 @@ def render_prompt_template(template, variables):
         rendered = rendered.replace(f"{{{{{name}}}}}", str(value))
     return rendered
 
+
+def render_llm_agent_prompt(num_battlefields, total_resources, history):
+    template = load_prompt_templates()[LLM_AGENT_PROMPT_KEY]
+    return render_prompt_template(
+        template,
+        {
+            "num_battlefields": num_battlefields,
+            "total_resources": total_resources,
+            "history": history,
+        },
+    )
+
+
 def balanced_allocation(num_battlefields, total_resources):
     base = total_resources // num_battlefields
     allocation = [base] * num_battlefields
@@ -37,17 +53,17 @@ def balanced_allocation(num_battlefields, total_resources):
 class Agent(GameAgent):
     def __init__(self, name):
         self.name = name
-        
+
     def act(self, history):
         allocation = []
         return allocation
-    
+
 class UniformAgent(Agent):
     def __init__(self, num_battlefields=5, total_resources=100):
         super().__init__("UniformAgent")
         self.num_battlefields = num_battlefields
         self.total_resources = total_resources
-        
+
     def act(self, history):
         return balanced_allocation(self.num_battlefields, self.total_resources)
 
@@ -56,14 +72,14 @@ class RandomAgent(Agent):
         super().__init__("RandomAgent")
         self.num_battlefields = num_battlefields
         self.total_resources = total_resources
-        
+
     def act(self, history):
         cuts = sorted(random.sample(range(self.total_resources+1), self.num_battlefields-1))
         values = [cuts[0]]
-        
+
         for i in range(1, len(cuts)):
             values.append(cuts[i] - cuts[i-1])
-            
+
         values.append(self.total_resources - cuts[-1])
         return values
 
@@ -75,39 +91,41 @@ class GreedyAgent(Agent):
         super().__init__("GreedyAgent")
         self.num_battlefields = num_battlefields
         self.total_resources = total_resources
-    
+
     def act(self, history):
         if len(history) == 0:
             return balanced_allocation(self.num_battlefields, self.total_resources)
-        
+
         last_round = history[-1]
         opponent_action = last_round["opponent_action"]
-        
+
         allocation = [x+1 for x in opponent_action]
         total = sum(allocation)
-        
+
         while total > self.total_resources:
             max_index = allocation.index(max(allocation))
             allocation[max_index] -= 1
             total -= 1
-            
+
         while total < self.total_resources:
             min_index = allocation.index(min(allocation))
             allocation[min_index] += 1
             total += 1
-        
+
         return allocation
 
 class LLMAgent(Agent):
-    def __init__(self, 
-                 num_battlefields=5, 
-                 total_resources=100, 
-                 model_name="Qwen/Qwen3.5-0.8B"):
+    def __init__(self,
+                 num_battlefields=5,
+                 total_resources=100,
+                 model_name="Qwen/Qwen3.5-0.8B",
+                 temperature=0.7,
+                 reasoning=None):
         super().__init__("LLMAgent")
         self.num_battlefields = num_battlefields
         self.total_resources = total_resources
-
-        from transformers import pipeline
+        self.temperature = temperature
+        self.reasoning = reasoning or ReasoningModerator(model_name)
 
         self.generator = pipeline(
             "text-generation",
@@ -116,16 +134,16 @@ class LLMAgent(Agent):
         )
 
     def build_prompt(self, history):
-        template = load_prompt_templates()[LLM_AGENT_PROMPT_KEY]
-        return render_prompt_template(
-            template,
-            {
-                "num_battlefields": self.num_battlefields,
-                "total_resources": self.total_resources,
-                "history": history,
-            },
+        base_prompt = render_llm_agent_prompt(
+            self.num_battlefields,
+            self.total_resources,
+            history,
         )
-    
+        reasoning = getattr(self, "reasoning", None)
+        if reasoning is None:
+            return base_prompt
+        return reasoning.build_system_prompt(base_prompt)
+
     def parse_allocation(self, text):
         match = re.search(r"\[[^\]]+\]", text)
 
@@ -156,14 +174,15 @@ class LLMAgent(Agent):
 
     def act(self, history):
         prompt = self.build_prompt(history)
-        
+        limits = self.reasoning.get_limits()
+
         output = self.generator(
             prompt,
-            max_new_tokens=50,
+            max_new_tokens=limits["max_tokens"],
             do_sample=True,
-            temperature=0.7
+            temperature=self.temperature
         )[0]["generated_text"]
-        
+
         response = output[len(prompt):]
         return self.parse_allocation(response)
 
@@ -174,7 +193,9 @@ class LiteLLMAgent(Agent):
                  total_resources=100,
                  model_name=None,
                  api_base=None,
-                 api_key=None):
+                 api_key=None,
+                 temperature=0.7,
+                 reasoning=None):
         super().__init__("LiteLLMAgent")
         self.num_battlefields = num_battlefields
         self.total_resources = total_resources
@@ -182,17 +203,19 @@ class LiteLLMAgent(Agent):
         self.api_base = api_base or os.environ.get("LLM_API_BASE", "http://127.0.0.1:11434/v1")
         raw_key = api_key or os.environ.get("LLM_API_KEY") or os.environ.get("OPENCODE_GO_API_KEY") or ""
         self.api_key = raw_key.strip()
+        self.temperature = temperature
+        self.reasoning = reasoning or ReasoningModerator(self.model_name)
 
     def build_prompt(self, history):
-        template = load_prompt_templates()[LLM_AGENT_PROMPT_KEY]
-        return render_prompt_template(
-            template,
-            {
-                "num_battlefields": self.num_battlefields,
-                "total_resources": self.total_resources,
-                "history": history,
-            },
+        base_prompt = render_llm_agent_prompt(
+            self.num_battlefields,
+            self.total_resources,
+            history,
         )
+        reasoning = getattr(self, "reasoning", None)
+        if reasoning is None:
+            return base_prompt
+        return reasoning.build_system_prompt(base_prompt)
 
     def _fallback_allocation(self):
         return balanced_allocation(self.num_battlefields, self.total_resources)
@@ -220,15 +243,28 @@ class LiteLLMAgent(Agent):
 
     def act(self, history):
         prompt = self.build_prompt(history)
+        limits = self.reasoning.get_limits()
         kwargs = dict(
             model=f"openai/{self.model_name}",
             messages=[{"role": "user", "content": prompt}],
             api_base=self.api_base,
-            max_tokens=50,
-            temperature=0.7,
+            max_tokens=limits["max_tokens"],
+            temperature=self.temperature,
+            **self.reasoning.get_api_params(),
         )
         if self.api_key:
             kwargs["api_key"] = self.api_key
         response = litellm.completion(**kwargs)
-        text = response.choices[0].message.content
-        return self.parse_allocation(text)
+        message = response.choices[0].message
+        response_data = {
+            "choices": [
+                {
+                    "message": {
+                        "content": message.content,
+                        "reasoning_content": getattr(message, "reasoning_content", ""),
+                    }
+                }
+            ]
+        }
+        content, reasoning = self.reasoning.extract_response_text(response_data)
+        return self.parse_allocation(content or reasoning)
