@@ -333,6 +333,109 @@ def test_frontend_games_route_lists_registered_blotto_game():
     assert games[0]["players"] == {"min": 2, "max": 2}
 
 
+def test_stats_routes_require_user_api_token(monkeypatch):
+    monkeypatch.setenv("NASH_ARENA_USER_API_TOKEN", "user-secret")
+    client = TestClient(app)
+
+    response = client.get("/api/stats/experiments")
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "missing bearer token"
+
+
+def test_stats_routes_reject_invalid_user_api_token(monkeypatch):
+    monkeypatch.setenv("NASH_ARENA_USER_API_TOKEN", "user-secret")
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/stats/experiments",
+        headers={"Authorization": "Bearer wrong"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "invalid user API token"
+
+
+def test_stats_routes_list_experiments(monkeypatch):
+    monkeypatch.setenv("NASH_ARENA_USER_API_TOKEN", "user-secret")
+    client = TestClient(app)
+    created = client.post("/api/frontend/experiment", json=valid_payload(rounds=2)).json()
+
+    response = client.get(
+        "/api/stats/experiments",
+        headers={"Authorization": "Bearer user-secret"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "session_id": created["session_id"],
+            "config_hash": created["config_hash"],
+            "phase": "awaiting_action",
+            "round": 1,
+            "round_total": 2,
+        }
+    ]
+
+
+def test_stats_routes_get_experiment_detail(monkeypatch):
+    monkeypatch.setenv("NASH_ARENA_USER_API_TOKEN", "user-secret")
+    client = TestClient(app)
+    created = client.post("/api/frontend/experiment", json=valid_payload()).json()
+
+    response = client.get(
+        f"/api/stats/experiments/{created['session_id']}",
+        headers={"Authorization": "Bearer user-secret"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["session_id"] == created["session_id"]
+    assert body["config_hash"] == created["config_hash"]
+    assert body["state"]["phase"] == "awaiting_action"
+    assert "results" not in body
+
+
+def test_stats_routes_metrics_before_completion_returns_conflict(monkeypatch):
+    monkeypatch.setenv("NASH_ARENA_USER_API_TOKEN", "user-secret")
+    client = TestClient(app)
+    created = client.post("/api/frontend/experiment", json=valid_payload()).json()
+
+    response = client.get(
+        f"/api/stats/experiments/{created['session_id']}/metrics",
+        headers={"Authorization": "Bearer user-secret"},
+    )
+
+    assert response.status_code == 409
+    assert "complete" in response.json()["detail"]
+
+
+def test_stats_routes_metrics_after_completion(monkeypatch):
+    monkeypatch.setenv("NASH_ARENA_USER_API_TOKEN", "user-secret")
+    client = TestClient(app)
+    created = client.post("/api/frontend/experiment", json=valid_payload(rounds=1)).json()
+    session_id = created["session_id"]
+
+    client.post(
+        f"/api/frontend/session/{session_id}/action",
+        headers={"Authorization": f"Bearer {created['player_tokens']['A']}"},
+        json={"allocation": [10, 0, 0]},
+    )
+    client.post(
+        f"/api/frontend/session/{session_id}/action",
+        headers={"Authorization": f"Bearer {created['player_tokens']['B']}"},
+        json={"allocation": [0, 5, 5]},
+    )
+
+    response = client.get(
+        f"/api/stats/experiments/{session_id}/metrics",
+        headers={"Authorization": "Bearer user-secret"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["total_payoff"] == {"A": 1, "B": 2}
+
+
 def test_get_game_directory_details_metrics_and_prompts():
     client = TestClient(app)
 

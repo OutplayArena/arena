@@ -34,7 +34,7 @@ internal_game_router = create_game_router(
     require_internal_token=True,
 )
 frontend_router = create_frontend_router(GAME_REGISTRY, SESSIONS)
-stats_router = create_stats_router()
+stats_router = create_stats_router(SESSIONS)
 
 app.include_router(catalog_router)
 app.include_router(catalog_router, prefix="/api/catalog")
