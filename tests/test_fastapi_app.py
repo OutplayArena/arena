@@ -49,10 +49,35 @@ def test_create_experiment_returns_session_and_tokens():
     assert data["player_tokens"]["A"] != data["player_tokens"]["B"]
 
 
-def test_prefixed_game_routes_create_and_play_session():
+def test_prefixed_game_routes_require_internal_token(monkeypatch):
+    monkeypatch.setenv("NASH_ARENA_INTERNAL_API_TOKEN", "secret")
     client = TestClient(app)
 
-    created = client.post("/api/game/experiment", json=valid_payload(rounds=1))
+    response = client.post("/api/game/experiment", json=valid_payload())
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "invalid internal API token"
+
+
+def test_unprefixed_game_routes_do_not_require_internal_token(monkeypatch):
+    monkeypatch.setenv("NASH_ARENA_INTERNAL_API_TOKEN", "secret")
+    client = TestClient(app)
+
+    response = client.post("/experiment", json=valid_payload())
+
+    assert response.status_code == 200
+
+
+def test_prefixed_game_routes_create_and_play_session_with_internal_token(monkeypatch):
+    monkeypatch.setenv("NASH_ARENA_INTERNAL_API_TOKEN", "secret")
+    client = TestClient(app)
+    internal_headers = {"X-Nash-Arena-Internal-Token": "secret"}
+
+    created = client.post(
+        "/api/game/experiment",
+        headers=internal_headers,
+        json=valid_payload(rounds=1),
+    )
 
     assert created.status_code == 200
     data = created.json()
@@ -60,25 +85,37 @@ def test_prefixed_game_routes_create_and_play_session():
     token_a = data["player_tokens"]["A"]
     token_b = data["player_tokens"]["B"]
 
-    state = client.get(f"/api/game/session/{session_id}/state")
+    state = client.get(
+        f"/api/game/session/{session_id}/state",
+        headers=internal_headers,
+    )
     assert state.status_code == 200
     assert state.json()["awaiting"] == ["A", "B"]
 
     first = client.post(
         f"/api/game/session/{session_id}/action",
-        headers={"Authorization": f"Bearer {token_a}"},
+        headers={
+            **internal_headers,
+            "Authorization": f"Bearer {token_a}",
+        },
         json={"allocation": [10, 0, 0]},
     )
     second = client.post(
         f"/api/game/session/{session_id}/action",
-        headers={"Authorization": f"Bearer {token_b}"},
+        headers={
+            **internal_headers,
+            "Authorization": f"Bearer {token_b}",
+        },
         json={"allocation": [0, 5, 5]},
     )
 
     assert first.status_code == 200
     assert second.status_code == 200
 
-    results = client.get(f"/api/game/session/{session_id}/results")
+    results = client.get(
+        f"/api/game/session/{session_id}/results",
+        headers=internal_headers,
+    )
     assert results.status_code == 200
     assert results.json()["winner"] == "B"
 
