@@ -30,6 +30,9 @@ class FakeClient:
     def get_game_prompts(self, game):
         return {"game": game, "action_format": {"type": "json_array"}}
 
+    def get_game_skill(self, game):
+        return {"game": game, "skill": "Use MCP."}
+
 
 def test_required_env_returns_value(monkeypatch):
     monkeypatch.setenv("ARENA_SESSION_ID", "session-1")
@@ -127,4 +130,14 @@ def test_game_directory_tools_call_client(monkeypatch):
     assert mcp_server.get_game_prompts("blotto") == {
         "game": "blotto",
         "action_format": {"type": "json_array"},
+    }
+
+
+def test_download_game_skill_calls_client(monkeypatch):
+    fake = FakeClient()
+    monkeypatch.setattr(mcp_server, "arena_client", lambda: fake)
+
+    assert mcp_server.download_game_skill("blotto") == {
+        "game": "blotto",
+        "skill": "Use MCP.",
     }

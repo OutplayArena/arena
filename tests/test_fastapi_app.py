@@ -303,6 +303,20 @@ def test_get_game_directory_details_metrics_and_prompts():
     assert prompts.json()["action_format"]["type"] == "json_array"
 
 
+def test_get_game_skill_routes():
+    client = TestClient(app)
+
+    direct = client.get("/games/blotto/skill")
+    prefixed = client.get("/api/catalog/games/blotto/skill")
+
+    assert direct.status_code == 200
+    assert prefixed.status_code == 200
+    assert direct.json()["game"] == "blotto"
+    assert "submit_action" in direct.json()["skill"]
+    assert "Use MCP tools only." in direct.json()["skill"]
+    assert prefixed.json() == direct.json()
+
+
 def test_get_unknown_game_returns_not_found():
     client = TestClient(app)
 

@@ -227,6 +227,23 @@ def test_game_directory_methods_get_expected_endpoints():
     ]
 
 
+def test_get_game_skill_gets_expected_endpoint():
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(200, json={"game": "blotto", "skill": "Use MCP."})
+
+    client = ArenaClient("http://arena.test", http_client=mock_client(handler))
+
+    assert client.get_game_skill("blotto") == {
+        "game": "blotto",
+        "skill": "Use MCP.",
+    }
+    assert requests[0].method == "GET"
+    assert requests[0].url.path == "/games/blotto/skill"
+
+
 def test_for_player_builds_session_bound_client():
     created = {
         "session_id": "s1",
