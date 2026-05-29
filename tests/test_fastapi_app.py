@@ -68,6 +68,20 @@ def test_unprefixed_game_routes_are_not_mounted(monkeypatch):
     assert response.status_code == 405
 
 
+def test_openapi_only_exposes_segmented_game_surfaces():
+    client = TestClient(app)
+
+    paths = set(client.get("/openapi.json").json()["paths"])
+
+    assert "/experiment" not in paths
+    assert "/session/{session_id}/state" not in paths
+    assert "/session/{session_id}/action" not in paths
+    assert "/session/{session_id}/results" not in paths
+    assert "/api/game/experiment" in paths
+    assert "/api/frontend/experiment" in paths
+    assert "/api/stats/experiments" in paths
+
+
 def test_prefixed_game_routes_create_and_play_session_with_internal_token(monkeypatch):
     monkeypatch.setenv("NASH_ARENA_INTERNAL_API_TOKEN", "secret")
     client = TestClient(app)
