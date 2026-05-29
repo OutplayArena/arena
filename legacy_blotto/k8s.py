@@ -42,7 +42,7 @@ class LocalMCPOrchestrator(MCPOrchestrator):
         })
 
         proc = await asyncio.create_subprocess_exec(
-            "python3", "-m", "blotto.mcp_server",
+            "python3", "-m", "legacy_blotto.mcp_server",
             env=env,
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,

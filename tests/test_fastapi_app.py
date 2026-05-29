@@ -1,8 +1,10 @@
+import os
+os.environ["API_PREFIX"] = ""
+
 import pytest
 from fastapi.testclient import TestClient
 
-from blotto.main import app, bearer_token, config_from_request
-from blotto.main import ExperimentRequest
+from nash_arena.main import SESSIONS, app, bearer_token, config_from_request
 
 
 class FakeResult:
@@ -31,34 +33,6 @@ class FakeDb:
         pass
 
 
-def _db_generator(db):
-    yield db
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    from blotto.db import get_db
-
-    db = FakeDb()
-
-    async def override_get_db():
-        gen = _db_generator(db)
-        value = next(gen)
-        try:
-            yield value
-        finally:
-            try:
-                next(gen)
-            except StopIteration:
-                pass
-
-    app.dependency_overrides[get_db] = override_get_db
-
-    yield
-
-    app.dependency_overrides.pop(get_db, None)
-
-
 def valid_payload(rounds=1):
     return {
         "game": "blotto",
@@ -75,8 +49,12 @@ def valid_payload(rounds=1):
     }
 
 
+def setup_function():
+    SESSIONS.clear()
+
+
 def test_config_from_request_builds_experiment_config():
-    config = config_from_request(ExperimentRequest(**valid_payload(rounds=3)))
+    config = config_from_request(valid_payload(rounds=3))
 
     assert config.game == "blotto"
     assert config.rounds == 3
@@ -91,11 +69,11 @@ def test_bearer_token_extracts_token():
 def test_create_experiment_returns_session_and_tokens():
     client = TestClient(app)
 
-    response = client.post("/api/experiment", json=valid_payload())
+    response = client.post("/experiment", json=valid_payload())
 
     assert response.status_code == 200
     data = response.json()
-    assert "session_id" in data
+    assert data["session_id"] in SESSIONS
     assert data["config_hash"].startswith("sha256:")
     assert set(data["player_tokens"]) == {"A", "B"}
     assert data["player_tokens"]["A"] != data["player_tokens"]["B"]
@@ -106,7 +84,7 @@ def test_create_experiment_rejects_invalid_config():
     payload = valid_payload()
     payload["players"] = 3
 
-    response = client.post("/api/experiment", json=payload)
+    response = client.post("/experiment", json=payload)
 
     assert response.status_code == 400
     assert "2 players" in response.json()["detail"]
@@ -114,9 +92,9 @@ def test_create_experiment_rejects_invalid_config():
 
 def test_get_state_returns_public_state_without_tokens():
     client = TestClient(app)
-    created = client.post("/api/experiment", json=valid_payload(rounds=2)).json()
+    created = client.post("/experiment", json=valid_payload(rounds=2)).json()
 
-    response = client.get(f"/api/session/{created['session_id']}/state")
+    response = client.get(f"/session/{created['session_id']}/state")
 
     assert response.status_code == 200
     state = response.json()
@@ -129,10 +107,10 @@ def test_get_state_returns_public_state_without_tokens():
 
 def test_submit_action_requires_bearer_token():
     client = TestClient(app)
-    created = client.post("/api/experiment", json=valid_payload()).json()
+    created = client.post("/experiment", json=valid_payload()).json()
 
     response = client.post(
-        f"/api/session/{created['session_id']}/action",
+        f"/session/{created['session_id']}/action",
         json={"allocation": [10, 0, 0]},
     )
 
@@ -142,10 +120,10 @@ def test_submit_action_requires_bearer_token():
 
 def test_submit_action_rejects_invalid_token():
     client = TestClient(app)
-    created = client.post("/api/experiment", json=valid_payload()).json()
+    created = client.post("/experiment", json=valid_payload()).json()
 
     response = client.post(
-        f"/api/session/{created['session_id']}/action",
+        f"/session/{created['session_id']}/action",
         headers={"Authorization": "Bearer bad-token"},
         json={"allocation": [10, 0, 0]},
     )
@@ -156,18 +134,18 @@ def test_submit_action_rejects_invalid_token():
 
 def test_submit_actions_advance_session_and_results_include_metrics():
     client = TestClient(app)
-    created = client.post("/api/experiment", json=valid_payload(rounds=1)).json()
+    created = client.post("/experiment", json=valid_payload(rounds=1)).json()
     session_id = created["session_id"]
     token_a = created["player_tokens"]["A"]
     token_b = created["player_tokens"]["B"]
 
     first = client.post(
-        f"/api/session/{session_id}/action",
+        f"/session/{session_id}/action",
         headers={"Authorization": f"Bearer {token_a}"},
         json={"allocation": [10, 0, 0]},
     )
     second = client.post(
-        f"/api/session/{session_id}/action",
+        f"/session/{session_id}/action",
         headers={"Authorization": f"Bearer {token_b}"},
         json={"allocation": [0, 5, 5]},
     )
@@ -177,7 +155,7 @@ def test_submit_actions_advance_session_and_results_include_metrics():
     assert second.status_code == 200
     assert second.json()["phase"] == "complete"
 
-    results = client.get(f"/api/session/{session_id}/results")
+    results = client.get(f"/session/{session_id}/results")
     assert results.status_code == 200
     body = results.json()
     assert body["winner"] == "B"
@@ -187,16 +165,16 @@ def test_submit_actions_advance_session_and_results_include_metrics():
 
 def test_duplicate_action_returns_conflict():
     client = TestClient(app)
-    created = client.post("/api/experiment", json=valid_payload(rounds=2)).json()
+    created = client.post("/experiment", json=valid_payload(rounds=2)).json()
     token_a = created["player_tokens"]["A"]
 
     client.post(
-        f"/api/session/{created['session_id']}/action",
+        f"/session/{created['session_id']}/action",
         headers={"Authorization": f"Bearer {token_a}"},
         json={"allocation": [10, 0, 0]},
     )
     response = client.post(
-        f"/api/session/{created['session_id']}/action",
+        f"/session/{created['session_id']}/action",
         headers={"Authorization": f"Bearer {token_a}"},
         json={"allocation": [0, 10, 0]},
     )
@@ -207,9 +185,9 @@ def test_duplicate_action_returns_conflict():
 
 def test_results_before_completion_returns_conflict():
     client = TestClient(app)
-    created = client.post("/api/experiment", json=valid_payload(rounds=2)).json()
+    created = client.post("/experiment", json=valid_payload(rounds=2)).json()
 
-    response = client.get(f"/api/session/{created['session_id']}/results")
+    response = client.get(f"/session/{created['session_id']}/results")
 
     assert response.status_code == 409
     assert "complete" in response.json()["detail"]
@@ -218,7 +196,7 @@ def test_results_before_completion_returns_conflict():
 def test_unknown_session_returns_not_found():
     client = TestClient(app)
 
-    response = client.get("/api/session/missing/state")
+    response = client.get("/session/missing/state")
 
     assert response.status_code == 404
     assert response.json()["detail"] == "session not found"
@@ -242,3 +220,41 @@ def test_fastapi_serves_visualizer_javascript():
     assert response.status_code == 200
     assert "POST" in response.text
     assert "/api/experiment" in response.text
+    assert "/api/run-experiment" not in response.text
+    assert "/api/huggingface-models" not in response.text
+    assert "llm-model" not in response.text
+
+
+def test_list_games_returns_registered_blotto_game():
+    client = TestClient(app)
+
+    response = client.get("/games")
+
+    assert response.status_code == 200
+    games = response.json()
+    assert games[0]["name"] == "blotto"
+    assert games[0]["players"] == {"min": 2, "max": 2}
+
+
+def test_get_game_directory_details_metrics_and_prompts():
+    client = TestClient(app)
+
+    details = client.get("/games/blotto")
+    metrics = client.get("/games/blotto/metrics")
+    prompts = client.get("/games/blotto/prompts")
+
+    assert details.status_code == 200
+    assert details.json()["name"] == "blotto"
+    assert metrics.status_code == 200
+    assert metrics.json()["metrics"][0]["name"] == "total_payoff"
+    assert prompts.status_code == 200
+    assert prompts.json()["action_format"]["type"] == "json_array"
+
+
+def test_get_unknown_game_returns_not_found():
+    client = TestClient(app)
+
+    response = client.get("/games/missing")
+
+    assert response.status_code == 404
+    assert "game not found" in response.json()["detail"]

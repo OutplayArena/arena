@@ -10,11 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import httpx
 
-from blotto.config import BattlefieldConfig, BlottoExperimentConfig
-from blotto.db import get_db
-from blotto.k8s import get_orchestrator, MCPOrchestrator
-from blotto.models import SessionModel
-from blotto.session import GameSession
+from legacy_blotto.config import BattlefieldConfig, BlottoExperimentConfig
+from legacy_blotto.db import get_db
+from legacy_blotto.k8s import get_orchestrator, MCPOrchestrator
+from legacy_blotto.models import SessionModel
+from legacy_blotto.session import GameSession
 
 API_PREFIX = os.environ.get("API_PREFIX", "/api")
 BASE_URL = os.environ.get("ARENA_BASE_URL", f"http://127.0.0.1:8000{API_PREFIX}")

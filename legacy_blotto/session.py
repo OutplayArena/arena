@@ -2,8 +2,8 @@ import secrets
 import uuid
 from dataclasses import dataclass, field
 
-from blotto.config import BlottoExperimentConfig
-from blotto.engine import BlottoGame, BlottoState
+from legacy_blotto.config import BlottoExperimentConfig
+from legacy_blotto.engine import BlottoGame, BlottoState
 
 
 @dataclass
@@ -36,7 +36,7 @@ class GameSession:
 
     @classmethod
     def from_db_row(cls, row):
-        from blotto.config import BattlefieldConfig
+        from legacy_blotto.config import BattlefieldConfig
 
         config = BlottoExperimentConfig(
             game=row.config_json["game"],
