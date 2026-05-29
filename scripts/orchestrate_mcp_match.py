@@ -13,8 +13,8 @@ import httpx
 from mcp import ClientSession, StdioServerParameters, types
 from mcp.client.stdio import stdio_client
 
-from blotto.client import ArenaClient
-from blotto.config import BlottoExperimentConfig
+from nash_arena.client import ArenaClient
+from games.core.blotto.config import BlottoExperimentConfig
 
 sys.stdout.reconfigure(line_buffering=True)
 
@@ -173,7 +173,7 @@ async def create_player_session(player, session_id, token, exit_stack):
     }
     server_params = StdioServerParameters(
         command=sys.executable,
-        args=["-m", "blotto.mcp_server"],
+        args=["-m", "nash_arena.mcp_server"],
         env=env,
     )
     read_stream, write_stream = await exit_stack.enter_async_context(

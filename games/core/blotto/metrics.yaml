@@ -1,0 +1,25 @@
+metrics:
+  - name: total_payoff
+    when: terminal
+    type: object
+    description: "Final total score for each player."
+
+  - name: average_payoff
+    when: terminal
+    type: object
+    description: "Average score per round for each player."
+
+  - name: round_win_counts
+    when: terminal
+    type: object
+    description: "Number of rounds won by A, B, or tied."
+
+  - name: round_win_rate
+    when: terminal
+    type: object
+    description: "Fraction of rounds won by A, B, or tied."
+
+  - name: allocation_concentration
+    when: terminal
+    type: object
+    description: "Average concentration of each player's allocations."

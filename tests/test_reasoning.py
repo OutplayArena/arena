@@ -1,6 +1,6 @@
 import pytest
 
-from blotto.reasoning import (
+from nash_arena.reasoning import (
     MODEL_PROFILES,
     ReasoningConfig,
     ReasoningControlEngine,

@@ -1,8 +1,8 @@
 import os
 from mcp.server.fastmcp import FastMCP
-from blotto.client import ArenaClient
+from nash_arena.client import ArenaClient
 
-mcp = FastMCP("blotto-arena")
+mcp = FastMCP("nash-arena")
 
 def required_env(name):
     value = os.environ.get(name)
@@ -30,6 +30,26 @@ def submit_action(allocation: list[int]) -> dict:
 def get_results() -> dict:
     """Retrieve final scores and metrics after the game is complete."""
     return arena_client().get_results()
+
+@mcp.tool()
+def list_games() -> list[dict]:
+    """List games available in the arena game catalog."""
+    return arena_client().list_games()
+
+@mcp.tool()
+def get_game_details(game: str) -> dict:
+    """Get metadata, ontology, config schema, and example config for a game."""
+    return arena_client().get_game_details(game)
+
+@mcp.tool()
+def get_game_metrics(game: str) -> dict:
+    """Get metric declarations for a game."""
+    return arena_client().get_game_metrics(game)
+
+@mcp.tool()
+def get_game_prompts(game: str) -> dict:
+    """Get default prompt templates and action format for a game."""
+    return arena_client().get_game_prompts(game)
 
 if __name__ == "__main__":
     mcp.run()

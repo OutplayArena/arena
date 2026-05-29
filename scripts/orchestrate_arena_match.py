@@ -9,9 +9,9 @@ from datetime import datetime, timezone
 
 import httpx
 
-from blotto.client import ArenaClient
-from blotto.config import BlottoExperimentConfig
-from blotto.reasoning import ReasoningControlEngine, ReasoningEffort
+from nash_arena.client import ArenaClient
+from games.core.blotto.config import BlottoExperimentConfig
+from nash_arena.reasoning import ReasoningControlEngine, ReasoningEffort
 
 sys.stdout.reconfigure(line_buffering=True)
 

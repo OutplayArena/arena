@@ -4,8 +4,8 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from blotto.config import BattlefieldConfig, BlottoExperimentConfig
-from blotto.session import GameSession
+from legacy_blotto.config import BattlefieldConfig, BlottoExperimentConfig
+from legacy_blotto.session import GameSession
 
 
 app = FastAPI(title="Blotto Agent Arena")
