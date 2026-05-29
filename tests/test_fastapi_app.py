@@ -49,6 +49,40 @@ def test_create_experiment_returns_session_and_tokens():
     assert data["player_tokens"]["A"] != data["player_tokens"]["B"]
 
 
+def test_prefixed_game_routes_create_and_play_session():
+    client = TestClient(app)
+
+    created = client.post("/api/game/experiment", json=valid_payload(rounds=1))
+
+    assert created.status_code == 200
+    data = created.json()
+    session_id = data["session_id"]
+    token_a = data["player_tokens"]["A"]
+    token_b = data["player_tokens"]["B"]
+
+    state = client.get(f"/api/game/session/{session_id}/state")
+    assert state.status_code == 200
+    assert state.json()["awaiting"] == ["A", "B"]
+
+    first = client.post(
+        f"/api/game/session/{session_id}/action",
+        headers={"Authorization": f"Bearer {token_a}"},
+        json={"allocation": [10, 0, 0]},
+    )
+    second = client.post(
+        f"/api/game/session/{session_id}/action",
+        headers={"Authorization": f"Bearer {token_b}"},
+        json={"allocation": [0, 5, 5]},
+    )
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+
+    results = client.get(f"/api/game/session/{session_id}/results")
+    assert results.status_code == 200
+    assert results.json()["winner"] == "B"
+
+
 def test_create_experiment_rejects_invalid_config():
     client = TestClient(app)
     payload = valid_payload()
@@ -199,6 +233,17 @@ def test_list_games_returns_registered_blotto_game():
     client = TestClient(app)
 
     response = client.get("/games")
+
+    assert response.status_code == 200
+    games = response.json()
+    assert games[0]["name"] == "blotto"
+    assert games[0]["players"] == {"min": 2, "max": 2}
+
+
+def test_prefixed_catalog_routes_return_registered_blotto_game():
+    client = TestClient(app)
+
+    response = client.get("/api/catalog/games")
 
     assert response.status_code == 200
     games = response.json()
