@@ -27,7 +27,6 @@ def health():
     return {"status": "ok"}
 
 catalog_router = create_catalog_router(GAME_REGISTRY)
-public_game_router = create_game_router(GAME_REGISTRY, SESSIONS)
 internal_game_router = create_game_router(
     GAME_REGISTRY,
     SESSIONS,
@@ -38,7 +37,6 @@ stats_router = create_stats_router(SESSIONS)
 
 app.include_router(catalog_router)
 app.include_router(catalog_router, prefix="/api/catalog")
-app.include_router(public_game_router)
 app.include_router(internal_game_router, prefix="/api/game")
 app.include_router(frontend_router, prefix="/api/frontend")
 app.include_router(stats_router, prefix="/api/stats")
