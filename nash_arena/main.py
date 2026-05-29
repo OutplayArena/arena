@@ -33,7 +33,7 @@ internal_game_router = create_game_router(
     SESSIONS,
     require_internal_token=True,
 )
-frontend_router = create_frontend_router()
+frontend_router = create_frontend_router(GAME_REGISTRY, SESSIONS)
 stats_router = create_stats_router()
 
 app.include_router(catalog_router)
