@@ -1,6 +1,7 @@
 import pytest
 
 from nash_arena.reasoning import (
+    DEFAULT_MODEL_PROFILE,
     MODEL_PROFILES,
     ReasoningConfig,
     ReasoningControlEngine,
@@ -8,6 +9,7 @@ from nash_arena.reasoning import (
     ReasoningStrategy,
     build_api_params,
     build_system_prompt,
+    get_model_profile,
     get_limits,
 )
 
@@ -95,6 +97,11 @@ class TestBuildSystemPrompt:
         result = build_system_prompt("You are a General.", config, "mimo-v2.5")
         assert result == "You are a General."
 
+    def test_unknown_model_uses_default_budget_prompt_strategy(self):
+        config = ReasoningConfig(effort=ReasoningEffort.NONE)
+        result = build_system_prompt("You are a General.", config, "unknown-model")
+        assert "NO time to think" in result
+
 
 class TestGetLimits:
     def test_none_effort_limits(self):
@@ -142,6 +149,14 @@ class TestModelProfiles:
             assert isinstance(profile.supports_reasoning_effort, bool)
             assert isinstance(profile.supports_enable_thinking, bool)
             assert profile.baseline_response_time > 0
+
+    def test_unknown_model_uses_default_profile(self):
+        profile = get_model_profile("unknown-model")
+
+        assert profile.model_id == "unknown-model"
+        assert profile.provider == DEFAULT_MODEL_PROFILE.provider
+        assert profile.preferred_strategy == ReasoningStrategy.BUDGET_PROMPT
+        assert profile.baseline_response_time == DEFAULT_MODEL_PROFILE.baseline_response_time
 
 
 class TestReasoningControlEngine:
@@ -270,4 +285,7 @@ class TestReasoningControlEngine:
 
     def test_profile_attribute_unknown_model(self):
         engine = ReasoningControlEngine("nonexistent-model")
-        assert engine.profile is None
+        assert engine.profile is not None
+        assert engine.profile.model_id == "nonexistent-model"
+        assert engine.profile.provider == "unknown"
+        assert engine.strategy == ReasoningStrategy.BUDGET_PROMPT

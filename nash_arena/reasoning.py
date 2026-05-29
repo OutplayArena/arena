@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from typing import Literal
 
@@ -27,6 +27,16 @@ class ModelProfile:
     supports_enable_thinking: bool
     baseline_response_time: float
     preferred_strategy: ReasoningStrategy = ReasoningStrategy.API_CONTROL
+
+DEFAULT_MODEL_PROFILE = ModelProfile(
+    model_id="unknown",
+    provider="unknown",
+    supports_thinking_toggle=False,
+    supports_reasoning_effort=False,
+    supports_enable_thinking=False,
+    baseline_response_time=30.0,
+    preferred_strategy=ReasoningStrategy.BUDGET_PROMPT,
+)
 
 
 MODEL_PROFILES: dict[str, ModelProfile] = {
@@ -367,19 +377,20 @@ _BUDGET_PROMPTS: dict[ReasoningEffort, str] = {
     ),
 }
 
+def get_model_profile(model_id: str) -> ModelProfile:
+    profile = MODEL_PROFILES.get(model_id)
+    if profile is not None:
+        return profile
+    return replace(DEFAULT_MODEL_PROFILE, model_id=model_id)
+
 
 def get_strategy(model_id: str) -> ReasoningStrategy:
-    profile = MODEL_PROFILES.get(model_id)
-    if profile is None:
-        return ReasoningStrategy.STUBBORN
+    profile = get_model_profile(model_id)
     return profile.preferred_strategy
 
 
 def build_api_params(config: ReasoningConfig, model_id: str) -> dict:
-    profile = MODEL_PROFILES.get(model_id)
-    if profile is None:
-        return {}
-
+    profile = get_model_profile(model_id)
     strategy = profile.preferred_strategy
 
     if strategy == ReasoningStrategy.BUDGET_PROMPT:
@@ -413,10 +424,7 @@ def build_system_prompt(base_prompt: str, config: ReasoningConfig, model_id: str
     if not config.prompt_hint:
         return base_prompt
 
-    profile = MODEL_PROFILES.get(model_id)
-    if profile is None:
-        return base_prompt
-
+    profile = get_model_profile(model_id)
     strategy = profile.preferred_strategy
 
     if strategy == ReasoningStrategy.BUDGET_PROMPT:
@@ -436,8 +444,8 @@ def build_system_prompt(base_prompt: str, config: ReasoningConfig, model_id: str
 
 def get_limits(config: ReasoningConfig, model_id: str) -> dict[str, float | int]:
     """Get token and timeout limits based on config and model."""
-    profile = MODEL_PROFILES.get(model_id)
-    baseline = profile.baseline_response_time if profile else 30.0
+    profile = get_model_profile(model_id)
+    baseline = profile.baseline_response_time
 
     limits: dict[ReasoningEffort, tuple[int, float]] = {
         ReasoningEffort.NONE: (512, 3.0),
@@ -477,7 +485,7 @@ class ReasoningControlEngine:
         """
         self.model_id = model_id
         self.config = ReasoningConfig(effort=effort, prompt_hint=prompt_hint)
-        self.profile = MODEL_PROFILES.get(model_id)
+        self.profile = get_model_profile(model_id)
 
     @classmethod
     def from_config(
