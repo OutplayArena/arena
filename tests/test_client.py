@@ -24,7 +24,7 @@ def test_create_experiment_posts_config_dict_to_endpoint():
 
     assert result == {"session_id": "s1"}
     assert requests[0].method == "POST"
-    assert requests[0].url.path == "/experiment"
+    assert requests[0].url.path == "/api/game/experiment"
     assert json.loads(requests[0].content) == {"game": "blotto"}
 
 
@@ -89,7 +89,7 @@ def test_get_state_requires_session_id_and_gets_state_endpoint():
 
     assert client.get_state() == {"phase": "awaiting_action"}
     assert requests[0].method == "GET"
-    assert requests[0].url.path == "/session/s1/state"
+    assert requests[0].url.path == "/api/game/session/s1/state"
 
 
 def test_internal_client_gets_prefixed_state_with_token():
@@ -137,7 +137,7 @@ def test_submit_action_requires_token_and_posts_bearer_action():
 
     assert client.submit_action([10, 0, 0]) == {"awaiting": ["B"]}
     assert requests[0].method == "POST"
-    assert requests[0].url.path == "/session/s1/action"
+    assert requests[0].url.path == "/api/game/session/s1/action"
     assert requests[0].headers["Authorization"] == "Bearer tok_a"
     assert json.loads(requests[0].content) == {"allocation": [10, 0, 0]}
 
@@ -181,7 +181,7 @@ def test_get_results_gets_results_endpoint():
 
     assert client.get_results() == {"winner": "A"}
     assert requests[0].method == "GET"
-    assert requests[0].url.path == "/session/s1/results"
+    assert requests[0].url.path == "/api/game/session/s1/results"
 
 
 def test_internal_client_gets_prefixed_results_with_token():
@@ -250,11 +250,19 @@ def test_for_player_builds_session_bound_client():
         "player_tokens": {"A": "tok_a", "B": "tok_b"},
     }
 
-    client = ArenaClient.for_player("http://arena.test", created, "B")
+    client = ArenaClient.for_player(
+        "http://arena.test",
+        created,
+        "B",
+        game_api_prefix="/custom/game",
+        internal_api_token="secret",
+    )
 
     assert client.base_url == "http://arena.test"
     assert client.session_id == "s1"
     assert client.token == "tok_b"
+    assert client.game_api_prefix == "/custom/game"
+    assert client.internal_api_token == "secret"
 
 
 def test_http_errors_are_raised():

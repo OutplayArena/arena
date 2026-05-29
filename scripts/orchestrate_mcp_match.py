@@ -21,6 +21,7 @@ sys.stdout.reconfigure(line_buffering=True)
 LLM_EXECUTOR = ThreadPoolExecutor(max_workers=2)
 
 ARENA_BASE_URL = os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000")
+INTERNAL_API_TOKEN = os.environ.get("NASH_ARENA_INTERNAL_API_TOKEN", "").strip()
 OPENCODE_GO_API_KEY = os.environ.get("OPENCODE_GO_API_KEY", "").strip()
 OPENCODE_GO_API_BASE = "https://opencode.ai/zen/go/v1"
 
@@ -170,6 +171,7 @@ async def create_player_session(player, session_id, token, exit_stack):
         "ARENA_BASE_URL": ARENA_BASE_URL,
         "ARENA_SESSION_ID": session_id,
         "ARENA_SESSION_TOKEN": token,
+        "NASH_ARENA_INTERNAL_API_TOKEN": INTERNAL_API_TOKEN,
     }
     server_params = StdioServerParameters(
         command=sys.executable,
@@ -189,9 +191,12 @@ async def run_match():
     if not OPENCODE_GO_API_KEY:
         print("ERROR: OPENCODE_GO_API_KEY environment variable is required")
         sys.exit(1)
+    if not INTERNAL_API_TOKEN:
+        print("ERROR: NASH_ARENA_INTERNAL_API_TOKEN environment variable is required")
+        sys.exit(1)
 
     print("Creating arena session...")
-    arena = ArenaClient(ARENA_BASE_URL)
+    arena = ArenaClient(ARENA_BASE_URL, internal_api_token=INTERNAL_API_TOKEN)
     config = BlottoExperimentConfig.classic(
         num_battlefields=NUM_BATTLEFIELDS,
         total_resources=TOTAL_RESOURCES,

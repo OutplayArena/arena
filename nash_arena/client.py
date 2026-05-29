@@ -9,8 +9,8 @@ class ArenaClient:
         token=None,
         timeout=10.0,
         http_client=None,
-        game_api_prefix: str="",
-        internal_api_token: str | None=None,
+        game_api_prefix: str = "/api/game",
+        internal_api_token: str | None = None,
     ):
         self.base_url = base_url.rstrip("/")
         self.session_id = session_id
@@ -104,6 +104,8 @@ class ArenaClient:
         player,
         timeout=10.0,
         http_client=None,
+        game_api_prefix: str = "/api/game",
+        internal_api_token: str | None = None,
     ):
         return cls(
             base_url=base_url,
@@ -111,6 +113,8 @@ class ArenaClient:
             token=creation_response["player_tokens"][player],
             timeout=timeout,
             http_client=http_client,
+            game_api_prefix=game_api_prefix,
+            internal_api_token=internal_api_token,
         )
 
     def is_terminal(self):
