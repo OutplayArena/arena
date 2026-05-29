@@ -10,7 +10,8 @@ from transformers import pipeline
 import yaml
 
 from nash_arena.game_components.game_agent import GameAgent
-from nash_arena.reasoning import ReasoningControlEngine
+from nash_arena.reasoning import ReasoningModerator
+
 
 PROMPTS_PATH = Path(__file__).with_name("prompts.yaml")
 LLM_AGENT_PROMPT_KEY = "llm_agent"
@@ -124,7 +125,7 @@ class LLMAgent(Agent):
         self.num_battlefields = num_battlefields
         self.total_resources = total_resources
         self.temperature = temperature
-        self.reasoning = reasoning or ReasoningControlEngine(model_name)
+        self.reasoning = reasoning or ReasoningModerator(model_name)
 
         self.generator = pipeline(
             "text-generation",
@@ -203,7 +204,7 @@ class LiteLLMAgent(Agent):
         raw_key = api_key or os.environ.get("LLM_API_KEY") or os.environ.get("OPENCODE_GO_API_KEY") or ""
         self.api_key = raw_key.strip()
         self.temperature = temperature
-        self.reasoning = reasoning or ReasoningControlEngine(self.model_name)
+        self.reasoning = reasoning or ReasoningModerator(self.model_name)
 
     def build_prompt(self, history):
         base_prompt = render_llm_agent_prompt(

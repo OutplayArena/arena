@@ -13,9 +13,9 @@ class ReasoningEffort(str, Enum):
 
 
 class ReasoningStrategy(str, Enum):
-    API_CONTROL = "api_control"
-    BUDGET_PROMPT = "budget_prompt"
-    STUBBORN = "stubborn"
+    API_CONTROL = "api_control"  # This flags models that have a dedicated API parameter to set the available reasoning budget
+    BUDGET_PROMPT = "budget_prompt"  # This flags models that respond to prompt-based reasoning constraints 
+    STUBBORN = "stubborn"  # This flags models that do not respond to any reasoning moderating attempts and keep using extensive efforts regardless.
 
 
 @dataclass(frozen=True)
@@ -27,6 +27,7 @@ class ModelProfile:
     supports_enable_thinking: bool
     baseline_response_time: float
     preferred_strategy: ReasoningStrategy = ReasoningStrategy.API_CONTROL
+
 
 DEFAULT_MODEL_PROFILE = ModelProfile(
     model_id="unknown",
@@ -82,7 +83,7 @@ MODEL_PROFILES: dict[str, ModelProfile] = {
         supports_thinking_toggle=True,
         supports_reasoning_effort=False,
         supports_enable_thinking=False,
-        baseline_response_time=1.0,
+        baseline_response_time=5.0,
         preferred_strategy=ReasoningStrategy.API_CONTROL,
     ),
     "kimi-k2.6": ModelProfile(
@@ -91,7 +92,7 @@ MODEL_PROFILES: dict[str, ModelProfile] = {
         supports_thinking_toggle=True,
         supports_reasoning_effort=False,
         supports_enable_thinking=False,
-        baseline_response_time=1.0,
+        baseline_response_time=5.0,
         preferred_strategy=ReasoningStrategy.API_CONTROL,
     ),
     "minimax-m2.7": ModelProfile(
@@ -367,10 +368,10 @@ _BUDGET_PROMPTS: dict[ReasoningEffort, str] = {
         "No analysis, no strategy discussion."
     ),
     ReasoningEffort.LOW: (
-        "You have a brief moment. Think in at most 1 sentence, then output the list."
+        "You have a brief moment. Think in at most 2 sentence, then output the list."
     ),
     ReasoningEffort.MEDIUM: (
-        "You have time for a short assessment. Think in 2-3 sentences, then output the list."
+        "You have time for a short assessment. Think in 5-10 sentences, then output the list."
     ),
     ReasoningEffort.HIGH: (
         "Take your time to analyze the situation thoroughly before outputting the list."
@@ -461,7 +462,7 @@ def get_limits(config: ReasoningConfig, model_id: str) -> dict[str, float | int]
     }
 
 
-class ReasoningControlEngine:
+class ReasoningModerator:
     """
     Unified reasoning control engine for LLM agents.
 
@@ -490,7 +491,7 @@ class ReasoningControlEngine:
     @classmethod
     def from_config(
         cls, model_id: str, config: ReasoningConfig
-    ) -> "ReasoningControlEngine":
+    ) -> "ReasoningModerator":
         """Create engine from existing ReasoningConfig."""
         return cls(
             model_id, effort=config.effort, prompt_hint=config.prompt_hint

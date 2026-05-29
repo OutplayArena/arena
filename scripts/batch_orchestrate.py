@@ -19,15 +19,20 @@ ARENA_BASE_URL = os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000")
 OPENCODE_GO_API_KEY = os.environ.get("OPENCODE_GO_API_KEY_2", "").strip()
 OPENCODE_GO_API_BASE = "https://opencode.ai/zen/go/v1"
 
-PLAYER_A_MODEL = "deepseek-v4-flash"
-PLAYER_B_MODEL = "kimi-k2.5"
+PLAYER_A_MODEL = "deepseek-v4-pro"
+PLAYER_B_MODEL = "kimi-k2.6"
 
-REASONING_EFFORT = ReasoningEffort.NONE
 TEMPERATURE = 0.9
 
 NUM_BATTLEFIELDS = 5
 TOTAL_RESOURCES = 100
-NUM_ROUNDS = 20
+NUM_ROUNDS = 3
+
+EFFORT_LEVELS = [
+    (ReasoningEffort.NONE, "none"),
+    (ReasoningEffort.MEDIUM, "medium"),
+    (ReasoningEffort.HIGH, "high"),
+]
 
 
 def balanced_allocation(num_battlefields, total_resources):
@@ -74,8 +79,8 @@ def build_prompt(state, player_label):
     return "\n".join(lines)
 
 
-def llm_allocate(model, prompt):
-    engine = ReasoningModerator(model, effort=REASONING_EFFORT)
+def llm_allocate(model, prompt, effort):
+    engine = ReasoningModerator(model, effort=effort)
     base_system = (
         "You are an allocation bot. Output format: a Python list of 5 non-negative integers summing to 100. "
         "No text before or after the list."
@@ -115,35 +120,65 @@ def llm_allocate(model, prompt):
 
             choice = data["choices"][0]
             finish = choice.get("finish_reason")
+            usage = data.get("usage", {})
+            prompt_tokens = usage.get("prompt_tokens", 0)
+            completion_tokens = usage.get("completion_tokens", 0)
+            reasoning_tokens = usage.get("completion_tokens_details", {}).get("reasoning_tokens", 0)
+
             content, reasoning = engine.extract_response_text(data)
 
             text = content if content.strip() else reasoning
             alloc = parse_allocation(text, NUM_BATTLEFIELDS, TOTAL_RESOURCES)
             is_fallback = alloc == fallback and not content.strip()
 
+            raw_output = {
+                "content": content.strip() if content else "",
+                "reasoning": reasoning.strip() if reasoning else "",
+                "latency_s": round(dt, 2),
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "reasoning_tokens": reasoning_tokens,
+                "finish_reason": finish,
+            }
+
             print(
                 f"  [{model}] {dt:.1f}s finish={finish} "
                 f"content={repr(content)[:60] or '(empty)'} "
+                f"reasoning_tokens={reasoning_tokens} "
                 f"→ {alloc}"
                 + (" (from reasoning)" if not content.strip() and reasoning else "")
                 + (" (FALLBACK)" if is_fallback else "")
             )
-            return alloc, text
+            return alloc, raw_output
 
         except (httpx.ReadTimeout, httpx.ConnectTimeout) as exc:
             print(f"  [{model}] timeout ({exc.__class__.__name__}) attempt {attempt+1}/3")
             time.sleep(2)
 
     print(f"  [{model}] all retries exhausted, using uniform allocation")
-    return fallback, ""
+    return fallback, {
+        "content": "",
+        "reasoning": "",
+        "latency_s": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "reasoning_tokens": 0,
+        "finish_reason": "timeout",
+        "error": "all retries exhausted",
+    }
 
 
-def run_match():
+def run_game(effort, effort_label):
     if not OPENCODE_GO_API_KEY:
-        print("ERROR: OPENCODE_GO_API_KEY environment variable is required")
+        print("ERROR: OPENCODE_GO_API_KEY_2 environment variable is required")
         sys.exit(1)
 
-    print("Creating arena session...")
+    print(f"\n{'='*60}")
+    print(f"GAME: effort={effort_label}")
+    print(f"Player A ({PLAYER_A_MODEL}) vs Player B ({PLAYER_B_MODEL})")
+    print(f"Config: {NUM_BATTLEFIELDS} battlefields, {TOTAL_RESOURCES} troops, {NUM_ROUNDS} rounds")
+    print(f"{'='*60}")
+
     arena = ArenaClient(ARENA_BASE_URL)
     config = BlottoExperimentConfig.classic(
         num_battlefields=NUM_BATTLEFIELDS,
@@ -159,10 +194,7 @@ def run_match():
     agent_a = ArenaClient(ARENA_BASE_URL, session_id=session_id, token=token_a)
     agent_b = ArenaClient(ARENA_BASE_URL, session_id=session_id, token=token_b)
 
-    print(f"Session: {session_id}")
-    print(f"Player A ({PLAYER_A_MODEL}) vs Player B ({PLAYER_B_MODEL})")
-    print(f"Config: {NUM_BATTLEFIELDS} battlefields, {TOTAL_RESOURCES} troops, {NUM_ROUNDS} rounds")
-    print()
+    print(f"Session: {session_id}\n")
 
     full_history = []
 
@@ -179,8 +211,8 @@ def run_match():
         prompt_b = build_prompt(state, "B")
 
         with ThreadPoolExecutor(max_workers=2) as pool:
-            future_a = pool.submit(llm_allocate, PLAYER_A_MODEL, prompt_a)
-            future_b = pool.submit(llm_allocate, PLAYER_B_MODEL, prompt_b)
+            future_a = pool.submit(llm_allocate, PLAYER_A_MODEL, prompt_a, effort)
+            future_b = pool.submit(llm_allocate, PLAYER_B_MODEL, prompt_b, effort)
             alloc_a, raw_a = future_a.result()
             alloc_b, raw_b = future_b.result()
 
@@ -194,6 +226,7 @@ def run_match():
             a_score = last["scores"]["A"]
             b_score = last["scores"]["B"]
             winner = last["winner"]
+            last["raw_responses"] = {"A": raw_a, "B": raw_b}
             full_history.append(last)
             dt = time.time() - t_round
             print(
@@ -212,7 +245,6 @@ def run_match():
     metrics = results.get("metrics", {})
 
     print()
-    print("=" * 50)
     winner_label = (
         f"Player A ({PLAYER_A_MODEL})"
         if winner == "A"
@@ -232,9 +264,18 @@ def run_match():
             "total_resources": TOTAL_RESOURCES,
             "num_rounds": NUM_ROUNDS,
             "seed": 42,
+            "reasoning_effort": effort_label,
         },
-        "player_a": {"model": PLAYER_A_MODEL, "label": "A"},
-        "player_b": {"model": PLAYER_B_MODEL, "label": "B"},
+        "player_a": {
+            "model": PLAYER_A_MODEL,
+            "label": "A",
+            "reasoning_effort": effort_label,
+        },
+        "player_b": {
+            "model": PLAYER_B_MODEL,
+            "label": "B",
+            "reasoning_effort": effort_label,
+        },
         "total_scores": {"A": total_a, "B": total_b},
         "winner": winner,
         "history": full_history,
@@ -243,11 +284,45 @@ def run_match():
     }
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"results_{ts}.json"
+    filename = f"results/batch_{effort_label}_{ts}.json"
     with open(filename, "w") as f:
         json.dump(output, f, indent=2)
-    print(f"\nResults saved to {filename}")
+    print(f"Results saved to {filename}")
+
+    return output
+
+
+def main():
+    if not OPENCODE_GO_API_KEY:
+        print("ERROR: OPENCODE_GO_API_KEY_2 environment variable is required")
+        sys.exit(1)
+
+    os.makedirs("results", exist_ok=True)
+
+    print(f"Batch run: {PLAYER_A_MODEL} vs {PLAYER_B_MODEL}")
+    print(f"Effort levels: {[label for _, label in EFFORT_LEVELS]}")
+    print(f"Rounds per game: {NUM_ROUNDS}\n")
+
+    all_results = []
+    for effort, label in EFFORT_LEVELS:
+        result = run_game(effort, label)
+        all_results.append(result)
+
+    print(f"\n{'='*60}")
+    print("BATCH SUMMARY")
+    print(f"{'='*60}")
+    for i, (effort, label) in enumerate(EFFORT_LEVELS):
+        r = all_results[i]
+        print(f"{label:>6}: A({PLAYER_A_MODEL})={r['total_scores']['A']:.1f}  "
+              f"B({PLAYER_B_MODEL})={r['total_scores']['B']:.1f}  "
+              f"winner={r['winner']}")
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    summary_file = f"results/batch_summary_{ts}.json"
+    with open(summary_file, "w") as f:
+        json.dump(all_results, f, indent=2)
+    print(f"\nBatch summary saved to {summary_file}")
 
 
 if __name__ == "__main__":
-    run_match()
+    main()

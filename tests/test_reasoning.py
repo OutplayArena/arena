@@ -4,7 +4,7 @@ from nash_arena.reasoning import (
     DEFAULT_MODEL_PROFILE,
     MODEL_PROFILES,
     ReasoningConfig,
-    ReasoningControlEngine,
+    ReasoningModerator,
     ReasoningEffort,
     ReasoningStrategy,
     build_api_params,
@@ -159,64 +159,64 @@ class TestModelProfiles:
         assert profile.baseline_response_time == DEFAULT_MODEL_PROFILE.baseline_response_time
 
 
-class TestReasoningControlEngine:
+class TestReasoningModerator:
     def test_init_with_defaults(self):
-        engine = ReasoningControlEngine("deepseek-v4-flash")
+        engine = ReasoningModerator("deepseek-v4-flash")
         assert engine.model_id == "deepseek-v4-flash"
         assert engine.effort == ReasoningEffort.NONE
         assert engine.config.prompt_hint is True
 
     def test_init_with_custom_effort(self):
-        engine = ReasoningControlEngine("kimi-k2.5", effort=ReasoningEffort.HIGH)
+        engine = ReasoningModerator("kimi-k2.5", effort=ReasoningEffort.HIGH)
         assert engine.effort == ReasoningEffort.HIGH
 
     def test_init_with_prompt_hint_disabled(self):
-        engine = ReasoningControlEngine("glm-5.1", prompt_hint=False)
+        engine = ReasoningModerator("glm-5.1", prompt_hint=False)
         assert engine.config.prompt_hint is False
 
     def test_from_config(self):
         config = ReasoningConfig(effort=ReasoningEffort.LOW, prompt_hint=False)
-        engine = ReasoningControlEngine.from_config("deepseek-v4-pro", config)
+        engine = ReasoningModerator.from_config("deepseek-v4-pro", config)
         assert engine.model_id == "deepseek-v4-pro"
         assert engine.effort == ReasoningEffort.LOW
         assert engine.config.prompt_hint is False
 
     def test_strategy_property_api_control(self):
-        engine = ReasoningControlEngine("deepseek-v4-flash")
+        engine = ReasoningModerator("deepseek-v4-flash")
         assert engine.strategy == ReasoningStrategy.API_CONTROL
 
     def test_strategy_property_budget_prompt(self):
-        engine = ReasoningControlEngine("glm-5.1")
+        engine = ReasoningModerator("glm-5.1")
         assert engine.strategy == ReasoningStrategy.BUDGET_PROMPT
 
     def test_strategy_property_stubborn(self):
-        engine = ReasoningControlEngine("mimo-v2.5")
+        engine = ReasoningModerator("mimo-v2.5")
         assert engine.strategy == ReasoningStrategy.STUBBORN
 
     def test_get_api_params_delegates(self):
-        engine = ReasoningControlEngine("deepseek-v4-flash", effort=ReasoningEffort.NONE)
+        engine = ReasoningModerator("deepseek-v4-flash", effort=ReasoningEffort.NONE)
         params = engine.get_api_params()
         assert params == {"thinking": {"type": "disabled"}}
 
     def test_get_limits_delegates(self):
-        engine = ReasoningControlEngine("deepseek-v4-flash", effort=ReasoningEffort.NONE)
+        engine = ReasoningModerator("deepseek-v4-flash", effort=ReasoningEffort.NONE)
         limits = engine.get_limits()
         assert limits["max_tokens"] == 512
         assert limits["timeout"] == 21.0
 
     def test_build_system_prompt_delegates(self):
-        engine = ReasoningControlEngine("glm-5.1", effort=ReasoningEffort.NONE)
+        engine = ReasoningModerator("glm-5.1", effort=ReasoningEffort.NONE)
         result = engine.build_system_prompt("You are a General.")
         assert "NO time to think" in result
 
     def test_prepare_request_body_includes_model(self):
-        engine = ReasoningControlEngine("deepseek-v4-flash")
+        engine = ReasoningModerator("deepseek-v4-flash")
         messages = [{"role": "user", "content": "test"}]
         body = engine.prepare_request_body(messages)
         assert body["model"] == "deepseek-v4-flash"
 
     def test_prepare_request_body_includes_messages(self):
-        engine = ReasoningControlEngine("deepseek-v4-flash")
+        engine = ReasoningModerator("deepseek-v4-flash")
         messages = [
             {"role": "system", "content": "sys"},
             {"role": "user", "content": "usr"},
@@ -225,27 +225,27 @@ class TestReasoningControlEngine:
         assert body["messages"] == messages
 
     def test_prepare_request_body_includes_limits(self):
-        engine = ReasoningControlEngine("deepseek-v4-flash", effort=ReasoningEffort.LOW)
+        engine = ReasoningModerator("deepseek-v4-flash", effort=ReasoningEffort.LOW)
         body = engine.prepare_request_body([])
         assert body["max_tokens"] == 1024
 
     def test_prepare_request_body_includes_api_params(self):
-        engine = ReasoningControlEngine("deepseek-v4-flash", effort=ReasoningEffort.NONE)
+        engine = ReasoningModerator("deepseek-v4-flash", effort=ReasoningEffort.NONE)
         body = engine.prepare_request_body([])
         assert body["thinking"] == {"type": "disabled"}
 
     def test_prepare_request_body_custom_temperature(self):
-        engine = ReasoningControlEngine("deepseek-v4-flash")
+        engine = ReasoningModerator("deepseek-v4-flash")
         body = engine.prepare_request_body([], temperature=0.5)
         assert body["temperature"] == 0.5
 
     def test_prepare_request_body_default_temperature(self):
-        engine = ReasoningControlEngine("deepseek-v4-flash")
+        engine = ReasoningModerator("deepseek-v4-flash")
         body = engine.prepare_request_body([])
         assert body["temperature"] == 0.9
 
     def test_extract_response_text_content_only(self):
-        engine = ReasoningControlEngine("deepseek-v4-flash")
+        engine = ReasoningModerator("deepseek-v4-flash")
         response_data = {
             "choices": [{"message": {"content": "[20,20,20,20,20]", "reasoning_content": None}}]
         }
@@ -254,7 +254,7 @@ class TestReasoningControlEngine:
         assert reasoning == ""
 
     def test_extract_response_text_reasoning_fallback(self):
-        engine = ReasoningControlEngine("deepseek-v4-flash")
+        engine = ReasoningModerator("deepseek-v4-flash")
         response_data = {
             "choices": [{"message": {"content": "", "reasoning_content": "thinking..."}}]
         }
@@ -263,7 +263,7 @@ class TestReasoningControlEngine:
         assert reasoning == "thinking..."
 
     def test_extract_response_text_both_present(self):
-        engine = ReasoningControlEngine("deepseek-v4-flash")
+        engine = ReasoningModerator("deepseek-v4-flash")
         response_data = {
             "choices": [{"message": {"content": "[10,20,30,20,20]", "reasoning_content": "let me think"}}]
         }
@@ -272,19 +272,19 @@ class TestReasoningControlEngine:
         assert reasoning == "let me think"
 
     def test_extract_response_text_missing_fields(self):
-        engine = ReasoningControlEngine("deepseek-v4-flash")
+        engine = ReasoningModerator("deepseek-v4-flash")
         response_data = {"choices": [{"message": {}}]}
         content, reasoning = engine.extract_response_text(response_data)
         assert content == ""
         assert reasoning == ""
 
     def test_profile_attribute_known_model(self):
-        engine = ReasoningControlEngine("kimi-k2.5")
+        engine = ReasoningModerator("kimi-k2.5")
         assert engine.profile is not None
         assert engine.profile.provider == "moonshot"
 
     def test_profile_attribute_unknown_model(self):
-        engine = ReasoningControlEngine("nonexistent-model")
+        engine = ReasoningModerator("nonexistent-model")
         assert engine.profile is not None
         assert engine.profile.model_id == "nonexistent-model"
         assert engine.profile.provider == "unknown"
