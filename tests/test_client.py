@@ -3,8 +3,8 @@ import json
 import httpx
 import pytest
 
-from nash_arena.client import ArenaClient
 from games.core.blotto.config import BlottoExperimentConfig
+from nash_arena.client import ArenaClient
 
 
 def mock_client(handler):
@@ -18,7 +18,7 @@ def test_create_experiment_posts_config_dict_to_endpoint():
         requests.append(request)
         return httpx.Response(200, json={"session_id": "s1"})
 
-    client = ArenaClient("http://arena.test/", http_client=mock_client(handler))
+    client = ArenaClient("http://arena.test", http_client=mock_client(handler))
 
     result = client.create_experiment({"game": "blotto"})
 
@@ -36,7 +36,7 @@ def test_internal_client_posts_config_to_prefixed_endpoint_with_token():
         return httpx.Response(200, json={"session_id": "s1"})
 
     client = ArenaClient(
-        "http://arena.test/",
+        "http://arena.test",
         http_client=mock_client(handler),
         game_api_prefix="/api/game",
         internal_api_token="secret",

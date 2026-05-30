@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,7 @@ from nash_arena.routes.stats import create_stats_router
 from nash_arena.session import GameSession
 
 
+API_PREFIX = os.environ.get("API_PREFIX", "/api").rstrip("/")
 app = FastAPI(title="Blotto Agent Arena")
 SESSIONS: dict[str, GameSession] = {}
 STATIC_ROOT = Path(__file__).resolve().parent.parent / "static"
@@ -22,9 +24,13 @@ def config_from_request(request: dict[str, Any]):
     return GAME_REGISTRY.config_from_request(request)
 
 
-@app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+app.add_api_route("/health", health, methods=["GET"])
+if API_PREFIX:
+    app.add_api_route(f"{API_PREFIX}/health", health, methods=["GET"])
 
 catalog_router = create_catalog_router(GAME_REGISTRY)
 internal_game_router = create_game_router(

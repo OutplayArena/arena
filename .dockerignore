@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+.eggs/
+*.egg-info/
+dist/
+build/
+.git/
+.gitignore
+.python-version
+*.md
+!README.md
+results_*.json
+planning/
+examples/
+tests/
+node_modules/

@@ -1,6 +1,36 @@
+import os
+os.environ["API_PREFIX"] = ""
+
+import pytest
 from fastapi.testclient import TestClient
 
 from nash_arena.main import SESSIONS, app, bearer_token, config_from_request
+
+
+class FakeResult:
+    def __init__(self, value):
+        self._value = value
+
+    def scalar_one_or_none(self):
+        return self._value
+
+
+class FakeDb:
+    def __init__(self):
+        self._store: dict[str, object] = {}
+
+    async def execute(self, stmt):
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        for sid, row in self._store.items():
+            if sid in compiled:
+                return FakeResult(row)
+        return FakeResult(None)
+
+    async def merge(self, obj):
+        self._store[obj.id] = obj
+
+    async def commit(self):
+        pass
 
 
 def valid_payload(rounds=1):

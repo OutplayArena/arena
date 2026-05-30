@@ -11,7 +11,7 @@ import httpx
 
 from nash_arena.client import ArenaClient
 from games.core.blotto.config import BlottoExperimentConfig
-from nash_arena.reasoning import ReasoningModerator, ReasoningEffort
+from nash_arena.reasoning import ReasoningModerator, ReasoningEffort, ReasoningStrategy, MODEL_PROFILES
 
 sys.stdout.reconfigure(line_buffering=True)
 
@@ -20,11 +20,7 @@ INTERNAL_API_TOKEN = os.environ.get("NASH_ARENA_INTERNAL_API_TOKEN", "").strip()
 OPENCODE_GO_API_KEY = os.environ.get("OPENCODE_GO_API_KEY_2", "").strip()
 OPENCODE_GO_API_BASE = "https://opencode.ai/zen/go/v1"
 
-PLAYER_A_MODEL = "deepseek-v4-pro"
-PLAYER_B_MODEL = "kimi-k2.6"
-
 TEMPERATURE = 0.9
-
 NUM_BATTLEFIELDS = 5
 TOTAL_RESOURCES = 100
 NUM_ROUNDS = 3
@@ -34,6 +30,12 @@ EFFORT_LEVELS = [
     (ReasoningEffort.MEDIUM, "medium"),
     (ReasoningEffort.HIGH, "high"),
 ]
+
+MODEL_PAIR_PRESETS = {
+    "api_control": ("deepseek-v4-pro", "kimi-k2.6"),
+    "budget_prompt": ("glm-5.1", "glm-5"),
+    "stubborn": ("mimo-v2.5", "mimo-v2.5-pro"),
+}
 
 
 def balanced_allocation(num_battlefields, total_resources):
@@ -90,6 +92,10 @@ def llm_allocate(model, prompt, effort):
     limits = engine.get_limits()
     fallback = balanced_allocation(NUM_BATTLEFIELDS, TOTAL_RESOURCES)
 
+    strategy = engine.strategy
+    print(f"  [{model}] strategy={strategy.value} effort={effort.value} "
+          f"max_tokens={limits['max_tokens']} timeout={limits['timeout']}s")
+
     messages = [
         {"role": "system", "content": system_msg},
         {"role": "user", "content": prompt},
@@ -113,6 +119,11 @@ def llm_allocate(model, prompt, effort):
                 wait = 30 * (attempt + 1)
                 print(f"  [{model}] 429 rate limited, waiting {wait}s...")
                 time.sleep(wait)
+                continue
+
+            if resp.status_code >= 500:
+                print(f"  [{model}] {resp.status_code} server error, attempt {attempt+1}/3: {resp.text[:200]}")
+                time.sleep(5)
                 continue
 
             resp.raise_for_status()
@@ -140,13 +151,22 @@ def llm_allocate(model, prompt, effort):
                 "completion_tokens": completion_tokens,
                 "reasoning_tokens": reasoning_tokens,
                 "finish_reason": finish,
+                "strategy": strategy.value,
+                "effort": effort.value,
+                "model_profile": {
+                    "provider": engine.profile.provider,
+                    "supports_thinking_toggle": engine.profile.supports_thinking_toggle,
+                    "supports_reasoning_effort": engine.profile.supports_reasoning_effort,
+                    "supports_enable_thinking": engine.profile.supports_enable_thinking,
+                    "preferred_strategy": engine.profile.preferred_strategy.value,
+                },
             }
 
             print(
                 f"  [{model}] {dt:.1f}s finish={finish} "
                 f"content={repr(content)[:60] or '(empty)'} "
                 f"reasoning_tokens={reasoning_tokens} "
-                f"→ {alloc}"
+                f"\u2192 {alloc}"
                 + (" (from reasoning)" if not content.strip() and reasoning else "")
                 + (" (FALLBACK)" if is_fallback else "")
             )
@@ -165,21 +185,16 @@ def llm_allocate(model, prompt, effort):
         "completion_tokens": 0,
         "reasoning_tokens": 0,
         "finish_reason": "timeout",
+        "strategy": strategy.value,
+        "effort": effort.value,
         "error": "all retries exhausted",
     }
 
 
-def run_game(effort, effort_label):
-    if not OPENCODE_GO_API_KEY:
-        print("ERROR: OPENCODE_GO_API_KEY_2 environment variable is required")
-        sys.exit(1)
-    if not INTERNAL_API_TOKEN:
-        print("ERROR: NASH_ARENA_INTERNAL_API_TOKEN environment variable is required")
-        sys.exit(1)
-
+def run_game(effort, effort_label, model_a, model_b, strategy_label):
     print(f"\n{'='*60}")
-    print(f"GAME: effort={effort_label}")
-    print(f"Player A ({PLAYER_A_MODEL}) vs Player B ({PLAYER_B_MODEL})")
+    print(f"GAME: strategy={strategy_label} effort={effort_label}")
+    print(f"Player A ({model_a}) vs Player B ({model_b})")
     print(f"Config: {NUM_BATTLEFIELDS} battlefields, {TOTAL_RESOURCES} troops, {NUM_ROUNDS} rounds")
     print(f"{'='*60}")
 
@@ -225,8 +240,8 @@ def run_game(effort, effort_label):
         prompt_b = build_prompt(state, "B")
 
         with ThreadPoolExecutor(max_workers=2) as pool:
-            future_a = pool.submit(llm_allocate, PLAYER_A_MODEL, prompt_a, effort)
-            future_b = pool.submit(llm_allocate, PLAYER_B_MODEL, prompt_b, effort)
+            future_a = pool.submit(llm_allocate, model_a, prompt_a, effort)
+            future_b = pool.submit(llm_allocate, model_b, prompt_b, effort)
             alloc_a, raw_a = future_a.result()
             alloc_b, raw_b = future_b.result()
 
@@ -245,7 +260,7 @@ def run_game(effort, effort_label):
             dt = time.time() - t_round
             print(
                 f"Round {round_num:2d}: "
-                f"A={alloc_a} B={alloc_b} → "
+                f"A={alloc_a} B={alloc_b} \u2192 "
                 f"A={a_score:.1f} B={b_score:.1f} winner={winner} "
                 f"({dt:.0f}s)"
             )
@@ -260,9 +275,9 @@ def run_game(effort, effort_label):
 
     print()
     winner_label = (
-        f"Player A ({PLAYER_A_MODEL})"
+        f"Player A ({model_a})"
         if winner == "A"
-        else f"Player B ({PLAYER_B_MODEL})"
+        else f"Player B ({model_b})"
         if winner == "B"
         else "Tie"
     )
@@ -273,6 +288,7 @@ def run_game(effort, effort_label):
 
     output = {
         "session_id": session_id,
+        "strategy": strategy_label,
         "config": {
             "num_battlefields": NUM_BATTLEFIELDS,
             "total_resources": TOTAL_RESOURCES,
@@ -281,14 +297,16 @@ def run_game(effort, effort_label):
             "reasoning_effort": effort_label,
         },
         "player_a": {
-            "model": PLAYER_A_MODEL,
+            "model": model_a,
             "label": "A",
             "reasoning_effort": effort_label,
+            "strategy": strategy_label,
         },
         "player_b": {
-            "model": PLAYER_B_MODEL,
+            "model": model_b,
             "label": "B",
             "reasoning_effort": effort_label,
+            "strategy": strategy_label,
         },
         "total_scores": {"A": total_a, "B": total_b},
         "winner": winner,
@@ -298,7 +316,8 @@ def run_game(effort, effort_label):
     }
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"results/batch_{effort_label}_{ts}.json"
+    filename = f"results/batch_{strategy_label}_{effort_label}_{ts}.json"
+    os.makedirs("results", exist_ok=True)
     with open(filename, "w") as f:
         json.dump(output, f, indent=2)
     print(f"Results saved to {filename}")
@@ -309,27 +328,51 @@ def run_game(effort, effort_label):
 def main():
     if not OPENCODE_GO_API_KEY:
         print("ERROR: OPENCODE_GO_API_KEY_2 environment variable is required")
+        print("Set it with: export OPENCODE_GO_API_KEY_2='your-key'")
+        sys.exit(1)
+    if not INTERNAL_API_TOKEN:
+        print("ERROR: NASH_ARENA_INTERNAL_API_TOKEN environment variable is required")
         sys.exit(1)
 
     os.makedirs("results", exist_ok=True)
 
-    print(f"Batch run: {PLAYER_A_MODEL} vs {PLAYER_B_MODEL}")
+    pairs_to_run = []
+    for name, (model_a, model_b) in MODEL_PAIR_PRESETS.items():
+        profile_a = MODEL_PROFILES.get(model_a)
+        profile_b = MODEL_PROFILES.get(model_b)
+        if profile_a and profile_b:
+            pairs_to_run.append((name, model_a, model_b, profile_a.preferred_strategy.value))
+
+    print(f"Model pair presets: {len(pairs_to_run)}")
+    for name, ma, mb, strat in pairs_to_run:
+        print(f"  {name}: {ma} vs {mb}  (strategy: {strat})")
     print(f"Effort levels: {[label for _, label in EFFORT_LEVELS]}")
     print(f"Rounds per game: {NUM_ROUNDS}\n")
 
     all_results = []
-    for effort, label in EFFORT_LEVELS:
-        result = run_game(effort, label)
-        all_results.append(result)
+
+    for name, model_a, model_b, strategy_label in pairs_to_run:
+        print(f"\n{'#'*60}")
+        print(f"# STRATEGY GROUP: {strategy_label} ({name})")
+        print(f"# {model_a} vs {model_b}")
+        print(f"{'#'*60}")
+
+        for effort, label in EFFORT_LEVELS:
+            t_start = time.time()
+            result = run_game(effort, label, model_a, model_b, strategy_label)
+            all_results.append(result)
+            print(f"  Game duration: {time.time() - t_start:.0f}s")
 
     print(f"\n{'='*60}")
     print("BATCH SUMMARY")
     print(f"{'='*60}")
-    for i, (effort, label) in enumerate(EFFORT_LEVELS):
-        r = all_results[i]
-        print(f"{label:>6}: A({PLAYER_A_MODEL})={r['total_scores']['A']:.1f}  "
-              f"B({PLAYER_B_MODEL})={r['total_scores']['B']:.1f}  "
-              f"winner={r['winner']}")
+    for r in all_results:
+        strategy = r["strategy"]
+        effort = r["config"]["reasoning_effort"]
+        model_a = r["player_a"]["model"]
+        model_b = r["player_b"]["model"]
+        print(f"{strategy:>14} {effort:>6}: {model_a}={r['total_scores']['A']:.1f}  "
+              f"{model_b}={r['total_scores']['B']:.1f}  winner={r['winner']}")
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     summary_file = f"results/batch_summary_{ts}.json"
