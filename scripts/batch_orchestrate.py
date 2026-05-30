@@ -16,6 +16,7 @@ from nash_arena.reasoning import ReasoningModerator, ReasoningEffort, ReasoningS
 sys.stdout.reconfigure(line_buffering=True)
 
 ARENA_BASE_URL = os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000")
+INTERNAL_API_TOKEN = os.environ.get("NASH_ARENA_INTERNAL_API_TOKEN", "").strip()
 OPENCODE_GO_API_KEY = os.environ.get("OPENCODE_GO_API_KEY_2", "").strip()
 OPENCODE_GO_API_BASE = "https://opencode.ai/zen/go/v1"
 
@@ -197,7 +198,7 @@ def run_game(effort, effort_label, model_a, model_b, strategy_label):
     print(f"Config: {NUM_BATTLEFIELDS} battlefields, {TOTAL_RESOURCES} troops, {NUM_ROUNDS} rounds")
     print(f"{'='*60}")
 
-    arena = ArenaClient(ARENA_BASE_URL)
+    arena = ArenaClient(ARENA_BASE_URL, internal_api_token=INTERNAL_API_TOKEN)
     config = BlottoExperimentConfig.classic(
         num_battlefields=NUM_BATTLEFIELDS,
         total_resources=TOTAL_RESOURCES,
@@ -209,8 +210,18 @@ def run_game(effort, effort_label, model_a, model_b, strategy_label):
     token_a = created["player_tokens"]["A"]
     token_b = created["player_tokens"]["B"]
 
-    agent_a = ArenaClient(ARENA_BASE_URL, session_id=session_id, token=token_a)
-    agent_b = ArenaClient(ARENA_BASE_URL, session_id=session_id, token=token_b)
+    agent_a = ArenaClient(
+        ARENA_BASE_URL,
+        session_id=session_id,
+        token=token_a,
+        internal_api_token=INTERNAL_API_TOKEN,
+    )
+    agent_b = ArenaClient(
+        ARENA_BASE_URL,
+        session_id=session_id,
+        token=token_b,
+        internal_api_token=INTERNAL_API_TOKEN,
+    )
 
     print(f"Session: {session_id}\n")
 
@@ -318,6 +329,9 @@ def main():
     if not OPENCODE_GO_API_KEY:
         print("ERROR: OPENCODE_GO_API_KEY_2 environment variable is required")
         print("Set it with: export OPENCODE_GO_API_KEY_2='your-key'")
+        sys.exit(1)
+    if not INTERNAL_API_TOKEN:
+        print("ERROR: NASH_ARENA_INTERNAL_API_TOKEN environment variable is required")
         sys.exit(1)
 
     os.makedirs("results", exist_ok=True)

@@ -148,7 +148,13 @@ The MCP server also exposes directory tools:
 
 ## Core HTTP Flow
 
-The arena flow is:
+Direct game interaction is internal API surface area. For local development, set the same internal token in the server shell and the client shell:
+
+```bash
+export NASH_ARENA_INTERNAL_API_TOKEN=dev-secret
+```
+
+Then the internal arena flow is:
 
 1. Create an experiment.
 2. Save the returned `session_id`.
@@ -159,8 +165,9 @@ The arena flow is:
 Create a session:
 
 ```bash
-curl -sS -X POST http://127.0.0.1:8000/experiment \
+curl -sS -X POST http://127.0.0.1:8000/api/game/experiment \
   -H "Content-Type: application/json" \
+  -H "X-Nash-Arena-Internal-Token: $NASH_ARENA_INTERNAL_API_TOKEN" \
   -d '{
     "game": "blotto",
     "variant": "classic",
@@ -192,14 +199,16 @@ The response contains:
 Fetch state:
 
 ```bash
-curl -sS http://127.0.0.1:8000/session/SESSION_ID/state
+curl -sS http://127.0.0.1:8000/api/game/session/SESSION_ID/state \
+  -H "X-Nash-Arena-Internal-Token: $NASH_ARENA_INTERNAL_API_TOKEN"
 ```
 
 Submit player A's action:
 
 ```bash
-curl -sS -X POST http://127.0.0.1:8000/session/SESSION_ID/action \
+curl -sS -X POST http://127.0.0.1:8000/api/game/session/SESSION_ID/action \
   -H "Content-Type: application/json" \
+  -H "X-Nash-Arena-Internal-Token: $NASH_ARENA_INTERNAL_API_TOKEN" \
   -H "Authorization: Bearer TOKEN_A" \
   -d '{"allocation": [10, 0, 0]}'
 ```
@@ -207,8 +216,9 @@ curl -sS -X POST http://127.0.0.1:8000/session/SESSION_ID/action \
 Submit player B's action:
 
 ```bash
-curl -sS -X POST http://127.0.0.1:8000/session/SESSION_ID/action \
+curl -sS -X POST http://127.0.0.1:8000/api/game/session/SESSION_ID/action \
   -H "Content-Type: application/json" \
+  -H "X-Nash-Arena-Internal-Token: $NASH_ARENA_INTERNAL_API_TOKEN" \
   -H "Authorization: Bearer TOKEN_B" \
   -d '{"allocation": [0, 5, 5]}'
 ```
@@ -216,7 +226,8 @@ curl -sS -X POST http://127.0.0.1:8000/session/SESSION_ID/action \
 Fetch final results:
 
 ```bash
-curl -sS http://127.0.0.1:8000/session/SESSION_ID/results
+curl -sS http://127.0.0.1:8000/api/game/session/SESSION_ID/results \
+  -H "X-Nash-Arena-Internal-Token: $NASH_ARENA_INTERNAL_API_TOKEN"
 ```
 
 ## Python SDK Flow
@@ -224,6 +235,7 @@ curl -sS http://127.0.0.1:8000/session/SESSION_ID/results
 Run the included example while the FastAPI server is running:
 
 ```bash
+export NASH_ARENA_INTERNAL_API_TOKEN=dev-secret
 python3 examples/play_blotto_game.py
 ```
 
@@ -234,8 +246,9 @@ from nash_arena.client import ArenaClient
 from games.core.blotto.config import BlottoExperimentConfig
 
 base_url = "http://127.0.0.1:8000"
+internal_token = "dev-secret"
 
-arena = ArenaClient(base_url)
+arena = ArenaClient(base_url, internal_api_token=internal_token)
 config = BlottoExperimentConfig.classic(
     num_battlefields=3,
     total_resources=10,
@@ -244,8 +257,8 @@ config = BlottoExperimentConfig.classic(
 )
 
 created = arena.create_experiment(config)
-agent_a = ArenaClient.for_player(base_url, created, "A")
-agent_b = ArenaClient.for_player(base_url, created, "B")
+agent_a = ArenaClient.for_player(base_url, created, "A", internal_api_token=internal_token)
+agent_b = ArenaClient.for_player(base_url, created, "B", internal_api_token=internal_token)
 
 print(agent_a.get_state())
 agent_a.submit_action([10, 0, 0])
@@ -263,6 +276,7 @@ First, create a session with HTTP or the SDK. Then start an MCP server for each 
 ARENA_BASE_URL=http://127.0.0.1:8000 \
 ARENA_SESSION_ID=SESSION_ID \
 ARENA_SESSION_TOKEN=TOKEN_A \
+NASH_ARENA_INTERNAL_API_TOKEN=dev-secret \
 python3 -m nash_arena.mcp_server
 ```
 
@@ -270,6 +284,7 @@ python3 -m nash_arena.mcp_server
 ARENA_BASE_URL=http://127.0.0.1:8000 \
 ARENA_SESSION_ID=SESSION_ID \
 ARENA_SESSION_TOKEN=TOKEN_B \
+NASH_ARENA_INTERNAL_API_TOKEN=dev-secret \
 python3 -m nash_arena.mcp_server
 ```
 

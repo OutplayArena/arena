@@ -735,13 +735,13 @@ form.addEventListener("submit", async (event) => {
       seed: null,
     };
 
-    const created = await requestJson("/api/experiment", {
+    const created = await requestJson("/api/frontend/experiment", {
       method: "POST",
       body: JSON.stringify(experiment),
     });
 
     payload.session_id = created.session_id;
-    let state = await requestJson(`/api/session/${created.session_id}/state`);
+    let state = await requestJson(`/api/frontend/session/${created.session_id}/state`);
 
     while (state.phase !== "complete") {
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
@@ -751,7 +751,7 @@ form.addEventListener("submit", async (event) => {
         if (!state.awaiting.includes(player)) continue;
         const agent = player === "A" ? payload.agent_a : payload.agent_b;
         const action = chooseAction(agent, player, state);
-        state = await requestJson(`/api/session/${created.session_id}/action`, {
+        state = await requestJson(`/api/frontend/session/${created.session_id}/action`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${created.player_tokens[player]}`,
@@ -761,7 +761,7 @@ form.addEventListener("submit", async (event) => {
       }
     }
 
-    const result = await requestJson(`/api/session/${created.session_id}/results`);
+    const result = await requestJson(`/api/frontend/session/${created.session_id}/results`);
     runButton.disabled = false;
     startReplay(resultToMatch(result, payload));
   } catch (error) {

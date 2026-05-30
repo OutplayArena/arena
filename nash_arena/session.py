@@ -1,13 +1,13 @@
-# POST /experiment
+# POST /api/game/experiment or /api/frontend/experiment
 #   -> GameSession.create(config)
 
-# GET /session/{id}/state
+# GET /api/game/session/{id}/state or /api/frontend/session/{id}/state
 #   -> session.public_state()
 
-# POST /session/{id}/action
+# POST /api/game/session/{id}/action or /api/frontend/session/{id}/action
 #   -> session.submit_action(player, allocation)
 
-# GET /session/{id}/results
+# GET /api/game/session/{id}/results or /api/frontend/session/{id}/results
 #   -> session.results()
 
 from dataclasses import dataclass
@@ -27,7 +27,7 @@ class GameSession:
     state: Any
     player_tokens: dict[str, str]
     
-    # Future POST /experiment behavior minus HTTP
+    # Future POST /api/game/experiment behavior minus HTTP
     @classmethod
     def create(cls, config, game=None):
         if game is None:
@@ -46,7 +46,7 @@ class GameSession:
             player_tokens=player_tokens,
         )
         
-    # Equivalent of: GET /session/{id}/state
+    # Equivalent of: GET /api/game/session/{id}/state
     # What external agents will see
     def public_state(self):
         return self.game.public_state(
@@ -56,11 +56,11 @@ class GameSession:
             config_hash=self.config_hash,
         )
         
-    # Equivalent of: POST /session/{id}/action
+    # Equivalent of: POST /api/game/session/{id}/action
     def submit_action(self, player, allocation):
         self.state = self.game.apply_action(self.state, player, allocation)
         
-    # Equivalent of: GET /session/{id}/results
+    # Equivalent of: GET /api/game/session/{id}/results
     def results(self):
         return self.game.compute_results(
             state=self.state,
