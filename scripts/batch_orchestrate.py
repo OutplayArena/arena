@@ -120,6 +120,11 @@ def llm_allocate(model, prompt, effort):
                 time.sleep(wait)
                 continue
 
+            if resp.status_code >= 500:
+                print(f"  [{model}] {resp.status_code} server error, attempt {attempt+1}/3: {resp.text[:200]}")
+                time.sleep(5)
+                continue
+
             resp.raise_for_status()
             data = resp.json()
             dt = time.time() - t0
