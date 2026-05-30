@@ -1,0 +1,14 @@
+{{- if .Values.backend.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "blotto.fullname" . }}-backend
+  labels:
+    {{- include "blotto.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  minAvailable: {{ .Values.backend.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "blotto.backend.selectorLabels" . | nindent 6 }}
+{{- end }}

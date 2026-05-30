@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +10,7 @@ from nash_arena.game_registry import GameRegistry, GameRegistryError
 from nash_arena.session import GameSession
 
 
+API_PREFIX = os.environ.get("API_PREFIX", "/api")
 app = FastAPI(title="Blotto Agent Arena")
 SESSIONS: dict[str, GameSession] = {}
 STATIC_ROOT = Path(__file__).resolve().parent.parent / "static"
@@ -54,17 +56,17 @@ def game_registry_error(exc: GameRegistryError) -> HTTPException:
     return HTTPException(status_code=404, detail=str(exc))
 
 
-@app.get("/health")
+@app.get(f"{API_PREFIX}/health")
 def health():
     return {"status": "ok"}
 
 
-@app.get("/games")
+@app.get(f"{API_PREFIX}/games")
 def list_games():
     return GAME_REGISTRY.list_games()
 
 
-@app.get("/games/{name}")
+@app.get(f"{API_PREFIX}/games/{{name}}")
 def get_game(name: str):
     try:
         return GAME_REGISTRY.get_game(name)
@@ -72,7 +74,7 @@ def get_game(name: str):
         raise game_registry_error(exc) from exc
 
 
-@app.get("/games/{name}/metrics")
+@app.get(f"{API_PREFIX}/games/{{name}}/metrics")
 def get_game_metrics(name: str):
     try:
         return GAME_REGISTRY.get_game_metrics(name)
@@ -80,7 +82,7 @@ def get_game_metrics(name: str):
         raise game_registry_error(exc) from exc
 
 
-@app.get("/games/{name}/prompts")
+@app.get(f"{API_PREFIX}/games/{{name}}/prompts")
 def get_game_prompts(name: str):
     try:
         return GAME_REGISTRY.get_game_prompts(name)
@@ -88,7 +90,7 @@ def get_game_prompts(name: str):
         raise game_registry_error(exc) from exc
 
 
-@app.post("/experiment")
+@app.post(f"{API_PREFIX}/experiment")
 def create_experiment(request: dict[str, Any]):
     try:
         config = config_from_request(request)
@@ -101,12 +103,12 @@ def create_experiment(request: dict[str, Any]):
     return session.creation_response()
 
 
-@app.get("/session/{session_id}/state")
+@app.get(f"{API_PREFIX}/session/{{session_id}}/state")
 def get_state(session_id: str):
     return get_session(session_id).public_state()
 
 
-@app.post("/session/{session_id}/action")
+@app.post(f"{API_PREFIX}/session/{{session_id}}/action")
 def submit_action(
     session_id: str,
     request: ActionRequest,
@@ -123,7 +125,7 @@ def submit_action(
     return session.public_state()
 
 
-@app.get("/session/{session_id}/results")
+@app.get(f"{API_PREFIX}/session/{{session_id}}/results")
 def get_results(session_id: str):
     session = get_session(session_id)
     try:
