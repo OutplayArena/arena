@@ -22,6 +22,14 @@ def make_config(rounds=2):
     )
 
 
+class FakeRoundLogger:
+    def __init__(self):
+        self.round_logs = []
+
+    def log_round(self, payload, step):
+        self.round_logs.append({"payload": payload, "step": step})
+
+
 def test_create_session_stores_game_and_initial_state():
     config = make_config()
 
@@ -118,6 +126,64 @@ def test_submit_action_delegates_to_engine_state_machine():
     assert session.state.pending_actions == {}
     assert session.state.total_scores == {"A": 1.5, "B": 1.5}
     assert len(session.state.history) == 1
+
+
+def test_submit_action_without_wandb_logger_does_not_crash():
+    session = GameSession.create(make_config(rounds=1))
+
+    session.submit_action("A", [10, 0, 0])
+    session.submit_action("B", [0, 5, 5])
+
+    assert session.state.phase == "complete"
+
+
+def test_submit_action_does_not_log_before_round_resolves():
+    session = GameSession.create(make_config(rounds=1))
+    fake_logger = FakeRoundLogger()
+    session.wandb_logger = fake_logger
+
+    session.submit_action("A", [10, 0, 0])
+
+    assert fake_logger.round_logs == []
+
+
+def test_submit_action_logs_resolved_round_to_wandb_once():
+    session = GameSession.create(make_config(rounds=1))
+    fake_logger = FakeRoundLogger()
+    session.wandb_logger = fake_logger
+
+    session.submit_action("A", [10, 0, 0])
+    session.submit_action("B", [0, 5, 5])
+
+    assert fake_logger.round_logs == [
+        {
+            "step": 1,
+            "payload": {
+                "round": 1,
+                "scores/A": 1,
+                "scores/B": 2,
+                "total_scores/A": 1,
+                "total_scores/B": 2,
+                "winner": "B",
+                "allocation_concentration/A": 1.0,
+                "allocation_concentration/B": 0.5,
+            },
+        }
+    ]
+
+
+def test_submit_action_logs_each_resolved_round_once():
+    session = GameSession.create(make_config(rounds=2))
+    fake_logger = FakeRoundLogger()
+    session.wandb_logger = fake_logger
+
+    session.submit_action("A", [10, 0, 0])
+    session.submit_action("B", [0, 5, 5])
+    session.submit_action("A", [0, 10, 0])
+    session.submit_action("B", [0, 5, 5])
+
+    assert [entry["step"] for entry in fake_logger.round_logs] == [1, 2]
+    assert [entry["payload"]["round"] for entry in fake_logger.round_logs] == [1, 2]
 
 
 def test_session_results_add_session_metadata():

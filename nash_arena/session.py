@@ -77,7 +77,12 @@ class GameSession:
         
     # Equivalent of: POST /api/game/session/{id}/action
     def submit_action(self, player, allocation):
+        before_history_len = len(self.state.history)
         self.state = self.game.apply_action(self.state, player, allocation)
+        after_history_len = len(self.state.history)
+
+        if after_history_len > before_history_len:
+            self._log_latest_round_to_wandb()
         
     # Equivalent of: GET /api/game/session/{id}/results
     def results(self):
@@ -111,3 +116,29 @@ class GameSession:
         player = self.player_for_token(token)
         self.submit_action(player, allocation)
         
+    # Log the latest completed round to W&B when optional logging is enabled.
+    def _log_latest_round_to_wandb(self):
+        if self.wandb_logger is None:
+            return
+        if not self.state.history:
+            return
+
+        latest = self.state.history[-1]
+        step = latest["round"]
+
+        payload = {
+            "round": latest["round"],
+            "scores/A": latest["scores"]["A"],
+            "scores/B": latest["scores"]["B"],
+            "total_scores/A": latest["total_scores"]["A"],
+            "total_scores/B": latest["total_scores"]["B"],
+            "winner": latest["winner"],
+        }
+
+        allocations = latest.get("allocations", {})
+        for player, allocation in allocations.items():
+            total = sum(allocation)
+            concentration = 0 if total == 0 else max(allocation) / total
+            payload[f"allocation_concentration/{player}"] = concentration
+
+        self.wandb_logger.log_round(payload, step=step)
