@@ -30,6 +30,7 @@ class GameSession:
     player_tokens: dict[str, str]
     runtime_config: ExperimentRuntimeConfig
     wandb_logger: WandbGameLogger | None = None
+    wandb_finished: bool = False
     
     # Future POST /api/game/experiment behavior minus HTTP
     @classmethod
@@ -83,6 +84,8 @@ class GameSession:
 
         if after_history_len > before_history_len:
             self._log_latest_round_to_wandb()
+            if self.game.is_terminal(self.state):
+                self._log_terminal_to_wandb()
         
     # Equivalent of: GET /api/game/session/{id}/results
     def results(self):
@@ -142,3 +145,30 @@ class GameSession:
             payload[f"allocation_concentration/{player}"] = concentration
 
         self.wandb_logger.log_round(payload, step=step)
+    # Log final W&B metrics and finish the run once the game is terminal.
+    def _log_terminal_to_wandb(self):
+        if self.wandb_logger is None or self.wandb_finished:
+            return
+
+        results = self.results()
+        metrics = results.get("metrics", {})
+        total_scores = results.get("total_scores", {})
+
+        payload = {
+            "final/winner": results.get("winner"),
+        }
+
+        for player, score in total_scores.items():
+            payload[f"final/total_scores/{player}"] = score
+
+        average_payoff = metrics.get("average_payoff", {})
+        for player, value in average_payoff.items():
+            payload[f"metrics/average_payoff/{player}"] = value
+
+        round_win_rate = metrics.get("round_win_rate", {})
+        for player, value in round_win_rate.items():
+            payload[f"metrics/round_win_rate/{player}"] = value
+
+        self.wandb_logger.log_terminal(payload)
+        self.wandb_logger.finish()
+        self.wandb_finished = True

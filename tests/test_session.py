@@ -25,9 +25,17 @@ def make_config(rounds=2):
 class FakeRoundLogger:
     def __init__(self):
         self.round_logs = []
+        self.terminal_logs = []
+        self.finished = False
 
     def log_round(self, payload, step):
         self.round_logs.append({"payload": payload, "step": step})
+
+    def log_terminal(self, payload):
+        self.terminal_logs.append(payload)
+
+    def finish(self):
+        self.finished = True
 
 
 def test_create_session_stores_game_and_initial_state():
@@ -135,6 +143,7 @@ def test_submit_action_without_wandb_logger_does_not_crash():
     session.submit_action("B", [0, 5, 5])
 
     assert session.state.phase == "complete"
+    assert session.wandb_finished is False
 
 
 def test_submit_action_does_not_log_before_round_resolves():
@@ -170,6 +179,7 @@ def test_submit_action_logs_resolved_round_to_wandb_once():
             },
         }
     ]
+    assert fake_logger.finished is True
 
 
 def test_submit_action_logs_each_resolved_round_once():
@@ -184,6 +194,42 @@ def test_submit_action_logs_each_resolved_round_once():
 
     assert [entry["step"] for entry in fake_logger.round_logs] == [1, 2]
     assert [entry["payload"]["round"] for entry in fake_logger.round_logs] == [1, 2]
+
+
+def test_submit_action_logs_terminal_metrics_and_finishes_wandb():
+    session = GameSession.create(make_config(rounds=1))
+    fake_logger = FakeRoundLogger()
+    session.wandb_logger = fake_logger
+
+    session.submit_action("A", [10, 0, 0])
+    session.submit_action("B", [0, 5, 5])
+
+    assert fake_logger.terminal_logs == [
+        {
+            "final/winner": "B",
+            "final/total_scores/A": 1,
+            "final/total_scores/B": 2,
+            "metrics/average_payoff/A": 1.0,
+            "metrics/average_payoff/B": 2.0,
+            "metrics/round_win_rate/A": 0.0,
+            "metrics/round_win_rate/B": 1.0,
+            "metrics/round_win_rate/Tie": 0.0,
+        }
+    ]
+    assert fake_logger.finished is True
+    assert session.wandb_finished is True
+
+
+def test_terminal_wandb_logging_is_idempotent():
+    session = GameSession.create(make_config(rounds=1))
+    fake_logger = FakeRoundLogger()
+    session.wandb_logger = fake_logger
+
+    session.submit_action("A", [10, 0, 0])
+    session.submit_action("B", [0, 5, 5])
+    session._log_terminal_to_wandb()
+
+    assert len(fake_logger.terminal_logs) == 1
 
 
 def test_session_results_add_session_metadata():
