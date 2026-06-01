@@ -1,7 +1,9 @@
 import base64
 import binascii
 import os
+from typing import Any
 
+import wandb
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
@@ -56,3 +58,50 @@ def decrypt_api_key(encrypted: str, key: bytes | None = None) -> str:
         return aesgcm.decrypt(nonce, ciphertext, None).decode("utf-8")
     except (InvalidTag, UnicodeDecodeError) as exc:
         raise WandbConfigError("could not decrypt wandb api key") from exc
+
+
+class WandbGameLogger:
+    def __init__(self, wandb_config, game_config, encrypted_api_key: str):
+        self.wandb_config = wandb_config
+        self.game_config = game_config
+        self.encrypted_api_key = encrypted_api_key
+        self._run = None
+
+    # Start a W&B run using the decrypted session-scoped API key.
+    def start(self):
+        api_key = decrypt_api_key(self.encrypted_api_key)
+        try:
+            self._run = wandb.init(
+                project=self.wandb_config.project,
+                entity=self.wandb_config.entity,
+                name=self.wandb_config.run_name,
+                tags=list(self.wandb_config.tags or []),
+                config=self._game_config_dict(),
+                settings=wandb.Settings(_api_key=api_key),
+            )
+        finally:
+            api_key = None
+            del api_key
+
+        return self
+
+    def log_round(self, payload: dict[str, Any], step: int) -> None:
+        if self._run is None:
+            return
+        self._run.log(payload, step=step)
+
+    def log_terminal(self, payload: dict[str, Any]) -> None:
+        if self._run is None:
+            return
+        self._run.log(payload)
+
+    def finish(self) -> None:
+        if self._run is None:
+            return
+        self._run.finish()
+        self._run = None
+
+    def _game_config_dict(self):
+        if hasattr(self.game_config, "to_dict"):
+            return self.game_config.to_dict()
+        return self.game_config
