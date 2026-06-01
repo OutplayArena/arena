@@ -1,116 +1,37 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Blotto Experiment Visualizer</title>
-    <link rel="stylesheet" href="/style.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NashArena - Strategic Game Theory Platform</title>
+    <link rel="icon" type="image/png" href="/img/favicon_nash_arena.png" />
+    <link rel="apple-touch-icon" href="/img/favicon_nash_arena.png" />
+    <script>
+      (function() {
+        var t = localStorage.getItem("theme");
+        if (t === "dark" || (!t && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-BWATNJxp.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BGUqpZHr.css">
   </head>
   <body>
-    <main class="app-shell">
-      <section class="side-panel control-panel" aria-label="experiment controls">
-        <div class="brand-block">
-          <p class="eyebrow">Colonel Blotto</p>
-          <h1>Experiment Visualizer</h1>
-          <p>Models how two competing agents should allocate their limited, fixed resources across different locations.</p>
-        </div>
-
-        <form id="experiment-form" class="experiment-form">
-          <label>
-            <span>agent_a</span>
-            <select id="agent-a" name="agent_a"></select>
-          </label>
-
-          <label>
-            <span>agent_b</span>
-            <select id="agent-b" name="agent_b"></select>
-          </label>
-
-          <label>
-            <span>num_rounds</span>
-            <input id="num-rounds" name="num_rounds" type="number" min="1" max="50" value="10">
-          </label>
-
-          <label>
-            <span>num_battlefields</span>
-            <input id="num-battlefields" name="num_battlefields" type="number" min="1" max="12" value="5">
-          </label>
-
-          <label>
-            <span>total_resources</span>
-            <input id="total-resources" name="total_resources" type="number" min="1" max="1000" value="100">
-          </label>
-
-          <button id="run-button" type="submit">Run Experiment</button>
-        </form>
-
-        <div class="scoreboard">
-          <div class="score-card score-card-a">
-            <span>total_score_a</span>
-            <strong id="score-a">0</strong>
-          </div>
-          <div class="score-card">
-            <span>round</span>
-            <strong id="round-counter">0 / 0</strong>
-          </div>
-          <div class="score-card score-card-b">
-            <span>total_score_b</span>
-            <strong id="score-b">0</strong>
-          </div>
-        </div>
-      </section>
-
-      <section class="battle-stage" aria-label="battlefield visualization">
-        <canvas id="battle-canvas" width="1200" height="900"></canvas>
-
-        <div class="playback-panel" aria-label="replay controls">
-          <div class="scrubber-wrap">
-            <span>round</span>
-            <input id="round-scrubber" type="range" min="1" max="1" value="1" disabled>
-          </div>
-          <div class="playback-buttons">
-            <button id="prev-round" type="button" aria-label="Previous round" disabled>&lt;</button>
-            <button id="play-toggle" type="button" disabled>Pause</button>
-            <button id="next-round" type="button" aria-label="Next round" disabled>&gt;</button>
-          </div>
-        </div>
-
-        <div id="status-banner" class="status-banner">Choose agent_a, agent_b, and num_rounds.</div>
-      </section>
-
-      <section class="side-panel data-panel" aria-label="experiment data">
-        <div class="panel-heading">
-          <p class="eyebrow">Live Data</p>
-          <h2>Current Round</h2>
-        </div>
-
-        <button id="download-history" class="secondary-button" type="button" disabled>Download history JSON</button>
-
-        <dl class="round-metrics">
-          <div><dt>winner</dt><dd id="winner">-</dd></div>
-          <div><dt>score_a</dt><dd id="round-score-a">-</dd></div>
-          <div><dt>score_b</dt><dd id="round-score-b">-</dd></div>
-        </dl>
-
-        <div class="action-block">
-          <span>action_a</span>
-          <code id="action-a">[-]</code>
-        </div>
-
-        <div class="action-block">
-          <span>action_b</span>
-          <code id="action-b">[-]</code>
-        </div>
-
-        <div class="round-log">
-          <div class="panel-heading compact">
-            <p class="eyebrow">history</p>
-          </div>
-          <ol id="history-log"></ol>
-        </div>
-      </section>
-    </main>
-
-    <script src="/app.js"></script>
+    <div id="root"></div>
+    <script>
+      ;(function () {
+        var v = null
+        setInterval(function () {
+          fetch('/api/static-version')
+            .then(function (r) { return r.json() })
+            .then(function (d) {
+              if (v !== null && d.version !== v) location.reload()
+              v = d.version
+            })
+            .catch(function () {})
+        }, 1500)
+      })()
+    </script>
   </body>
 </html>

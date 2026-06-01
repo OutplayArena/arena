@@ -1,12 +1,15 @@
 # NashArena: Benchmarking Cooperative & Competitive Behavior of LLM Agents
 
-NashArena is an open platform for studying how LLM-powered agents behave under strategic pressure — from purely competitive zero-sum games to cooperative public-goods dilemmas and everything in between. Researchers can register new games, pit agents against each other, and measure not just who won but *how* they played: did the agent cooperate then defect at the critical moment? Did it honor its promises? Did it exploit trust?
+![NashArena AI Agent Benchmarking & Game Theory Platform](static/img/logo_banner_nash_arena_resized.png)
+
+
+NashArena is a platform for game theoretic analyses of LLM-based agents — studying how they behave under strategic pressure — from purely competitive zero-sum games to cooperative public-goods dilemmas and everything in between. Researchers can register new games, pit agents against each other, and measure not just who won but *how* they played: did the agent cooperate then defect at the critical moment? Did it honor its promises? Did it exploit trust?
 
 The platform treats games along a cooperative-to-competitive spectrum via its game ontology:
 
 | Payoff structure | Example games | What it reveals |
 |---|---|---|
-| **Zero-sum** | Colonel Blotto | Strategic reasoning, resource allocation, exploitability |
+| **Zero-sum** | Resource allocation (Blotto) | Strategic reasoning, resource allocation, exploitability |
 | **Mixed-motive** | Prisoner's Dilemma, Ultimatum Game | Trust, reciprocity, fairness, defection thresholds |
 | **Cooperative** | Public Goods Game | Free riding, contribution behavior, group welfare vs. self-interest |
 
@@ -25,32 +28,39 @@ The current implementation is intentionally in-memory and lightweight, designed 
 
 ```text
 nash_arena/
-  client.py      Python SDK for the FastAPI arena
-  game_engine.py generic game engine contract
-  game_registry.py discovers the top-level games catalog
-  main.py        FastAPI app and static visualizer server
-  mcp_server.py  MCP tools for one player in one session
-  session.py     generic session wrapper, pending actions, player tokens
+  client.py          Python SDK for the FastAPI arena
+  game_engine.py     generic game engine contract
+  game_registry.py   discovers the top-level games catalog
+  main.py            FastAPI app and API server
+  mcp_server.py      MCP tools for one player in one session
+  session.py         generic session wrapper, pending actions, player tokens
+  models/            SQLAlchemy models (session, user, apikey)
+  middleware/        auth middleware
 
 games/
-  _template/     starter shape for future games
-  core/blotto/   first registered platform-maintained game:
-                 config, engine, metrics, prompts, agents, tests
-  community/     reserved for contributor games
+  _template/         starter shape for future games
+  core/blotto/       first registered platform-maintained game:
+                     config, engine, metrics, prompts, agents, ui/
+  community/         reserved for contributor games
 
-static/
-  index.html     browser visualizer shell
-  app.js         visualizer client and demo agents
-  style.css      visualizer styling
+frontend/
+  src/
+    components/      React components (tabbed play view, auto-forms, etc.)
+    pages/           Dashboard, History, GamePlay pages
+    games/           UI registry (import.meta.glob for per-game components)
+  package.json       Vite + React + Tailwind
 
+static/              built frontend output (index.html, assets/)
 examples/
   play_blotto_game.py  minimal SDK example
 
 tests/
   pytest coverage for config, engine, sessions, API, SDK, metrics, MCP
 
-run_experiment.py      simple CLI match runner
-planning/             planning notes for the broader platform
+run_experiment.py        simple CLI match runner
+migrations/              Alembic DB migrations
+docker/                  Docker & docker-compose
+planning/                planning notes for the broader platform
 ```
 
 ## Install
@@ -58,7 +68,7 @@ planning/             planning notes for the broader platform
 From the repository root:
 
 ```bash
-python3 -m pip install -e .
+uv sync
 ```
 
 Optional local or API LLM agents use the `transformers` and `litellm` dependencies declared in `pyproject.toml`. You do not need to use those agents to run the FastAPI arena, SDK, visualizer, or MCP flow.
@@ -71,22 +81,83 @@ uv run pytest # Add -q for lower verbosity
 
 This is the main safety check. It exercises the platform modules plus the web API and SDK.
 
-## Run the FastAPI Arena
+## Development
 
-Start the server:
+### Prerequisites
+
+- Python 3.12+ with `uv` (pip alternative)
+- Node.js 20+ with `npm`
+- PostgreSQL 16 (or Docker)
+
+### One-time setup
 
 ```bash
-uvicorn nash_arena.main:app --reload
+# Install Python dependencies
+uv sync
+
+# Install frontend dependencies
+cd frontend && npm install && cd ..
+
+# Copy and edit environment variables
+cp .env.example .env
+# DATABASE_URL is pre-configured for local Docker PostgreSQL
 ```
 
-Then open:
+### Database
 
-- visualizer: http://127.0.0.1:8000/
+Bring up PostgreSQL via Docker:
+
+```bash
+docker compose -f docker/docker-compose.yml up db -d --wait
+```
+
+Apply migrations:
+
+```bash
+uv run alembic upgrade head
+```
+
+### Backend
+
+```bash
+uv run uvicorn nash_arena.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+The backend serves:
+- API: http://127.0.0.1:8000/api/
 - API docs: http://127.0.0.1:8000/docs
-- health check: http://127.0.0.1:8000/health
-- game directory: http://127.0.0.1:8000/games
+- Health: http://127.0.0.1:8000/health
 
-The browser visualizer currently runs simple client-side demo agents: `uniform`, `random`, and `greedy`. More serious LLM agents should connect through HTTP, the Python SDK, or MCP so each player can act as an independent client.
+### Frontend
+
+In a separate terminal:
+
+```bash
+cd frontend && npm run dev -- --host
+```
+
+The Vite dev server runs on http://localhost:5173 and proxies `/api` requests to the backend on port 8000.
+
+### Remote access (Tailscale / SSH)
+
+If you're connecting from another machine (e.g. a Mac to WSL):
+
+```bash
+# Find your Tailscale IP
+tailscale status | head -1
+```
+
+The backend (`--host 0.0.0.0`) and frontend (`--host`) already bind to all interfaces. Open `http://<tailscale-ip>:5173` in your local browser.
+
+Alternatively, use SSH port forwarding: `ssh -L 8000:localhost:8000 -L 5173:localhost:5173 user@host`.
+
+### Full Docker stack
+
+```bash
+docker compose -f docker/docker-compose.yml up -d --build
+```
+
+This starts PostgreSQL, runs migrations, builds the frontend, and launches the backend behind Traefik at `api.agent-arena.local`.
 
 ## Game Directory
 
@@ -304,20 +375,20 @@ python3 run_experiment.py --agent_a llm-api --agent_b random --rounds 3
 Use this checklist after platform changes:
 
 ```bash
-python3 -m pytest -q
+uv run pytest -q
 ```
 
 ```bash
-uvicorn nash_arena.main:app --reload
+uv run uvicorn nash_arena.main:app --reload &
 curl -sS http://127.0.0.1:8000/health
 ```
 
 ```bash
-python3 examples/play_blotto_game.py
+uv run python examples/play_blotto_game.py
 ```
 
 ```bash
-python3 run_experiment.py --agent_a uniform --agent_b random --rounds 3
+uv run python run_experiment.py --agent_a uniform --agent_b random --rounds 3
 ```
 
 For MCP import sanity:

@@ -20,7 +20,7 @@ sys.stdout.reconfigure(line_buffering=True)
 
 LLM_EXECUTOR = ThreadPoolExecutor(max_workers=2)
 
-ARENA_BASE_URL = os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000")
+NASH_ARENA_BASE_URL = os.environ.get("NASH_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
 OPENCODE_GO_API_KEY = os.environ.get("OPENCODE_GO_API_KEY", "").strip()
 OPENCODE_GO_API_BASE = "https://opencode.ai/zen/go/v1"
 
@@ -68,7 +68,7 @@ def build_prompt(state, player_label):
     total_scores = state.get("total_scores", {})
 
     lines = [
-        f"Blotto R{round_num}/{round_total}. You={player_label}. Troops=100. Fields=5. Scores A={total_scores.get('A', 0)} B={total_scores.get('B', 0)}.",
+        f"R{round_num}/{round_total}. You={player_label}. Troops={TOTAL_RESOURCES}. Fields={NUM_BATTLEFIELDS}. Scores A={total_scores.get('A', 0)} B={total_scores.get('B', 0)}.",
     ]
 
     if history:
@@ -101,6 +101,7 @@ def _sync_llm_call(model, system_msg, prompt):
                     ],
                     "max_tokens": 16384,
                     "temperature": 0.7,
+                    "reasoning_effort": "low",
                 },
                 timeout=300.0,
             )
@@ -143,9 +144,9 @@ def _sync_llm_call(model, system_msg, prompt):
 
 async def llm_allocate(model, prompt):
     system_msg = (
-        "You play Colonel Blotto. "
-        "Distribute exactly 100 troops across 5 equal battlefields. "
-        "Output ONLY a Python list like [30,25,20,15,10]. "
+        f"You are playing the resource allocation game. "
+        f"Distribute exactly {TOTAL_RESOURCES} troops across {NUM_BATTLEFIELDS} equal battlefields. "
+        "Output ONLY a Python list of integers. "
         "No other text."
     )
     loop = asyncio.get_running_loop()
@@ -165,11 +166,10 @@ def extract_tool_text(result):
     return {}
 
 
-async def create_player_session(player, session_id, token, exit_stack):
+async def create_player_session(player, arena_key, exit_stack):
     env = {
-        "ARENA_BASE_URL": ARENA_BASE_URL,
-        "ARENA_SESSION_ID": session_id,
-        "ARENA_SESSION_TOKEN": token,
+        "NASH_ARENA_BASE_URL": NASH_ARENA_BASE_URL,
+        "NASH_ARENA_KEY": arena_key,
     }
     server_params = StdioServerParameters(
         command=sys.executable,
@@ -191,7 +191,7 @@ async def run_match():
         sys.exit(1)
 
     print("Creating arena session...")
-    arena = ArenaClient(ARENA_BASE_URL)
+    arena = ArenaClient(NASH_ARENA_BASE_URL)
     config = BlottoExperimentConfig.classic(
         num_battlefields=NUM_BATTLEFIELDS,
         total_resources=TOTAL_RESOURCES,
@@ -200,18 +200,19 @@ async def run_match():
     )
     created = arena.create_experiment(config)
     session_id = created["session_id"]
-    token_a = created["player_tokens"]["A"]
-    token_b = created["player_tokens"]["B"]
+    key_a = created["player_tokens"]["A"]
+    key_b = created["player_tokens"]["B"]
     print(f"Session: {session_id}")
-    print(f"Player A ({PLAYER_A_MODEL}) vs Player B ({PLAYER_B_MODEL})")
+    print(f"Player A ({PLAYER_A_MODEL}) key: {key_a}")
+    print(f"Player B ({PLAYER_B_MODEL}) key: {key_b}")
     print(f"Config: {NUM_BATTLEFIELDS} battlefields, {TOTAL_RESOURCES} troops, {NUM_ROUNDS} rounds")
     print()
 
     async with AsyncExitStack() as exit_stack:
         print("Starting MCP server for Player A...")
-        mcp_a = await create_player_session("A", session_id, token_a, exit_stack)
+        mcp_a = await create_player_session("A", key_a, exit_stack)
         print("Starting MCP server for Player B...")
-        mcp_b = await create_player_session("B", session_id, token_b, exit_stack)
+        mcp_b = await create_player_session("B", key_b, exit_stack)
         print("Both MCP servers ready.")
         print()
 
@@ -229,10 +230,8 @@ async def run_match():
             prompt_a = build_prompt(state, "A")
             prompt_b = build_prompt(state, "B")
 
-            (alloc_a, raw_a), (alloc_b, raw_b) = await asyncio.gather(
-                llm_allocate(PLAYER_A_MODEL, prompt_a),
-                llm_allocate(PLAYER_B_MODEL, prompt_b),
-            )
+            alloc_a, raw_a = await llm_allocate(PLAYER_A_MODEL, prompt_a)
+            alloc_b, raw_b = await llm_allocate(PLAYER_B_MODEL, prompt_b)
 
             action_a_result = await mcp_a.call_tool(
                 "submit_action", {"allocation": alloc_a}

@@ -18,7 +18,7 @@ TEMPERATURE = 0.9
 MAX_TOKENS = 512
 
 BASE_SYSTEM = (
-    "You are a General playing Colonel Blotto. "
+    "You are playing the resource allocation game. "
     "Distribute exactly 100 troops across 5 battlefields. "
     "Output a Python list like [30,25,20,15,10]."
 )

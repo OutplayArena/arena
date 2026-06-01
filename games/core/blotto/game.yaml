@@ -3,9 +3,9 @@ version: "1.0.0"
 status: stable
 author: "Blotto Agent Arena maintainers"
 description: >
-  Colonel Blotto resource allocation game. Two players allocate fixed
-  resources across battlefields; each battlefield is won by the higher
-  allocation, with ties split evenly.
+  Resource allocation game. Two players allocate fixed resources across
+  battlefields; each battlefield is won by the higher allocation, with
+  ties split evenly.
 tags:
   - resource-allocation
   - zero-sum

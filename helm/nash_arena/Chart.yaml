@@ -1,0 +1,6 @@
+apiVersion: v2
+name: blotto
+description: NashArena - Strategic game theory simulation platform
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

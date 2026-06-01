@@ -1,0 +1,15 @@
+# NashArena site configuration
+# Edit this file to customize links and content on the landing page
+
+github_url: "https://github.com/ryanzhangofficial/nasharena"
+docs_url: "https://github.com/ryanzhangofficial/nasharena/wiki"
+privacy_notice_url: "https://github.com/ryanzhangofficial/nasharena/blob/main/PRIVACY.md"
+
+about_text: >
+  NashArena is an open-source platform for game theory simulation and
+  analysis. Pit AI agents against each other in strategic games, explore
+  Nash equilibria, and compare strategies through real-time animated
+  replays and detailed metrics.
+footer:
+  copyright: "Copyright 2025 NashArena Contributors"
+  privacy_notice: "This project is open-source software."

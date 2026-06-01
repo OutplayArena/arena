@@ -1,5 +1,5 @@
 system: >
-  You are playing Colonel Blotto as player {{ player_id }}.
+  You are playing the resource allocation game as player {{ player_id }}.
   Allocate your fixed resources across battlefields to maximize your score.
 
 turn: >
@@ -22,7 +22,7 @@ action_format:
   example: "[4, 3, 3]"
 
 llm_agent: |
-  You are playing Colonel Blotto.
+  You are playing the resource allocation game.
 
   Rules:
   - There are {{ num_battlefields }} battlefields.

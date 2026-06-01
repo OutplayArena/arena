@@ -1,5 +1,6 @@
 from pathlib import Path
 import importlib
+import importlib.util
 
 import yaml
 
@@ -9,6 +10,22 @@ CATALOG_ROOT = Path(__file__).resolve().parent.parent / "games"
 
 class GameRegistryError(ValueError):
     pass
+
+
+def _has_ui_component(game_dir: Path, name: str) -> bool:
+    return (game_dir / "ui" / f"{name}.tsx").exists()
+
+
+def _detect_ui(game_dir: Path) -> dict:
+    ui_dir = game_dir / "ui"
+    has_live_view = _has_ui_component(game_dir, "LiveView")
+    has_config = _has_ui_component(game_dir, "ConfigForm")
+    has_history = _has_ui_component(game_dir, "HistoryView")
+    return {
+        "live_view": has_live_view,
+        "custom_config": has_config,
+        "custom_history": has_history,
+    }
 
 
 class GameRegistry:
@@ -23,6 +40,7 @@ class GameRegistry:
     def get_game(self, name: str) -> dict:
         game_dir = self._game_dir(name)
         metadata = self._load_yaml(game_dir / "game.yaml")
+        metadata["ui"] = _detect_ui(game_dir)
         return metadata
 
     def get_game_metrics(self, name: str) -> dict:
@@ -30,6 +48,13 @@ class GameRegistry:
 
     def get_game_prompts(self, name: str) -> dict:
         return self._load_yaml(self._game_dir(name) / "prompts.yaml")
+
+    def get_game_agents(self, name: str) -> dict:
+        game_dir = self._game_dir(name)
+        agents_yaml = game_dir / "agents.yaml"
+        if agents_yaml.exists():
+            return self._load_yaml(agents_yaml)
+        return {"agents": []}
 
     def config_from_request(self, payload: dict):
         game = payload.get("game")

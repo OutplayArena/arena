@@ -2,6 +2,7 @@ import pytest
 
 from nash_arena import mcp_server
 from nash_arena.client import ArenaClient
+from nash_arena.auth.session_key import derive_session_key
 
 
 class FakeClient:
@@ -32,35 +33,36 @@ class FakeClient:
 
 
 def test_required_env_returns_value(monkeypatch):
-    monkeypatch.setenv("ARENA_SESSION_ID", "session-1")
+    monkeypatch.setenv("NASH_ARENA_KEY", "nks_testkey")
 
-    assert mcp_server.required_env("ARENA_SESSION_ID") == "session-1"
+    assert mcp_server.required_env("NASH_ARENA_KEY") == "nks_testkey"
 
 
 def test_required_env_rejects_missing_value(monkeypatch):
-    monkeypatch.delenv("ARENA_SESSION_TOKEN", raising=False)
+    monkeypatch.delenv("NASH_ARENA_KEY", raising=False)
 
-    with pytest.raises(RuntimeError, match="ARENA_SESSION_TOKEN is required"):
-        mcp_server.required_env("ARENA_SESSION_TOKEN")
+    with pytest.raises(RuntimeError, match="NASH_ARENA_KEY is required"):
+        mcp_server.required_env("NASH_ARENA_KEY")
 
 
 def test_arena_client_reads_environment(monkeypatch):
-    monkeypatch.setenv("ARENA_BASE_URL", "http://arena.test")
-    monkeypatch.setenv("ARENA_SESSION_ID", "session-1")
-    monkeypatch.setenv("ARENA_SESSION_TOKEN", "tok-a")
+    session_key = derive_session_key("session-1", "A")
+    monkeypatch.setenv("NASH_ARENA_BASE_URL", "http://arena.test")
+    monkeypatch.setenv("NASH_ARENA_KEY", session_key)
 
     client = mcp_server.arena_client()
 
     assert isinstance(client, ArenaClient)
     assert client.base_url == "http://arena.test"
     assert client.session_id == "session-1"
-    assert client.token == "tok-a"
+    assert client.token == session_key
 
 
 def test_arena_client_uses_default_base_url(monkeypatch):
+    session_key = derive_session_key("session-1", "A")
+    monkeypatch.delenv("NASH_ARENA_BASE_URL", raising=False)
     monkeypatch.delenv("ARENA_BASE_URL", raising=False)
-    monkeypatch.setenv("ARENA_SESSION_ID", "session-1")
-    monkeypatch.setenv("ARENA_SESSION_TOKEN", "tok-a")
+    monkeypatch.setenv("NASH_ARENA_KEY", session_key)
 
     client = mcp_server.arena_client()
 

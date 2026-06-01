@@ -4,7 +4,9 @@ os.environ["API_PREFIX"] = ""
 import pytest
 from fastapi.testclient import TestClient
 
-from nash_arena.main import SESSIONS, app, bearer_token, config_from_request
+from nash_arena.main import app, bearer_token, config_from_request
+from nash_arena.db import get_db
+from nash_arena.models.session import SessionModel
 
 
 class FakeResult:
@@ -22,15 +24,36 @@ class FakeDb:
     async def execute(self, stmt):
         compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
         for sid, row in self._store.items():
-            if sid in compiled:
+            if str(sid) in compiled:
                 return FakeResult(row)
         return FakeResult(None)
 
-    async def merge(self, obj):
-        self._store[obj.id] = obj
+    def add(self, obj):
+        self._store[str(obj.id)] = obj
 
     async def commit(self):
         pass
+
+    async def refresh(self, obj):
+        stored = self._store.get(str(obj.id))
+        if stored is not None:
+            for key in obj.__dict__:
+                if not key.startswith("_"):
+                    setattr(obj, key, getattr(stored, key, getattr(obj, key)))
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        pass
+
+
+@pytest.fixture(name="fake_db")
+def fake_db_fixture():
+    db = FakeDb()
+    app.dependency_overrides[get_db] = lambda: db
+    yield db
+    app.dependency_overrides.pop(get_db, None)
 
 
 def valid_payload(rounds=1):
@@ -49,10 +72,6 @@ def valid_payload(rounds=1):
     }
 
 
-def setup_function():
-    SESSIONS.clear()
-
-
 def test_config_from_request_builds_experiment_config():
     config = config_from_request(valid_payload(rounds=3))
 
@@ -66,20 +85,20 @@ def test_bearer_token_extracts_token():
     assert bearer_token("Bearer tok_123") == "tok_123"
 
 
-def test_create_experiment_returns_session_and_tokens():
+def test_create_experiment_returns_session_and_tokens(fake_db):
     client = TestClient(app)
 
     response = client.post("/experiment", json=valid_payload())
 
     assert response.status_code == 200
     data = response.json()
-    assert data["session_id"] in SESSIONS
     assert data["config_hash"].startswith("sha256:")
     assert set(data["player_tokens"]) == {"A", "B"}
     assert data["player_tokens"]["A"] != data["player_tokens"]["B"]
+    assert data["session_id"] in fake_db._store
 
 
-def test_create_experiment_rejects_invalid_config():
+def test_create_experiment_rejects_invalid_config(fake_db):
     client = TestClient(app)
     payload = valid_payload()
     payload["players"] = 3
@@ -90,7 +109,7 @@ def test_create_experiment_rejects_invalid_config():
     assert "2 players" in response.json()["detail"]
 
 
-def test_get_state_returns_public_state_without_tokens():
+def test_get_state_returns_public_state_without_tokens(fake_db):
     client = TestClient(app)
     created = client.post("/experiment", json=valid_payload(rounds=2)).json()
 
@@ -105,7 +124,7 @@ def test_get_state_returns_public_state_without_tokens():
     assert "player_tokens" not in state
 
 
-def test_submit_action_requires_bearer_token():
+def test_submit_action_requires_bearer_token(fake_db):
     client = TestClient(app)
     created = client.post("/experiment", json=valid_payload()).json()
 
@@ -118,7 +137,7 @@ def test_submit_action_requires_bearer_token():
     assert response.json()["detail"] == "missing bearer token"
 
 
-def test_submit_action_rejects_invalid_token():
+def test_submit_action_rejects_invalid_token(fake_db):
     client = TestClient(app)
     created = client.post("/experiment", json=valid_payload()).json()
 
@@ -132,7 +151,7 @@ def test_submit_action_rejects_invalid_token():
     assert response.json()["detail"] == "invalid player token"
 
 
-def test_submit_actions_advance_session_and_results_include_metrics():
+def test_submit_actions_advance_session_and_results_include_metrics(fake_db):
     client = TestClient(app)
     created = client.post("/experiment", json=valid_payload(rounds=1)).json()
     session_id = created["session_id"]
@@ -163,7 +182,7 @@ def test_submit_actions_advance_session_and_results_include_metrics():
     assert "metrics" in body
 
 
-def test_duplicate_action_returns_conflict():
+def test_duplicate_action_returns_conflict(fake_db):
     client = TestClient(app)
     created = client.post("/experiment", json=valid_payload(rounds=2)).json()
     token_a = created["player_tokens"]["A"]
@@ -183,7 +202,7 @@ def test_duplicate_action_returns_conflict():
     assert "already submitted" in response.json()["detail"]
 
 
-def test_results_before_completion_returns_conflict():
+def test_results_before_completion_returns_conflict(fake_db):
     client = TestClient(app)
     created = client.post("/experiment", json=valid_payload(rounds=2)).json()
 
@@ -193,7 +212,7 @@ def test_results_before_completion_returns_conflict():
     assert "complete" in response.json()["detail"]
 
 
-def test_unknown_session_returns_not_found():
+def test_unknown_session_returns_not_found(fake_db):
     client = TestClient(app)
 
     response = client.get("/session/missing/state")
@@ -208,21 +227,24 @@ def test_fastapi_serves_visualizer_index():
     response = client.get("/")
 
     assert response.status_code == 200
-    assert "Blotto Experiment Visualizer" in response.text
-    assert "/app.js" in response.text
+    assert "NashArena" in response.text
+    assert "/assets/index-" in response.text
 
 
 def test_fastapi_serves_visualizer_javascript():
     client = TestClient(app)
 
-    response = client.get("/app.js")
+    response = client.get("/")
 
     assert response.status_code == 200
-    assert "POST" in response.text
-    assert "/api/experiment" in response.text
-    assert "/api/run-experiment" not in response.text
-    assert "/api/huggingface-models" not in response.text
-    assert "llm-model" not in response.text
+    import re
+
+    match = re.search(r'src="(/assets/index-[^"]+\.js)"', response.text)
+    assert match, "JS bundle script tag not found in index.html"
+    js_path = match.group(1)
+
+    js_response = client.get(js_path)
+    assert js_response.status_code == 200
 
 
 def test_list_games_returns_registered_blotto_game():

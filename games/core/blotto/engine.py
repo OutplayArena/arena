@@ -60,6 +60,9 @@ class BlottoGame(GameEngine):
             total_scores={"A": 0, "B": 0},
         )
 
+    def state_from_dict(self, d: dict) -> BlottoState:
+        return BlottoState(**d)
+
     # Asks: Is this a valid Blotto allocation?      
     def validate_action(self, action):
         if not isinstance(action, list):
