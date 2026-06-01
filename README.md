@@ -230,6 +230,52 @@ curl -sS http://127.0.0.1:8000/api/game/session/SESSION_ID/results \
   -H "X-Nash-Arena-Internal-Token: $NASH_ARENA_INTERNAL_API_TOKEN"
 ```
 
+## Optional W&B Logging
+
+Experiments can optionally stream round and terminal metrics to a researcher-owned Weights & Biases project. W&B config is runtime metadata, not game config: it does not affect the game config hash.
+
+Set a 32-byte hex encryption key before creating W&B-enabled experiments:
+
+```bash
+export NASH_ARENA_WANDB_ENCRYPTION_KEY="$(python3 - <<'PY'
+import secrets
+print(secrets.token_hex(32))
+PY
+)"
+```
+
+Then include a `wandb` block in the experiment payload:
+
+```bash
+curl -sS -X POST http://127.0.0.1:8000/api/game/experiment \
+  -H "Content-Type: application/json" \
+  -H "X-Nash-Arena-Internal-Token: $NASH_ARENA_INTERNAL_API_TOKEN" \
+  -d '{
+    "game": "blotto",
+    "variant": "classic",
+    "players": 2,
+    "budget": [10, 10],
+    "battlefields": [
+      {"id": "left", "value": 1.0},
+      {"id": "center", "value": 1.0},
+      {"id": "right", "value": 1.0}
+    ],
+    "rounds": 1,
+    "seed": 42,
+    "wandb": {
+      "api_key": "wandb_xxx",
+      "project": "arena-runs",
+      "entity": "my-lab",
+      "run_name": "blotto-smoke-test",
+      "tags": ["blotto", "arena"]
+    }
+  }'
+```
+
+When enabled, the arena starts a W&B run at session creation, logs one payload each time a round resolves, then logs final metrics and finishes the run when the game completes.
+
+The W&B API key is redacted from safe config serialization and API responses. It is encrypted with `NASH_ARENA_WANDB_ENCRYPTION_KEY` before being attached to the session logger, and the plaintext key is only used when starting the W&B run.
+
 ## Python SDK Flow
 
 Run the included example while the FastAPI server is running:
