@@ -22,6 +22,7 @@ dependencies = [
     "kubernetes>=31.0",
     "PyYAML>=6.0.0",
     "cryptography>=42.0.0",
+    "wandb>=0.17.0",
 ]
 
 [project.optional-dependencies]
