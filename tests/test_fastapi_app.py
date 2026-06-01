@@ -79,7 +79,41 @@ def test_create_experiment_returns_session_and_tokens():
     assert data["player_tokens"]["A"] != data["player_tokens"]["B"]
 
 
-def test_create_experiment_stores_wandb_runtime_config_without_leaking_key():
+def test_create_experiment_with_wandb_requires_encryption_key(monkeypatch):
+    monkeypatch.delenv("NASH_ARENA_WANDB_ENCRYPTION_KEY", raising=False)
+    client = TestClient(app)
+    payload = {
+        **valid_payload(),
+        "wandb": {
+            "api_key": "wandb-secret",
+            "project": "arena-runs",
+            "entity": "lab",
+            "run_name": "run-1",
+            "tags": ["blotto"],
+        },
+    }
+
+    response = client.post("/api/frontend/experiment", json=payload)
+
+    assert response.status_code == 400
+    assert "NASH_ARENA_WANDB_ENCRYPTION_KEY" in response.json()["detail"]
+
+
+def test_create_experiment_starts_wandb_logger_without_leaking_key(monkeypatch):
+    started = []
+
+    class FakeLogger:
+        def __init__(self, wandb_config, game_config, encrypted_api_key):
+            self.wandb_config = wandb_config
+            self.game_config = game_config
+            self.encrypted_api_key = encrypted_api_key
+
+        def start(self):
+            started.append(self)
+            return self
+
+    monkeypatch.setenv("NASH_ARENA_WANDB_ENCRYPTION_KEY", "0" * 64)
+    monkeypatch.setattr("nash_arena.session.WandbGameLogger", FakeLogger)
     client = TestClient(app)
     payload = {
         **valid_payload(),
@@ -100,6 +134,8 @@ def test_create_experiment_stores_wandb_runtime_config_without_leaking_key():
     assert session.runtime_config.wandb is not None
     assert session.runtime_config.wandb.api_key == "wandb-secret"
     assert session.runtime_config.to_safe_dict()["wandb"]["api_key"] == "[redacted]"
+    assert session.wandb_logger is started[0]
+    assert "wandb-secret" not in session.wandb_logger.encrypted_api_key
     assert "wandb-secret" not in str(body)
 
 

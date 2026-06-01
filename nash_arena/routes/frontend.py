@@ -28,10 +28,10 @@ def create_frontend_router(game_registry, sessions: dict[str, GameSession]):
             game_payload, runtime_config = split_runtime_config(request)
             config = game_registry.config_from_request(game_payload)
             game = game_registry.game_from_config(config)
+            session = GameSession.create(config, game=game, runtime_config=runtime_config)
         except (ValueError, GameRegistryError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-        session = GameSession.create(config, game=game, runtime_config=runtime_config)
         sessions[session.session_id] = session
         return session.creation_response()
 

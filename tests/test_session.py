@@ -2,6 +2,7 @@ import pytest
 
 from games.core.blotto.config import BattlefieldConfig, BlottoExperimentConfig
 from nash_arena.auth import create_player_token, decode_token
+from nash_arena.experiment_config import ExperimentRuntimeConfig, WandbConfig
 from nash_arena.session import GameSession
 
 
@@ -40,6 +41,40 @@ def test_create_session_stores_game_and_initial_state():
     assert session.player_tokens["B"]
     assert session.player_tokens["A"] != session.player_tokens["B"]
     assert session.player_tokens["A"].count(".") == 2
+    assert session.wandb_logger is None
+
+
+def test_create_session_with_wandb_starts_logger(monkeypatch):
+    started = []
+
+    class FakeLogger:
+        def __init__(self, wandb_config, game_config, encrypted_api_key):
+            self.wandb_config = wandb_config
+            self.game_config = game_config
+            self.encrypted_api_key = encrypted_api_key
+
+        def start(self):
+            started.append(self)
+            return self
+
+    monkeypatch.setenv(
+        "NASH_ARENA_WANDB_ENCRYPTION_KEY",
+        "0" * 64,
+    )
+    monkeypatch.setattr("nash_arena.session.WandbGameLogger", FakeLogger)
+    runtime_config = ExperimentRuntimeConfig(
+        wandb=WandbConfig(
+            api_key="wandb-secret",
+            project="arena-runs",
+        )
+    )
+
+    session = GameSession.create(make_config(), runtime_config=runtime_config)
+
+    assert session.wandb_logger is started[0]
+    assert session.wandb_logger.wandb_config == runtime_config.wandb
+    assert session.wandb_logger.game_config == session.config
+    assert "wandb-secret" not in session.wandb_logger.encrypted_api_key
 
 
 def test_public_state_reads_from_game_state():
