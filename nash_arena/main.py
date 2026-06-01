@@ -294,7 +294,12 @@ async def get_session_summary(session_id: str, db: AsyncSession = Depends(get_db
 
 
 def _agent_filter(agents_json_col, agent: str):
-    return agents_json_col.cast(JSONB).astext.ilike(f"%{agent}%")
+    from sqlalchemy import func
+    return func.coalesce(
+        agents_json_col["A"].astext, ""
+    ).ilike(f"%{agent}%") | func.coalesce(
+        agents_json_col["B"].astext, ""
+    ).ilike(f"%{agent}%")
 
 
 @app.get(f"{API_PREFIX}/sessions")
