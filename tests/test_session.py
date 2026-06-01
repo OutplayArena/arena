@@ -1,7 +1,6 @@
 import pytest
 
 from games.core.blotto.config import BattlefieldConfig, BlottoExperimentConfig
-from nash_arena.auth import create_player_token, decode_token
 from nash_arena.session import GameSession
 
 
@@ -39,7 +38,6 @@ def test_create_session_stores_game_and_initial_state():
     assert session.player_tokens["A"]
     assert session.player_tokens["B"]
     assert session.player_tokens["A"] != session.player_tokens["B"]
-    assert session.player_tokens["A"].count(".") == 2
 
 
 def test_public_state_reads_from_game_state():
@@ -145,25 +143,6 @@ def test_player_for_token_resolves_player_identity():
 
     assert session.player_for_token(session.player_tokens["A"]) == "A"
     assert session.player_for_token(session.player_tokens["B"]) == "B"
-
-
-def test_player_tokens_include_signed_session_claims():
-    session = GameSession.create(make_config())
-
-    claims = decode_token(session.player_tokens["A"])
-
-    assert claims["session_id"] == session.session_id
-    assert claims["player"] == "A"
-    assert claims["scope"] == "game:action"
-    assert claims["exp"] > claims["iat"]
-
-
-def test_player_token_from_another_session_is_rejected():
-    session = GameSession.create(make_config())
-    other_session_token = create_player_token(session_id="other-session", player="A")
-
-    with pytest.raises(ValueError, match="invalid player token"):
-        session.player_for_token(other_session_token)
 
 
 def test_invalid_player_token_is_rejected():

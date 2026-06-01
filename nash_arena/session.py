@@ -12,9 +12,9 @@
 
 from dataclasses import dataclass
 from typing import Any
+import secrets
 import uuid
 
-from nash_arena.auth import AuthError, create_player_token, decode_player_token
 from nash_arena.game_engine import GameEngine
 from nash_arena.game_registry import GameRegistry
 
@@ -32,14 +32,13 @@ class GameSession:
     def create(cls, config, game=None):
         if game is None:
             game = GameRegistry().game_from_config(config)
-        session_id = str(uuid.uuid4())
         player_tokens = {
-            player: create_player_token(session_id=session_id, player=player)
+            player: secrets.token_urlsafe(32)
             for player in config.player_ids()
         }
         
         return cls(
-            session_id=session_id,
+            session_id=str(uuid.uuid4()),
             config=config,
             config_hash=config.config_hash(),
             game=game,
@@ -76,19 +75,13 @@ class GameSession:
             "player_tokens": dict(self.player_tokens),
         }
         
-    # Resolve the player identity encoded in a signed session token.
     def player_for_token(self, token):
-        try:
-            claims = decode_player_token(token, session_id=self.session_id)
-        except AuthError as exc:
-            raise ValueError("invalid player token") from exc
-
-        player = claims.get("player")
-        if player not in self.config.player_ids():
-            raise ValueError("invalid player token")
-        return player
+        for player, player_token in self.player_tokens.items():
+            if secrets.compare_digest(token, player_token):
+                return player
+            
+        raise ValueError("invalid player token")
     
-    # Submit an action using the player identity encoded in the token.
     def submit_action_with_token(self, token, allocation):
         player = self.player_for_token(token)
         self.submit_action(player, allocation)
