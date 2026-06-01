@@ -198,7 +198,7 @@ async def run_match():
         rounds=NUM_ROUNDS,
         seed=42,
     )
-    created = arena.create_experiment(config)
+    created = arena.create_experiment(config, agents={"A": PLAYER_A_MODEL, "B": PLAYER_B_MODEL})
     session_id = created["session_id"]
     key_a = created["player_tokens"]["A"]
     key_b = created["player_tokens"]["B"]
