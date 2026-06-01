@@ -15,6 +15,7 @@ from typing import Any
 import uuid
 
 from nash_arena.auth import AuthError, create_player_token, decode_player_token
+from nash_arena.experiment_config import ExperimentRuntimeConfig
 from nash_arena.game_engine import GameEngine
 from nash_arena.game_registry import GameRegistry
 
@@ -26,12 +27,15 @@ class GameSession:
     game: GameEngine
     state: Any
     player_tokens: dict[str, str]
+    runtime_config: ExperimentRuntimeConfig
     
     # Future POST /api/game/experiment behavior minus HTTP
     @classmethod
-    def create(cls, config, game=None):
+    def create(cls, config, game=None, runtime_config=None):
         if game is None:
             game = GameRegistry().game_from_config(config)
+        if runtime_config is None:
+            runtime_config = ExperimentRuntimeConfig()
         session_id = str(uuid.uuid4())
         player_tokens = {
             player: create_player_token(session_id=session_id, player=player)
@@ -45,6 +49,7 @@ class GameSession:
             game=game,
             state=game.initial_state(),
             player_tokens=player_tokens,
+            runtime_config=runtime_config,
         )
         
     # Equivalent of: GET /api/game/session/{id}/state

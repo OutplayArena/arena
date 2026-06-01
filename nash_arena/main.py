@@ -5,6 +5,7 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from nash_arena.experiment_config import split_runtime_config
 from nash_arena.game_registry import GameRegistry
 from nash_arena.routes.catalog import create_catalog_router
 from nash_arena.routes.frontend import create_frontend_router
@@ -21,7 +22,8 @@ GAME_REGISTRY = GameRegistry()
 
 
 def config_from_request(request: dict[str, Any]):
-    return GAME_REGISTRY.config_from_request(request)
+    game_payload, _ = split_runtime_config(request)
+    return GAME_REGISTRY.config_from_request(game_payload)
 
 
 def health():

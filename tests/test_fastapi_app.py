@@ -79,6 +79,30 @@ def test_create_experiment_returns_session_and_tokens():
     assert data["player_tokens"]["A"] != data["player_tokens"]["B"]
 
 
+def test_create_experiment_stores_wandb_runtime_config_without_leaking_key():
+    client = TestClient(app)
+    payload = {
+        **valid_payload(),
+        "wandb": {
+            "api_key": "wandb-secret",
+            "project": "arena-runs",
+            "entity": "lab",
+            "run_name": "run-1",
+            "tags": ["blotto"],
+        },
+    }
+
+    response = client.post("/api/frontend/experiment", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    session = SESSIONS[body["session_id"]]
+    assert session.runtime_config.wandb is not None
+    assert session.runtime_config.wandb.api_key == "wandb-secret"
+    assert session.runtime_config.to_safe_dict()["wandb"]["api_key"] == "[redacted]"
+    assert "wandb-secret" not in str(body)
+
+
 def test_prefixed_game_routes_require_internal_token(monkeypatch):
     monkeypatch.setenv("NASH_ARENA_INTERNAL_API_TOKEN", "secret")
     client = TestClient(app)

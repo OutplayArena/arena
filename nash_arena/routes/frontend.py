@@ -2,6 +2,7 @@ from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException
 
+from nash_arena.experiment_config import split_runtime_config
 from nash_arena.game_registry import GameRegistryError
 from nash_arena.routes.game import ActionRequest, action_error, bearer_token, get_session
 from nash_arena.session import GameSession
@@ -24,12 +25,13 @@ def create_frontend_router(game_registry, sessions: dict[str, GameSession]):
     @router.post("/experiment")
     def create_experiment(request: dict[str, Any]):
         try:
-            config = game_registry.config_from_request(request)
+            game_payload, runtime_config = split_runtime_config(request)
+            config = game_registry.config_from_request(game_payload)
             game = game_registry.game_from_config(config)
         except (ValueError, GameRegistryError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-        session = GameSession.create(config, game=game)
+        session = GameSession.create(config, game=game, runtime_config=runtime_config)
         sessions[session.session_id] = session
         return session.creation_response()
 
