@@ -25,8 +25,7 @@ export default function BlottoConfigForm({ locked, sessionStatus, initialValues 
   const [agentBName, setAgentBName] = useState(() => randomAgentName());
   const [agentAId, setAgentAId] = useState("uniform");
   const [agentBId, setAgentBId] = useState("greedy");
-  const [agentARemote, setAgentARemote] = useState(false);
-  const [agentBRemote, setAgentBRemote] = useState(false);
+
   const [agents, setAgents] = useState<GameAgent[]>([]);
   const roundsRef = useRef<HTMLInputElement>(null);
   const fieldsRef = useRef<HTMLInputElement>(null);
@@ -137,11 +136,11 @@ export default function BlottoConfigForm({ locked, sessionStatus, initialValues 
       const created = await createExperiment(config);
       setSessionId(created.session_id);
 
-      const hasRemote = agentARemote || agentBRemote;
+      const hasRemote = agentAId === "remote" || agentBId === "remote";
       if (hasRemote) {
         const keys: Record<string, string> = {};
-        if (agentARemote) keys.A = created.player_tokens.A;
-        if (agentBRemote) keys.B = created.player_tokens.B;
+        if (agentAId === "remote") keys.A = created.player_tokens.A;
+        if (agentBId === "remote") keys.B = created.player_tokens.B;
         setSessionKeys(keys);
       }
 
@@ -152,7 +151,7 @@ export default function BlottoConfigForm({ locked, sessionStatus, initialValues 
         let acted = false;
         for (const player of ["A", "B"] as const) {
           if (!gameState.awaiting.includes(player)) continue;
-          const isRemote = player === "A" ? agentARemote : agentBRemote;
+          const isRemote = player === "A" ? agentAId === "remote" : agentBId === "remote";
           if (isRemote) continue;
 
           const agent = player === "A" ? agentAId : agentBId;
@@ -222,18 +221,6 @@ export default function BlottoConfigForm({ locked, sessionStatus, initialValues 
             disabled={formDisabled}
             placeholder="Agent display name"
           />
-          <div className="flex items-center gap-2 mt-0.5">
-            <label className="flex items-center gap-1.5 text-xs text-muted cursor-pointer">
-              <input
-                type="checkbox"
-                checked={agentARemote}
-                onChange={(e) => setAgentARemote(e.target.checked)}
-                className="w-3.5 h-3.5"
-                disabled={formDisabled}
-              />
-              Remote Agent
-            </label>
-          </div>
         </label>
 
         <label className="grid gap-1 text-muted text-[11px] font-extrabold">
@@ -256,18 +243,6 @@ export default function BlottoConfigForm({ locked, sessionStatus, initialValues 
             disabled={formDisabled}
             placeholder="Agent display name"
           />
-          <div className="flex items-center gap-2 mt-0.5">
-            <label className="flex items-center gap-1.5 text-xs text-muted cursor-pointer">
-              <input
-                type="checkbox"
-                checked={agentBRemote}
-                onChange={(e) => setAgentBRemote(e.target.checked)}
-                className="w-3.5 h-3.5"
-                disabled={formDisabled}
-              />
-              Remote Agent
-            </label>
-          </div>
         </label>
 
         <label className="grid gap-1 text-muted text-[11px] font-extrabold">

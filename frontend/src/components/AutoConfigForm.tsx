@@ -91,8 +91,8 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
   const initRanRef = useRef(false);
   const [agentAName, setAgentAName] = useState(() => randomAgentName());
   const [agentBName, setAgentBName] = useState(() => randomAgentName());
-  const [agentARemote, setAgentARemote] = useState(false);
-  const [agentBRemote, setAgentBRemote] = useState(false);
+  const [agentAId, setAgentAId] = useState("uniform");
+  const [agentBId, setAgentBId] = useState("greedy");
   const [formValues, setFormValues] = useState<Record<string, unknown>>({});
   const [status, setStatus] = useState("");
   const [running, setRunning] = useState(false);
@@ -220,11 +220,11 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
       const created = await createExperiment(config as never);
       setSessionId(created.session_id);
 
-      const hasRemote = agentARemote || agentBRemote;
+      const hasRemote = agentAId === "remote" || agentBId === "remote";
       if (hasRemote) {
         const keys: Record<string, string> = {};
-        if (agentARemote) keys.A = created.player_tokens.A;
-        if (agentBRemote) keys.B = created.player_tokens.B;
+        if (agentAId === "remote") keys.A = created.player_tokens.A;
+        if (agentBId === "remote") keys.B = created.player_tokens.B;
         setSessionKeys(keys);
       }
 
@@ -235,10 +235,10 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
         let acted = false;
         for (const player of ["A", "B"] as const) {
           if (!gameState.awaiting.includes(player)) continue;
-          const isRemote = player === "A" ? agentARemote : agentBRemote;
+          const isRemote = player === "A" ? agentAId === "remote" : agentBId === "remote";
           if (isRemote) continue;
 
-          const agent = player === "A" ? "uniform" : "greedy";
+          const agent = player === "A" ? agentAId : agentBId;
           const action = chooseAction(agent, player, gameState);
           gameState = await submitAction(created.session_id, action, created.player_tokens[player]);
           acted = true;
@@ -362,52 +362,50 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
 
         <label className="grid gap-1 text-muted text-[11px] font-extrabold">
           <span>Agent A</span>
+          {agents.length > 0 && (
+            <select
+              value={agentAId}
+              onChange={(e) => setAgentAId(e.target.value)}
+              className={inputClass}
+              disabled={formDisabled}
+            >
+              {agents.map((ag) => (
+                <option key={ag.id} value={ag.id}>{ag.label}</option>
+              ))}
+            </select>
+          )}
           <input
             type="text"
             value={agentAName}
             onChange={(e) => setAgentAName(e.target.value)}
             className={inputClass}
             disabled={formDisabled}
+            placeholder="Agent display name"
           />
-          {agents.length > 0 && (
-            <div className="flex items-center gap-2 mt-0.5">
-              <label className="flex items-center gap-1.5 text-xs text-muted cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={agentARemote}
-                  onChange={(e) => setAgentARemote(e.target.checked)}
-                  className="w-3.5 h-3.5"
-                  disabled={formDisabled}
-                />
-                Remote Agent
-              </label>
-            </div>
-          )}
         </label>
 
         <label className="grid gap-1 text-muted text-[11px] font-extrabold">
           <span>Agent B</span>
+          {agents.length > 0 && (
+            <select
+              value={agentBId}
+              onChange={(e) => setAgentBId(e.target.value)}
+              className={inputClass}
+              disabled={formDisabled}
+            >
+              {agents.map((ag) => (
+                <option key={ag.id} value={ag.id}>{ag.label}</option>
+              ))}
+            </select>
+          )}
           <input
             type="text"
             value={agentBName}
             onChange={(e) => setAgentBName(e.target.value)}
             className={inputClass}
             disabled={formDisabled}
+            placeholder="Agent display name"
           />
-          {agents.length > 0 && (
-            <div className="flex items-center gap-2 mt-0.5">
-              <label className="flex items-center gap-1.5 text-xs text-muted cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={agentBRemote}
-                  onChange={(e) => setAgentBRemote(e.target.checked)}
-                  className="w-3.5 h-3.5"
-                  disabled={formDisabled}
-                />
-                Remote Agent
-              </label>
-            </div>
-          )}
         </label>
 
         {editableProps.map(([key, prop]) => (
