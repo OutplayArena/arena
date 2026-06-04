@@ -1,24 +1,23 @@
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { createExperiment, getState, submitAction, getResults, getGameAgents } from "@frontend/api";
-import { chooseAction } from "@frontend/agents";
-import { buildBattlefields, resultToMatch, copyToClipboard } from "@frontend/components/utils";
+import { useSearchParams } from "react-router-dom";
+import { createExperiment, getGameAgents } from "@frontend/api";
+import { buildBattlefields, copyToClipboard } from "@frontend/components/utils";
 import { randomAgentName } from "@frontend/components/names";
 import { useApp } from "@frontend/hooks/useApp";
-import type { RunConfig, Match, GameAgent } from "@frontend/types";
+import type { GameAgent } from "@frontend/types";
 
 const inputClass =
   "w-full min-h-[40px] text-ink bg-surface-container border rounded-input px-[14px] shadow-none transition-[border-color,background,box-shadow] duration-150 outline-none hover:border-accent/40 focus:border-accent focus:bg-surface focus:shadow-[0_0_0_3px_var(--color-accent-soft)] border-line/40";
 
 interface BlottoConfigFormProps {
+  gameSlug: string;
   locked: boolean;
   sessionStatus?: string;
   initialValues?: Record<string, unknown>;
 }
 
-export default function BlottoConfigForm({ locked, sessionStatus, initialValues }: BlottoConfigFormProps) {
-  const navigate = useNavigate();
-  const { setMatch } = useApp();
+export default function BlottoConfigForm({ gameSlug, locked, sessionStatus, initialValues }: BlottoConfigFormProps) {
+  const { state, setMatch, stopPlay, startGame } = useApp();
   const [searchParams] = useSearchParams();
   const initRanRef = useRef(false);
   const [agentAName, setAgentAName] = useState(() => randomAgentName());
@@ -51,11 +50,11 @@ export default function BlottoConfigForm({ locked, sessionStatus, initialValues 
   }, [searchParams]);
 
   useEffect(() => {
-    getGameAgents("blotto").then((data) => setAgents(data.agents)).catch(() => {});
+    getGameAgents(gameSlug).then((data) => setAgents(data.agents)).catch(() => {});
   }, []);
 
   const isReplay = locked || sessionStatus === "completed";
-  const formDisabled = locked || running || sessionStatus === "completed" || sessionStatus === "running";
+  const formDisabled = locked || running || state.pendingGame !== null || sessionStatus === "completed" || sessionStatus === "running";
 
   useEffect(() => {
     if (initRanRef.current) return;
@@ -71,35 +70,6 @@ export default function BlottoConfigForm({ locked, sessionStatus, initialValues 
       if (seedRef.current && initialValues.seed !== undefined && initialValues.seed !== null) seedRef.current.value = String(initialValues.seed);
     }
   }, [isReplay, initialValues]);
-
-  const buildLiveMatch = (state: Record<string, unknown> | null, sessionId: string, agentA: string, agentB: string, numFields: number, totalResources: number): Match => {
-    const history = ((state?.history as Array<Record<string, unknown>>) || []).map((r) => ({
-      round: (r.round as number) || 0,
-      agent_a: agentA,
-      agent_b: agentB,
-      action_a: ((r.allocations as Record<string, number[]>)?.A) || [],
-      action_b: ((r.allocations as Record<string, number[]>)?.B) || [],
-      score_a: ((r.scores as Record<string, number>)?.A) || 0,
-      score_b: ((r.scores as Record<string, number>)?.B) || 0,
-      total_score_a: ((r.total_scores as Record<string, number>)?.A) || 0,
-      total_score_b: ((r.total_scores as Record<string, number>)?.B) || 0,
-      winner: (r.winner as string || "Tie") as "A" | "B" | "Tie",
-    }));
-    return {
-      agent_a: agentA,
-      agent_b: agentB,
-      session_id: sessionId,
-      config_hash: (state?.config_hash as string) || "",
-      num_rounds: history.length || 1,
-      num_battlefields: numFields,
-      total_resources: totalResources,
-      total_score_a: ((state?.total_scores as Record<string, number>)?.A) || 0,
-      total_score_b: ((state?.total_scores as Record<string, number>)?.B) || 0,
-      match_winner: (state?.winner as string || undefined) as "A" | "B" | "Tie" | undefined,
-      history,
-      metrics: {},
-    };
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,10 +88,10 @@ export default function BlottoConfigForm({ locked, sessionStatus, initialValues 
     setRunning(true);
     setSessionKeys(null);
     setSessionId(null);
-    setStatus("Running experiment...");
+    setStatus("Creating experiment...");
 
     const config = {
-      game: "blotto",
+      game: gameSlug,
       variant: "classic",
       players: 2,
       budget: [totalResources, totalResources] as [number, number],
@@ -137,50 +107,31 @@ export default function BlottoConfigForm({ locked, sessionStatus, initialValues 
       setSessionId(created.session_id);
 
       const hasRemote = agentAId === "remote" || agentBId === "remote";
-      if (hasRemote) {
-        const keys: Record<string, string> = {};
-        if (agentAId === "remote") keys.A = created.player_tokens.A;
-        if (agentBId === "remote") keys.B = created.player_tokens.B;
-        setSessionKeys(keys);
-      }
+      const remoteKeys: Record<string, string> | null = hasRemote
+        ? (() => {
+            const keys: Record<string, string> = {};
+            if (agentAId === "remote") keys.A = created.player_tokens.A;
+            if (agentBId === "remote") keys.B = created.player_tokens.B;
+            return keys;
+          })()
+        : null;
 
-      let gameState = await getState(created.session_id);
-      setMatch(buildLiveMatch(gameState as never, created.session_id, agentAName, agentBName, numFields, totalResources));
+      if (remoteKeys) setSessionKeys(remoteKeys);
 
-      while (gameState.phase !== "complete") {
-        let acted = false;
-        for (const player of ["A", "B"] as const) {
-          if (!gameState.awaiting.includes(player)) continue;
-          const isRemote = player === "A" ? agentAId === "remote" : agentBId === "remote";
-          if (isRemote) continue;
-
-          const agent = player === "A" ? agentAId : agentBId;
-          const action = chooseAction(agent, player, gameState);
-          gameState = await submitAction(created.session_id, action, created.player_tokens[player]);
-          acted = true;
-        }
-        if (!acted) {
-          setStatus(`Waiting for remote agents (round ${gameState.round}/${gameState.round_total})`);
-          setMatch(buildLiveMatch(gameState as never, created.session_id, agentAName, agentBName, numFields, totalResources));
-          break;
-        }
-        setMatch(buildLiveMatch(gameState as never, created.session_id, agentAName, agentBName, numFields, totalResources));
-        setStatus(`Round ${gameState.round}/${gameState.round_total}`);
-      }
-
-      if (gameState.phase === "complete") {
-        const result = await getResults(created.session_id);
-        const payload: RunConfig = {
-          agent_a: agentAName,
-          agent_b: agentBName,
-          num_rounds: numRounds,
-          num_battlefields: numFields,
-          total_resources: totalResources,
-          session_id: created.session_id,
-        };
-        const match = resultToMatch(result as never, payload);
-        navigate(`/play/blotto/${created.session_id}`, { state: { match } });
-      }
+      startGame({
+        sessionId: created.session_id,
+        tokens: created.player_tokens,
+        agentAName: agentAName.trim(),
+        agentBName: agentBName.trim(),
+        agentAId,
+        agentBId,
+        numRounds,
+        numFields,
+        totalResources,
+        gameSlug,
+        remoteKeys,
+      });
+      setStatus("Game started — switch to Live View to watch.");
     } catch (err) {
       setStatus(`error=${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -252,7 +203,7 @@ export default function BlottoConfigForm({ locked, sessionStatus, initialValues 
 
         <label className="grid gap-1 text-muted text-[11px] font-extrabold">
           <span>num_battlefields</span>
-          <input ref={fieldsRef} type="number" min={1} max={12} defaultValue={5} className={inputClass} disabled={formDisabled} />
+          <input ref={fieldsRef} type="number" min={1} max={100} defaultValue={5} className={inputClass} disabled={formDisabled} />
         </label>
 
         <label className="grid gap-1 text-muted text-[11px] font-extrabold">
@@ -265,7 +216,7 @@ export default function BlottoConfigForm({ locked, sessionStatus, initialValues 
           <input ref={seedRef} type="number" className={inputClass} disabled={formDisabled} placeholder="Random" />
         </label>
 
-        {!isReplay && (
+        {!isReplay && !state.pendingGame && (
           <button
             ref={btnRef}
             type="submit"

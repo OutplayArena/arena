@@ -1,7 +1,7 @@
-name: blotto
+name: Colonel Blotto
 version: "1.0.0"
 status: stable
-author: "Blotto Agent Arena maintainers"
+author: "NashArena maintainers"
 description: >
   Resource allocation game. Two players allocate fixed resources across
   battlefields; each battlefield is won by the higher allocation, with
@@ -22,7 +22,7 @@ players:
 config_schema:
   game:
     type: string
-    const: blotto
+    const: colonelblotto
   variant:
     type: string
     const: classic
@@ -55,7 +55,7 @@ config_schema:
       - integer
       - "null"
 example_config:
-  game: blotto
+  game: colonelblotto
   variant: classic
   players: 2
   budget: [10, 10]

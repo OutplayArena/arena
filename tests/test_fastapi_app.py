@@ -58,7 +58,7 @@ def fake_db_fixture():
 
 def valid_payload(rounds=1):
     return {
-        "game": "blotto",
+        "game": "colonelblotto",
         "variant": "classic",
         "players": 2,
         "budget": [10, 10],
@@ -75,7 +75,7 @@ def valid_payload(rounds=1):
 def test_config_from_request_builds_experiment_config():
     config = config_from_request(valid_payload(rounds=3))
 
-    assert config.game == "blotto"
+    assert config.game == "colonelblotto"
     assert config.rounds == 3
     assert config.budget == [10, 10]
     assert [field.id for field in config.battlefields] == ["A", "B", "C"]
@@ -254,19 +254,20 @@ def test_list_games_returns_registered_blotto_game():
 
     assert response.status_code == 200
     games = response.json()
-    assert games[0]["name"] == "blotto"
+    assert games[0]["name"] == "Colonel Blotto"
+    assert games[0]["slug"] == "colonelblotto"
     assert games[0]["players"] == {"min": 2, "max": 2}
 
 
 def test_get_game_directory_details_metrics_and_prompts():
     client = TestClient(app)
 
-    details = client.get("/games/blotto")
-    metrics = client.get("/games/blotto/metrics")
-    prompts = client.get("/games/blotto/prompts")
+    details = client.get("/games/colonelblotto")
+    metrics = client.get("/games/colonelblotto/metrics")
+    prompts = client.get("/games/colonelblotto/prompts")
 
     assert details.status_code == 200
-    assert details.json()["name"] == "blotto"
+    assert details.json()["name"] == "Colonel Blotto"
     assert metrics.status_code == 200
     assert metrics.json()["metrics"][0]["name"] == "total_payoff"
     assert prompts.status_code == 200

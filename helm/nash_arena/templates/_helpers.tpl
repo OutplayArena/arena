@@ -1,14 +1,14 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "blotto.name" -}}
+{{- define "nasharena.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Create a default fully qualified app name.
 */}}
-{{- define "blotto.fullname" -}}
+{{- define "nasharena.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -24,9 +24,9 @@ Create a default fully qualified app name.
 {{/*
 Common labels
 */}}
-{{- define "blotto.labels" -}}
-helm.sh/chart: {{ include "blotto.name" . }}-{{ .Chart.Version | replace "+" "_" }}
-{{ include "blotto.selectorLabels" . }}
+{{- define "nasharena.labels" -}}
+helm.sh/chart: {{ include "nasharena.name" . }}-{{ .Chart.Version | replace "+" "_" }}
+{{ include "nasharena.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -36,23 +36,23 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "blotto.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "blotto.name" . }}
+{{- define "nasharena.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "nasharena.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Backend selector labels
 */}}
-{{- define "blotto.backend.selectorLabels" -}}
-{{ include "blotto.selectorLabels" . }}
+{{- define "nasharena.backend.selectorLabels" -}}
+{{ include "nasharena.selectorLabels" . }}
 app.kubernetes.io/component: backend
 {{- end }}
 
 {{/*
 Database selector labels
 */}}
-{{- define "blotto.database.selectorLabels" -}}
-{{ include "blotto.selectorLabels" . }}
+{{- define "nasharena.database.selectorLabels" -}}
+{{ include "nasharena.selectorLabels" . }}
 app.kubernetes.io/component: database
 {{- end }}

@@ -11,6 +11,7 @@ load_dotenv()
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,12 +36,14 @@ if not _SITE_YAML.is_file():
     _SITE_YAML = Path(__file__).resolve().parent.parent / "frontend" / "site.yaml"
 SITE_YAML = _SITE_YAML
 app = FastAPI(title="NashArena Agent Arena")
+app.add_middleware(SessionMiddleware, secret_key=os.environ.get("JWT_SECRET", "dev-secret-change-me"))
 STATIC_ROOT = Path(__file__).resolve().parent.parent / "static"
 GAME_REGISTRY = GameRegistry()
 
 
 class ActionRequest(BaseModel):
-    allocation: list[int]
+    allocation: list[int] = []
+    forfeit: bool = False
 
 
 class UserResponse(BaseModel):
@@ -193,7 +196,7 @@ async def submit_action(
     token = bearer_token(authorization)
 
     try:
-        session.submit_action_with_token(token, request.allocation)
+        session.submit_action_with_token(token, request.allocation, forfeit=request.forfeit)
     except ValueError as exc:
         raise action_error(exc) from exc
     except Exception as exc:
@@ -562,8 +565,7 @@ def auth_providers():
 
 @app.get(f"{API_PREFIX}/auth/github/login")
 async def auth_github_login(request: Request):
-    redirect_uri = await github_login(request)
-    return RedirectResponse(url=redirect_uri)
+    return await github_login(request)
 
 
 @app.get(f"{API_PREFIX}/auth/github/callback")
@@ -575,8 +577,7 @@ async def auth_github_callback(request: Request, db: AsyncSession = Depends(get_
 
 @app.get(f"{API_PREFIX}/auth/google/login")
 async def auth_google_login(request: Request):
-    redirect_uri = await google_login(request)
-    return RedirectResponse(url=redirect_uri)
+    return await google_login(request)
 
 
 @app.get(f"{API_PREFIX}/auth/google/callback")

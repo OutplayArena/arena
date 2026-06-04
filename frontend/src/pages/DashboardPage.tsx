@@ -1,10 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getDashboard, createExperiment, getState, submitAction, getResults, listGames, deleteSession } from "../api";
-import { buildBattlefields, resultToMatch } from "../components/utils";
-import { chooseAction } from "../agents";
-import { randomAgentName } from "../components/names";
-import type { DashboardResponse, RunConfig, GameEntry } from "../types";
+import { getDashboard, deleteSession, listGames } from "../api";
+import type { DashboardResponse, GameEntry } from "../types";
 
 const outcomeBadge = (winner: string | null) => {
   if (!winner) return null;
@@ -28,8 +25,9 @@ export function DashboardPage() {
   const [gamesMeta, setGamesMeta] = useState<GameEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [quickStarting, setQuickStarting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   const refreshDashboard = async () => {
@@ -82,54 +80,23 @@ export function DashboardPage() {
     if (s.rounds) params.set("rounds", String(s.rounds));
     if (s.num_battlefields) params.set("fields", String(s.num_battlefields));
     if (s.resources) params.set("resources", String(s.resources));
-    const slug = s.game_slug || "blotto";
+    const slug = s.game_slug || "colonelblotto";
     navigate(`/play/${slug}?${params.toString()}`);
   };
 
-  const doQuickStart = async () => {
-    setQuickStarting(true);
-    try {
-      const agentNameA = randomAgentName();
-      const agentNameB = randomAgentName();
-      const config = {
-        game: "blotto",
-        variant: "classic",
-        players: 2,
-        budget: [100, 100] as [number, number],
-        battlefields: buildBattlefields(5),
-        rounds: 5,
-        seed: null,
-        agents: { A: agentNameA, B: agentNameB },
-      };
-      const payload: RunConfig = {
-        agent_a: "uniform",
-        agent_b: "greedy",
-        num_rounds: 5,
-        num_battlefields: 5,
-        total_resources: 100,
-      };
-
-      const created = await createExperiment(config);
-      payload.session_id = created.session_id;
-      let gameState = await getState(created.session_id);
-
-      while (gameState.phase !== "complete") {
-        for (const player of ["A", "B"] as const) {
-          if (!gameState.awaiting.includes(player)) continue;
-          const agent = player === "A" ? payload.agent_a : payload.agent_b;
-          const action = chooseAction(agent, player, gameState);
-          gameState = await submitAction(created.session_id, action, created.player_tokens[player]);
-        }
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
       }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-      const result = await getResults(created.session_id);
-      const match = resultToMatch(result, payload);
-      navigate(`/play/blotto/${created.session_id}`, { state: { match } });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setQuickStarting(false);
-    }
+  const handleNewGame = (slug: string) => {
+    setDropdownOpen(false);
+    navigate(`/play/${slug}`);
   };
 
   if (loading) {
@@ -160,31 +127,53 @@ export function DashboardPage() {
       </div>
 
       <div className="mb-8">
-        <button
-          type="button"
-          onClick={doQuickStart}
-          disabled={quickStarting}
-          className="inline-flex items-center justify-center min-h-[46px] px-6 text-white bg-accent border-accent rounded-button font-extrabold text-sm shadow-elevation-3 transition-[transform,background,box-shadow] duration-200 hover:-translate-y-px hover:shadow-elevation-4 active:translate-y-0.5 disabled:cursor-not-allowed disabled:bg-line/50 disabled:border-line/50 disabled:text-quiet disabled:shadow-none mr-3"
-        >
-          {quickStarting ? "Starting..." : "Quick Start"}
-        </button>
-        <Link
-          to="/play"
-          className="inline-flex items-center justify-center min-h-[46px] px-6 text-ink border border-line/40 rounded-button font-semibold text-sm shadow-elevation-1 transition-[transform,background,box-shadow] duration-200 hover:-translate-y-px hover:shadow-elevation-2 hover:bg-surface active:translate-y-0.5"
-        >
-          New Game
-        </Link>
+        <div className="relative inline-block" ref={dropdownRef}>
+          <button
+            type="button"
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="inline-flex items-center justify-center min-h-[46px] px-6 text-ink border border-line/40 rounded-button font-semibold text-sm shadow-elevation-1 transition-[transform,background,box-shadow] duration-200 hover:-translate-y-px hover:shadow-elevation-2 hover:bg-surface active:translate-y-0.5"
+          >
+            New Game
+            <svg
+              className={`ml-2 w-3.5 h-3.5 text-muted transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+              fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+          {dropdownOpen && (
+            <div className="absolute left-0 top-full mt-1.5 w-72 rounded-card border border-line/40 bg-surface shadow-elevation-4 z-50 py-1.5">
+              {gamesMeta.length === 0 ? (
+                <p className="px-4 py-3 text-xs text-muted">No games registered.</p>
+              ) : (
+                gamesMeta.map((game) => (
+                  <button
+                    key={game.slug}
+                    type="button"
+                    onClick={() => handleNewGame(game.slug)}
+                    className="w-full text-left px-4 py-2.5 text-sm text-ink hover:bg-surface-container transition-colors"
+                  >
+                    <span className="font-semibold">{game.name}</span>
+                    {game.description && (
+                      <span className="block text-xs text-muted mt-0.5 leading-snug line-clamp-2">{game.description}</span>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {gameSlugs.length === 0 ? (
         <div className="p-8 text-center border border-line/20 rounded-card">
           <p className="text-sm text-muted">No games played yet.</p>
-          <p className="text-xs text-quiet mt-1">Start a new game above to see your history.</p>
+          <p className="text-xs text-quiet mt-1">Select a game above to start your first match.</p>
         </div>
       ) : (
         gameSlugs.map((slug) => {
           const sessions = data?.games[slug] ?? [];
-          const meta = gamesMeta.find((g) => g.name === slug);
+          const meta = gamesMeta.find((g) => g.slug === slug);
           return (
             <div key={slug} className="mb-8">
               <div className="flex items-center justify-between mb-3">
@@ -215,7 +204,7 @@ export function DashboardPage() {
                     {sessions.map((s) => (
                       <tr
                         key={s.id}
-                        onClick={() => navigate(`/play/${s.game_slug || "blotto"}/${s.id}`)}
+                        onClick={() => navigate(`/play/${s.game_slug || "colonelblotto"}/${s.id}`)}
                         className="border-b border-line/20 last:border-b-0 hover:bg-ink/[0.03] cursor-pointer transition-colors group"
                       >
                         <td className="px-4 py-2.5 text-xs text-muted whitespace-nowrap">

@@ -1,9 +1,9 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "blotto.fullname" . }}-migrations
+  name: {{ include "nasharena.fullname" . }}-migrations
   labels:
-    {{- include "blotto.labels" . | nindent 4 }}
+    {{- include "nasharena.labels" . | nindent 4 }}
 spec:
   ttlSecondsAfterFinished: 300
   template:
@@ -16,7 +16,7 @@ spec:
             - sh
             - -c
             - |
-              until nc -z {{ include "blotto.fullname" . }}-db 5432; do
+              until nc -z {{ include "nasharena.fullname" . }}-db 5432; do
                 echo "waiting for database..."
                 sleep 2
               done
@@ -29,7 +29,7 @@ spec:
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "blotto.fullname" . }}-db
+                  name: {{ include "nasharena.fullname" . }}-db
                   key: password
             - name: DATABASE_URL
-              value: "postgresql://{{ .Values.database.user }}:$(DB_PASSWORD)@{{ include "blotto.fullname" . }}-db:5432/{{ .Values.database.database }}"
+              value: "postgresql://{{ .Values.database.user }}:$(DB_PASSWORD)@{{ include "nasharena.fullname" . }}-db:5432/{{ .Values.database.database }}"

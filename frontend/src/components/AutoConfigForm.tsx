@@ -1,11 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { createExperiment, getState, submitAction, getResults, getGameAgents } from "../api";
-import { chooseAction } from "../agents";
-import { resultToMatch, copyToClipboard } from "./utils";
+import { useEffect, useRef, useState } from "react";
+import { createExperiment, getGameAgents } from "../api";
+import { copyToClipboard } from "./utils";
 import { randomAgentName } from "./names";
 import { useApp } from "../hooks/useApp";
-import type { RunConfig, GameAgent, Match } from "../types";
+import type { GameAgent } from "../types";
 
 const inputClass =
   "w-full min-h-[40px] text-ink bg-surface-container border rounded-input px-[14px] shadow-none transition-[border-color,background,box-shadow] duration-150 outline-none hover:border-accent/40 focus:border-accent focus:bg-surface focus:shadow-[0_0_0_3px_var(--color-accent-soft)] border-line/40";
@@ -85,8 +83,7 @@ function getInputType(prop: SchemaProp): string {
 }
 
 export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initialValues }: AutoConfigFormProps) {
-  const navigate = useNavigate();
-  const { setMatch } = useApp();
+  const { state, startGame } = useApp();
   const [agents, setAgents] = useState<GameAgent[]>([]);
   const initRanRef = useRef(false);
   const [agentAName, setAgentAName] = useState(() => randomAgentName());
@@ -104,7 +101,7 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
   const editableProps = Object.entries(props).filter(([, p]) => !isConst(p));
 
   const isReplay = locked || sessionStatus === "completed";
-  const formDisabled = locked || running || sessionStatus === "completed" || sessionStatus === "running";
+  const formDisabled = locked || running || state.pendingGame !== null || sessionStatus === "completed" || sessionStatus === "running";
 
   useEffect(() => {
     getGameAgents(gameSlug).then((data) => setAgents(data.agents)).catch(() => {});
@@ -161,49 +158,6 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
     return config;
   };
 
-  const buildLiveMatch = useCallback((state: { history?: { round: number; allocations?: Record<string, number[]>; scores?: Record<string, number>; total_scores?: Record<string, number>; winner?: string }[]; battlefields?: { id: string }[]; budgets?: Record<string, number>; config_hash?: string; total_scores?: Record<string, number>; winner?: string } | null, sessionId: string, agentA: string, agentB: string): Match => {
-    if (!state) {
-      return {
-        agent_a: agentA,
-        agent_b: agentB,
-        session_id: sessionId,
-        config_hash: "",
-        num_rounds: 1,
-        num_battlefields: 1,
-        total_resources: 100,
-        total_score_a: 0,
-        total_score_b: 0,
-        history: [],
-        metrics: {},
-      };
-    }
-    const history = (state.history || []).map((r) => ({
-      round: r.round,
-      agent_a: agentA,
-      agent_b: agentB,
-      action_a: r.allocations?.A || [],
-      action_b: r.allocations?.B || [],
-      score_a: r.scores?.A || 0,
-      score_b: r.scores?.B || 0,
-      total_score_a: r.total_scores?.A || 0,
-      total_score_b: r.total_scores?.B || 0,
-      winner: (r.winner || "Tie") as "A" | "B" | "Tie",
-    }));
-    return {
-      agent_a: agentA,
-      agent_b: agentB,
-      session_id: sessionId,
-      config_hash: state.config_hash || "",
-      num_rounds: state.history?.length || 0,
-      num_battlefields: (state.battlefields || []).length || 1,
-      total_resources: state.budgets?.A || 100,
-      total_score_a: state.total_scores?.A || 0,
-      total_score_b: state.total_scores?.B || 0,
-      match_winner: (state.winner || undefined) as "A" | "B" | "Tie" | undefined,
-      history,
-      metrics: {},
-    };
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,7 +165,7 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
     setRunning(true);
     setSessionKeys(null);
     setSessionId(null);
-    setStatus("Running experiment...");
+    setStatus("Creating experiment...");
 
     const config = buildConfig();
     const numRounds = (config.rounds as number) || 10;
@@ -221,49 +175,31 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
       setSessionId(created.session_id);
 
       const hasRemote = agentAId === "remote" || agentBId === "remote";
-      if (hasRemote) {
-        const keys: Record<string, string> = {};
-        if (agentAId === "remote") keys.A = created.player_tokens.A;
-        if (agentBId === "remote") keys.B = created.player_tokens.B;
-        setSessionKeys(keys);
-      }
+      const remoteKeys: Record<string, string> | null = hasRemote
+        ? (() => {
+            const keys: Record<string, string> = {};
+            if (agentAId === "remote") keys.A = created.player_tokens.A;
+            if (agentBId === "remote") keys.B = created.player_tokens.B;
+            return keys;
+          })()
+        : null;
 
-      let gameState = await getState(created.session_id);
-      setMatch(buildLiveMatch(gameState as never, created.session_id, agentAName, agentBName));
+      if (remoteKeys) setSessionKeys(remoteKeys);
 
-      while (gameState.phase !== "complete") {
-        let acted = false;
-        for (const player of ["A", "B"] as const) {
-          if (!gameState.awaiting.includes(player)) continue;
-          const isRemote = player === "A" ? agentAId === "remote" : agentBId === "remote";
-          if (isRemote) continue;
-
-          const agent = player === "A" ? agentAId : agentBId;
-          const action = chooseAction(agent, player, gameState);
-          gameState = await submitAction(created.session_id, action, created.player_tokens[player]);
-          acted = true;
-        }
-        if (!acted) {
-          setStatus(`Waiting for remote agents (round ${gameState.round}/${gameState.round_total})`);
-          setMatch(buildLiveMatch(gameState as never, created.session_id, agentAName, agentBName));
-          break;
-        }
-        setMatch(buildLiveMatch(gameState as never, created.session_id, agentAName, agentBName));
-        setStatus(`Round ${gameState.round}/${gameState.round_total}`);
-      }
-
-      if (gameState.phase === "complete") {
-        const result = await getResults(created.session_id);
-        const match = resultToMatch(result as never, {
-          agent_a: agentAName,
-          agent_b: agentBName,
-          num_rounds: numRounds,
-          num_battlefields: 5,
-          total_resources: 100,
-          session_id: created.session_id,
-        } as RunConfig);
-        navigate(`/play/${gameSlug}/${created.session_id}`, { state: { match } });
-      }
+      startGame({
+        sessionId: created.session_id,
+        tokens: created.player_tokens,
+        agentAName: agentAName.trim(),
+        agentBName: agentBName.trim(),
+        agentAId,
+        agentBId,
+        numRounds,
+        numFields: 5,
+        totalResources: 100,
+        gameSlug,
+        remoteKeys,
+      });
+      setStatus("Game started — switch to Live View to watch.");
     } catch (err) {
       setStatus(`error=${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -415,7 +351,7 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
           </label>
         ))}
 
-        {!isReplay && (
+        {!isReplay && !state.pendingGame && (
           <button
             ref={btnRef}
             type="submit"

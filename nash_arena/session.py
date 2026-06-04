@@ -155,10 +155,14 @@ class GameSession:
 
         raise ValueError("invalid player token")
 
-    def submit_action_with_token(self, token, allocation):
+    def submit_action_with_token(self, token, allocation, forfeit: bool = False):
         state_dict = _serialize_state(self.state)
         phase = state_dict.get("phase", "")
         if phase == "complete":
             raise ValueError("game already complete")
         player = self.player_for_token(token)
-        self.submit_action(player, allocation)
+        if forfeit:
+            self.state = self.game.forfeit_round(self.state, player)
+            self._update_status_from_state()
+        else:
+            self.submit_action(player, allocation)

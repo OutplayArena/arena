@@ -1,12 +1,12 @@
 import pytest
 
-from games.core.blotto.config import BattlefieldConfig, BlottoExperimentConfig
+from games.core.colonelblotto.config import BattlefieldConfig, ColonelBlottoExperimentConfig
 from nash_arena.session import GameSession
 
 
 def make_config(rounds=2):
-    return BlottoExperimentConfig(
-        game="blotto",
+    return ColonelBlottoExperimentConfig(
+        game="colonelblotto",
         variant="classic",
         players=2,
         budget=[10, 10],

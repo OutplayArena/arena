@@ -1,8 +1,8 @@
-from games.core.blotto.metrics import compute_blotto_metrics
+from games.core.colonelblotto.metrics import compute_colonel_blotto_metrics
 
 
 def test_blotto_metrics_include_declared_keys():
-    metrics = compute_blotto_metrics(
+    metrics = compute_colonel_blotto_metrics(
         history=[
             {
                 "winner": "A",

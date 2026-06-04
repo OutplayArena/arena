@@ -1,7 +1,7 @@
 import argparse
 
-from games.core.blotto.agent import Agent, GreedyAgent, LiteLLMAgent, LLMAgent, RandomAgent, UniformAgent
-from games.core.blotto.engine import BlottoGame
+from games.core.colonelblotto.agent import Agent, GreedyAgent, LiteLLMAgent, LLMAgent, RandomAgent, UniformAgent
+from games.core.colonelblotto.engine import ColonelBlottoGame
 
 
 AGENTS = {
@@ -14,8 +14,8 @@ AGENTS = {
 
 
 def run_experiment(agent_a: Agent, agent_b: Agent, num_rounds=10):
-    blotto_game = BlottoGame(num_battlefields=5, total_resources=100)
-    result = blotto_game.play_match(agent_a, agent_b, num_rounds)
+    colonel_blotto_game = ColonelBlottoGame(num_battlefields=5, total_resources=100)
+    result = colonel_blotto_game.play_match(agent_a, agent_b, num_rounds)
     print(f'Winner of match is {result["match_winner"]}')
 
 

@@ -9,7 +9,7 @@ The platform treats games along a cooperative-to-competitive spectrum via its ga
 
 | Payoff structure | Example games | What it reveals |
 |---|---|---|
-| **Zero-sum** | Resource allocation (Blotto) | Strategic reasoning, resource allocation, exploitability |
+| **Zero-sum** | Resource allocation (Colonel Blotto) | Strategic reasoning, resource allocation, exploitability |
 | **Mixed-motive** | Prisoner's Dilemma, Ultimatum Game | Trust, reciprocity, fairness, defection thresholds |
 | **Cooperative** | Public Goods Game | Free riding, contribution behavior, group welfare vs. self-interest |
 
@@ -39,7 +39,7 @@ nash_arena/
 
 games/
   _template/         starter shape for future games
-  core/blotto/       first registered platform-maintained game:
+  core/colonelblotto/       first registered platform-maintained game:
                      config, engine, metrics, prompts, agents, ui/
   community/         reserved for contributor games
 
@@ -52,7 +52,7 @@ frontend/
 
 static/              built frontend output (index.html, assets/)
 examples/
-  play_blotto_game.py  minimal SDK example
+  play_colonel_blotto_game.py  minimal SDK example
 
 tests/
   pytest coverage for config, engine, sessions, API, SDK, metrics, MCP
@@ -87,7 +87,7 @@ This is the main safety check. It exercises the platform modules plus the web AP
 
 - Python 3.12+ with `uv` (pip alternative)
 - Node.js 20+ with `npm`
-- PostgreSQL 16 (or Docker)
+- PostgreSQL 16 (via minikube, Rancher Desktop, or Docker)
 
 ### One-time setup
 
@@ -105,11 +105,69 @@ cp .env.example .env
 
 ### Database
 
+Two options: Kubernetes (minikube / Rancher Desktop) or Docker Compose. Kubernetes is preferred — it matches production topology and keeps the host free of project-specific containers.
+
+#### Option A: Kubernetes (minikube or Rancher Desktop)
+
+**Run the Helm chart** to deploy PostgreSQL, backend, Traefik, and MCP infrastructure:
+
+```bash
+# Copy and fill in secrets first
+cp .env.example .env
+
+# Deploy (reads .env for OAuth secrets)
+./scripts/helm-upgrade.sh
+```
+
+The Helm release (`nasharena`) creates:
+- A PostgreSQL 16 StatefulSet with a 10 Gi persistent volume
+- A ClusterIP service (`nasharena-db`) on port 5432
+- Backend, Traefik, and migration Job resources
+
+**Port-forward the database** from the cluster to your local machine:
+
+```bash
+kubectl -n nasharena port-forward svc/nasharena-db 5432:5432 &
+```
+
+The `.env` file is pre-configured for `localhost:5432`, so the forwarded DB is transparent to the backend.
+
+**Apply migrations** against the cluster database:
+
+```bash
+uv run alembic upgrade head
+```
+
+**Persisting data across namespace changes** (optional):
+
+By default, the StatefulSet's PersistentVolumeClaim lives inside the namespace — delete the namespace and the data is gone. To keep data regardless of namespace, create the PV first with `Retain` reclaim policy:
+
+```bash
+# Deploy with a named, Retain-backed PV
+helm upgrade nasharena helm/nash_arena \
+  --install --create-namespace --namespace nasharena \
+  --set database.createPV=true \
+  --set database.volumeName=nasharena-db-pv \
+  --set database.storageClassName=manual
+```
+
+The PV (`nasharena-db-pv`) is cluster-scoped, survives namespace deletion, and the PVC binds to it by name. To move the DB to a new namespace, uninstall the release, delete the old namespace, recreate the PV (if needed), then helm-upgrade into the new namespace with the same `volumeName`.
+
+If you change the release name or namespace, set `RELEASE` / `NAMESPACE`:
+
+```bash
+RELEASE=myarena NAMESPACE=staging ./scripts/helm-upgrade.sh
+```
+
+#### Option B: Docker Compose
+
 Bring up PostgreSQL via Docker:
 
 ```bash
 docker compose -f docker/docker-compose.yml up db -d --wait
 ```
+
+The container listens on `localhost:5432` (mapped from its internal port).
 
 Apply migrations:
 
@@ -151,13 +209,15 @@ The backend (`--host 0.0.0.0`) and frontend (`--host`) already bind to all inter
 
 Alternatively, use SSH port forwarding: `ssh -L 8000:localhost:8000 -L 5173:localhost:5173 user@host`.
 
-### Full Docker stack
+### Full Docker stack (alternative)
+
+If you prefer to run everything — database, backend, Traefik — inside Docker instead of Kubernetes, use the Compose stack:
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d --build
 ```
 
-This starts PostgreSQL, runs migrations, builds the frontend, and launches the backend behind Traefik at `api.agent-arena.local`.
+This starts PostgreSQL, runs migrations, builds the frontend, and launches the backend behind Traefik at `api.agent-arena.local`. The Helm chart (Option A above) is still the recommended way to deploy the database for local development.
 
 ## Game Directory
 
@@ -169,10 +229,10 @@ games/        game catalog: configs, engines, prompts, metrics, agents
 legacy_blotto/ legacy/reference package kept for reference
 ```
 
-Blotto is the first registered core game:
+Colonel Blotto is the first registered core game:
 
 ```text
-games/core/blotto/
+games/core/colonelblotto/
   config.py
   engine.py
   metrics.py
@@ -193,9 +253,9 @@ Browse registered games through the API:
 
 ```bash
 curl -sS http://127.0.0.1:8000/games
-curl -sS http://127.0.0.1:8000/games/blotto
-curl -sS http://127.0.0.1:8000/games/blotto/metrics
-curl -sS http://127.0.0.1:8000/games/blotto/prompts
+curl -sS http://127.0.0.1:8000/games/colonelblotto
+curl -sS http://127.0.0.1:8000/games/colonelblotto/metrics
+curl -sS http://127.0.0.1:8000/games/colonelblotto/prompts
 ```
 
 The Python SDK exposes the same directory:
@@ -205,9 +265,9 @@ from nash_arena.client import ArenaClient
 
 client = ArenaClient("http://127.0.0.1:8000")
 print(client.list_games())
-print(client.get_game_details("blotto"))
-print(client.get_game_metrics("blotto"))
-print(client.get_game_prompts("blotto"))
+print(client.get_game_details("colonelblotto"))
+print(client.get_game_metrics("colonelblotto"))
+print(client.get_game_prompts("colonelblotto"))
 ```
 
 The MCP server also exposes directory tools:
@@ -233,7 +293,7 @@ Create a session:
 curl -sS -X POST http://127.0.0.1:8000/experiment \
   -H "Content-Type: application/json" \
   -d '{
-    "game": "blotto",
+    "game": "colonelblotto",
     "variant": "classic",
     "players": 2,
     "budget": [10, 10],
@@ -295,19 +355,19 @@ curl -sS http://127.0.0.1:8000/session/SESSION_ID/results
 Run the included example while the FastAPI server is running:
 
 ```bash
-python3 examples/play_blotto_game.py
+python3 examples/play_colonel_blotto_game.py
 ```
 
 Minimal SDK usage:
 
 ```python
 from nash_arena.client import ArenaClient
-from games.core.blotto.config import BlottoExperimentConfig
+from games.core.colonelblotto.config import ColonelBlottoExperimentConfig
 
 base_url = "http://127.0.0.1:8000"
 
 arena = ArenaClient(base_url)
-config = BlottoExperimentConfig.classic(
+config = ColonelBlottoExperimentConfig.classic(
     num_battlefields=3,
     total_resources=10,
     rounds=1,
@@ -384,7 +444,7 @@ curl -sS http://127.0.0.1:8000/health
 ```
 
 ```bash
-uv run python examples/play_blotto_game.py
+uv run python examples/play_colonel_blotto_game.py
 ```
 
 ```bash
@@ -402,5 +462,5 @@ For game directory sanity:
 
 ```bash
 curl -sS http://127.0.0.1:8000/games
-curl -sS http://127.0.0.1:8000/games/blotto
+curl -sS http://127.0.0.1:8000/games/colonelblotto
 ```

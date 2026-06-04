@@ -4,7 +4,7 @@ import httpx
 import pytest
 
 from nash_arena.client import ArenaClient
-from games.core.blotto.config import BlottoExperimentConfig
+from games.core.colonelblotto.config import ColonelBlottoExperimentConfig
 
 
 def mock_client(handler):
@@ -20,17 +20,17 @@ def test_create_experiment_posts_config_dict_to_endpoint():
 
     client = ArenaClient("http://arena.test/api", http_client=mock_client(handler))
 
-    result = client.create_experiment({"game": "blotto"})
+    result = client.create_experiment({"game": "colonelblotto"})
 
     assert result == {"session_id": "s1"}
     assert requests[0].method == "POST"
     assert requests[0].url.path == "/api/experiment"
-    assert json.loads(requests[0].content) == {"game": "blotto"}
+    assert json.loads(requests[0].content) == {"game": "colonelblotto"}
 
 
 def test_create_experiment_serializes_config_object():
     requests = []
-    config = BlottoExperimentConfig.classic(
+    config = ColonelBlottoExperimentConfig.classic(
         num_battlefields=2,
         total_resources=10,
         rounds=3,
@@ -126,15 +126,15 @@ def test_game_directory_methods_get_expected_endpoints():
     client = ArenaClient("http://arena.test", http_client=mock_client(handler))
 
     assert client.list_games() == {"ok": "/games"}
-    assert client.get_game_details("blotto") == {"ok": "/games/blotto"}
-    assert client.get_game_metrics("blotto") == {"ok": "/games/blotto/metrics"}
-    assert client.get_game_prompts("blotto") == {"ok": "/games/blotto/prompts"}
+    assert client.get_game_details("colonelblotto") == {"ok": "/games/colonelblotto"}
+    assert client.get_game_metrics("colonelblotto") == {"ok": "/games/colonelblotto/metrics"}
+    assert client.get_game_prompts("colonelblotto") == {"ok": "/games/colonelblotto/prompts"}
 
     assert [request.url.path for request in requests] == [
         "/games",
-        "/games/blotto",
-        "/games/blotto/metrics",
-        "/games/blotto/prompts",
+        "/games/colonelblotto",
+        "/games/colonelblotto/metrics",
+        "/games/colonelblotto/prompts",
     ]
 
 

@@ -33,13 +33,13 @@ class GameRegistry:
         self.catalog_root = Path(catalog_root) if catalog_root else CATALOG_ROOT
 
     def list_games(self) -> list[dict]:
-        games = [self._summary(metadata) for metadata in self._iter_game_metadata()]
-        print(games)
+        games = [self._summary(metadata, slug) for slug, metadata in self._iter_game_metadata()]
         return sorted(games, key=lambda game: game["name"])
 
     def get_game(self, name: str) -> dict:
         game_dir = self._game_dir(name)
         metadata = self._load_yaml(game_dir / "game.yaml")
+        metadata["slug"] = name
         metadata["ui"] = _detect_ui(game_dir)
         return metadata
 
@@ -76,7 +76,8 @@ class GameRegistry:
                 metadata = self._load_yaml(game_yaml)
                 if metadata.get("status") == "deprecated":
                     continue
-                yield metadata
+                slug = game_yaml.parent.name
+                yield slug, metadata
 
     def _game_dir(self, name: str) -> Path:
         for namespace in ("core", "community"):
@@ -101,9 +102,10 @@ class GameRegistry:
             raise GameRegistryError(f"invalid game file: {path}")
         return data
 
-    def _summary(self, metadata: dict) -> dict:
+    def _summary(self, metadata: dict, slug: str) -> dict:
         return {
             "name": metadata["name"],
+            "slug": slug,
             "version": metadata.get("version"),
             "status": metadata.get("status"),
             "description": metadata.get("description"),

@@ -2,13 +2,13 @@ from copy import deepcopy
 from dataclasses import dataclass
 
 from nash_arena.game_engine import GameEngine
-from .metrics import BlottoMetrics
+from .metrics import ColonelBlottoMetrics
 
 from .agent import Agent
 
 
 @dataclass
-class BlottoState:
+class ColonelBlottoState:
     round_number: int
     phase: str
     awaiting: list[str]
@@ -27,7 +27,7 @@ class BlottoState:
 # Scoring: higher allocation wins that battlefield, 
 #          tie gives both 0.5 pts, 
 #          winner of round is whoever wins more battlefield points!
-class BlottoGame(GameEngine):
+class ColonelBlottoGame(GameEngine):
     def __init__(self, num_battlefields=5, total_resources=100, num_rounds=10):
         if num_battlefields < 1:
             raise ValueError("num_battlefields must be at least 1")
@@ -40,7 +40,7 @@ class BlottoGame(GameEngine):
         self.total_resources = total_resources
         self.num_rounds = num_rounds
         
-        self.metrics_engine = BlottoMetrics()
+        self.metrics_engine = ColonelBlottoMetrics()
 
     @classmethod
     def from_config(cls, config):
@@ -51,7 +51,7 @@ class BlottoGame(GameEngine):
         )
         
     def initial_state(self):
-        return BlottoState(
+        return ColonelBlottoState(
             round_number=1,
             phase="awaiting_action",
             awaiting=["A", "B"],
@@ -60,8 +60,8 @@ class BlottoGame(GameEngine):
             total_scores={"A": 0, "B": 0},
         )
 
-    def state_from_dict(self, d: dict) -> BlottoState:
-        return BlottoState(**d)
+    def state_from_dict(self, d: dict) -> ColonelBlottoState:
+        return ColonelBlottoState(**d)
 
     # Asks: Is this a valid Blotto allocation?      
     def validate_action(self, action):
@@ -187,6 +187,42 @@ class BlottoGame(GameEngine):
             "history": list(state.history),
         }
         
+    def forfeit_round(self, state, player):
+        """Player forfeits — opponent wins all battlefields for this round."""
+        if self.is_terminal(state):
+            return state
+        next_state = deepcopy(state)
+        opponent = "B" if player == "A" else "A"
+        fields = self.num_battlefields
+
+        next_state.history.append({
+            "round": next_state.round_number,
+            "allocations": {
+                player: [0] * fields,
+                opponent: [self.total_resources] * fields,
+            },
+            "scores": {player: 0, opponent: float(fields)},
+            "winner": opponent,
+            "total_scores": {
+                **next_state.total_scores,
+                opponent: next_state.total_scores[opponent] + fields,
+            },
+            "forfeit": True,
+            "forfeit_by": player,
+        })
+        next_state.total_scores[opponent] += fields
+
+        if next_state.round_number >= self.num_rounds:
+            next_state.phase = "complete"
+            next_state.awaiting = []
+            next_state.pending_actions = {}
+        else:
+            next_state.round_number += 1
+            next_state.awaiting = ["A", "B"]
+            next_state.pending_actions = {}
+
+        return next_state
+
     def play_round(self, action_a, action_b):
         if not self.validate_action(action_a):
             raise ValueError(f"Invalid action for Agent A: {action_a}")

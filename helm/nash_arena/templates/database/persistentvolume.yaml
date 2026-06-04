@@ -1,0 +1,21 @@
+{{- if .Values.database.createPV -}}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Values.database.volumeName | default (printf "%s-db-pv" (include "nasharena.fullname" .)) }}
+  labels:
+    {{- include "nasharena.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  capacity:
+    storage: {{ .Values.database.storage }}
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  {{- if .Values.database.storageClassName }}
+  storageClassName: {{ .Values.database.storageClassName }}
+  {{- end }}
+  hostPath:
+    path: /data/nasharena-postgres
+    type: DirectoryOrCreate
+{{- end }}

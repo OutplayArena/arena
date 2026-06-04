@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useTheme } from "../hooks/useTheme";
 import { useAuth } from "../hooks/useAuth";
@@ -13,6 +14,18 @@ export function NavBar() {
   const { theme, toggle } = useTheme();
   const { user, hasProviders, logout } = useAuth();
   const { github_url } = useSiteConfig();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <nav className="sticky top-0 z-50 flex items-center justify-between h-14 px-5 border-b shadow-elevation-1 bg-surface/85 backdrop-blur-xl border-line/50">
@@ -32,18 +45,16 @@ export function NavBar() {
           Home
         </NavLink>
 
-        <NavLink to="/dashboard" className={linkClass}>
-          Dashboard
-        </NavLink>
+        {(user || !hasProviders) && (
+          <>
+            <NavLink to="/dashboard" className={linkClass}>
+              Dashboard
+            </NavLink>
 
-        <NavLink to="/keys" className={linkClass}>
-          API Keys
-        </NavLink>
-
-        {hasProviders && !user && (
-          <NavLink to="/login" className={linkClass}>
-            Login
-          </NavLink>
+            <NavLink to="/keys" className={linkClass}>
+              API Keys
+            </NavLink>
+          </>
         )}
 
         {github_url && (
@@ -80,26 +91,50 @@ export function NavBar() {
           )}
         </button>
 
+        {hasProviders && !user && (
+          <NavLink to="/login" className={linkClass}>
+            Login
+          </NavLink>
+        )}
+
         {user && (
-          <button
-            type="button"
-            onClick={logout}
-            className="w-9 h-9 flex items-center justify-center rounded-chip text-muted hover:text-ink hover:bg-ink/[0.06] transition-colors duration-200 ml-1"
-            title={`Signed in as ${user.name}`}
-          >
-            {user.avatar_url ? (
-              <img
-                src={user.avatar_url}
-                alt={user.name}
-                className="w-6 h-6 rounded-full"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <span className="text-xs font-extrabold text-accent w-6 h-6 rounded-full bg-accent/10 flex items-center justify-center">
-                {user.name.charAt(0).toUpperCase()}
-              </span>
+          <div className="relative ml-1" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="w-9 h-9 flex items-center justify-center rounded-chip text-muted hover:text-ink hover:bg-ink/[0.06] transition-colors duration-200"
+              title={`Signed in as ${user.name}`}
+            >
+              {user.avatar_url ? (
+                <img
+                  src={user.avatar_url}
+                  alt={user.name}
+                  className="w-6 h-6 rounded-full"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <span className="text-xs font-extrabold text-accent w-6 h-6 rounded-full bg-accent/10 flex items-center justify-center">
+                  {user.name.charAt(0).toUpperCase()}
+                </span>
+              )}
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-56 rounded-card border border-line/40 bg-surface shadow-elevation-4 z-50 py-1.5">
+                <div className="px-4 py-2">
+                  <p className="text-sm font-semibold text-ink truncate">{user.name}</p>
+                  <p className="text-xs text-muted truncate">{user.email}</p>
+                </div>
+                <div className="border-t border-line/40 my-1" />
+                <button
+                  type="button"
+                  onClick={() => { setMenuOpen(false); logout(); }}
+                  className="w-full text-left px-4 py-2 text-sm text-ink hover:bg-surface-container transition-colors"
+                >
+                  Log out
+                </button>
+              </div>
             )}
-          </button>
+          </div>
         )}
       </div>
     </nav>

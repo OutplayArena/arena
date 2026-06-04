@@ -1,18 +1,18 @@
-from .config import BattlefieldConfig, BlottoExperimentConfig, config_from_dict
-from .engine import BlottoGame, BlottoState
-from .metrics import BlottoMetrics
+from .config import BattlefieldConfig, ColonelBlottoExperimentConfig, config_from_dict
+from .engine import ColonelBlottoGame, ColonelBlottoState
+from .metrics import ColonelBlottoMetrics
 
 
 def game_from_config(config):
-    return BlottoGame.from_config(config)
+    return ColonelBlottoGame.from_config(config)
 
 
 __all__ = [
     "BattlefieldConfig",
-    "BlottoExperimentConfig",
-    "BlottoGame",
-    "BlottoMetrics",
-    "BlottoState",
+    "ColonelBlottoExperimentConfig",
+    "ColonelBlottoGame",
+    "ColonelBlottoMetrics",
+    "ColonelBlottoState",
     "config_from_dict",
     "game_from_config",
 ]

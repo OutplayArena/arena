@@ -22,7 +22,7 @@ class BattlefieldConfig:
 # Experiment becomes one object
 # POST / experiment will accept almost exactly this shape as JSON
 @dataclass(frozen=True)
-class BlottoExperimentConfig(GameConfig):
+class ColonelBlottoExperimentConfig(GameConfig):
     game: str
     variant: str
     players: int
@@ -32,8 +32,8 @@ class BlottoExperimentConfig(GameConfig):
     seed: int | None = None
     
     def __post_init__(self):
-        if self.game != "blotto":
-            raise ValueError("game must be 'blotto'")
+        if self.game != "colonelblotto":
+            raise ValueError("game must be 'colonelblotto'")
         if self.variant != "classic":
             raise ValueError("variant must be 'classic'")
         if self.players != 2:
@@ -80,7 +80,7 @@ class BlottoExperimentConfig(GameConfig):
         seed: int | None = None,
     ):
         return cls(
-            game="blotto",
+            game="colonelblotto",
             variant="classic",
             players=2,
             budget=[total_resources, total_resources],
@@ -119,7 +119,7 @@ class BlottoExperimentConfig(GameConfig):
 
 
 def config_from_dict(data):
-    return BlottoExperimentConfig(
+    return ColonelBlottoExperimentConfig(
         game=data["game"],
         variant=data["variant"],
         players=data["players"],

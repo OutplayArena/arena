@@ -17,12 +17,12 @@ set -a
 source .env
 set +a
 
-NS="${NAMESPACE:-blotto}"
-RELEASE="${RELEASE:-blotto}"
+NS="${NAMESPACE:-nasharena}"
+RELEASE="${RELEASE:-nasharena}"
 
 echo "Deploying $RELEASE to namespace $NS ..."
 
-helm upgrade "$RELEASE" helm/blotto \
+helm upgrade "$RELEASE" helm/nash_arena \
   --install \
   --create-namespace \
   --namespace "$NS" \

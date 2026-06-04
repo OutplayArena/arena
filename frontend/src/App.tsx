@@ -29,7 +29,7 @@ export default function App() {
             path="/play"
             element={
               <ProtectedRoute>
-                <Navigate to="/play/blotto" replace />
+                <Navigate to="/dashboard" replace />
               </ProtectedRoute>
             }
           />

@@ -177,37 +177,37 @@ export function HistoryPage() {
                 >
                   <td
                     className="px-4 py-2.5 text-xs text-muted whitespace-nowrap cursor-pointer"
-                    onClick={() => navigate(`/play/${s.game_slug || "blotto"}/${s.id}`)}
+                    onClick={() => navigate(`/play/${s.game_slug || "colonelblotto"}/${s.id}`)}
                   >
                     {s.created_at ? new Date(s.created_at).toLocaleDateString() : "-"}
                   </td>
                   <td
                     className="px-4 py-2.5 text-xs text-ink font-medium capitalize cursor-pointer"
-                    onClick={() => navigate(`/play/${s.game_slug || "blotto"}/${s.id}`)}
+                    onClick={() => navigate(`/play/${s.game_slug || "colonelblotto"}/${s.id}`)}
                   >
                     {s.game_slug}
                   </td>
                   <td
                     className="px-4 py-2.5 cursor-pointer"
-                    onClick={() => navigate(`/play/${s.game_slug || "blotto"}/${s.id}`)}
+                    onClick={() => navigate(`/play/${s.game_slug || "colonelblotto"}/${s.id}`)}
                   >
                     {statusBadge(s.status)}
                   </td>
                   <td
                     className="px-4 py-2.5 text-xs text-ink font-medium cursor-pointer"
-                    onClick={() => navigate(`/play/${s.game_slug || "blotto"}/${s.id}`)}
+                    onClick={() => navigate(`/play/${s.game_slug || "colonelblotto"}/${s.id}`)}
                   >
                     {s.agent_a || "Unknown"}
                   </td>
                   <td
                     className="px-4 py-2.5 text-xs text-ink font-medium cursor-pointer"
-                    onClick={() => navigate(`/play/${s.game_slug || "blotto"}/${s.id}`)}
+                    onClick={() => navigate(`/play/${s.game_slug || "colonelblotto"}/${s.id}`)}
                   >
                     {s.agent_b || "Unknown"}
                   </td>
                   <td
                     className="px-4 py-2.5 cursor-pointer"
-                    onClick={() => navigate(`/play/${s.game_slug || "blotto"}/${s.id}`)}
+                    onClick={() => navigate(`/play/${s.game_slug || "colonelblotto"}/${s.id}`)}
                   >
                     {outcomeBadge(s.winner)}
                   </td>
@@ -224,7 +224,7 @@ export function HistoryPage() {
                       {!s.locked && (
                         <button
                           type="button"
-                          onClick={(e) => { e.stopPropagation(); navigate(`/play/${s.game_slug || "blotto"}?agent_a=${s.agent_a || ""}&agent_b=${s.agent_b || ""}`); }}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/play/${s.game_slug || "colonelblotto"}?agent_a=${s.agent_a || ""}&agent_b=${s.agent_b || ""}`); }}
                           title="Use as template"
                           className="w-7 h-7 flex items-center justify-center rounded-md text-muted hover:text-accent hover:bg-accent/[0.12] cursor-pointer transition-colors"
                         >

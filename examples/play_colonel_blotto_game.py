@@ -1,13 +1,13 @@
 import os
 
 from nash_arena.client import ArenaClient
-from games.core.blotto.config import BlottoExperimentConfig
+from games.core.colonelblotto.config import ColonelBlottoExperimentConfig
 
 BASE_URL = os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000")
 
 def main():
     arena = ArenaClient(BASE_URL)
-    config = BlottoExperimentConfig.classic(
+    config = ColonelBlottoExperimentConfig.classic(
         num_battlefields=3,
         total_resources=10,
         rounds=1,

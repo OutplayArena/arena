@@ -4,18 +4,19 @@ import importlib.util
 import pytest
 
 from nash_arena.game_registry import CATALOG_ROOT, GameRegistry, GameRegistryError
-from games.core.blotto.engine import BlottoGame
+from games.core.colonelblotto.engine import ColonelBlottoGame
 
 
 def test_registry_catalog_root_points_to_top_level_games_directory():
     assert CATALOG_ROOT.name == "games"
-    assert (CATALOG_ROOT / "core" / "blotto" / "game.yaml").exists()
+    assert (CATALOG_ROOT / "core" / "colonelblotto" / "game.yaml").exists()
 
 
 def test_registry_lists_blotto():
     games = GameRegistry().list_games()
 
-    assert [game["name"] for game in games] == ["blotto"]
+    assert [game["name"] for game in games] == ["Colonel Blotto"]
+    assert games[0]["slug"] == "colonelblotto"
     assert games[0]["players"] == {"min": 2, "max": 2}
     assert "resource-allocation" in games[0]["tags"]
 
@@ -23,12 +24,12 @@ def test_registry_lists_blotto():
 def test_registry_loads_blotto_details_metrics_and_prompts():
     registry = GameRegistry()
 
-    details = registry.get_game("blotto")
-    metrics = registry.get_game_metrics("blotto")
-    prompts = registry.get_game_prompts("blotto")
+    details = registry.get_game("colonelblotto")
+    metrics = registry.get_game_metrics("colonelblotto")
+    prompts = registry.get_game_prompts("colonelblotto")
 
-    assert details["name"] == "blotto"
-    assert details["example_config"]["game"] == "blotto"
+    assert details["name"] == "Colonel Blotto"
+    assert details["example_config"]["game"] == "colonelblotto"
     assert {metric["name"] for metric in metrics["metrics"]} >= {
         "total_payoff",
         "allocation_concentration",
@@ -41,7 +42,7 @@ def test_registry_builds_blotto_config_and_game_from_catalog():
 
     config = registry.config_from_request(
         {
-            "game": "blotto",
+            "game": "colonelblotto",
             "variant": "classic",
             "players": 2,
             "budget": [10, 10],
@@ -55,9 +56,9 @@ def test_registry_builds_blotto_config_and_game_from_catalog():
     )
     game = registry.game_from_config(config)
 
-    assert config.game == "blotto"
+    assert config.game == "colonelblotto"
     assert game.num_battlefields == 2
-    assert isinstance(game, BlottoGame)
+    assert isinstance(game, ColonelBlottoGame)
 
 
 def test_arena_package_does_not_own_blotto_specific_modules():

@@ -37,7 +37,7 @@ export interface CreateExperimentResponse {
 }
 
 export interface GameState {
-  phase: "awaiting" | "complete";
+  phase: "awaiting_action" | "complete";
   round: number;
   round_total: number;
   awaiting: PlayerSide[];
@@ -148,6 +148,7 @@ export interface DashboardResponse {
 
 export interface GameEntry {
   name: string;
+  slug: string;
   version?: string;
   status?: string;
   description?: string;

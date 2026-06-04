@@ -1,4 +1,4 @@
-from games.core.blotto.agent import LLMAgent, LiteLLMAgent, load_prompt_templates
+from games.core.colonelblotto.agent import LLMAgent, LiteLLMAgent, load_prompt_templates
 
 
 def assert_agent_uses_yaml_prompt(agent):

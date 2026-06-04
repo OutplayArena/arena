@@ -20,7 +20,7 @@ class FakeClient:
         return {"winner": "A"}
 
     def list_games(self):
-        return [{"name": "blotto"}]
+        return [{"name": "colonelblotto"}]
 
     def get_game_details(self, game):
         return {"name": game}
@@ -95,10 +95,10 @@ def test_game_directory_tools_call_client(monkeypatch):
     fake = FakeClient()
     monkeypatch.setattr(mcp_server, "arena_client", lambda: fake)
 
-    assert mcp_server.list_games() == [{"name": "blotto"}]
-    assert mcp_server.get_game_details("blotto") == {"name": "blotto"}
-    assert mcp_server.get_game_metrics("blotto") == {"game": "blotto", "metrics": []}
-    assert mcp_server.get_game_prompts("blotto") == {
-        "game": "blotto",
+    assert mcp_server.list_games() == [{"name": "colonelblotto"}]
+    assert mcp_server.get_game_details("colonelblotto") == {"name": "colonelblotto"}
+    assert mcp_server.get_game_metrics("colonelblotto") == {"game": "colonelblotto", "metrics": []}
+    assert mcp_server.get_game_prompts("colonelblotto") == {
+        "game": "colonelblotto",
         "action_format": {"type": "json_array"},
     }

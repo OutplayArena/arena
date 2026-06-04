@@ -23,6 +23,19 @@ export interface AppState {
     num_battlefields: number;
     total_resources: number;
   } | null;
+  pendingGame: {
+    sessionId: string;
+    tokens: Record<string, string>;
+    agentAName: string;
+    agentBName: string;
+    agentAId: string;
+    agentBId: string;
+    numRounds: number;
+    numFields: number;
+    totalResources: number;
+    gameSlug: string;
+    remoteKeys: Record<string, string> | null;
+  } | null;
 }
 
 type Action =
@@ -34,6 +47,8 @@ type Action =
   | { type: "STOP_PLAY" }
   | { type: "CLEAR_MATCH" }
   | { type: "SET_STATUS"; status: string }
+  | { type: "START_GAME"; payload: AppState["pendingGame"] }
+  | { type: "END_GAME" }
   | { type: "SET_SESSION_META"; locked: boolean; status: string; config: AppState["sessionConfig"] };
 
 function initialState(): AppState {
@@ -46,19 +61,26 @@ function initialState(): AppState {
     sessionLocked: false,
     sessionStatus: "",
     sessionConfig: null,
+    pendingGame: null,
   };
 }
 
 function appReducer(state: AppState, action: Action): AppState {
   switch (action.type) {
-    case "SET_MATCH":
+    case "SET_MATCH": {
+      const sameSession = state.activeMatch?.session_id === action.match.session_id;
       return {
-        ...initialState(),
+        ...state,
         activeMatch: action.match,
-        activeRoundIndex: 0,
-        isPlaying: true,
-        status: "Running replay...",
+        activeRoundIndex: sameSession
+          ? Math.max(0, action.match.history.length - 1)
+          : Math.max(0, action.match.history.length - 1),
+        isPlaying: !action.match.history.length ? state.isPlaying : true,
+        status: sameSession ? state.status : "Running...",
+        sessionLocked: sameSession ? state.sessionLocked : false,
+        sessionStatus: sameSession ? state.sessionStatus : "",
       };
+    }
     case "SHOW_ROUND": {
       if (!state.activeMatch) return state;
       const i = Math.max(
@@ -97,6 +119,10 @@ function appReducer(state: AppState, action: Action): AppState {
       return { ...state, isPlaying: true };
     case "STOP_PLAY":
       return { ...state, isPlaying: false };
+    case "START_GAME":
+      return { ...state, pendingGame: action.payload, status: "Starting game..." };
+    case "END_GAME":
+      return { ...state, pendingGame: null };
     case "CLEAR_MATCH":
       return initialState();
     case "SET_STATUS":
@@ -124,6 +150,8 @@ interface AppContextValue {
   stopPlay: () => void;
   clearMatch: () => void;
   setStatus: (status: string) => void;
+  startGame: (payload: NonNullable<AppState["pendingGame"]>) => void;
+  endGame: () => void;
   setSessionMeta: (locked: boolean, status: string, config: AppState["sessionConfig"]) => void;
   currentRound: () => MatchRound | null;
 }
@@ -182,6 +210,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!s.activeMatch) return null;
     return s.activeMatch.history[s.activeRoundIndex] ?? null;
   }, []);
+  const startGame = useCallback(
+    (payload: NonNullable<AppState["pendingGame"]>) =>
+      dispatch({ type: "START_GAME", payload }),
+    [],
+  );
+  const endGame = useCallback(
+    () => dispatch({ type: "END_GAME" }),
+    [],
+  );
 
   return (
     <AppContext.Provider
@@ -198,6 +235,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setStatus,
         setSessionMeta,
         currentRound,
+        startGame,
+        endGame,
       }}
     >
       {children}

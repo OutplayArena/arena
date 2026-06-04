@@ -8,6 +8,10 @@ import type { GameMetadata, Match } from "../types";
 import { useApp } from "../hooks/useApp";
 import { AppProvider } from "../state";
 import type { AnimatedScores } from "../hooks/useCanvasRenderer";
+import { getState, submitAction, getResults } from "../api";
+import { chooseAction } from "../agents";
+import { resultToMatch, copyToClipboard } from "./utils";
+import type { RunConfig, PlayerSide } from "../types";
 
 interface GamePlayViewProps {
   game: GameMetadata;
@@ -26,7 +30,7 @@ interface GamePlayViewProps {
 }
 
 function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionConfig, createdAt }: GamePlayViewProps) {
-  const { setMatch, setSessionMeta } = useApp();
+  const { state, setMatch, setSessionMeta, stopPlay, endGame } = useApp();
   const hasLiveView = game.ui?.live_view ?? false;
 
   const tabs = [
@@ -42,26 +46,117 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
   const [CustomHistoryView, setCustomHistoryView] = useState<ComponentType<Record<string, unknown>> | null>(null);
   const [canvasCollapsed, setCanvasCollapsed] = useState(false);
   const loadedRef = useRef(false);
+  const gameLoopRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const completedRef = useRef(false);
+
+  useEffect(() => {
+    const pg = state.pendingGame;
+    if (!pg || gameLoopRef.current) return;
+    gameLoopRef.current = true;
+    completedRef.current = false;
+    setActiveTab("live");
+
+    const buildMatch = (gs: Record<string, unknown>) => ({
+      agent_a: pg.agentAName,
+      agent_b: pg.agentBName,
+      session_id: pg.sessionId,
+      config_hash: (gs.config_hash as string) || "",
+      num_rounds: pg.numRounds,
+      num_battlefields: pg.numFields,
+      total_resources: pg.totalResources,
+      total_score_a: ((gs.total_scores as Record<string, number>)?.A) || 0,
+      total_score_b: ((gs.total_scores as Record<string, number>)?.B) || 0,
+      match_winner: undefined as PlayerSide | "Tie" | undefined,
+      history: ((gs.history as Array<Record<string, unknown>>) || []).map((r) => ({
+        round: (r.round as number) || 0,
+        agent_a: pg.agentAName,
+        agent_b: pg.agentBName,
+        action_a: ((r.allocations as Record<string, number[]>)?.A) || [],
+        action_b: ((r.allocations as Record<string, number[]>)?.B) || [],
+        score_a: ((r.scores as Record<string, number>)?.A) || 0,
+        score_b: ((r.scores as Record<string, number>)?.B) || 0,
+        total_score_a: ((r.total_scores as Record<string, number>)?.A) || 0,
+        total_score_b: ((r.total_scores as Record<string, number>)?.B) || 0,
+        winner: (r.winner as string || "Tie") as "A" | "B" | "Tie",
+      })),
+      metrics: {},
+    });
+
+    const tokens = pg.tokens;
+
+    const scheduleTick = () => {
+      timerRef.current = setTimeout(async () => {
+        if (completedRef.current) return;
+        try {
+          let gameState = await getState(pg.sessionId);
+
+          for (const player of ["A", "B"] as const) {
+            if (!gameState.awaiting.includes(player)) continue;
+            const isRemote = player === "A" ? pg.agentAId === "remote" : pg.agentBId === "remote";
+            if (isRemote) continue;
+            const agent = player === "A" ? pg.agentAId : pg.agentBId;
+            const action = chooseAction(agent, player, gameState);
+            const updated = await submitAction(pg.sessionId, action, tokens[player]);
+            gameState = updated;
+          }
+
+          gameState = await getState(pg.sessionId);
+          setMatch(buildMatch(gameState as never));
+
+          if (gameState.phase === "complete") {
+            completedRef.current = true;
+            const result = await getResults(pg.sessionId);
+            const payload: RunConfig = {
+              agent_a: pg.agentAName,
+              agent_b: pg.agentBName,
+              num_rounds: pg.numRounds,
+              num_battlefields: pg.numFields,
+              total_resources: pg.totalResources,
+              session_id: pg.sessionId,
+            };
+            setMatch(resultToMatch(result as never, payload));
+            stopPlay();
+            gameLoopRef.current = false;
+            endGame();
+            return;
+          }
+
+          scheduleTick();
+        } catch (err) {
+          console.error("Game poll error:", err);
+          scheduleTick();
+        }
+      }, 500);
+    };
+
+    scheduleTick();
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [state.pendingGame, setMatch, stopPlay, endGame]);
 
   useEffect(() => {
     if (loadedRef.current) return;
     loadedRef.current = true;
+    const slug = game.slug || game.name;
     if (hasLiveView) {
-      loadLiveView(game.name).then((mod) => {
+      loadLiveView(slug).then((mod) => {
         if (mod) setCustomLiveView(() => mod.default as ComponentType<Record<string, unknown>>);
       }).catch(() => {});
     }
     if (game.ui?.custom_config) {
-      loadConfigForm(game.name).then((mod) => {
+      loadConfigForm(slug).then((mod) => {
         if (mod) setCustomConfigForm(() => mod.default as ComponentType<Record<string, unknown>>);
       }).catch(() => {});
     }
     if (game.ui?.custom_history) {
-      loadHistoryView(game.name).then((mod) => {
+      loadHistoryView(slug).then((mod) => {
         if (mod) setCustomHistoryView(() => mod.default as ComponentType<Record<string, unknown>>);
       }).catch(() => {});
     }
-  }, [game.name, game.ui, hasLiveView]);
+  }, [game.name, game.slug, game.ui, hasLiveView]);
 
   useEffect(() => {
     if (sessionConfig) {
@@ -105,13 +200,39 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
   return (
     <div className="flex flex-col h-full">
       <GameHeader game={game} locked={locked} status={sessionStatus} createdAt={createdAt} />
+      {state.pendingGame?.remoteKeys && Object.keys(state.pendingGame.remoteKeys).length > 0 && (
+        <div className="shrink-0 mx-4 mt-3 p-3 rounded-card border border-accent/30 bg-accent/5">
+          <h3 className="text-xs font-extrabold text-ink mb-1.5">Remote Agent Keys</h3>
+          <p className="text-[11px] text-muted mb-2">
+            Pass these to your LLM agents as <code className="bg-ink/8 px-1 rounded text-[10px]">NASH_ARENA_KEY</code>.
+          </p>
+          {Object.entries(state.pendingGame.remoteKeys).map(([player, key]) => (
+            <div key={player} className="flex items-center gap-2 mt-1">
+              <span className="text-[10px] font-extrabold text-muted uppercase shrink-0">Player {player}</span>
+              <span className="text-xs text-ink font-medium truncate max-w-[120px]">{player === "A" ? state.pendingGame!.agentAName : state.pendingGame!.agentBName}</span>
+              <code className="flex-1 text-[10px] bg-ink/6 px-2 py-1 rounded text-ink break-all font-mono">{key}</code>
+              <button
+                type="button"
+                onClick={() => copyToClipboard(key)}
+                title="Copy key"
+                className="w-6 h-6 flex items-center justify-center rounded-md text-muted hover:text-accent hover:bg-accent/[0.12] cursor-pointer transition-colors shrink-0"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       <TabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
       <div className="flex-1 flex flex-col min-h-0">
         {activeTab === "config" && (
           <div className="flex-1 overflow-y-auto">
             {CustomConfigForm ? (
               <CustomConfigForm
-                gameSlug={game.name}
+                gameSlug={game.slug || game.name}
                 schema={schema}
                 locked={locked}
                 sessionStatus={sessionStatus}
@@ -119,7 +240,7 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
               />
             ) : (
               <AutoConfigForm
-                gameSlug={game.name}
+                gameSlug={game.slug || game.name}
                 schema={schema}
                 locked={locked}
                 sessionStatus={sessionStatus}
@@ -128,9 +249,13 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
             )}
           </div>
         )}
-        {activeTab === "live" && CustomLiveView && (
+        {activeTab === "live" && hasLiveView && (
           <div className="flex-1 min-h-0 flex flex-col">
-            <CustomLiveView onScores={handleScores} onToggleCollapse={() => setCanvasCollapsed(true)} createdAt={createdAt || null} />
+            {CustomLiveView ? (
+              <CustomLiveView onScores={handleScores} onToggleCollapse={() => setCanvasCollapsed(true)} createdAt={createdAt || null} />
+            ) : (
+              <div className="flex items-center justify-center flex-1 text-muted text-sm">Loading...</div>
+            )}
           </div>
         )}
         {activeTab === "history" && (

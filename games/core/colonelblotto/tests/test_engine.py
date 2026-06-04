@@ -1,15 +1,15 @@
-from games.core.blotto.config import BlottoExperimentConfig
-from games.core.blotto.engine import BlottoGame
+from games.core.colonelblotto.config import ColonelBlottoExperimentConfig
+from games.core.colonelblotto.engine import ColonelBlottoGame
 
 
 def test_blotto_game_from_config_reaches_complete_state():
-    config = BlottoExperimentConfig.classic(
+    config = ColonelBlottoExperimentConfig.classic(
         num_battlefields=3,
         total_resources=10,
         rounds=1,
         seed=42,
     )
-    game = BlottoGame.from_config(config)
+    game = ColonelBlottoGame.from_config(config)
     state = game.initial_state()
 
     state = game.apply_action(state, "A", [10, 0, 0])

@@ -1,7 +1,7 @@
 import pytest
 
-from games.core.blotto.agent import Agent, GreedyAgent, RandomAgent, UniformAgent
-from games.core.blotto.engine import BlottoGame
+from games.core.colonelblotto.agent import Agent, GreedyAgent, RandomAgent, UniformAgent
+from games.core.colonelblotto.engine import ColonelBlottoGame
 
 
 class FixedAgent(Agent):
@@ -14,7 +14,7 @@ class FixedAgent(Agent):
 
 
 def test_match_winner_can_be_agent_b():
-    game = BlottoGame(num_battlefields=5, total_resources=100)
+    game = ColonelBlottoGame(num_battlefields=5, total_resources=100)
     agent_a = FixedAgent("weak", [0, 0, 0, 0, 100])
     agent_b = FixedAgent("strong", [1, 1, 1, 1, 96])
 
@@ -26,7 +26,7 @@ def test_match_winner_can_be_agent_b():
 
 
 def test_validate_action_accepts_only_exact_integer_allocations():
-    game = BlottoGame(num_battlefields=3, total_resources=9)
+    game = ColonelBlottoGame(num_battlefields=3, total_resources=9)
 
     assert game.validate_action([3, 3, 3])
     assert not game.validate_action((3, 3, 3))
@@ -38,7 +38,7 @@ def test_validate_action_accepts_only_exact_integer_allocations():
 
 
 def test_play_round_scores_wins_losses_and_ties():
-    game = BlottoGame(num_battlefields=5, total_resources=10)
+    game = ColonelBlottoGame(num_battlefields=5, total_resources=10)
 
     result = game.play_round([5, 2, 1, 1, 1], [1, 2, 2, 3, 2])
 
@@ -52,7 +52,7 @@ def test_play_round_scores_wins_losses_and_ties():
 
 
 def test_play_round_rejects_invalid_actions():
-    game = BlottoGame(num_battlefields=3, total_resources=9)
+    game = ColonelBlottoGame(num_battlefields=3, total_resources=9)
 
     with pytest.raises(ValueError, match="Invalid action for Agent A"):
         game.play_round([3, 3, 2], [3, 3, 3])
@@ -62,7 +62,7 @@ def test_play_round_rejects_invalid_actions():
 
 
 def test_play_match_totals_history_and_tie_winner():
-    game = BlottoGame(num_battlefields=3, total_resources=9)
+    game = ColonelBlottoGame(num_battlefields=3, total_resources=9)
     agent_a = FixedAgent("a", [3, 3, 3])
     agent_b = FixedAgent("b", [3, 3, 3])
 
@@ -86,7 +86,7 @@ def test_play_match_history_contains_opponent_score_key():
             self.seen_history = list(history)
             return self.action
 
-    game = BlottoGame(num_battlefields=5, total_resources=100)
+    game = ColonelBlottoGame(num_battlefields=5, total_resources=100)
     agent_a = CapturingAgent("a", [20, 20, 20, 20, 20])
     agent_b = CapturingAgent("b", [20, 20, 20, 20, 20])
 
@@ -98,10 +98,10 @@ def test_play_match_history_contains_opponent_score_key():
 
 def test_game_rejects_impossible_parameters():
     with pytest.raises(ValueError, match="num_battlefields"):
-        BlottoGame(num_battlefields=0, total_resources=100)
+        ColonelBlottoGame(num_battlefields=0, total_resources=100)
 
     with pytest.raises(ValueError, match="total_resources"):
-        BlottoGame(num_battlefields=5, total_resources=4)
+        ColonelBlottoGame(num_battlefields=5, total_resources=4)
 
 
 def test_builtin_agents_support_variable_game_parameters():
@@ -119,7 +119,7 @@ def test_builtin_agents_support_variable_game_parameters():
 
 
 def test_initial_state_starts_awaiting_both_players():
-    game = BlottoGame(num_battlefields=3, total_resources=9, num_rounds=2)
+    game = ColonelBlottoGame(num_battlefields=3, total_resources=9, num_rounds=2)
 
     state = game.initial_state()
 
@@ -132,7 +132,7 @@ def test_initial_state_starts_awaiting_both_players():
 
 
 def test_apply_first_action_returns_new_waiting_state_without_mutating_original():
-    game = BlottoGame(num_battlefields=3, total_resources=9, num_rounds=2)
+    game = ColonelBlottoGame(num_battlefields=3, total_resources=9, num_rounds=2)
     state = game.initial_state()
 
     next_state = game.apply_action(state, "A", [9, 0, 0])
@@ -146,7 +146,7 @@ def test_apply_first_action_returns_new_waiting_state_without_mutating_original(
 
 
 def test_apply_second_action_resolves_round_and_advances():
-    game = BlottoGame(num_battlefields=3, total_resources=9, num_rounds=2)
+    game = ColonelBlottoGame(num_battlefields=3, total_resources=9, num_rounds=2)
     state = game.initial_state()
 
     state = game.apply_action(state, "A", [9, 0, 0])
@@ -169,7 +169,7 @@ def test_apply_second_action_resolves_round_and_advances():
 
 
 def test_apply_final_round_marks_terminal():
-    game = BlottoGame(num_battlefields=3, total_resources=9, num_rounds=1)
+    game = ColonelBlottoGame(num_battlefields=3, total_resources=9, num_rounds=1)
     state = game.initial_state()
 
     state = game.apply_action(state, "A", [9, 0, 0])
@@ -183,7 +183,7 @@ def test_apply_final_round_marks_terminal():
 
 
 def test_apply_action_rejects_complete_state_duplicate_player_and_bad_input():
-    game = BlottoGame(num_battlefields=3, total_resources=9, num_rounds=1)
+    game = ColonelBlottoGame(num_battlefields=3, total_resources=9, num_rounds=1)
     state = game.initial_state()
 
     with pytest.raises(ValueError, match="unknown player"):
@@ -204,7 +204,7 @@ def test_apply_action_rejects_complete_state_duplicate_player_and_bad_input():
 
 
 def test_compute_results_requires_terminal_state_and_reports_winner():
-    game = BlottoGame(num_battlefields=3, total_resources=9, num_rounds=1)
+    game = ColonelBlottoGame(num_battlefields=3, total_resources=9, num_rounds=1)
     state = game.initial_state()
 
     with pytest.raises(ValueError, match="complete"):

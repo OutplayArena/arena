@@ -28,8 +28,7 @@ oauth.register(
     authorize_url="https://accounts.google.com/o/oauth2/auth",
     access_token_url="https://accounts.google.com/o/oauth2/token",
     api_base_url="https://www.googleapis.com/",
-    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-    client_kwargs={"scope": "openid email profile"},
+    client_kwargs={"scope": "email profile"},
 )
 
 
@@ -75,9 +74,8 @@ async def github_login(request: Any) -> str:
 
 
 async def github_callback(request: Any, db: AsyncSession) -> User:
-    redirect_uri = f"{CALLBACK_BASE}/api/auth/github/callback"
     client = _github_client()
-    token = await client.authorize_access_token(request, redirect_uri=redirect_uri)
+    token = await client.authorize_access_token(request)
     resp = await client.get("user", token=token)
     profile = resp.json()
 
@@ -108,10 +106,10 @@ async def google_login(request: Any) -> str:
 
 
 async def google_callback(request: Any, db: AsyncSession) -> User:
-    redirect_uri = f"{CALLBACK_BASE}/api/auth/google/callback"
     client = _google_client()
-    token = await client.authorize_access_token(request, redirect_uri=redirect_uri)
-    userinfo = token.get("userinfo")
+    token = await client.authorize_access_token(request)
+    resp = await client.get("oauth2/v3/userinfo", token=token)
+    userinfo = resp.json()
 
     return await _upsert_user(
         db,
