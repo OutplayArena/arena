@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "@frontend/hooks/useApp";
 import { useCanvasRenderer } from "@frontend/hooks/useCanvasRenderer";
 import type { AnimatedScores } from "@frontend/hooks/useCanvasRenderer";
@@ -14,10 +14,20 @@ export default function LiveView({ onScores, onToggleCollapse, createdAt }: Live
   const { state } = useApp();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hasMatch = Boolean(state.activeMatch);
+  const isGameRunning = Boolean(state.pendingGame);
+  const [canvasError, setCanvasError] = useState(false);
+
+  console.log("[LiveView] rendering, hasMatch:", hasMatch, "isGameRunning:", isGameRunning, "canvasError:", canvasError);
+
+  const handleRenderError = useCallback((_err: Error) => {
+    setCanvasError(true);
+  }, []);
+
   const scores = useCanvasRenderer(
     canvasRef,
     state.activeMatch,
     state.activeRoundIndex,
+    handleRenderError,
   );
 
   useEffect(() => {
@@ -101,25 +111,48 @@ export default function LiveView({ onScores, onToggleCollapse, createdAt }: Live
 
       {/* Canvas */}
       <div className="flex-1 min-h-0 relative overflow-hidden">
+        {canvasError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-surface-soft z-10">
+            <div className="text-center px-6">
+              <p className="text-sm font-semibold text-red-500">Canvas rendering failed</p>
+              <p className="text-xs text-muted mt-1.5">Check the browser console for details.</p>
+            </div>
+          </div>
+        )}
         <canvas
           ref={canvasRef}
           className={`block w-full h-full ${hasMatch ? "" : "hidden"}`}
           width={1200}
           height={800}
         />
-        {!hasMatch && (
+        {!hasMatch && !canvasError && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center px-6">
               <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-surface-container flex items-center justify-center">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted/60">
-                  <rect x="3" y="3" width="7" height="7" rx="1" />
-                  <rect x="14" y="3" width="7" height="7" rx="1" />
-                  <rect x="3" y="14" width="7" height="7" rx="1" />
-                  <rect x="14" y="14" width="7" height="7" rx="1" />
-                </svg>
+                {isGameRunning ? (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent/70 animate-spin">
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                  </svg>
+                ) : (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted/60">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" />
+                  </svg>
+                )}
               </div>
-              <p className="text-sm font-semibold text-muted">No battle data yet</p>
-              <p className="text-xs text-quiet mt-1.5">Start a game from the Config tab to visualize the battlefield.</p>
+              {isGameRunning ? (
+                <>
+                  <p className="text-sm font-semibold text-muted">Waiting for first round...</p>
+                  <p className="text-xs text-quiet mt-1.5">Agents are computing their moves. Battle data will appear shortly.</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-muted">No battle data yet</p>
+                  <p className="text-xs text-quiet mt-1.5">Start a game from the Config tab to visualize the battlefield.</p>
+                </>
+              )}
             </div>
           </div>
         )}

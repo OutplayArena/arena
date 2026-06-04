@@ -1,24 +1,8 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { listSessions, listGames, deleteSession } from "../api";
+import { outcomeBadge, statusBadge } from "../components/badges";
 import type { SessionSummary, GameEntry } from "../types";
-
-const outcomeBadge = (winner: string | null) => {
-  if (!winner) return null;
-  const color = winner === "A" ? "text-agent-a bg-agent-a/10" : winner === "B" ? "text-agent-b bg-agent-b/10" : "text-muted bg-ink/6";
-  return <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-chip ${color}`}>{winner === "Tie" ? "Tie" : `Agent ${winner}`}</span>;
-};
-
-const statusBadge = (status: string) => {
-  const map: Record<string, string> = {
-    ready: "bg-[#d4edda] text-[#155724]",
-    running: "bg-[#cce5ff] text-[#004085] animate-pulse",
-    completed: "bg-[#1e7e34] text-white",
-    failed: "bg-[#f8d7da] text-[#721c24]",
-  };
-  const cls = map[status] || "bg-ink/8 text-muted";
-  return <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-chip ${cls}`}>{status}</span>;
-};
 
 export function HistoryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -147,7 +131,12 @@ export function HistoryPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16 text-muted text-sm">Loading...</div>
+        <div className="rounded-card border border-line/40 overflow-hidden">
+          <div className="h-12 bg-surface-container/50" />
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-12 bg-surface animate-pulse border-b border-line/20 last:border-b-0" />
+          ))}
+        </div>
       ) : error ? (
         <div className="flex items-center justify-center py-16 text-muted text-sm">{error}</div>
       ) : sessions.length === 0 ? (
@@ -177,37 +166,37 @@ export function HistoryPage() {
                 >
                   <td
                     className="px-4 py-2.5 text-xs text-muted whitespace-nowrap cursor-pointer"
-                    onClick={() => navigate(`/play/${s.game_slug || "colonelblotto"}/${s.id}`)}
+                    onClick={() => navigate(`/play/${s.game_slug || games[0]?.slug || ""}/${s.id}`)}
                   >
                     {s.created_at ? new Date(s.created_at).toLocaleDateString() : "-"}
                   </td>
                   <td
                     className="px-4 py-2.5 text-xs text-ink font-medium capitalize cursor-pointer"
-                    onClick={() => navigate(`/play/${s.game_slug || "colonelblotto"}/${s.id}`)}
+                    onClick={() => navigate(`/play/${s.game_slug || games[0]?.slug || ""}/${s.id}`)}
                   >
                     {s.game_slug}
                   </td>
                   <td
                     className="px-4 py-2.5 cursor-pointer"
-                    onClick={() => navigate(`/play/${s.game_slug || "colonelblotto"}/${s.id}`)}
+                    onClick={() => navigate(`/play/${s.game_slug || games[0]?.slug || ""}/${s.id}`)}
                   >
                     {statusBadge(s.status)}
                   </td>
                   <td
                     className="px-4 py-2.5 text-xs text-ink font-medium cursor-pointer"
-                    onClick={() => navigate(`/play/${s.game_slug || "colonelblotto"}/${s.id}`)}
+                    onClick={() => navigate(`/play/${s.game_slug || games[0]?.slug || ""}/${s.id}`)}
                   >
                     {s.agent_a || "Unknown"}
                   </td>
                   <td
                     className="px-4 py-2.5 text-xs text-ink font-medium cursor-pointer"
-                    onClick={() => navigate(`/play/${s.game_slug || "colonelblotto"}/${s.id}`)}
+                    onClick={() => navigate(`/play/${s.game_slug || games[0]?.slug || ""}/${s.id}`)}
                   >
                     {s.agent_b || "Unknown"}
                   </td>
                   <td
                     className="px-4 py-2.5 cursor-pointer"
-                    onClick={() => navigate(`/play/${s.game_slug || "colonelblotto"}/${s.id}`)}
+                    onClick={() => navigate(`/play/${s.game_slug || games[0]?.slug || ""}/${s.id}`)}
                   >
                     {outcomeBadge(s.winner)}
                   </td>
@@ -224,7 +213,7 @@ export function HistoryPage() {
                       {!s.locked && (
                         <button
                           type="button"
-                          onClick={(e) => { e.stopPropagation(); navigate(`/play/${s.game_slug || "colonelblotto"}?agent_a=${s.agent_a || ""}&agent_b=${s.agent_b || ""}`); }}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/play/${s.game_slug || games[0]?.slug || ""}?agent_a=${s.agent_a || ""}&agent_b=${s.agent_b || ""}`); }}
                           title="Use as template"
                           className="w-7 h-7 flex items-center justify-center rounded-md text-muted hover:text-accent hover:bg-accent/[0.12] cursor-pointer transition-colors"
                         >

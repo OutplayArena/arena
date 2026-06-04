@@ -24,7 +24,7 @@ export function LandingPage() {
   const { github_url, docs_url, about_text } = useSiteConfig();
 
   return (
-    <div className="relative min-h-[calc(100dvh-56px)] flex flex-col items-center justify-center px-6 py-16">
+    <div className="relative flex-1 flex flex-col items-center justify-center px-6 py-16">
       <BlobBackground />
 
       <div className="relative z-10 flex flex-col items-center text-center max-w-2xl mx-auto">

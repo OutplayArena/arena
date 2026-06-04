@@ -11,6 +11,7 @@ import type { AnimatedScores } from "../hooks/useCanvasRenderer";
 import { getState, submitAction, getResults } from "../api";
 import { chooseAction } from "../agents";
 import { resultToMatch, copyToClipboard } from "./utils";
+import { LoadingSpinner } from "./LoadingSpinner";
 import type { RunConfig, PlayerSide } from "../types";
 
 interface GamePlayViewProps {
@@ -49,12 +50,16 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
   const gameLoopRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const completedRef = useRef(false);
+  const sessionRef = useRef<string | null>(null);
+  const backoffRef = useRef(0);
 
   useEffect(() => {
     const pg = state.pendingGame;
     if (!pg || gameLoopRef.current) return;
     gameLoopRef.current = true;
     completedRef.current = false;
+    sessionRef.current = pg.sessionId;
+    backoffRef.current = 1000;
     setActiveTab("live");
 
     const buildMatch = (gs: Record<string, unknown>) => ({
@@ -87,7 +92,8 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
 
     const scheduleTick = () => {
       timerRef.current = setTimeout(async () => {
-        if (completedRef.current) return;
+        if (!gameLoopRef.current || completedRef.current) return;
+        if (sessionRef.current !== pg.sessionId) return;
         try {
           let gameState = await getState(pg.sessionId);
 
@@ -102,11 +108,13 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
           }
 
           gameState = await getState(pg.sessionId);
-          setMatch(buildMatch(gameState as never));
+          if (sessionRef.current !== pg.sessionId) return;
+          setMatch(buildMatch(gameState));
 
           if (gameState.phase === "complete") {
             completedRef.current = true;
             const result = await getResults(pg.sessionId);
+            if (sessionRef.current !== pg.sessionId) return;
             const payload: RunConfig = {
               agent_a: pg.agentAName,
               agent_b: pg.agentBName,
@@ -122,40 +130,60 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
             return;
           }
 
+          backoffRef.current = 1000;
           scheduleTick();
         } catch (err) {
+          if (!gameLoopRef.current || sessionRef.current !== pg.sessionId) return;
           console.error("Game poll error:", err);
+          backoffRef.current = Math.min(backoffRef.current * 2, 16000);
           scheduleTick();
         }
-      }, 500);
+      }, backoffRef.current);
     };
 
     scheduleTick();
 
     return () => {
+      gameLoopRef.current = false;
+      sessionRef.current = null;
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [state.pendingGame, setMatch, stopPlay, endGame]);
 
+  const [dynamicLoadError, setDynamicLoadError] = useState(false);
+
   useEffect(() => {
     if (loadedRef.current) return;
     loadedRef.current = true;
+    let cancelled = false;
     const slug = game.slug || game.name;
+    console.log("[GamePlayView] loading custom UI for slug:", slug, "hasLiveView:", hasLiveView);
     if (hasLiveView) {
+      console.log("[GamePlayView] calling loadLiveView...");
       loadLiveView(slug).then((mod) => {
-        if (mod) setCustomLiveView(() => mod.default as ComponentType<Record<string, unknown>>);
-      }).catch(() => {});
+        console.log("[GamePlayView] loadLiveView resolved, mod:", !!mod);
+        if (!cancelled && mod) setCustomLiveView(() => mod.default as ComponentType<Record<string, unknown>>);
+        if (!cancelled && !mod) setDynamicLoadError(true);
+      }).catch((err) => {
+        console.error("Failed to load LiveView:", err);
+        if (!cancelled) setDynamicLoadError(true);
+      });
     }
     if (game.ui?.custom_config) {
       loadConfigForm(slug).then((mod) => {
-        if (mod) setCustomConfigForm(() => mod.default as ComponentType<Record<string, unknown>>);
-      }).catch(() => {});
+        if (!cancelled && mod) setCustomConfigForm(() => mod.default as ComponentType<Record<string, unknown>>);
+      }).catch((err) => {
+        console.error("Failed to load ConfigForm:", err);
+      });
     }
     if (game.ui?.custom_history) {
       loadHistoryView(slug).then((mod) => {
-        if (mod) setCustomHistoryView(() => mod.default as ComponentType<Record<string, unknown>>);
-      }).catch(() => {});
+        if (!cancelled && mod) setCustomHistoryView(() => mod.default as ComponentType<Record<string, unknown>>);
+      }).catch((err) => {
+        console.error("Failed to load HistoryView:", err);
+      });
     }
+    return () => { cancelled = true; };
   }, [game.name, game.slug, game.ui, hasLiveView]);
 
   useEffect(() => {
@@ -198,7 +226,7 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
   const schema = (game.config_schema as Record<string, unknown>) ?? {};
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       <GameHeader game={game} locked={locked} status={sessionStatus} createdAt={createdAt} />
       {state.pendingGame?.remoteKeys && Object.keys(state.pendingGame.remoteKeys).length > 0 && (
         <div className="shrink-0 mx-4 mt-3 p-3 rounded-card border border-accent/30 bg-accent/5">
@@ -249,12 +277,20 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
             )}
           </div>
         )}
+        {activeTab === "live" && hasLiveView && (() => {
+          console.log("[GamePlayView] rendering live tab: activeTab=live hasLiveView=true CustomLiveView=", !!CustomLiveView, "dynamicLoadError=", dynamicLoadError);
+          return null;
+        })()}
         {activeTab === "live" && hasLiveView && (
           <div className="flex-1 min-h-0 flex flex-col">
             {CustomLiveView ? (
               <CustomLiveView onScores={handleScores} onToggleCollapse={() => setCanvasCollapsed(true)} createdAt={createdAt || null} />
+            ) : dynamicLoadError ? (
+              <div className="flex items-center justify-center flex-1 text-muted text-sm">
+                Failed to load Live View. Check the browser console for details.
+              </div>
             ) : (
-              <div className="flex items-center justify-center flex-1 text-muted text-sm">Loading...</div>
+              <LoadingSpinner className="flex-1" />
             )}
           </div>
         )}

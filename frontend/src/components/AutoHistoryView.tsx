@@ -1,19 +1,10 @@
 import { useApp } from "../hooks/useApp";
+import { downloadJSON } from "./badges";
 
 interface AutoHistoryViewProps {
   hasMatch: boolean;
   canvasCollapsed: boolean;
   onExpandCanvas: () => void;
-}
-
-function downloadJSON(data: unknown, filename: string) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
 export function AutoHistoryView({ hasMatch, canvasCollapsed, onExpandCanvas }: AutoHistoryViewProps) {
@@ -24,7 +15,7 @@ export function AutoHistoryView({ hasMatch, canvasCollapsed, onExpandCanvas }: A
   const total = history.length;
 
   return (
-    <div className="overflow-y-auto overscroll-contain">
+    <div>
       <div className="p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xs font-extrabold text-muted uppercase tracking-wider">History</h2>

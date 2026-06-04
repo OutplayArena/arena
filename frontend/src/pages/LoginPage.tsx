@@ -1,15 +1,20 @@
 import { useAuth } from "../hooks/useAuth";
-import { Navigate } from "react-router-dom";
+import { useSiteConfig } from "../hooks/useSiteConfig";
+import { Navigate, useLocation } from "react-router-dom";
 import { BlobBackground } from "../components/BlobBackground";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 import { OAuthButton } from "../components/OAuthButton";
 
 export function LoginPage() {
   const { user, providers, hasProviders, loading } = useAuth();
+  const { privacy_notice_url } = useSiteConfig();
+  const location = useLocation();
+  const sessionExpired = (location.state as { sessionExpired?: boolean } | null)?.sessionExpired;
 
   if (loading) {
     return (
-      <div className="relative min-h-[calc(100dvh-56px)] flex items-center justify-center">
-        <p className="text-muted text-sm">Loading...</p>
+      <div className="relative flex-1 flex items-center justify-center">
+        <LoadingSpinner />
       </div>
     );
   }
@@ -17,8 +22,14 @@ export function LoginPage() {
   if (!hasProviders || user) return <Navigate to="/dashboard" replace />;
 
   return (
-    <div className="relative min-h-[calc(100dvh-56px)] flex flex-col items-center justify-center px-6">
+    <div className="relative flex-1 flex flex-col items-center justify-center px-6">
       <BlobBackground />
+
+      {sessionExpired && (
+        <div className="relative z-10 mb-6 px-4 py-2.5 rounded-card border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-950/30 text-xs text-amber-700 dark:text-amber-300 font-semibold text-center max-w-sm">
+          Your session has expired. Please sign in again.
+        </div>
+      )}
 
       <div className="relative z-10 flex flex-col items-center text-center max-w-sm mx-auto w-full gap-8">
         <div className="grid gap-2">
@@ -36,8 +47,16 @@ export function LoginPage() {
         </div>
 
         <p className="text-[11px] text-quiet leading-relaxed">
-          By signing in you agree to our terms. We only access your public
-          profile and email to create your account.
+          By signing in you agree to our{" "}
+          <a
+            href={privacy_notice_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-ink underline-offset-2 hover:underline"
+          >
+            terms
+          </a>
+          . We only access your public profile and email to create your account.
         </p>
       </div>
     </div>

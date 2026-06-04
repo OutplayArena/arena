@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { AnimatedScores } from "../hooks/useCanvasRenderer";
 import { useApp } from "../hooks/useApp";
 
@@ -5,7 +6,7 @@ interface ScoreboardProps {
   scores: AnimatedScores;
 }
 
-export function Scoreboard({ scores }: ScoreboardProps) {
+export const Scoreboard = memo(function Scoreboard({ scores }: ScoreboardProps) {
   const { state } = useApp();
   const round = state.activeMatch?.history[state.activeRoundIndex] ?? null;
 
@@ -43,4 +44,4 @@ export function Scoreboard({ scores }: ScoreboardProps) {
       </div>
     </div>
   );
-}
+});

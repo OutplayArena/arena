@@ -3,11 +3,8 @@ import type {
   ExperimentConfig,
   GameResult,
   GameState,
-  HealthResponse,
   ProvidersResponse,
   SiteConfig,
-  StaticVersionResponse,
-  UserInfo,
   DashboardResponse,
   SessionsResponse,
   SessionSummary,
@@ -18,7 +15,7 @@ import type {
   GameAgent,
 } from "./types";
 
-class ApiError extends Error {
+export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
     super(message);
@@ -57,14 +54,6 @@ export async function request<T>(
   return data as T;
 }
 
-export function health(): Promise<HealthResponse> {
-  return request<HealthResponse>("/api/health");
-}
-
-export function staticVersion(): Promise<StaticVersionResponse> {
-  return request<StaticVersionResponse>("/api/static-version");
-}
-
 export function createExperiment(
   config: ExperimentConfig,
 ): Promise<CreateExperimentResponse> {
@@ -92,10 +81,6 @@ export function submitAction(
 
 export function getResults(sessionId: string): Promise<GameResult> {
   return request<GameResult>(`/api/session/${sessionId}/results`);
-}
-
-export function getMe(): Promise<UserInfo> {
-  return request<UserInfo>("/api/auth/me");
 }
 
 export function getProviders(): Promise<ProvidersResponse> {
@@ -187,6 +172,4 @@ export function getGameAgents(name: string): Promise<{ agents: GameAgent[] }> {
   return request<{ agents: GameAgent[] }>(`/api/games/${name}/agents`);
 }
 
-export function getUser(): Promise<UserInfo> {
-  return request<UserInfo>("/api/auth/user");
-}
+

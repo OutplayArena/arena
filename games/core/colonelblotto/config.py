@@ -119,15 +119,27 @@ class ColonelBlottoExperimentConfig(GameConfig):
 
 
 def config_from_dict(data):
+    if "budget" in data and "battlefields" in data:
+        budget = list(data["budget"])
+        battlefields = [
+            BattlefieldConfig(id=field["id"], value=field.get("value", 1.0))
+            for field in data["battlefields"]
+        ]
+    else:
+        total_resources = data.get("total_resources", 100)
+        num_battlefields = data.get("num_battlefields", 5)
+        budget = [total_resources, total_resources]
+        battlefields = [
+            BattlefieldConfig(id=f"battlefield_{i + 1}", value=1.0)
+            for i in range(num_battlefields)
+        ]
+
     return ColonelBlottoExperimentConfig(
         game=data["game"],
         variant=data["variant"],
         players=data["players"],
-        budget=list(data["budget"]),
-        battlefields=[
-            BattlefieldConfig(id=field["id"], value=field.get("value", 1.0))
-            for field in data["battlefields"]
-        ],
+        budget=budget,
+        battlefields=battlefields,
         rounds=data["rounds"],
         seed=data.get("seed"),
     )

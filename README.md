@@ -196,19 +196,6 @@ cd frontend && npm run dev -- --host
 
 The Vite dev server runs on http://localhost:5173 and proxies `/api` requests to the backend on port 8000.
 
-### Remote access (Tailscale / SSH)
-
-If you're connecting from another machine (e.g. a Mac to WSL):
-
-```bash
-# Find your Tailscale IP
-tailscale status | head -1
-```
-
-The backend (`--host 0.0.0.0`) and frontend (`--host`) already bind to all interfaces. Open `http://<tailscale-ip>:5173` in your local browser.
-
-Alternatively, use SSH port forwarding: `ssh -L 8000:localhost:8000 -L 5173:localhost:5173 user@host`.
-
 ### Full Docker stack (alternative)
 
 If you prefer to run everything — database, backend, Traefik — inside Docker instead of Kubernetes, use the Compose stack:

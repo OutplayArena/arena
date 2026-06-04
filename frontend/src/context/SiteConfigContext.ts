@@ -6,5 +6,5 @@ export const SiteConfigContext = createContext<SiteConfig>({
   docs_url: "",
   privacy_notice_url: "",
   about_text: "",
-  footer: { copyright: "", privacy_notice: "" },
+  footer: { copyright: "", tagline: "" },
 });

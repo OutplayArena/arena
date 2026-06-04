@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { GamePlayView } from "../components/GamePlayView";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 import { getGameMetadata, getSessionSummary, getState, getResults } from "../api";
 import { resultToMatch } from "../components/utils";
 import type { GameMetadata, Match, RunConfig, GameState } from "../types";
@@ -86,8 +87,8 @@ export function GamePlayPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center flex-1 text-muted text-sm">
-        Loading...
+      <div className="flex items-center justify-center flex-1">
+        <LoadingSpinner />
       </div>
     );
   }

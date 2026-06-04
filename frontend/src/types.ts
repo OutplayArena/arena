@@ -106,7 +106,7 @@ export interface SiteConfig {
   about_text: string;
   footer: {
     copyright: string;
-    privacy_notice: string;
+    tagline: string;
   };
 }
 
@@ -187,4 +187,4 @@ export interface ApiKeyCreatedResponse extends ApiKeyRow {
   full_key: string;
 }
 
-export const CLIENT_AGENTS: AgentName[] = ["uniform", "random", "greedy"];
+

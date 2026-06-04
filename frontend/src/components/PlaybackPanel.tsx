@@ -19,10 +19,15 @@ export function PlaybackPanel() {
   const isAtEnd = activeRoundIndex >= lastIndex;
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const indexRef = useRef(activeRoundIndex);
+
+  useEffect(() => {
+    indexRef.current = activeRoundIndex;
+  }, [activeRoundIndex]);
 
   const advance = useCallback(() => {
     if (!activeMatch) return;
-    if (activeRoundIndex >= activeMatch.history.length - 1) {
+    if (indexRef.current >= activeMatch.history.length - 1) {
       stopPlay();
       setStatus(
         `match_winner=${activeMatch.match_winner} | total_score_a=${activeMatch.total_score_a} | total_score_b=${activeMatch.total_score_b}`,
@@ -30,7 +35,7 @@ export function PlaybackPanel() {
       return;
     }
     nextRound();
-  }, [activeMatch, activeRoundIndex, nextRound, stopPlay, setStatus]);
+  }, [activeMatch, nextRound, stopPlay, setStatus]);
 
   useEffect(() => {
     if (timerRef.current) {
@@ -79,6 +84,7 @@ export function PlaybackPanel() {
             showRound(Number(e.target.value) - 1);
           }}
           className="flex-1 h-1.5 rounded-full bg-line/60 appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-elevation-2 [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:duration-150 hover:[&::-webkit-slider-thumb]:scale-110 disabled:opacity-40"
+          aria-label="Select round"
         />
         <span className="tabular-nums text-xs font-extrabold text-quiet shrink-0 w-8 text-right">
           {activeRoundIndex + 1}/{activeMatch?.history.length ?? 1}

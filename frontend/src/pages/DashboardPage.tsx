@@ -1,24 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getDashboard, deleteSession, listGames } from "../api";
+import { outcomeBadge, statusBadge } from "../components/badges";
 import type { DashboardResponse, GameEntry } from "../types";
-
-const outcomeBadge = (winner: string | null) => {
-  if (!winner) return null;
-  const color = winner === "A" ? "text-agent-a bg-agent-a/10" : winner === "B" ? "text-agent-b bg-agent-b/10" : "text-muted bg-ink/6";
-  return <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-chip ${color}`}>{winner === "Tie" ? "Tie" : `Agent ${winner}`}</span>;
-};
-
-const statusBadge = (status: string) => {
-  const map: Record<string, string> = {
-    ready: "bg-[#d4edda] text-[#155724]",
-    running: "bg-[#cce5ff] text-[#004085] animate-pulse",
-    completed: "bg-[#1e7e34] text-white",
-    failed: "bg-[#f8d7da] text-[#721c24]",
-  };
-  const cls = map[status] || "bg-ink/8 text-muted";
-  return <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-chip ${cls}`}>{status}</span>;
-};
 
 export function DashboardPage() {
   const [data, setData] = useState<DashboardResponse | null>(null);
@@ -62,11 +46,19 @@ export function DashboardPage() {
   const handleDelete = async (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
     setDeleting(sessionId);
+    if (data) {
+      const nextData = { ...data, games: { ...data.games } };
+      for (const slug of Object.keys(nextData.games)) {
+        nextData.games[slug] = nextData.games[slug].filter((s) => s.id !== sessionId);
+      }
+      nextData.total_games = Math.max(0, nextData.total_games - 1);
+      setData(nextData);
+    }
     try {
       await deleteSession(sessionId);
-      await refreshDashboard();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      await refreshDashboard();
     } finally {
       setDeleting(null);
     }
@@ -80,7 +72,7 @@ export function DashboardPage() {
     if (s.rounds) params.set("rounds", String(s.rounds));
     if (s.num_battlefields) params.set("fields", String(s.num_battlefields));
     if (s.resources) params.set("resources", String(s.resources));
-    const slug = s.game_slug || "colonelblotto";
+    const slug = s.game_slug || gamesMeta[0]?.slug || "";
     navigate(`/play/${slug}?${params.toString()}`);
   };
 
@@ -101,8 +93,22 @@ export function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100dvh-56px)] text-muted text-sm">
-        Loading...
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <div className="mb-8">
+          <div className="h-8 w-36 bg-surface-container rounded animate-pulse mb-1" />
+          <div className="h-4 w-24 bg-surface-container rounded animate-pulse" />
+        </div>
+        <div className="mb-8">
+          <div className="h-[46px] w-32 bg-surface-container rounded-button animate-pulse" />
+        </div>
+        {[1, 2].map((i) => (
+          <div key={i} className="mb-8">
+            <div className="h-6 w-40 bg-surface-container rounded animate-pulse mb-3" />
+            <div className="rounded-card border border-line/40 overflow-hidden">
+              <div className="h-48 bg-surface-container/50 animate-pulse" />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
@@ -204,7 +210,7 @@ export function DashboardPage() {
                     {sessions.map((s) => (
                       <tr
                         key={s.id}
-                        onClick={() => navigate(`/play/${s.game_slug || "colonelblotto"}/${s.id}`)}
+                        onClick={() => navigate(`/play/${s.game_slug || slug}/${s.id}`)}
                         className="border-b border-line/20 last:border-b-0 hover:bg-ink/[0.03] cursor-pointer transition-colors group"
                       >
                         <td className="px-4 py-2.5 text-xs text-muted whitespace-nowrap">

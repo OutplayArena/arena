@@ -69,7 +69,14 @@ function getDefault(prop: SchemaProp): unknown {
   if (prop.default !== undefined) return prop.default;
   if (prop.type === "integer" || prop.type === "number") return prop.minimum ?? 0;
   if (prop.type === "boolean") return false;
-  if (prop.type === "array") return [];
+  if (prop.type === "array") {
+    const count = prop.minItems ?? 0;
+    if (count > 0 && prop.items) {
+      const itemDefault = getDefault(prop.items);
+      return Array.from({ length: count }, () => itemDefault);
+    }
+    return [];
+  }
   if (prop.type === "string") return "";
   return "";
 }
@@ -194,8 +201,8 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
         agentAId,
         agentBId,
         numRounds,
-        numFields: 5,
-        totalResources: 100,
+        numFields: (config.num_battlefields as number) ?? 5,
+        totalResources: (config.total_resources as number) ?? 100,
         gameSlug,
         remoteKeys,
       });
@@ -240,31 +247,127 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
     }
 
     if (inputType === "array" && prop.items?.type === "object" && prop.items.properties) {
+      const objProps = prop.items.properties;
+      const visibleProps = Object.entries(objProps).filter(([objKey]) => objKey !== "id");
+      const arr = (Array.isArray(value) && value.length > 0
+        ? value
+        : getDefault(prop)) as Record<string, unknown>[];
+      const canAdd = !prop.maxItems || arr.length < prop.maxItems;
+      const canRemove = !prop.minItems || arr.length > prop.minItems;
+
       return (
-        <div className="text-xs text-muted">
-          Array of objects — use custom ConfigForm for this game type.
+        <div className="grid gap-2">
+          {arr.map((item, i) => (
+            <div key={i} className="flex items-start gap-2">
+              <div className="flex-1 grid gap-1">
+                {visibleProps.map(([objKey, objProp]) => (
+                  <div key={objKey} className="grid gap-0.5">
+                    <label className="text-[10px] font-extrabold text-muted">{objKey}</label>
+                    <input
+                      type={objProp.type === "number" || objProp.type === "integer" ? "number" : "text"}
+                      value={(item as Record<string, unknown>)[objKey] as string ?? getDefault(objProp) as string}
+                      onChange={(e) => {
+                        const next = arr.map((el, idx) =>
+                          idx === i
+                            ? { ...el, [objKey]: objProp.type === "number" || objProp.type === "integer" ? Number(e.target.value) : e.target.value }
+                            : el,
+                        );
+                        handleValueChange(key, next);
+                      }}
+                      className={inputClass}
+                      disabled={disabled}
+                      min={objProp.minimum}
+                      max={objProp.maximum}
+                    />
+                  </div>
+                ))}
+              </div>
+              {canRemove && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleValueChange(key, arr.filter((_, idx) => idx !== i));
+                  }}
+                  className="w-8 h-8 flex items-center justify-center rounded text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors shrink-0"
+                  disabled={disabled}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          ))}
+          {canAdd && (
+            <button
+              type="button"
+              onClick={() => {
+                const itemDefault: Record<string, unknown> = {};
+                for (const [objKey, objProp] of Object.entries(objProps)) {
+                  if (objKey === "id" && objProp.type === "string") {
+                    itemDefault[objKey] = `${objKey}-${arr.length + 1}`;
+                  } else {
+                    itemDefault[objKey] = getDefault(objProp);
+                  }
+                }
+                handleValueChange(key, [...arr, itemDefault]);
+              }}
+              className="text-xs font-semibold text-accent hover:underline"
+              disabled={disabled}
+            >
+              + Add
+            </button>
+          )}
         </div>
       );
     }
 
     if (inputType === "array") {
-      const arr = Array.isArray(value) ? value : (getDefault(prop) as unknown[]);
+      const arr = (Array.isArray(value) && value.length > 0
+        ? value
+        : getDefault(prop)) as unknown[];
+      const canAdd = !prop.maxItems || arr.length < prop.maxItems;
+      const canRemove = !prop.minItems || arr.length > prop.minItems;
+
       return (
         <div className="grid gap-1">
           {arr.map((item, i) => (
-            <input
-              key={i}
-              type="number"
-              value={item as number}
-              onChange={(e) => {
-                const next = [...arr];
-                next[i] = Number(e.target.value);
-                handleValueChange(key, next);
-              }}
-              className={inputClass}
-              disabled={disabled}
-            />
+            <div key={i} className="flex items-center gap-2">
+              <input
+                type="number"
+                value={item as number}
+                onChange={(e) => {
+                  const next = [...arr];
+                  next[i] = Number(e.target.value);
+                  handleValueChange(key, next);
+                }}
+                className={`${inputClass} flex-1`}
+                disabled={disabled}
+              />
+              {canRemove && (
+                <button
+                  type="button"
+                  onClick={() => handleValueChange(key, arr.filter((_, idx) => idx !== i))}
+                  className="w-8 h-8 flex items-center justify-center rounded text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors shrink-0"
+                  disabled={disabled}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              )}
+            </div>
           ))}
+          {canAdd && (
+            <button
+              type="button"
+              onClick={() => handleValueChange(key, [...arr, prop.items ? getDefault(prop.items) : 0])}
+              className="text-xs font-semibold text-accent hover:underline"
+              disabled={disabled}
+            >
+              + Add
+            </button>
+          )}
         </div>
       );
     }
@@ -284,7 +387,7 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
   };
 
   return (
-    <div className="overflow-y-auto overscroll-contain">
+    <div>
       <form className="grid gap-3 p-4" onSubmit={handleSubmit}>
         {isReplay && (
           <div className="flex items-center gap-2 px-3 py-2 rounded bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50">
@@ -358,7 +461,7 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
             disabled={running}
             className="min-h-[42px] bg-accent border-accent text-white rounded-input px-6 font-extrabold cursor-pointer shadow-elevation-3 transition-[transform,background,border-color,box-shadow] duration-150 hover:not-disabled:-translate-y-px hover:not-disabled:shadow-elevation-4 active:not-disabled:translate-y-0.5 disabled:cursor-not-allowed disabled:bg-line/50 disabled:border-line/50 disabled:text-quiet disabled:shadow-none mt-1"
           >
-            {running ? "Running..." : "Run Experiment"}
+            {running ? "Running..." : state.activeMatch ? "Play Again" : "Run Experiment"}
           </button>
         )}
 

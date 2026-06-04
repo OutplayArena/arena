@@ -625,7 +625,7 @@ def site_config():
         "docs_url": data.get("docs_url", ""),
         "privacy_notice_url": data.get("privacy_notice_url", ""),
         "about_text": data.get("about_text", ""),
-        "footer": data.get("footer") or {"copyright": "", "privacy_notice": ""},
+        "footer": data.get("footer") or {"copyright": "", "tagline": ""},
     }
 
 

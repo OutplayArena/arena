@@ -1,5 +1,7 @@
 const uiModules = import.meta.glob("@games/**/ui/*.tsx");
 
+console.log("[registry] glob modules found:", Object.keys(uiModules));
+
 type ComponentModule = { default: React.ComponentType<unknown> };
 
 function parseGameSlug(key: string): string {
@@ -14,22 +16,23 @@ function parseComponentName(key: string): string {
   return basename.replace(".tsx", "");
 }
 
-export function hasCustomUI(gameSlug: string): boolean {
-  for (const key of Object.keys(uiModules)) {
-    if (parseGameSlug(key) === gameSlug) return true;
-  }
-  return false;
-}
-
 async function loadComponent(
   gameSlug: string,
   name: string,
 ): Promise<ComponentModule | null> {
+  console.log(`[registry] loadComponent looking for game="${gameSlug}" name="${name}"`);
   for (const [key, loader] of Object.entries(uiModules)) {
-    if (parseGameSlug(key) === gameSlug && parseComponentName(key) === name) {
-      return (await loader()) as ComponentModule;
+    const parsedSlug = parseGameSlug(key);
+    const parsedName = parseComponentName(key);
+    console.log(`[registry]   checking key="${key}" slug="${parsedSlug}" name="${parsedName}"`);
+    if (parsedSlug === gameSlug && parsedName === name) {
+      console.log(`[registry]   MATCH! loading...`);
+      const mod = await loader();
+      console.log(`[registry]   loaded successfully, has default:`, !!mod.default);
+      return mod as ComponentModule;
     }
   }
+  console.log(`[registry]   NO MATCH found for game="${gameSlug}" name="${name}"`);
   return null;
 }
 

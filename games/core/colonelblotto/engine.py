@@ -44,10 +44,29 @@ class ColonelBlottoGame(GameEngine):
 
     @classmethod
     def from_config(cls, config):
+        if hasattr(config, "num_battlefields") and config.num_battlefields is not None:
+            num_fields = config.num_battlefields
+        elif hasattr(config, "battlefields"):
+            num_fields = len(config.battlefields)
+        else:
+            num_fields = 5
+
+        if hasattr(config, "total_resources") and config.total_resources is not None:
+            total_res = config.total_resources
+        elif hasattr(config, "budget"):
+            total_res = config.budget[0]
+        else:
+            total_res = 100
+
+        if hasattr(config, "rounds") and config.rounds is not None:
+            num_r = config.rounds
+        else:
+            num_r = 10
+
         return cls(
-            num_battlefields=len(config.battlefields),
-            total_resources=config.budget[0],
-            num_rounds=config.rounds,
+            num_battlefields=num_fields,
+            total_resources=total_res,
+            num_rounds=num_r,
         )
         
     def initial_state(self):

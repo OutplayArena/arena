@@ -78,7 +78,7 @@ export default function BlottoConfigForm({ gameSlug, locked, sessionStatus, init
     const numRounds = Number(roundsRef.current.value);
     const numFields = Number(fieldsRef.current.value);
     const totalResources = Number(resourcesRef.current.value);
-    const seedVal = seedRef.current?.value ? Number(seedRef.current.value) : null;
+    const seedVal = seedRef.current?.value && seedRef.current.value !== "" ? Number(seedRef.current.value) : null;
 
     if (totalResources < numFields) {
       setStatus("error=total_resources must be >= num_battlefields");
@@ -140,7 +140,7 @@ export default function BlottoConfigForm({ gameSlug, locked, sessionStatus, init
   };
 
   return (
-    <div className="overflow-y-auto overscroll-contain">
+    <div>
       <form className="grid gap-3 p-4" onSubmit={handleSubmit}>
         {isReplay && (
           <div className="flex items-center gap-2 px-3 py-2 rounded bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50">

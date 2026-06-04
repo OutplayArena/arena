@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ProvidersResponse, UserInfo } from "../types";
 import { AuthContext } from "./AuthContext";
 import { request } from "../api";
@@ -22,6 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(!!token);
   const [providers, setProviders] = useState<ProvidersResponse>(EMPTY_PROVIDERS);
+  const [sessionExpired, setSessionExpired] = useState(false);
   const hasProviders = providers.github || providers.google;
 
   useEffect(() => {
@@ -39,21 +40,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       .catch(() => {
         localStorage.removeItem(TOKEN_KEY);
+        setSessionExpired(true);
         setLoading(false);
       });
   }, [token]);
 
   const login = useCallback(() => {
+    setSessionExpired(false);
     setLoading(true);
   }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
     setUser(null);
+    setSessionExpired(false);
   }, []);
 
+  const value = useMemo(() => ({
+    user, token, loading, hasProviders, providers, sessionExpired, login, logout
+  }), [user, token, loading, hasProviders, providers, sessionExpired, login, logout]);
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, hasProviders, providers, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
