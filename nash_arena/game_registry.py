@@ -56,6 +56,13 @@ class GameRegistry:
             return self._load_yaml(agents_yaml)
         return {"agents": []}
 
+    def get_game_skill(self, name: str) -> str:
+        game_dir = self._game_dir(name)
+        skill_path = game_dir / "skill.md"
+        if not skill_path.exists():
+            raise GameRegistryError(f"skill not found for game: {name}")
+        return skill_path.read_text(encoding="utf-8")
+
     def config_from_request(self, payload: dict):
         game = payload.get("game")
         if not game:

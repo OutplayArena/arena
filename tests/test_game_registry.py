@@ -37,6 +37,15 @@ def test_registry_loads_blotto_details_metrics_and_prompts():
     assert prompts["action_format"]["type"] == "json_array"
 
 
+def test_registry_loads_blotto_skill():
+    skill = GameRegistry().get_game_skill("colonelblotto")
+
+    assert "Colonel Blotto" in skill
+    assert "MCP tools" in skill
+    assert "submit_action" in skill
+    assert "Do not call REST endpoints directly." in skill
+
+
 def test_registry_builds_blotto_config_and_game_from_catalog():
     registry = GameRegistry()
 
