@@ -348,6 +348,7 @@ python3 examples/play_colonel_blotto_game.py
 Minimal SDK usage:
 
 ```python
+import os
 from nash_arena.client import ArenaClient
 from games.core.colonelblotto.config import ColonelBlottoExperimentConfig
 
@@ -361,7 +362,8 @@ config = ColonelBlottoExperimentConfig.classic(
     seed=42,
 )
 
-created = arena.create_experiment(config)
+api_key = os.environ["NASH_ARENA_API_KEY"]
+created = arena.create_experiment(config, api_key=api_key)
 agent_a = ArenaClient.for_player(base_url, created, "A")
 agent_b = ArenaClient.for_player(base_url, created, "B")
 

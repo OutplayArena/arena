@@ -16,13 +16,17 @@ class ArenaClient:
         self.timeout = timeout
         self.http_client = http_client or httpx.Client(timeout=timeout)
 
-    def create_experiment(self, config, agents=None):
+    def create_experiment(self, config, agents=None, api_key=None):
         payload = self._config_payload(config)
         if agents:
             payload["agents"] = agents
+        headers = {}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
         response = self.http_client.post(
             f"{self.base_url}/experiment",
             json=payload,
+            headers=headers,
             timeout=self.timeout,
         )
         return self._json_or_raise(response)

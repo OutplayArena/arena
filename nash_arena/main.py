@@ -146,7 +146,7 @@ def get_game_agents(name: str):
 async def create_experiment(
     request: dict[str, Any],
     db: AsyncSession = Depends(get_db),
-    user: User | None = Depends(get_local_or_optional_user),
+    user: User = Depends(require_user),
 ):
     try:
         config = config_from_request(request)
@@ -173,7 +173,7 @@ async def create_experiment(
 
     await session.save_new(
         db,
-        user_id=str(user.id) if user else None,
+        user_id=str(user.id),
         agents=agents,
     )
     return session.creation_response()

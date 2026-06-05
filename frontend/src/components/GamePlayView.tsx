@@ -42,9 +42,7 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
 
   const defaultTab = "config";
   const [activeTab, setActiveTab] = useState(defaultTab);
-  const [CustomLiveView, setCustomLiveView] = useState<ComponentType<Record<string, unknown>> | null>(null);
-  const [CustomConfigForm, setCustomConfigForm] = useState<ComponentType<Record<string, unknown>> | null>(null);
-  const [CustomHistoryView, setCustomHistoryView] = useState<ComponentType<Record<string, unknown>> | null>(null);
+  const [customUIMod, setCustomUIMod] = useState<{ live?: ComponentType<Record<string, unknown>>; config?: ComponentType<Record<string, unknown>>; history?: ComponentType<Record<string, unknown>> }>({});
   const [canvasCollapsed, setCanvasCollapsed] = useState(false);
   const loadedRef = useRef(false);
   const gameLoopRef = useRef(false);
@@ -155,35 +153,30 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
   useEffect(() => {
     if (loadedRef.current) return;
     loadedRef.current = true;
-    let cancelled = false;
     const slug = game.slug || game.name;
-    console.log("[GamePlayView] loading custom UI for slug:", slug, "hasLiveView:", hasLiveView);
     if (hasLiveView) {
-      console.log("[GamePlayView] calling loadLiveView...");
       loadLiveView(slug).then((mod) => {
-        console.log("[GamePlayView] loadLiveView resolved, mod:", !!mod);
-        if (!cancelled && mod) setCustomLiveView(() => mod.default as ComponentType<Record<string, unknown>>);
-        if (!cancelled && !mod) setDynamicLoadError(true);
+        if (mod) setCustomUIMod(prev => ({ ...prev, live: mod.default as ComponentType<Record<string, unknown>> }));
+        else setDynamicLoadError(true);
       }).catch((err) => {
         console.error("Failed to load LiveView:", err);
-        if (!cancelled) setDynamicLoadError(true);
+        setDynamicLoadError(true);
       });
     }
     if (game.ui?.custom_config) {
       loadConfigForm(slug).then((mod) => {
-        if (!cancelled && mod) setCustomConfigForm(() => mod.default as ComponentType<Record<string, unknown>>);
+        if (mod) setCustomUIMod(prev => ({ ...prev, config: mod.default as ComponentType<Record<string, unknown>> }));
       }).catch((err) => {
         console.error("Failed to load ConfigForm:", err);
       });
     }
     if (game.ui?.custom_history) {
       loadHistoryView(slug).then((mod) => {
-        if (!cancelled && mod) setCustomHistoryView(() => mod.default as ComponentType<Record<string, unknown>>);
+        if (mod) setCustomUIMod(prev => ({ ...prev, history: mod.default as ComponentType<Record<string, unknown>> }));
       }).catch((err) => {
         console.error("Failed to load HistoryView:", err);
       });
     }
-    return () => { cancelled = true; };
   }, [game.name, game.slug, game.ui, hasLiveView]);
 
   useEffect(() => {
@@ -258,8 +251,8 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
       <div className="flex-1 flex flex-col min-h-0">
         {activeTab === "config" && (
           <div className="flex-1 overflow-y-auto">
-            {CustomConfigForm ? (
-              <CustomConfigForm
+            {customUIMod.config ? (
+              <customUIMod.config
                 gameSlug={game.slug || game.name}
                 schema={schema}
                 locked={locked}
@@ -277,14 +270,10 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
             )}
           </div>
         )}
-        {activeTab === "live" && hasLiveView && (() => {
-          console.log("[GamePlayView] rendering live tab: activeTab=live hasLiveView=true CustomLiveView=", !!CustomLiveView, "dynamicLoadError=", dynamicLoadError);
-          return null;
-        })()}
         {activeTab === "live" && hasLiveView && (
           <div className="flex-1 min-h-0 flex flex-col">
-            {CustomLiveView ? (
-              <CustomLiveView onScores={handleScores} onToggleCollapse={() => setCanvasCollapsed(true)} createdAt={createdAt || null} />
+            {customUIMod.live ? (
+              <customUIMod.live onScores={handleScores} onToggleCollapse={() => setCanvasCollapsed(true)} createdAt={createdAt || null} />
             ) : dynamicLoadError ? (
               <div className="flex items-center justify-center flex-1 text-muted text-sm">
                 Failed to load Live View. Check the browser console for details.
@@ -296,8 +285,8 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
         )}
         {activeTab === "history" && (
           <div className="flex-1 overflow-y-auto">
-            {CustomHistoryView ? (
-              <CustomHistoryView
+            {customUIMod.history ? (
+              <customUIMod.history
                 hasMatch={hasMatch}
                 canvasCollapsed={canvasCollapsed}
                 onExpandCanvas={() => setCanvasCollapsed(false)}

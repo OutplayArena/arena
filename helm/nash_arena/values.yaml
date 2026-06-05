@@ -11,8 +11,8 @@ database:
   user: nasharena
   password: nasharena
   storage: 10Gi
-  storageClassName: ""
-  volumeName: ""
+  storageClassName: "manual"
+  volumeName: "nasharena-db-pv"
   createPV: false
   resources:
     requests:

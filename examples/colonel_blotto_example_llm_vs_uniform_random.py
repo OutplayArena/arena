@@ -18,6 +18,7 @@ from games.core.colonelblotto.config import ColonelBlottoExperimentConfig
 sys.stdout.reconfigure(line_buffering=True)
 
 NASH_ARENA_BASE_URL = os.environ.get("NASH_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
+NASH_ARENA_API_KEY = os.environ["NASH_ARENA_API_KEY"]
 OPENCODE_GO_API_BASE = "https://opencode.ai/zen/go/v1"
 
 _client = OpenAI(
@@ -154,7 +155,7 @@ async def run_match():
         rounds=NUM_ROUNDS,
         seed=42,
     )
-    created = arena.create_experiment(config, agents={"A": LLM_MODEL, "B": "UniformAgent"})
+    created = arena.create_experiment(config, agents={"A": LLM_MODEL, "B": "UniformAgent"}, api_key=NASH_ARENA_API_KEY)
     session_id = created["session_id"]
     key_a = created["player_tokens"]["A"]
     key_b = created["player_tokens"]["B"]
@@ -230,7 +231,7 @@ async def run_match():
     winner_label = f"LLM ({LLM_MODEL})" if winner == "A" else "UniformAgent" if winner == "B" else "Tie"
     print(f"Winner: {winner_label}")
     print(f"Final: A({LLM_MODEL})={total_a:.1f}  B(Uniform)={total_b:.1f}")
-    print(f"URL: http://100.82.53.8:5173/play/colonelblotto/{session_id}")
+    print(f"URL: http://localhost:5173/play/colonelblotto/{session_id}")
 
 
 if __name__ == "__main__":

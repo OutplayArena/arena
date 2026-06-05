@@ -20,12 +20,13 @@ def test_create_experiment_posts_config_dict_to_endpoint():
 
     client = ArenaClient("http://arena.test/api", http_client=mock_client(handler))
 
-    result = client.create_experiment({"game": "colonelblotto"})
+    result = client.create_experiment({"game": "colonelblotto"}, api_key="nka_testkey")
 
     assert result == {"session_id": "s1"}
     assert requests[0].method == "POST"
     assert requests[0].url.path == "/api/experiment"
     assert json.loads(requests[0].content) == {"game": "colonelblotto"}
+    assert requests[0].headers["Authorization"] == "Bearer nka_testkey"
 
 
 def test_create_experiment_serializes_config_object():
@@ -42,9 +43,10 @@ def test_create_experiment_serializes_config_object():
 
     client = ArenaClient("http://arena.test/api", http_client=mock_client(handler))
 
-    client.create_experiment(config)
+    client.create_experiment(config, api_key="nka_testkey")
 
     assert json.loads(requests[0].content) == config.to_dict()
+    assert requests[0].headers["Authorization"] == "Bearer nka_testkey"
 
 
 def test_get_state_requires_session_id_and_gets_state_endpoint():

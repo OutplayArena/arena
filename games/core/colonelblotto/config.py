@@ -136,8 +136,8 @@ def config_from_dict(data):
 
     return ColonelBlottoExperimentConfig(
         game=data["game"],
-        variant=data["variant"],
-        players=data["players"],
+        variant=data.get("variant", "classic"),
+        players=data.get("players", 2),
         budget=budget,
         battlefields=battlefields,
         rounds=data["rounds"],
