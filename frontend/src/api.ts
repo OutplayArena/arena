@@ -13,6 +13,8 @@ import type {
   GameEntry,
   GameMetadata,
   GameAgent,
+  MetricDescriptor,
+  ScenarioInfo,
 } from "./types";
 
 export class ApiError extends Error {
@@ -69,12 +71,12 @@ export function getState(sessionId: string): Promise<GameState> {
 
 export function submitAction(
   sessionId: string,
-  allocation: number[],
+  action: unknown,
   token: string,
 ): Promise<GameState> {
   return request<GameState>(`/api/session/${sessionId}/action`, {
     method: "POST",
-    body: JSON.stringify({ allocation }),
+    body: JSON.stringify({ allocation: action }),
     headers: { Authorization: `Bearer ${token}` },
   });
 }
@@ -170,6 +172,14 @@ export function getGameMetadata(name: string): Promise<GameMetadata> {
 
 export function getGameAgents(name: string): Promise<{ agents: GameAgent[] }> {
   return request<{ agents: GameAgent[] }>(`/api/games/${name}/agents`);
+}
+
+export function getGameMetrics(name: string): Promise<{ metrics: MetricDescriptor[] }> {
+  return request<{ metrics: MetricDescriptor[] }>(`/api/games/${name}/metrics`);
+}
+
+export function getGameScenarios(name: string): Promise<{ scenarios: ScenarioInfo[] }> {
+  return request<{ scenarios: ScenarioInfo[] }>(`/api/games/${name}/scenarios`);
 }
 
 

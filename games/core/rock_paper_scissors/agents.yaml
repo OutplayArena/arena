@@ -1,0 +1,16 @@
+agents:
+  - id: random
+    label: Random
+    description: "Plays rock, paper, or scissors uniformly at random — the Nash equilibrium strategy."
+  - id: biased
+    label: Biased (rock-heavy)
+    description: "Plays rock 50% of the time; paper and scissors each 25%."
+  - id: copycat
+    label: Copycat
+    description: "Copies the opponent's last move. Plays randomly on round 1."
+  - id: counter
+    label: Counter
+    description: "Plays the move that beats the opponent's last move. Plays randomly on round 1."
+  - id: remote
+    label: Remote Agent (LLM/MCP)
+    description: "LLM-powered agent connecting via MCP server with session key."

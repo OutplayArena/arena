@@ -1,0 +1,71 @@
+scenarios:
+  - id: tft_vs_defector
+    name: "Tit-for-Tat vs Always Defect"
+    agents: {A: tit_for_tat, B: always_defect}
+    rounds: 10
+    description: >
+      TFT cooperates on round 1, then mirrors the defector from round 2 onward.
+      Expected pattern: TFT cooperates once, then defects every subsequent round.
+      Illustrates how a defector exploits cooperative first-movers.
+
+  - id: mutual_tft
+    name: "TFT vs TFT (Mutual Cooperation)"
+    agents: {A: tit_for_tat, B: tit_for_tat}
+    rounds: 10
+    description: >
+      Both agents start cooperating and mirror each other, maintaining
+      a perfect (CC) equilibrium for all rounds. Maximum social welfare.
+
+  - id: grim_vs_defector
+    name: "Grim Trigger vs Always Defect"
+    agents: {A: grim_trigger, B: always_defect}
+    rounds: 10
+    description: >
+      Grim Trigger cooperates on round 1, then defects permanently after
+      the first defection. Both agents end up in perpetual mutual defection.
+
+  - id: pavlov_vs_defector
+    name: "Pavlov vs Always Defect"
+    agents: {A: pavlov, B: always_defect}
+    rounds: 10
+    description: >
+      Pavlov (win-stay/lose-shift) oscillates between cooperating and defecting
+      against a pure defector. Demonstrates how Pavlov is vulnerable to exploitation.
+
+  - id: pavlov_vs_tft
+    name: "Pavlov vs Tit-for-Tat"
+    agents: {A: pavlov, B: tit_for_tat}
+    rounds: 20
+    description: >
+      Both Pavlov and TFT are reciprocators. Together they typically converge on
+      mutual cooperation (CC) and maintain it, though the path depends on the
+      first round interaction.
+
+  - id: noisy_tft
+    name: "TFT vs TFT with Noise (5%)"
+    agents: {A: tit_for_tat, B: tit_for_tat}
+    rounds: 30
+    variant: noisy
+    noise: 0.05
+    description: >
+      When noise randomly flips actions, two TFT agents may enter a defection
+      spiral. Illustrates the importance of forgiveness in noisy environments.
+
+  - id: forgiveness_rescue
+    name: "Forgiving TFT vs TFT with Noise"
+    agents: {A: forgiving_tft, B: tit_for_tat}
+    rounds: 30
+    variant: noisy
+    noise: 0.05
+    description: >
+      Forgiving TFT can break defection spirals caused by noise, recovering
+      cooperation more robustly than standard TFT in noisy environments.
+
+  - id: cooperation_collapse
+    name: "Always Cooperate vs Always Defect"
+    agents: {A: always_cooperate, B: always_defect}
+    rounds: 10
+    description: >
+      Maximum exploitation. Always Cooperate always gets the sucker payoff (S),
+      while Always Defect gets the temptation payoff (T) every round.
+      Demonstrates the tragedy of unilateral cooperation.

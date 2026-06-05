@@ -1,0 +1,47 @@
+name: Rock-Paper-Scissors
+version: "1.0.0"
+status: stable
+author: "NashArena maintainers"
+description: >
+  Classic simultaneous zero-sum game. Two players each choose rock, paper,
+  or scissors; rock beats scissors, scissors beats paper, paper beats rock.
+  The unique Nash equilibrium is the uniform mixed strategy 1/3-1/3-1/3,
+  making it ideal for evaluating α-Rank and detecting exploitable patterns.
+tags:
+  - zero-sum
+  - simultaneous
+  - multi-round
+  - non-transitive
+ontology:
+  action_space: discrete_choice
+  information_structure: simultaneous
+  payoff_structure: zero_sum
+  timing: multi_round
+players:
+  min: 2
+  max: 2
+config_schema:
+  game:
+    type: string
+    const: rock_paper_scissors
+  variant:
+    type: string
+    const: classic
+  players:
+    type: integer
+    const: 2
+  rounds:
+    type: integer
+    minimum: 1
+    default: 10
+  seed:
+    type:
+      - integer
+      - "null"
+    default: null
+example_config:
+  game: rock_paper_scissors
+  variant: classic
+  players: 2
+  rounds: 10
+  seed: 42

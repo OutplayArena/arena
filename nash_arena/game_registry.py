@@ -43,10 +43,44 @@ class GameRegistry:
         return metadata
 
     def get_game_metrics(self, name: str) -> dict:
-        return self._load_yaml(self._game_dir(name) / "metrics.yaml")
+        raw = self._load_yaml(self._game_dir(name) / "metrics.yaml")
+        metrics_list = raw.get("metrics", [])
+        if not isinstance(metrics_list, list):
+            return {"metrics": []}
+        from nash_arena.metrics.catalog import build_metrics_list
+        names = []
+        overrides = {}
+        for entry in metrics_list:
+            if isinstance(entry, str):
+                names.append(entry)
+            elif isinstance(entry, dict) and "name" in entry:
+                names.append(entry["name"])
+                if "description" in entry and len(entry) > 1:
+                    overrides[entry["name"]] = entry["description"]
+        return {"metrics": build_metrics_list(names, overrides)}
 
     def get_game_prompts(self, name: str) -> dict:
         return self._load_yaml(self._game_dir(name) / "prompts.yaml")
+
+    def get_game_scenarios(self, name: str) -> list[dict]:
+        game_dir = self._game_dir(name)
+        namespace = game_dir.parent.name
+        try:
+            module = importlib.import_module(f"games.{namespace}.{name}.scenarios")
+        except ImportError:
+            return []
+        scenarios = []
+        for sid in getattr(module, "ALL_SCENARIOS", ()):
+            scenario = module.get_scenario(sid)
+            scenarios.append({
+                "id": scenario.id,
+                "name": scenario.name,
+                "description": scenario.description,
+                "cooperate_label": scenario.cooperate_label,
+                "defect_label": scenario.defect_label,
+                "system_prompt": scenario.system_prompt,
+            })
+        return scenarios
 
     def get_game_agents(self, name: str) -> dict:
         game_dir = self._game_dir(name)
@@ -72,6 +106,50 @@ class GameRegistry:
     def game_from_config(self, config):
         module = self._game_module(config.game)
         return module.game_from_config(config)
+
+    def metrics_extension(self, game_type: str):
+        """
+        Load the GameMetricsExtension for a game, or None if not defined.
+
+        Imports the game's metrics.py submodule and returns the first class
+        that inherits from GameMetricsExtension.
+        """
+        from nash_arena.metrics.extension import GameMetricsExtension
+        try:
+            game_dir = self._game_dir(game_type)
+        except GameRegistryError:
+            return None
+        namespace = game_dir.parent.name
+        try:
+            module = importlib.import_module(f"games.{namespace}.{game_type}.metrics")
+        except ImportError:
+            return None
+        for name in dir(module):
+            obj = getattr(module, name)
+            if (
+                isinstance(obj, type)
+                and issubclass(obj, GameMetricsExtension)
+                and obj is not GameMetricsExtension
+            ):
+                return obj()
+        return None
+
+    def get_metric_names(self, game_type: str) -> set[str]:
+        """Return the set of metric names declared in a game's metrics.yaml."""
+        try:
+            data = self.get_game_metrics(game_type)
+        except GameRegistryError:
+            return set()
+        metrics_list = data.get("metrics", [])
+        if not isinstance(metrics_list, list):
+            return set()
+        names = set()
+        for entry in metrics_list:
+            if isinstance(entry, str):
+                names.add(entry)
+            elif isinstance(entry, dict) and "name" in entry:
+                names.add(entry["name"])
+        return names
 
     def _iter_game_metadata(self):
         for namespace in ("core", "community"):

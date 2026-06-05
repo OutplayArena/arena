@@ -1,7 +1,7 @@
 export function outcomeBadge(winner: string | null) {
   if (!winner) return null;
   const color = winner === "A" ? "text-agent-a bg-agent-a/10" : winner === "B" ? "text-agent-b bg-agent-b/10" : "text-muted bg-ink/6";
-  return <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-chip ${color}`}>{winner === "Tie" ? "Tie" : `Agent ${winner}`}</span>;
+  return <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-chip ${color}`}>{winner === "Tie" ? "Draw" : `Agent ${winner}`}</span>;
 }
 
 export function statusBadge(status: string) {

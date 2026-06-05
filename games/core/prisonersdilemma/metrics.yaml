@@ -1,0 +1,24 @@
+metrics:
+  - total_payoff
+  - average_payoff
+  - cooperation_rate
+  - mutual_cooperation_rate
+  - mutual_defection_rate
+  - outcome_counts
+  - pd_outcome_counts
+  - pd_mutual_cooperation_rate
+  - pd_price_of_anarchy
+  - exploitation_rate
+  - forgiveness_rate
+  - first_move
+  - strategy_entropy
+  - behavioral_consistency
+  - cumulative_regret
+  - nash_gap
+  - tit_for_tat_adherence
+  - forgiveness_index
+  - conditional_cooperation
+  - multilateral_cooperation_index
+  - social_welfare
+  - pareto_efficiency
+  - gini_coefficient

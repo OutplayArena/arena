@@ -22,12 +22,13 @@ export interface ExperimentConfig {
   game: string;
   variant: string;
   players: number;
-  budget: number[];
-  battlefields: Battlefield[];
+  budget?: number[];
+  battlefields?: Battlefield[];
   rounds: number;
-  seed: null;
+  seed?: number | null;
   agents?: Record<string, string>;
   interactive?: boolean;
+  [key: string]: unknown;
 }
 
 export interface CreateExperimentResponse {
@@ -41,25 +42,57 @@ export interface GameState {
   round: number;
   round_total: number;
   awaiting: PlayerSide[];
-  budgets: Record<PlayerSide, number>;
-  battlefields: Battlefield[];
+  budgets?: Record<PlayerSide, number>;
+  battlefields?: Battlefield[];
+  total_scores?: Record<PlayerSide, number>;
   history: GameStateRound[];
+  [key: string]: unknown;
 }
 
 export interface GameStateRound {
   round: number;
-  allocations: Record<PlayerSide, number[]>;
-  scores: Record<PlayerSide, number>;
-  total_scores: Record<PlayerSide, number>;
-  winner: PlayerSide | "Tie";
+  allocations?: Record<PlayerSide, number[]>;
+  actions?: Record<PlayerSide, unknown>;
+  scores?: Record<PlayerSide, number>;
+  payoffs?: Record<PlayerSide, number>;
+  total_scores?: Record<PlayerSide, number>;
+  winner?: PlayerSide | "Tie";
+  outcome?: string;
 }
 
 export interface GameResult {
   config_hash: string;
   total_scores: Record<PlayerSide, number>;
   winner: PlayerSide | "Tie";
-  metrics: Record<string, number>;
+  metrics: Record<string, unknown>;
   history: GameStateRound[];
+  rich_metrics?: RichMetrics;
+}
+
+export interface RichMetrics {
+  match_id: string;
+  game_type: string;
+  num_agents: number;
+  agents: Record<string, RichAgentMetrics>;
+  joint: Record<string, unknown>;
+  pairwise: Record<string, unknown>;
+}
+
+export interface RichAgentMetrics {
+  total_payoff: number;
+  avg_payoff: number;
+  strategy_entropy: number;
+  behavioral_consistency: number;
+  cumulative_regret: number;
+  adaptive_regret_series: number[];
+  nash_gap: number;
+  cooperation_rate?: number;
+  tit_for_tat_adherence?: Record<string, number>;
+  forgiveness_index?: Record<string, number>;
+  conditional_cooperation?: Record<string, number>;
+  mean_tft_adherence?: number;
+  mean_forgiveness?: number;
+  [key: string]: unknown;
 }
 
 export interface Match {
@@ -73,21 +106,23 @@ export interface Match {
   total_score_a: number;
   total_score_b: number;
   match_winner?: PlayerSide | "Tie";
-  metrics: Record<string, number>;
+  metrics: Record<string, unknown>;
   history: MatchRound[];
+  rich_metrics?: RichMetrics;
 }
 
 export interface MatchRound {
   round: number;
   agent_a: string;
   agent_b: string;
-  action_a: number[];
-  action_b: number[];
+  action_a: unknown;
+  action_b: unknown;
   score_a: number;
   score_b: number;
   total_score_a: number;
   total_score_b: number;
   winner: PlayerSide | "Tie";
+  raw?: Record<string, unknown>;
 }
 
 export interface RunConfig {
@@ -185,6 +220,22 @@ export interface ApiKeyRow {
 
 export interface ApiKeyCreatedResponse extends ApiKeyRow {
   full_key: string;
+}
+
+export interface MetricDescriptor {
+  name: string;
+  when: string;
+  type: string;
+  description: string;
+}
+
+export interface ScenarioInfo {
+  id: string;
+  name: string;
+  description: string;
+  cooperate_label: string;
+  defect_label: string;
+  system_prompt: string;
 }
 
 

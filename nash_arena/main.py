@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from nash_arena.db import get_db
 from nash_arena.game_registry import GameRegistry, GameRegistryError
+from nash_arena.metrics import get_global_registry, MatchEvaluator
 from nash_arena.session import GameSession
 from nash_arena.models.session import SessionModel
 from nash_arena.models.api_key import ApiKey
@@ -41,7 +42,7 @@ GAME_REGISTRY = GameRegistry()
 
 
 class ActionRequest(BaseModel):
-    allocation: list[int] = []
+    allocation: Any = None
     forfeit: bool = False
 
 
@@ -133,6 +134,14 @@ def get_game_prompts(name: str):
         raise game_registry_error(exc) from exc
 
 
+@app.get(f"{API_PREFIX}/games/{{name}}/scenarios")
+def get_game_scenarios(name: str):
+    try:
+        return {"scenarios": GAME_REGISTRY.get_game_scenarios(name)}
+    except GameRegistryError as exc:
+        raise game_registry_error(exc) from exc
+
+
 @app.get(f"{API_PREFIX}/games/{{name}}/agents")
 def get_game_agents(name: str):
     try:
@@ -211,7 +220,8 @@ async def submit_action(
 async def get_results(session_id: str, db: AsyncSession = Depends(get_db)):
     session = await get_session(session_id, db)
     try:
-        return session.results()
+        evaluator = MatchEvaluator(get_global_registry())
+        return session.results(evaluator=evaluator)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 

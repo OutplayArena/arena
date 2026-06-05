@@ -1,0 +1,99 @@
+name: Prisoner's Dilemma
+version: "1.0.0"
+status: stable
+author: "NashArena maintainers"
+description: >
+  Classic social dilemma. Two players simultaneously choose to cooperate or
+  defect. Mutual cooperation yields the best collective outcome (R,R), but
+  defection is individually dominant — creating tension between personal gain
+  and collective welfare. Supports classic and noisy variants.
+tags:
+  - social-dilemma
+  - cooperative
+  - simultaneous
+  - multi-round
+  - iterated
+ontology:
+  action_space: binary_choice
+  information_structure: simultaneous
+  payoff_structure: mixed_motive
+  timing: multi_round
+players:
+  min: 2
+  max: 2
+config_schema:
+  game:
+    type: string
+    const: prisonersdilemma
+  variant:
+    type: string
+    enum: [classic, noisy]
+    enum_labels:
+      classic: "Classic"
+      noisy: "Noisy"
+    description: "Game variant: classic (clean actions) or noisy (actions may randomly flip)"
+    default: classic
+  players:
+    type: integer
+    const: 2
+  rounds:
+    type: integer
+    minimum: 1
+    default: 10
+  payoff_T:
+    type: number
+    description: "Temptation payoff (defect while opponent cooperates)"
+    default: 5.0
+  payoff_R:
+    type: number
+    description: "Reward payoff (mutual cooperation)"
+    default: 3.0
+  payoff_P:
+    type: number
+    description: "Punishment payoff (mutual defection)"
+    default: 1.0
+  payoff_S:
+    type: number
+    description: "Sucker payoff (cooperate while opponent defects)"
+    default: 0.0
+  noise:
+    type: number
+    minimum: 0.0
+    maximum: 0.5
+    description: "Probability that an action is flipped (noisy variant)"
+    default: 0.0
+    visible_when:
+      variant: "noisy"
+  seed:
+    type:
+      - integer
+      - "null"
+    default: null
+  scenario:
+    type: string
+    enum: [prison, business, climate, arms_race, roommates]
+    enum_labels:
+      prison: "Original Prison"
+      business: "Price War"
+      climate: "Climate Treaty"
+      arms_race: "Arms Race"
+      roommates: "Messy Roommates"
+    description: "Narrative framing for LLM prompts"
+    default: prison
+  system_prompt:
+    type: string
+    description: "System prompt for LLM agents. Uses Jinja templates ({{ payoff_T }}, {{ payoff_R }}, etc.) that are rendered with the payoff values above at runtime."
+    default: ""
+example_config:
+  game: prisonersdilemma
+  variant: classic
+  players: 2
+  rounds: 10
+  payoff_T: 5.0
+  payoff_R: 3.0
+  payoff_P: 1.0
+  payoff_S: 0.0
+  noise: 0.0
+  seed: 42
+  scenario: prison
+  system_prompt: ""

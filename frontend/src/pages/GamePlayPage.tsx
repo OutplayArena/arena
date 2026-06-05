@@ -63,8 +63,8 @@ export function GamePlayPage() {
               agent_a: summary.agent_a || "unknown",
               agent_b: summary.agent_b || "unknown",
               num_rounds: state.round_total,
-              num_battlefields: state.battlefields.length,
-              total_resources: state.budgets.A,
+              num_battlefields: (state.battlefields ?? []).length,
+              total_resources: (state.budgets as Record<string, number> | undefined)?.A ?? 0,
               session_id: sessionId,
             };
             const match = resultToMatch(result as never, payload);

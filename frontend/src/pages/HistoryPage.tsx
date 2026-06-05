@@ -93,7 +93,7 @@ export function HistoryPage() {
           >
             <option value="">All games</option>
             {games.map((g) => (
-              <option key={g.name} value={g.name}>{g.name}</option>
+              <option key={g.slug} value={g.slug}>{g.name}</option>
             ))}
           </select>
         </div>
@@ -174,7 +174,7 @@ export function HistoryPage() {
                     className="px-4 py-2.5 text-xs text-ink font-medium capitalize cursor-pointer"
                     onClick={() => navigate(`/play/${s.game_slug || games[0]?.slug || ""}/${s.id}`)}
                   >
-                    {s.game_slug}
+                    {games.find((g) => g.slug === s.game_slug)?.name ?? s.game_slug}
                   </td>
                   <td
                     className="px-4 py-2.5 cursor-pointer"

@@ -58,7 +58,7 @@ export function PlaybackPanel() {
 
   const round = currentRound();
   const roundStatus = round
-    ? `round=${round.round} | winner=${round.winner} | action_a=[${round.action_a.join(", ")}] | action_b=[${round.action_b.join(", ")}]`
+    ? `round=${round.round} | winner=${round.winner} | action_a=[${(round.action_a as number[]).join(", ")}] | action_b=[${(round.action_b as number[]).join(", ")}]`
     : state.status;
 
   useEffect(() => {

@@ -1,15 +1,161 @@
+import { useEffect, useState } from "react";
 import { useApp } from "../hooks/useApp";
 import { downloadJSON } from "./badges";
+import { getGameMetrics } from "../api";
+import type { RichMetrics, MetricDescriptor } from "../types";
 
 interface AutoHistoryViewProps {
   hasMatch: boolean;
   canvasCollapsed: boolean;
   onExpandCanvas: () => void;
+  gameSlug?: string;
 }
 
-export function AutoHistoryView({ hasMatch, canvasCollapsed, onExpandCanvas }: AutoHistoryViewProps) {
+function MetricLabel({ name, catalog }: { name: string; catalog: Record<string, MetricDescriptor> }) {
+  const def = catalog[name];
+  const [open, setOpen] = useState(false);
+
+  if (!def?.description) {
+    return <span className="text-[10px] font-extrabold text-muted uppercase">{name}</span>;
+  }
+
+  return (
+    <span className="relative inline-flex items-center gap-1">
+      <span className="text-[10px] font-extrabold text-muted uppercase">{name}</span>
+      <button
+        type="button"
+        className="text-muted/60 hover:text-muted cursor-help transition-colors leading-none"
+        onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        title={def.description}
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="16" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+      </button>
+      {open && (
+        <span className="absolute bottom-full left-0 mb-1.5 w-48 rounded-lg bg-ink dark:bg-surface-container border border-line/50 p-2 z-50 shadow-lg">
+          <span className="text-[10px] text-white dark:text-ink leading-snug">{def.description}</span>
+        </span>
+      )}
+    </span>
+  );
+}
+
+function formatValue(value: unknown): string {
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? String(value) : value.toFixed(4);
+  }
+  if (typeof value === "string") return value;
+  return String(value ?? "");
+}
+
+function isPlainObj(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function MetricValue({ value }: { value: unknown }) {
+  if (value === null || value === undefined) {
+    return <span className="text-xs text-quiet font-mono mt-0.5 block">—</span>;
+  }
+  if (isPlainObj(value)) {
+    const entries = Object.entries(value);
+    if (entries.length === 0) return <span className="text-xs text-ink font-mono mt-0.5 block">{}</span>;
+    return (
+      <table className="w-full mt-0.5 text-[10px] border-separate border-spacing-0">
+        <tbody>
+          {entries.map(([k, v]) => (
+            <tr key={k}>
+              <td className="pr-2 py-0.5 text-muted font-semibold whitespace-nowrap align-top">{k}</td>
+              <td className="py-0.5 text-ink font-mono text-right">
+                {isPlainObj(v) ? <MetricValue value={v} />
+                 : Array.isArray(v) ? JSON.stringify(v)
+                 : formatValue(v)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+  if (Array.isArray(value)) {
+    return <span className="text-xs text-ink font-mono mt-0.5 block">{JSON.stringify(value)}</span>;
+  }
+  return <span className="text-xs text-ink font-mono mt-0.5 block">{formatValue(value)}</span>;
+}
+
+function RichMetricsPanel({ rich, catalog }: { rich: RichMetrics; catalog: Record<string, MetricDescriptor> }) {
+  const agents = rich.agents ? Object.keys(rich.agents) : [];
+
+  return (
+    <div className="mt-4 space-y-3">
+      <h3 className="text-[11px] font-extrabold text-muted uppercase">Rich Metrics</h3>
+
+      <div className="rounded-card bg-surface-container/30 border border-line/30 p-3">
+        <h4 className="text-[10px] font-extrabold text-muted uppercase mb-2">Joint</h4>
+        <div className="grid grid-cols-2 gap-2">
+          {Object.entries(rich.joint).map(([key, value]) => (
+            <div key={key} className="rounded-card bg-surface-container/30 border border-line/30 p-2">
+              <MetricLabel name={key} catalog={catalog} />
+              <MetricValue value={value} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {agents.map((agentId) => {
+        const agent = rich.agents[agentId];
+        if (!agent) return null;
+        return (
+          <div key={agentId} className="rounded-card bg-surface-container/30 border border-line/30 p-3">
+            <h4 className="text-[10px] font-extrabold text-muted uppercase mb-2">
+              Agent {agentId}
+            </h4>
+            <div className="grid grid-cols-2 gap-2">
+              {Object.entries(agent).map(([key, value]) => {
+                if (key === "adaptive_regret_series") return null;
+                return (
+                  <div key={key} className="rounded-card bg-surface-container/30 border border-line/30 p-2">
+                    <MetricLabel name={key} catalog={catalog} />
+                    <MetricValue value={value} />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function formatAction(action: unknown): string {
+  if (Array.isArray(action)) return `[${action.join(", ")}]`;
+  if (typeof action === "string") return action;
+  if (typeof action === "number") return String(action);
+  return String(action ?? "");
+}
+
+export function AutoHistoryView({ hasMatch, canvasCollapsed, onExpandCanvas, gameSlug }: AutoHistoryViewProps) {
   const { state } = useApp();
   const { activeMatch } = state;
+  const [catalog, setCatalog] = useState<Record<string, MetricDescriptor>>({});
+
+  useEffect(() => {
+    if (!gameSlug) return;
+    let cancelled = false;
+    getGameMetrics(gameSlug).then((data) => {
+      if (cancelled) return;
+      const map: Record<string, MetricDescriptor> = {};
+      for (const m of data.metrics) {
+        map[m.name] = m;
+      }
+      setCatalog(map);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [gameSlug]);
 
   const history = activeMatch?.history ?? [];
   const total = history.length;
@@ -58,17 +204,17 @@ export function AutoHistoryView({ hasMatch, canvasCollapsed, onExpandCanvas }: A
                     >
                       <td className="px-3 py-2 text-xs text-muted font-mono">{round.round}</td>
                       <td className="px-3 py-2 text-xs text-ink font-mono">
-                        [{round.action_a.join(", ")}]
+                        {formatAction(round.action_a)}
                       </td>
                       <td className="px-3 py-2 text-xs text-ink font-mono">
-                        [{round.action_b.join(", ")}]
+                        {formatAction(round.action_b)}
                       </td>
                       <td className="px-3 py-2 text-xs text-ink">
                         A:{round.score_a} B:{round.score_b}
                       </td>
                       <td className="px-3 py-2 text-xs font-bold">
                         <span className={round.winner === "A" ? "text-agent-a" : round.winner === "B" ? "text-agent-b" : "text-muted"}>
-                          {round.winner === "Tie" ? "T" : round.winner}
+                          {round.winner === "Tie" ? "D" : round.winner}
                         </span>
                       </td>
                     </tr>
@@ -101,14 +247,16 @@ export function AutoHistoryView({ hasMatch, canvasCollapsed, onExpandCanvas }: A
                 <div className="grid grid-cols-2 gap-2">
                   {Object.entries(activeMatch.metrics).map(([key, value]) => (
                     <div key={key} className="rounded-card bg-surface-container/30 border border-line/30 p-2">
-                      <span className="text-[10px] font-extrabold text-muted uppercase">{key}</span>
-                      <p className="text-xs text-ink font-mono mt-0.5">
-                        {typeof value === "object" ? JSON.stringify(value) : String(value)}
-                      </p>
+                      <MetricLabel name={key} catalog={catalog} />
+                      <MetricValue value={value} />
                     </div>
                   ))}
                 </div>
               </div>
+            )}
+
+            {activeMatch.rich_metrics && (
+              <RichMetricsPanel rich={activeMatch.rich_metrics} catalog={catalog} />
             )}
           </>
         )}

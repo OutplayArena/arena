@@ -1,0 +1,25 @@
+agents:
+  - id: always_cooperate
+    label: Always Cooperate
+    description: "Always cooperates regardless of opponent's actions."
+  - id: always_defect
+    label: Always Defect
+    description: "Always defects regardless of opponent's actions."
+  - id: tit_for_tat
+    label: Tit-for-Tat
+    description: "Starts cooperating, then mirrors the opponent's last move."
+  - id: grim_trigger
+    label: Grim Trigger
+    description: "Cooperates until the opponent defects once, then defects forever."
+  - id: forgiving_tft
+    label: Forgiving TFT
+    description: "Like Tit-for-Tat but cooperates with 10% probability after opponent defects."
+  - id: pavlov
+    label: Pavlov (Win-Stay/Lose-Shift)
+    description: "Cooperates after mutual cooperation or after exploiting opponent; defects otherwise."
+  - id: random
+    label: Random
+    description: "Chooses cooperate or defect with equal probability each round."
+  - id: remote
+    label: Remote Agent (LLM/MCP)
+    description: "LLM-powered agent connecting via MCP server with session key."
