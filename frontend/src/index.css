@@ -1,0 +1,148 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-ink: #263238;
+  --color-muted: #6c747a;
+  --color-quiet: #9aa3a8;
+  --color-line: #dde1de;
+  --color-line-strong: #c6d0ce;
+  --color-agent-a: #f28c38;
+  --color-agent-a-soft: rgba(242, 140, 56, 0.14);
+  --color-agent-b: #2d9cdb;
+  --color-agent-b-soft: rgba(45, 156, 219, 0.14);
+  --color-accent: #12a594;
+  --color-accent-soft: rgba(18, 165, 148, 0.12);
+  --color-gold: #d5a11e;
+
+  --color-surface: #ffffff;
+  --color-surface-soft: #fbfaf5;
+  --color-surface-container: #f4f3ed;
+  --color-surface-container-high: #efede7;
+  --color-surface-container-highest: #e9e8e2;
+
+  --shadow-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-elevation-2: 0 1px 2px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.06);
+  --shadow-elevation-3: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 8px 3px rgba(0, 0, 0, 0.06);
+  --shadow-elevation-4: 0 2px 3px rgba(0, 0, 0, 0.08), 0 6px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-elevation-5: 0 4px 4px rgba(0, 0, 0, 0.08), 0 8px 18px 4px rgba(0, 0, 0, 0.06);
+
+  --radius-card: 16px;
+  --radius-button: 28px;
+  --radius-input: 12px;
+  --radius-chip: 8px;
+
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.dark {
+  --color-ink: #e6edf3;
+  --color-muted: #8b949e;
+  --color-quiet: #6e7681;
+  --color-line: #30363d;
+  --color-line-strong: #484f58;
+  --color-agent-a: #fb923c;
+  --color-agent-a-soft: rgba(251, 146, 60, 0.14);
+  --color-agent-b: #60a5fa;
+  --color-agent-b-soft: rgba(96, 165, 250, 0.14);
+  --color-accent: #2dd4bf;
+  --color-accent-soft: rgba(45, 212, 191, 0.12);
+  --color-gold: #fbbf24;
+
+  --color-surface: #161b22;
+  --color-surface-soft: #1c2128;
+  --color-surface-container: #1c2128;
+  --color-surface-container-high: #21262d;
+  --color-surface-container-highest: #262c34;
+
+  --shadow-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.24), 0 1px 3px rgba(0, 0, 0, 0.18);
+  --shadow-elevation-2: 0 1px 2px rgba(0, 0, 0, 0.24), 0 2px 6px rgba(0, 0, 0, 0.18);
+  --shadow-elevation-3: 0 1px 3px rgba(0, 0, 0, 0.24), 0 4px 8px 3px rgba(0, 0, 0, 0.18);
+  --shadow-elevation-4: 0 2px 3px rgba(0, 0, 0, 0.24), 0 6px 12px rgba(0, 0, 0, 0.18), 0 2px 4px rgba(0, 0, 0, 0.12);
+  --shadow-elevation-5: 0 4px 4px rgba(0, 0, 0, 0.24), 0 8px 18px 4px rgba(0, 0, 0, 0.18);
+}
+
+@keyframes blob-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(80px, -40px) scale(1.06); }
+  50% { transform: translate(-30px, 60px) scale(0.94); }
+  75% { transform: translate(-60px, 20px) scale(1.04); }
+}
+
+@keyframes blob-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-70px, -30px) scale(0.92); }
+  50% { transform: translate(-20px, -80px) scale(1.08); }
+  75% { transform: translate(60px, -10px) scale(0.96); }
+}
+
+@keyframes blob-drift-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(50px, 60px) scale(1.05); }
+  50% { transform: translate(-60px, 30px) scale(0.95); }
+  75% { transform: translate(10px, -50px) scale(1.03); }
+}
+
+@keyframes blob-drift-4 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-40px, -50px) scale(0.93); }
+  50% { transform: translate(70px, 10px) scale(1.07); }
+  75% { transform: translate(30px, 60px) scale(0.97); }
+}
+
+@keyframes blob-drift-5 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-80px, 20px) scale(1.04); }
+  50% { transform: translate(40px, -70px) scale(0.96); }
+  75% { transform: translate(-20px, -30px) scale(1.06); }
+}
+
+.animate-blob-drift-1 { animation: blob-drift-1 18s ease-in-out infinite; }
+.animate-blob-drift-2 { animation: blob-drift-2 22s ease-in-out infinite; }
+.animate-blob-drift-3 { animation: blob-drift-3 20s ease-in-out infinite; }
+.animate-blob-drift-4 { animation: blob-drift-4 24s ease-in-out infinite; }
+.animate-blob-drift-5 { animation: blob-drift-5 19s ease-in-out infinite; }
+
+.blob {
+  will-change: transform;
+  filter: blur(80px);
+}
+
+.blob-1 { background: var(--color-accent); }
+.blob-2 { background: var(--color-agent-a); }
+.blob-3 { background: var(--color-agent-b); }
+.blob-4 { background: var(--color-gold); }
+.blob-5 { background: var(--color-accent); }
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: #f6f5ef;
+  color: var(--color-ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+.dark body {
+  background-color: #0b1014;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+/* subtle transition on themed surfaces */
+.dark .transition-theme,
+[class*="bg-surface"] {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}

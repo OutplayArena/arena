@@ -11,17 +11,35 @@ class GameRegistryError(ValueError):
     pass
 
 
+def _has_ui_component(game_dir: Path, name: str) -> bool:
+    return (game_dir / "ui" / f"{name}.tsx").exists()
+
+
+def _detect_ui(game_dir: Path) -> dict:
+    ui_dir = game_dir / "ui"
+    has_live_view = _has_ui_component(game_dir, "LiveView")
+    has_config = _has_ui_component(game_dir, "ConfigForm")
+    has_history = _has_ui_component(game_dir, "HistoryView")
+    return {
+        "live_view": has_live_view,
+        "custom_config": has_config,
+        "custom_history": has_history,
+    }
+
+
 class GameRegistry:
     def __init__(self, catalog_root: Path | None = None):
         self.catalog_root = Path(catalog_root) if catalog_root else CATALOG_ROOT
 
     def list_games(self) -> list[dict]:
-        games = [self._summary(metadata) for metadata in self._iter_game_metadata()]
+        games = [self._summary(metadata, slug) for slug, metadata in self._iter_game_metadata()]
         return sorted(games, key=lambda game: game["name"])
 
     def get_game(self, name: str) -> dict:
         game_dir = self._game_dir(name)
         metadata = self._load_yaml(game_dir / "game.yaml")
+        metadata["slug"] = name
+        metadata["ui"] = _detect_ui(game_dir)
         return metadata
 
     def get_game_metrics(self, name: str) -> dict:
@@ -29,6 +47,13 @@ class GameRegistry:
 
     def get_game_prompts(self, name: str) -> dict:
         return self._load_yaml(self._game_dir(name) / "prompts.yaml")
+
+    def get_game_agents(self, name: str) -> dict:
+        game_dir = self._game_dir(name)
+        agents_yaml = game_dir / "agents.yaml"
+        if agents_yaml.exists():
+            return self._load_yaml(agents_yaml)
+        return {"agents": []}
 
     def get_game_skill(self, name: str) -> str:
         game_dir = self._game_dir(name)
@@ -57,7 +82,8 @@ class GameRegistry:
                 metadata = self._load_yaml(game_yaml)
                 if metadata.get("status") == "deprecated":
                     continue
-                yield metadata
+                slug = game_yaml.parent.name
+                yield slug, metadata
 
     def _game_dir(self, name: str) -> Path:
         for namespace in ("core", "community"):
@@ -82,9 +108,10 @@ class GameRegistry:
             raise GameRegistryError(f"invalid game file: {path}")
         return data
 
-    def _summary(self, metadata: dict) -> dict:
+    def _summary(self, metadata: dict, slug: str) -> dict:
         return {
             "name": metadata["name"],
+            "slug": slug,
             "version": metadata.get("version"),
             "status": metadata.get("status"),
             "description": metadata.get("description"),

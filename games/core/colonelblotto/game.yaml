@@ -1,0 +1,56 @@
+name: Colonel Blotto
+version: "1.0.0"
+status: stable
+author: "NashArena maintainers"
+description: >
+  Resource allocation game. Two players allocate fixed resources across
+  battlefields; each battlefield is won by the higher allocation, with
+  ties split evenly.
+tags:
+  - resource-allocation
+  - zero-sum
+  - simultaneous
+  - multi-round
+ontology:
+  action_space: discrete_allocation
+  information_structure: simultaneous
+  payoff_structure: zero_sum
+  timing: multi_round
+players:
+  min: 2
+  max: 2
+config_schema:
+  game:
+    type: string
+    const: colonelblotto
+  variant:
+    type: string
+    const: classic
+  players:
+    type: integer
+    const: 2
+  num_battlefields:
+    type: integer
+    minimum: 2
+    default: 5
+  total_resources:
+    type: integer
+    minimum: 1
+    default: 100
+  rounds:
+    type: integer
+    minimum: 1
+    default: 10
+  seed:
+    type:
+      - integer
+      - "null"
+    default: 42
+example_config:
+  game: colonelblotto
+  variant: classic
+  players: 2
+  num_battlefields: 3
+  total_resources: 10
+  rounds: 3
+  seed: 42

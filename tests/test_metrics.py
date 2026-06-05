@@ -1,11 +1,11 @@
 import pytest
 
-from games.core.blotto.engine import BlottoGame
-from games.core.blotto.metrics import (
-    BlottoMetrics,
+from games.core.colonelblotto.engine import ColonelBlottoGame
+from games.core.colonelblotto.metrics import (
+    ColonelBlottoMetrics,
     allocation_concentration,
     average_payoff,
-    compute_blotto_metrics,
+    compute_colonel_blotto_metrics,
     round_win_counts,
     round_win_rate,
 )
@@ -38,7 +38,7 @@ def sample_history():
 
 
 def test_compute_metrics_handles_empty_history():
-    assert compute_blotto_metrics([], {"A": 0, "B": 0}) == {
+    assert compute_colonel_blotto_metrics([], {"A": 0, "B": 0}) == {
         "total_payoff": {"A": 0, "B": 0},
         "average_payoff": {"A": 0, "B": 0},
         "round_win_counts": {"A": 0, "B": 0, "Tie": 0},
@@ -77,8 +77,8 @@ def test_allocation_concentration_averages_max_share_per_round():
     }
 
 
-def test_compute_blotto_metrics_combines_all_metrics():
-    assert compute_blotto_metrics(sample_history(), {"A": 4.5, "B": 4.5}) == {
+def test_compute_colonel_blotto_metrics_combines_all_metrics():
+    assert compute_colonel_blotto_metrics(sample_history(), {"A": 4.5, "B": 4.5}) == {
         "total_payoff": {"A": 4.5, "B": 4.5},
         "average_payoff": {"A": 1.5, "B": 1.5},
         "round_win_counts": {"A": 1, "B": 1, "Tie": 1},
@@ -95,13 +95,13 @@ def test_compute_blotto_metrics_combines_all_metrics():
 
 
 def test_blotto_metrics_class_matches_function_wrapper():
-    assert BlottoMetrics().compute(sample_history(), {"A": 4.5, "B": 4.5}) == (
-        compute_blotto_metrics(sample_history(), {"A": 4.5, "B": 4.5})
+    assert ColonelBlottoMetrics().compute(sample_history(), {"A": 4.5, "B": 4.5}) == (
+        compute_colonel_blotto_metrics(sample_history(), {"A": 4.5, "B": 4.5})
     )
 
 
 def test_compute_results_includes_metrics():
-    game = BlottoGame(num_battlefields=3, total_resources=9, num_rounds=1)
+    game = ColonelBlottoGame(num_battlefields=3, total_resources=9, num_rounds=1)
     state = game.initial_state()
 
     state = game.apply_action(state, "A", [9, 0, 0])

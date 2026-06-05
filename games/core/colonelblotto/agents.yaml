@@ -1,0 +1,13 @@
+agents:
+  - id: uniform
+    label: Uniform
+    description: "Evenly distributes troops across all battlefields."
+  - id: random
+    label: Random
+    description: "Assigns random troop allocations each round."
+  - id: greedy
+    label: Greedy
+    description: "Copies opponent's last move +1, normalized to budget."
+  - id: remote
+    label: Remote Agent (LLM/MCP)
+    description: "LLM-powered agent connecting via MCP server with session key."

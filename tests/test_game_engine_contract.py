@@ -4,10 +4,10 @@ from nash_arena.game_components.game_agent import GameAgent
 from nash_arena.game_components.game_config import GameConfig
 from nash_arena.game_engine import GameEngine
 from nash_arena.game_components.game_metrics import GameMetrics
-from games.core.blotto.agent import Agent, UniformAgent
-from games.core.blotto.config import BlottoExperimentConfig
-from games.core.blotto.engine import BlottoGame
-from games.core.blotto.metrics import BlottoMetrics
+from games.core.colonelblotto.agent import Agent, UniformAgent
+from games.core.colonelblotto.config import ColonelBlottoExperimentConfig
+from games.core.colonelblotto.engine import ColonelBlottoGame
+from games.core.colonelblotto.metrics import ColonelBlottoMetrics
 
 
 def test_base_contracts_are_abstract():
@@ -22,18 +22,18 @@ def test_base_contracts_are_abstract():
 
 
 def test_blotto_game_implements_engine_contract():
-    assert isinstance(BlottoGame(num_battlefields=3, total_resources=10), GameEngine)
+    assert isinstance(ColonelBlottoGame(num_battlefields=3, total_resources=10), GameEngine)
 
 
 def test_blotto_support_classes_implement_base_contracts():
-    assert isinstance(BlottoExperimentConfig.classic(), GameConfig)
+    assert isinstance(ColonelBlottoExperimentConfig.classic(), GameConfig)
     assert isinstance(Agent("base-agent"), GameAgent)
     assert isinstance(UniformAgent(), GameAgent)
-    assert isinstance(BlottoMetrics(), GameMetrics)
+    assert isinstance(ColonelBlottoMetrics(), GameMetrics)
 
 
 def test_engine_contract_rejects_invalid_and_duplicate_actions():
-    game = BlottoGame(num_battlefields=3, total_resources=10, num_rounds=2)
+    game = ColonelBlottoGame(num_battlefields=3, total_resources=10, num_rounds=2)
     state = game.initial_state()
 
     assert game.validate_player_action(state, "A", [10, 0, 0]) is True
@@ -47,7 +47,7 @@ def test_engine_contract_rejects_invalid_and_duplicate_actions():
 
 
 def test_engine_contract_full_game_reaches_terminal_results():
-    game = BlottoGame(num_battlefields=3, total_resources=10, num_rounds=1)
+    game = ColonelBlottoGame(num_battlefields=3, total_resources=10, num_rounds=1)
     state = game.initial_state()
 
     assert state.phase == "awaiting_action"

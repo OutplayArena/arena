@@ -152,3 +152,15 @@ cython_debug/
 
 # Local data
 data/
+
+# Frontend
+frontend/node_modules/
+static/assets/
+!package.json
+!package-lock.json
+!tsconfig.json
+!tsconfig.*.json
+!pyproject.toml
+!*.cfg
+!frontend/package.json
+!frontend/package-lock.json

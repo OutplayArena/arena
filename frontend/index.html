@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NashArena - Strategic Game Theory Platform</title>
+    <link rel="icon" type="image/png" href="/img/favicon_nash_arena.png" />
+    <link rel="apple-touch-icon" href="/img/favicon_nash_arena.png" />
+    <script>
+      (function() {
+        var t = localStorage.getItem("theme");
+        if (t === "dark" || (!t && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      ;(function () {
+        var v = null
+        setInterval(function () {
+          fetch('/api/static-version')
+            .then(function (r) { return r.json() })
+            .then(function (d) {
+              if (v !== null && d.version !== v) location.reload()
+              v = d.version
+            })
+            .catch(function () {})
+        }, 1500)
+      })()
+    </script>
+  </body>
+</html>

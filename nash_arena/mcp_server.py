@@ -1,11 +1,13 @@
 import os
 
-from mcp.server.fastmcp import FastMCP
+from dotenv import load_dotenv
+load_dotenv()
 
+from mcp.server.fastmcp import FastMCP
 from nash_arena.client import ArenaClient
+from nash_arena.auth.session_key import validate_session_key
 
 mcp = FastMCP("nash-arena")
-
 
 def required_env(name):
     value = os.environ.get(name)
@@ -13,24 +15,15 @@ def required_env(name):
         raise RuntimeError(f"{name} is required")
     return value
 
-
 def arena_client():
-    base_url = os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000")
-    session_id = required_env("ARENA_SESSION_ID")
-    token = required_env("ARENA_SESSION_TOKEN")
-    internal_api_token = required_env("NASH_ARENA_INTERNAL_API_TOKEN")
-    return ArenaClient(
-        base_url=base_url,
-        session_id=session_id,
-        token=token,
-        game_api_prefix=os.environ.get("NASH_ARENA_GAME_API_PREFIX", "/api/game"),
-        internal_api_token=internal_api_token,
-    )
-
+    base_url = os.environ.get("NASH_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
+    key = required_env("NASH_ARENA_KEY")
+    session_id, _player = validate_session_key(key)
+    return ArenaClient(base_url=base_url, session_id=session_id, token=key)
 
 @mcp.tool()
 def get_game_state() -> dict:
-    """Get the current game state for your assigned Blotto session."""
+    """Get the current game state for your assigned game session."""
     return arena_client().get_state()
 
 @mcp.tool()
@@ -62,11 +55,6 @@ def get_game_metrics(game: str) -> dict:
 def get_game_prompts(game: str) -> dict:
     """Get default prompt templates and action format for a game."""
     return arena_client().get_game_prompts(game)
-
-@mcp.tool()
-def download_game_skill(game: str) -> dict:
-    """Download agent instructions for playing a game through MCP tools."""
-    return arena_client().get_game_skill(game)
 
 if __name__ == "__main__":
     mcp.run()

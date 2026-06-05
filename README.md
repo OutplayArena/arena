@@ -1,12 +1,15 @@
 # NashArena: Benchmarking Cooperative & Competitive Behavior of LLM Agents
 
-NashArena is an open platform for studying how LLM-powered agents behave under strategic pressure — from purely competitive zero-sum games to cooperative public-goods dilemmas and everything in between. Researchers can register new games, pit agents against each other, and measure not just who won but *how* they played: did the agent cooperate then defect at the critical moment? Did it honor its promises? Did it exploit trust?
+![NashArena AI Agent Benchmarking & Game Theory Platform](static/img/logo_banner_nash_arena_resized.png)
+
+
+NashArena is a platform for game theoretic analyses of LLM-based agents — studying how they behave under strategic pressure — from purely competitive zero-sum games to cooperative public-goods dilemmas and everything in between. Researchers can register new games, pit agents against each other, and measure not just who won but *how* they played: did the agent cooperate then defect at the critical moment? Did it honor its promises? Did it exploit trust?
 
 The platform treats games along a cooperative-to-competitive spectrum via its game ontology:
 
 | Payoff structure | Example games | What it reveals |
 |---|---|---|
-| **Zero-sum** | Colonel Blotto | Strategic reasoning, resource allocation, exploitability |
+| **Zero-sum** | Resource allocation (Colonel Blotto) | Strategic reasoning, resource allocation, exploitability |
 | **Mixed-motive** | Prisoner's Dilemma, Ultimatum Game | Trust, reciprocity, fairness, defection thresholds |
 | **Cooperative** | Public Goods Game | Free riding, contribution behavior, group welfare vs. self-interest |
 
@@ -25,32 +28,39 @@ The current implementation is intentionally in-memory and lightweight, designed 
 
 ```text
 nash_arena/
-  client.py      Python SDK for the FastAPI arena
-  game_engine.py generic game engine contract
-  game_registry.py discovers the top-level games catalog
-  main.py        FastAPI app and static visualizer server
-  mcp_server.py  MCP tools for one player in one session
-  session.py     generic session wrapper, pending actions, player tokens
+  client.py          Python SDK for the FastAPI arena
+  game_engine.py     generic game engine contract
+  game_registry.py   discovers the top-level games catalog
+  main.py            FastAPI app and API server
+  mcp_server.py      MCP tools for one player in one session
+  session.py         generic session wrapper, pending actions, player tokens
+  models/            SQLAlchemy models (session, user, apikey)
+  middleware/        auth middleware
 
 games/
-  _template/     starter shape for future games
-  core/blotto/   first registered platform-maintained game:
-                 config, engine, metrics, prompts, agents, tests
-  community/     reserved for contributor games
+  _template/         starter shape for future games
+  core/colonelblotto/       first registered platform-maintained game:
+                     config, engine, metrics, prompts, agents, ui/
+  community/         reserved for contributor games
 
-static/
-  index.html     browser visualizer shell
-  app.js         visualizer client and demo agents
-  style.css      visualizer styling
+frontend/
+  src/
+    components/      React components (tabbed play view, auto-forms, etc.)
+    pages/           Dashboard, History, GamePlay pages
+    games/           UI registry (import.meta.glob for per-game components)
+  package.json       Vite + React + Tailwind
 
+static/              built frontend output (index.html, assets/)
 examples/
-  play_blotto_game.py  minimal SDK example
+  play_colonel_blotto_game.py  minimal SDK example
 
 tests/
   pytest coverage for config, engine, sessions, API, SDK, metrics, MCP
 
-run_experiment.py      simple CLI match runner
-planning/             planning notes for the broader platform
+run_experiment.py        simple CLI match runner
+migrations/              Alembic DB migrations
+docker/                  Docker & docker-compose
+planning/                planning notes for the broader platform
 ```
 
 ## Install
@@ -58,7 +68,7 @@ planning/             planning notes for the broader platform
 From the repository root:
 
 ```bash
-python3 -m pip install -e .
+uv sync
 ```
 
 Optional local or API LLM agents use the `transformers` and `litellm` dependencies declared in `pyproject.toml`. You do not need to use those agents to run the FastAPI arena, SDK, visualizer, or MCP flow.
@@ -71,22 +81,130 @@ uv run pytest # Add -q for lower verbosity
 
 This is the main safety check. It exercises the platform modules plus the web API and SDK.
 
-## Run the FastAPI Arena
+## Development
 
-Start the server:
+### Prerequisites
+
+- Python 3.12+ with `uv` (pip alternative)
+- Node.js 20+ with `npm`
+- PostgreSQL 16 (via minikube, Rancher Desktop, or Docker)
+
+### One-time setup
 
 ```bash
-uvicorn nash_arena.main:app --reload
+# Install Python dependencies
+uv sync
+
+# Install frontend dependencies
+cd frontend && npm install && cd ..
+
+# Copy and edit environment variables
+cp .env.example .env
+# DATABASE_URL is pre-configured for local Docker PostgreSQL
 ```
 
-Then open:
+### Database
 
-- visualizer: http://127.0.0.1:8000/
+Two options: Kubernetes (minikube / Rancher Desktop) or Docker Compose. Kubernetes is preferred — it matches production topology and keeps the host free of project-specific containers.
+
+#### Option A: Kubernetes (minikube or Rancher Desktop)
+
+**Run the Helm chart** to deploy PostgreSQL, backend, Traefik, and MCP infrastructure:
+
+```bash
+# Copy and fill in secrets first
+cp .env.example .env
+
+# Deploy (reads .env for OAuth secrets)
+./scripts/helm-upgrade.sh
+```
+
+The Helm release (`nasharena`) creates:
+- A PostgreSQL 16 StatefulSet with a 10 Gi persistent volume
+- A ClusterIP service (`nasharena-db`) on port 5432
+- Backend, Traefik, and migration Job resources
+
+**Port-forward the database** from the cluster to your local machine:
+
+```bash
+kubectl -n nasharena port-forward svc/nasharena-db 5432:5432 &
+```
+
+The `.env` file is pre-configured for `localhost:5432`, so the forwarded DB is transparent to the backend.
+
+**Apply migrations** against the cluster database:
+
+```bash
+uv run alembic upgrade head
+```
+
+**Persisting data across namespace changes** (optional):
+
+By default, the StatefulSet's PersistentVolumeClaim lives inside the namespace — delete the namespace and the data is gone. To keep data regardless of namespace, create the PV first with `Retain` reclaim policy:
+
+```bash
+# Deploy with a named, Retain-backed PV
+helm upgrade nasharena helm/nash_arena \
+  --install --create-namespace --namespace nasharena \
+  --set database.createPV=true \
+  --set database.volumeName=nasharena-db-pv \
+  --set database.storageClassName=manual
+```
+
+The PV (`nasharena-db-pv`) is cluster-scoped, survives namespace deletion, and the PVC binds to it by name. To move the DB to a new namespace, uninstall the release, delete the old namespace, recreate the PV (if needed), then helm-upgrade into the new namespace with the same `volumeName`.
+
+If you change the release name or namespace, set `RELEASE` / `NAMESPACE`:
+
+```bash
+RELEASE=myarena NAMESPACE=staging ./scripts/helm-upgrade.sh
+```
+
+#### Option B: Docker Compose
+
+Bring up PostgreSQL via Docker:
+
+```bash
+docker compose -f docker/docker-compose.yml up db -d --wait
+```
+
+The container listens on `localhost:5432` (mapped from its internal port).
+
+Apply migrations:
+
+```bash
+uv run alembic upgrade head
+```
+
+### Backend
+
+```bash
+uv run uvicorn nash_arena.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+The backend serves:
+- API: http://127.0.0.1:8000/api/
 - API docs: http://127.0.0.1:8000/docs
-- health check: http://127.0.0.1:8000/health
-- game directory: http://127.0.0.1:8000/games
+- Health: http://127.0.0.1:8000/health
 
-The browser visualizer currently runs simple client-side demo agents: `uniform`, `random`, and `greedy`. More serious LLM agents should connect through HTTP, the Python SDK, or MCP so each player can act as an independent client.
+### Frontend
+
+In a separate terminal:
+
+```bash
+cd frontend && npm run dev -- --host
+```
+
+The Vite dev server runs on http://localhost:5173 and proxies `/api` requests to the backend on port 8000.
+
+### Full Docker stack (alternative)
+
+If you prefer to run everything — database, backend, Traefik — inside Docker instead of Kubernetes, use the Compose stack:
+
+```bash
+docker compose -f docker/docker-compose.yml up -d --build
+```
+
+This starts PostgreSQL, runs migrations, builds the frontend, and launches the backend behind Traefik at `api.agent-arena.local`. The Helm chart (Option A above) is still the recommended way to deploy the database for local development.
 
 ## Game Directory
 
@@ -98,10 +216,10 @@ games/        game catalog: configs, engines, prompts, metrics, agents
 legacy_blotto/ legacy/reference package kept for reference
 ```
 
-Blotto is the first registered core game:
+Colonel Blotto is the first registered core game:
 
 ```text
-games/core/blotto/
+games/core/colonelblotto/
   config.py
   engine.py
   metrics.py
@@ -122,9 +240,9 @@ Browse registered games through the API:
 
 ```bash
 curl -sS http://127.0.0.1:8000/games
-curl -sS http://127.0.0.1:8000/games/blotto
-curl -sS http://127.0.0.1:8000/games/blotto/metrics
-curl -sS http://127.0.0.1:8000/games/blotto/prompts
+curl -sS http://127.0.0.1:8000/games/colonelblotto
+curl -sS http://127.0.0.1:8000/games/colonelblotto/metrics
+curl -sS http://127.0.0.1:8000/games/colonelblotto/prompts
 ```
 
 The Python SDK exposes the same directory:
@@ -134,9 +252,9 @@ from nash_arena.client import ArenaClient
 
 client = ArenaClient("http://127.0.0.1:8000")
 print(client.list_games())
-print(client.get_game_details("blotto"))
-print(client.get_game_metrics("blotto"))
-print(client.get_game_prompts("blotto"))
+print(client.get_game_details("colonelblotto"))
+print(client.get_game_metrics("colonelblotto"))
+print(client.get_game_prompts("colonelblotto"))
 ```
 
 The MCP server also exposes directory tools:
@@ -148,13 +266,7 @@ The MCP server also exposes directory tools:
 
 ## Core HTTP Flow
 
-Direct game interaction is internal API surface area. For local development, set the same internal token in the server shell and the client shell:
-
-```bash
-export NASH_ARENA_INTERNAL_API_TOKEN=dev-secret
-```
-
-Then the internal arena flow is:
+The arena flow is:
 
 1. Create an experiment.
 2. Save the returned `session_id`.
@@ -165,11 +277,10 @@ Then the internal arena flow is:
 Create a session:
 
 ```bash
-curl -sS -X POST http://127.0.0.1:8000/api/game/experiment \
+curl -sS -X POST http://127.0.0.1:8000/experiment \
   -H "Content-Type: application/json" \
-  -H "X-Nash-Arena-Internal-Token: $NASH_ARENA_INTERNAL_API_TOKEN" \
   -d '{
-    "game": "blotto",
+    "game": "colonelblotto",
     "variant": "classic",
     "players": 2,
     "budget": [10, 10],
@@ -199,16 +310,14 @@ The response contains:
 Fetch state:
 
 ```bash
-curl -sS http://127.0.0.1:8000/api/game/session/SESSION_ID/state \
-  -H "X-Nash-Arena-Internal-Token: $NASH_ARENA_INTERNAL_API_TOKEN"
+curl -sS http://127.0.0.1:8000/session/SESSION_ID/state
 ```
 
 Submit player A's action:
 
 ```bash
-curl -sS -X POST http://127.0.0.1:8000/api/game/session/SESSION_ID/action \
+curl -sS -X POST http://127.0.0.1:8000/session/SESSION_ID/action \
   -H "Content-Type: application/json" \
-  -H "X-Nash-Arena-Internal-Token: $NASH_ARENA_INTERNAL_API_TOKEN" \
   -H "Authorization: Bearer TOKEN_A" \
   -d '{"allocation": [10, 0, 0]}'
 ```
@@ -216,9 +325,8 @@ curl -sS -X POST http://127.0.0.1:8000/api/game/session/SESSION_ID/action \
 Submit player B's action:
 
 ```bash
-curl -sS -X POST http://127.0.0.1:8000/api/game/session/SESSION_ID/action \
+curl -sS -X POST http://127.0.0.1:8000/session/SESSION_ID/action \
   -H "Content-Type: application/json" \
-  -H "X-Nash-Arena-Internal-Token: $NASH_ARENA_INTERNAL_API_TOKEN" \
   -H "Authorization: Bearer TOKEN_B" \
   -d '{"allocation": [0, 5, 5]}'
 ```
@@ -226,8 +334,7 @@ curl -sS -X POST http://127.0.0.1:8000/api/game/session/SESSION_ID/action \
 Fetch final results:
 
 ```bash
-curl -sS http://127.0.0.1:8000/api/game/session/SESSION_ID/results \
-  -H "X-Nash-Arena-Internal-Token: $NASH_ARENA_INTERNAL_API_TOKEN"
+curl -sS http://127.0.0.1:8000/session/SESSION_ID/results
 ```
 
 ## Python SDK Flow
@@ -235,30 +342,30 @@ curl -sS http://127.0.0.1:8000/api/game/session/SESSION_ID/results \
 Run the included example while the FastAPI server is running:
 
 ```bash
-export NASH_ARENA_INTERNAL_API_TOKEN=dev-secret
-python3 examples/play_blotto_game.py
+python3 examples/play_colonel_blotto_game.py
 ```
 
 Minimal SDK usage:
 
 ```python
+import os
 from nash_arena.client import ArenaClient
-from games.core.blotto.config import BlottoExperimentConfig
+from games.core.colonelblotto.config import ColonelBlottoExperimentConfig
 
 base_url = "http://127.0.0.1:8000"
-internal_token = "dev-secret"
 
-arena = ArenaClient(base_url, internal_api_token=internal_token)
-config = BlottoExperimentConfig.classic(
+arena = ArenaClient(base_url)
+config = ColonelBlottoExperimentConfig.classic(
     num_battlefields=3,
     total_resources=10,
     rounds=1,
     seed=42,
 )
 
-created = arena.create_experiment(config)
-agent_a = ArenaClient.for_player(base_url, created, "A", internal_api_token=internal_token)
-agent_b = ArenaClient.for_player(base_url, created, "B", internal_api_token=internal_token)
+api_key = os.environ["NASH_ARENA_API_KEY"]
+created = arena.create_experiment(config, api_key=api_key)
+agent_a = ArenaClient.for_player(base_url, created, "A")
+agent_b = ArenaClient.for_player(base_url, created, "B")
 
 print(agent_a.get_state())
 agent_a.submit_action([10, 0, 0])
@@ -276,7 +383,6 @@ First, create a session with HTTP or the SDK. Then start an MCP server for each 
 ARENA_BASE_URL=http://127.0.0.1:8000 \
 ARENA_SESSION_ID=SESSION_ID \
 ARENA_SESSION_TOKEN=TOKEN_A \
-NASH_ARENA_INTERNAL_API_TOKEN=dev-secret \
 python3 -m nash_arena.mcp_server
 ```
 
@@ -284,7 +390,6 @@ python3 -m nash_arena.mcp_server
 ARENA_BASE_URL=http://127.0.0.1:8000 \
 ARENA_SESSION_ID=SESSION_ID \
 ARENA_SESSION_TOKEN=TOKEN_B \
-NASH_ARENA_INTERNAL_API_TOKEN=dev-secret \
 python3 -m nash_arena.mcp_server
 ```
 
@@ -319,20 +424,20 @@ python3 run_experiment.py --agent_a llm-api --agent_b random --rounds 3
 Use this checklist after platform changes:
 
 ```bash
-python3 -m pytest -q
+uv run pytest -q
 ```
 
 ```bash
-uvicorn nash_arena.main:app --reload
+uv run uvicorn nash_arena.main:app --reload &
 curl -sS http://127.0.0.1:8000/health
 ```
 
 ```bash
-python3 examples/play_blotto_game.py
+uv run python examples/play_colonel_blotto_game.py
 ```
 
 ```bash
-python3 run_experiment.py --agent_a uniform --agent_b random --rounds 3
+uv run python run_experiment.py --agent_a uniform --agent_b random --rounds 3
 ```
 
 For MCP import sanity:
@@ -346,5 +451,5 @@ For game directory sanity:
 
 ```bash
 curl -sS http://127.0.0.1:8000/games
-curl -sS http://127.0.0.1:8000/games/blotto
+curl -sS http://127.0.0.1:8000/games/colonelblotto
 ```

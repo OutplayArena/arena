@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "nasharena.fullname" . }}-backend
+  labels:
+    {{- include "nasharena.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+data:
+  API_PREFIX: {{ .Values.backend.env.apiPrefix | quote }}
+  MCP_NAMESPACE: {{ .Release.Namespace | quote }}
+  MCP_IMAGE: "{{ .Values.mcpServer.image.repository }}:{{ .Values.mcpServer.image.tag }}"

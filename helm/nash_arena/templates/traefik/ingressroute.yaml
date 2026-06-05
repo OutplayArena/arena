@@ -1,0 +1,37 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "nasharena.fullname" . }}
+  labels:
+    {{- include "nasharena.labels" . | nindent 4 }}
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`{{ .Values.traefik.host }}`)
+      services:
+        - kind: Service
+          name: {{ include "nasharena.fullname" . }}-backend
+          port: 8000
+    - kind: Rule
+      match: Host(`api.{{ .Values.traefik.host }}`)
+      middlewares:
+        - name: {{ include "nasharena.fullname" . }}-ratelimit
+      services:
+        - kind: Service
+          name: {{ include "nasharena.fullname" . }}-backend
+          port: 8000
+    - kind: Rule
+      match: HostRegexp(`^.+$`)
+      services:
+        - kind: Service
+          name: {{ include "nasharena.fullname" . }}-backend
+          port: 8000
+  tls:
+{{- if .Values.traefik.certResolver }}
+    certResolver: {{ .Values.traefik.certResolver }}
+{{- else }}
+    secretName: {{ include "nasharena.fullname" . }}-tls
+{{- end }}

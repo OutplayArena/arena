@@ -1,18 +1,18 @@
 import pytest
 
-from games.core.blotto.engine import BlottoGame
-from games.core.blotto.config import BattlefieldConfig, BlottoExperimentConfig
+from games.core.colonelblotto.engine import ColonelBlottoGame
+from games.core.colonelblotto.config import BattlefieldConfig, ColonelBlottoExperimentConfig
 
 
 def test_classic_config_has_platform_shape():
-    config = BlottoExperimentConfig.classic(
+    config = ColonelBlottoExperimentConfig.classic(
         num_battlefields=3,
         total_resources=9,
         rounds=4,
         seed=42,
     )
 
-    assert config.game == "blotto"
+    assert config.game == "colonelblotto"
     assert config.variant == "classic"
     assert config.players == 2
     assert config.budget == [9, 9]
@@ -26,14 +26,14 @@ def test_classic_config_has_platform_shape():
 
 
 def test_config_serializes_to_stable_dict():
-    config = BlottoExperimentConfig.classic(
+    config = ColonelBlottoExperimentConfig.classic(
         num_battlefields=2,
         total_resources=10,
         rounds=3,
     )
 
     assert config.to_dict() == {
-        "game": "blotto",
+        "game": "colonelblotto",
         "variant": "classic",
         "players": 2,
         "budget": [10, 10],
@@ -47,25 +47,25 @@ def test_config_serializes_to_stable_dict():
 
 
 def test_config_hash_is_stable_for_equivalent_configs():
-    config_a = BlottoExperimentConfig.classic(seed=7)
-    config_b = BlottoExperimentConfig.classic(seed=7)
+    config_a = ColonelBlottoExperimentConfig.classic(seed=7)
+    config_b = ColonelBlottoExperimentConfig.classic(seed=7)
 
     assert config_a.config_hash() == config_b.config_hash()
     assert config_a.config_hash().startswith("sha256:")
 
 
 def test_config_hash_changes_when_reproducible_inputs_change():
-    config_a = BlottoExperimentConfig.classic(rounds=10, seed=7)
-    config_b = BlottoExperimentConfig.classic(rounds=11, seed=7)
-    config_c = BlottoExperimentConfig.classic(rounds=10, seed=8)
+    config_a = ColonelBlottoExperimentConfig.classic(rounds=10, seed=7)
+    config_b = ColonelBlottoExperimentConfig.classic(rounds=11, seed=7)
+    config_c = ColonelBlottoExperimentConfig.classic(rounds=10, seed=8)
 
     assert config_a.config_hash() != config_b.config_hash()
     assert config_a.config_hash() != config_c.config_hash()
 
 
 def test_config_hash_preserves_battlefield_order():
-    config_a = BlottoExperimentConfig(
-        game="blotto",
+    config_a = ColonelBlottoExperimentConfig(
+        game="colonelblotto",
         variant="classic",
         players=2,
         budget=[10, 10],
@@ -75,8 +75,8 @@ def test_config_hash_preserves_battlefield_order():
         ],
         rounds=3,
     )
-    config_b = BlottoExperimentConfig(
-        game="blotto",
+    config_b = ColonelBlottoExperimentConfig(
+        game="colonelblotto",
         variant="classic",
         players=2,
         budget=[10, 10],
@@ -106,7 +106,7 @@ def test_config_hash_preserves_battlefield_order():
 )
 def test_config_validation_rejects_invalid_experiment_fields(kwargs, message):
     params = {
-        "game": "blotto",
+        "game": "colonelblotto",
         "variant": "classic",
         "players": 2,
         "budget": [10, 10],
@@ -117,7 +117,7 @@ def test_config_validation_rejects_invalid_experiment_fields(kwargs, message):
     params.update(kwargs)
 
     with pytest.raises(ValueError, match=message):
-        BlottoExperimentConfig(**params)
+        ColonelBlottoExperimentConfig(**params)
 
 
 @pytest.mark.parametrize(
@@ -135,8 +135,8 @@ def test_battlefield_validation_rejects_invalid_fields(field, message):
 
 def test_config_validation_rejects_duplicate_battlefield_ids():
     with pytest.raises(ValueError, match="unique"):
-        BlottoExperimentConfig(
-            game="blotto",
+        ColonelBlottoExperimentConfig(
+            game="colonelblotto",
             variant="classic",
             players=2,
             budget=[10, 10],
@@ -149,12 +149,12 @@ def test_config_validation_rejects_duplicate_battlefield_ids():
 
 
 def test_blotto_game_from_config_uses_battlefields_and_budget():
-    config = BlottoExperimentConfig.classic(
+    config = ColonelBlottoExperimentConfig.classic(
         num_battlefields=4,
         total_resources=12,
     )
 
-    game = BlottoGame.from_config(config)
+    game = ColonelBlottoGame.from_config(config)
 
     assert game.num_battlefields == 4
     assert game.total_resources == 12
