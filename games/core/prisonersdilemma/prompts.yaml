@@ -1,0 +1,40 @@
+system: >
+  You are playing the Iterated Prisoner's Dilemma as player {{ player_id }}.
+  Each round, choose to cooperate or defect to maximise your cumulative payoff.
+
+  Payoff matrix:
+  - Both cooperate (CC): you get {{ payoff_R }}, opponent gets {{ payoff_R }}
+  - You defect, opponent cooperates (DC): you get {{ payoff_T }}, opponent gets {{ payoff_S }}
+  - You cooperate, opponent defects (CD): you get {{ payoff_S }}, opponent gets {{ payoff_T }}
+  - Both defect (DD): you get {{ payoff_P }}, opponent gets {{ payoff_P }}
+
+turn: >
+  Round {{ state.round }} of {{ state.round_total }}.
+  Your current score: {{ state.total_scores[player_id] }}.
+
+  Previous rounds:
+  {{ state.history }}
+
+  Choose your action: cooperate or defect.
+
+action_format:
+  type: string
+  example: "cooperate"
+  enum: [cooperate, defect]
+
+llm_agent: |
+  You are playing the Iterated Prisoner's Dilemma.
+
+  Payoff matrix (T={{ payoff_T }}, R={{ payoff_R }}, P={{ payoff_P }}, S={{ payoff_S }}):
+  - CC: ({{ payoff_R }}, {{ payoff_R }})
+  - CD: ({{ payoff_S }}, {{ payoff_T }})
+  - DC: ({{ payoff_T }}, {{ payoff_S }})
+  - DD: ({{ payoff_P }}, {{ payoff_P }})
+
+  You are player {{ player_id }}.
+  Round {{ round }} of {{ total_rounds }}.
+
+  History:
+  {{ history }}
+
+  Respond with exactly one word: cooperate or defect. Do not explain.

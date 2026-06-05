@@ -1,0 +1,36 @@
+system: >
+  You are playing Rock-Paper-Scissors as player {{ player_id }}.
+  Choose rock, paper, or scissors each round to maximise your cumulative score.
+  Rock beats scissors, scissors beats paper, paper beats rock.
+  Win = +1, tie = 0, loss = -1.
+
+turn: >
+  Round {{ state.round }} of {{ state.round_total }}.
+  Your current score: {{ state.total_scores[player_id] }}.
+
+  Previous rounds:
+  {{ state.history }}
+
+  Respond with exactly one word: rock, paper, or scissors.
+
+action_format:
+  type: string
+  example: "rock"
+  enum: [rock, paper, scissors]
+
+llm_agent: |
+  You are playing Rock-Paper-Scissors.
+
+  Rules:
+  - Rock beats scissors
+  - Scissors beats paper
+  - Paper beats rock
+  - Win = +1, tie = 0, loss = -1
+
+  You are player {{ player_id }}.
+  Round {{ round }} of {{ total_rounds }}.
+
+  History:
+  {{ history }}
+
+  Respond with exactly one word (rock, paper, or scissors). Do not explain.

@@ -14,11 +14,20 @@ def test_registry_catalog_root_points_to_top_level_games_directory():
 
 def test_registry_lists_blotto():
     games = GameRegistry().list_games()
+    slugs = [g["slug"] for g in games]
 
-    assert [game["name"] for game in games] == ["Colonel Blotto"]
-    assert games[0]["slug"] == "colonelblotto"
-    assert games[0]["players"] == {"min": 2, "max": 2}
-    assert "resource-allocation" in games[0]["tags"]
+    assert "colonelblotto" in slugs
+    blotto = next(g for g in games if g["slug"] == "colonelblotto")
+    assert blotto["players"] == {"min": 2, "max": 2}
+    assert "resource-allocation" in blotto["tags"]
+
+
+def test_registry_lists_rps_and_prisonersdilemma():
+    games = GameRegistry().list_games()
+    slugs = [g["slug"] for g in games]
+
+    assert "rock_paper_scissors" in slugs, f"rock_paper_scissors not in {slugs}"
+    assert "prisonersdilemma" in slugs, f"prisonersdilemma not in {slugs}"
 
 
 def test_registry_loads_blotto_details_metrics_and_prompts():
@@ -71,10 +80,14 @@ def test_registry_builds_blotto_config_and_game_from_catalog():
 
 
 def test_arena_package_does_not_own_blotto_specific_modules():
+    # Game-specific modules must live under games/, not in nash_arena directly
     assert importlib.util.find_spec("nash_arena.config") is None
     assert importlib.util.find_spec("nash_arena.engine") is None
-    assert importlib.util.find_spec("nash_arena.metrics") is None
     assert importlib.util.find_spec("nash_arena.agent") is None
+    # nash_arena.metrics is intentionally present — it's the game-agnostic
+    # metrics infrastructure. Blotto-specific logic lives in games/core/colonelblotto/metrics.py
+    assert importlib.util.find_spec("nash_arena.metrics") is not None
+    assert importlib.util.find_spec("nash_arena.metrics.blotto") is None
 
 
 def test_registry_rejects_unknown_game():

@@ -69,12 +69,12 @@ export function getState(sessionId: string): Promise<GameState> {
 
 export function submitAction(
   sessionId: string,
-  allocation: number[],
+  action: unknown,
   token: string,
 ): Promise<GameState> {
   return request<GameState>(`/api/session/${sessionId}/action`, {
     method: "POST",
-    body: JSON.stringify({ allocation }),
+    body: JSON.stringify({ allocation: action }),
     headers: { Authorization: `Bearer ${token}` },
   });
 }

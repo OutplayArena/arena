@@ -22,12 +22,13 @@ export interface ExperimentConfig {
   game: string;
   variant: string;
   players: number;
-  budget: number[];
-  battlefields: Battlefield[];
+  budget?: number[];
+  battlefields?: Battlefield[];
   rounds: number;
-  seed: null;
+  seed?: number | null;
   agents?: Record<string, string>;
   interactive?: boolean;
+  [key: string]: unknown;
 }
 
 export interface CreateExperimentResponse {
@@ -41,17 +42,21 @@ export interface GameState {
   round: number;
   round_total: number;
   awaiting: PlayerSide[];
-  budgets: Record<PlayerSide, number>;
-  battlefields: Battlefield[];
+  budgets?: Record<PlayerSide, number>;
+  battlefields?: Battlefield[];
+  total_scores?: Record<PlayerSide, number>;
   history: GameStateRound[];
 }
 
 export interface GameStateRound {
   round: number;
-  allocations: Record<PlayerSide, number[]>;
-  scores: Record<PlayerSide, number>;
-  total_scores: Record<PlayerSide, number>;
-  winner: PlayerSide | "Tie";
+  allocations?: Record<PlayerSide, number[]>;
+  actions?: Record<PlayerSide, unknown>;
+  scores?: Record<PlayerSide, number>;
+  payoffs?: Record<PlayerSide, number>;
+  total_scores?: Record<PlayerSide, number>;
+  winner?: PlayerSide | "Tie";
+  outcome?: string;
 }
 
 export interface GameResult {
@@ -88,6 +93,7 @@ export interface MatchRound {
   total_score_a: number;
   total_score_b: number;
   winner: PlayerSide | "Tie";
+  raw?: Record<string, unknown>;
 }
 
 export interface RunConfig {

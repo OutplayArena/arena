@@ -1,0 +1,30 @@
+metrics:
+  - name: total_payoff
+    when: terminal
+    type: object
+    description: "Cumulative payoff for each player."
+
+  - name: average_payoff
+    when: terminal
+    type: object
+    description: "Average payoff per round for each player."
+
+  - name: cooperation_rate
+    when: terminal
+    type: object
+    description: "Fraction of rounds each player chose to cooperate."
+
+  - name: mutual_cooperation_rate
+    when: terminal
+    type: number
+    description: "Fraction of rounds where both players cooperated (CC)."
+
+  - name: mutual_defection_rate
+    when: terminal
+    type: number
+    description: "Fraction of rounds where both players defected (DD)."
+
+  - name: outcome_counts
+    when: terminal
+    type: object
+    description: "Raw count of each outcome type: CC, CD, DC, DD."

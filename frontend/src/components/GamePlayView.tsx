@@ -75,13 +75,14 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
         round: (r.round as number) || 0,
         agent_a: pg.agentAName,
         agent_b: pg.agentBName,
-        action_a: ((r.allocations as Record<string, number[]>)?.A) || [],
-        action_b: ((r.allocations as Record<string, number[]>)?.B) || [],
+        action_a: ((r.allocations as Record<string, number[]> | undefined)?.A) || [],
+        action_b: ((r.allocations as Record<string, number[]> | undefined)?.B) || [],
         score_a: ((r.scores as Record<string, number>)?.A) || 0,
         score_b: ((r.scores as Record<string, number>)?.B) || 0,
         total_score_a: ((r.total_scores as Record<string, number>)?.A) || 0,
         total_score_b: ((r.total_scores as Record<string, number>)?.B) || 0,
         winner: (r.winner as string || "Tie") as "A" | "B" | "Tie",
+        raw: r,
       })),
       metrics: {},
     });
@@ -100,7 +101,7 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
             const isRemote = player === "A" ? pg.agentAId === "remote" : pg.agentBId === "remote";
             if (isRemote) continue;
             const agent = player === "A" ? pg.agentAId : pg.agentBId;
-            const action = chooseAction(agent, player, gameState);
+            const action = chooseAction(agent, player, gameState, pg.gameSlug);
             const updated = await submitAction(pg.sessionId, action, tokens[player]);
             gameState = updated;
           }

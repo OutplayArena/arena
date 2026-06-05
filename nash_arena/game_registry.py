@@ -73,6 +73,33 @@ class GameRegistry:
         module = self._game_module(config.game)
         return module.game_from_config(config)
 
+    def metrics_extension(self, game_type: str):
+        """
+        Load the GameMetricsExtension for a game, or None if not defined.
+
+        Imports the game's metrics.py submodule and returns the first class
+        that inherits from GameMetricsExtension.
+        """
+        from nash_arena.metrics.extension import GameMetricsExtension
+        try:
+            game_dir = self._game_dir(game_type)
+        except GameRegistryError:
+            return None
+        namespace = game_dir.parent.name
+        try:
+            module = importlib.import_module(f"games.{namespace}.{game_type}.metrics")
+        except ImportError:
+            return None
+        for name in dir(module):
+            obj = getattr(module, name)
+            if (
+                isinstance(obj, type)
+                and issubclass(obj, GameMetricsExtension)
+                and obj is not GameMetricsExtension
+            ):
+                return obj()
+        return None
+
     def _iter_game_metadata(self):
         for namespace in ("core", "community"):
             namespace_dir = self.catalog_root / namespace

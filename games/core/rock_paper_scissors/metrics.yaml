@@ -1,0 +1,25 @@
+metrics:
+  - name: total_payoff
+    when: terminal
+    type: object
+    description: "Cumulative score for each player (win=+1, tie=0, loss=-1)."
+
+  - name: average_payoff
+    when: terminal
+    type: object
+    description: "Average score per round for each player."
+
+  - name: round_win_counts
+    when: terminal
+    type: object
+    description: "Number of rounds won by A, B, or tied."
+
+  - name: round_win_rate
+    when: terminal
+    type: object
+    description: "Fraction of rounds won by A, B, or tied."
+
+  - name: move_frequencies
+    when: terminal
+    type: object
+    description: "Empirical frequency of each move (rock/paper/scissors) per player."

@@ -41,7 +41,7 @@ GAME_REGISTRY = GameRegistry()
 
 
 class ActionRequest(BaseModel):
-    allocation: list[int] = []
+    allocation: Any = None
     forfeit: bool = False
 
 
