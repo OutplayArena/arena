@@ -5,8 +5,10 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from nash_arena.experiment_config import ExperimentRuntimeConfig
 from nash_arena.game_engine import GameEngine
 from nash_arena.game_registry import GameRegistry
+from nash_arena.integrations.wandb_logger import WandbGameLogger, encrypt_api_key
 from nash_arena.metrics.contracts import Match, Move
 from nash_arena.models.session import SessionModel
 from nash_arena.auth.session_key import derive_session_key, validate_session_key
@@ -31,7 +33,6 @@ def _round_metrics(obj: Any, decimals: int = 4) -> Any:
         return [_round_metrics(v, decimals) for v in obj]
     return obj
 
-
 @dataclass
 class GameSession:
     session_id: str
@@ -43,11 +44,26 @@ class GameSession:
     status: str = "ready"
     error_message: str | None = None
     locked: bool = False
+    runtime_config: ExperimentRuntimeConfig | None = None
+    wandb_logger: WandbGameLogger | None = None
+    wandb_finished: bool = False
 
     @classmethod
-    def create(cls, config, game=None, locked: bool = False) -> "GameSession":
+    def create(cls, config, game=None, locked: bool = False, runtime_config=None) -> "GameSession":
         if game is None:
             game = GameRegistry().game_from_config(config)
+        if runtime_config is None:
+            runtime_config = ExperimentRuntimeConfig()
+        # Start optional W&B logging before exposing player tokens.
+        if runtime_config.wandb:
+            encrypted_key = encrypt_api_key(runtime_config.wandb.api_key)
+            wandb_logger = WandbGameLogger(
+                wandb_config=runtime_config.wandb,
+                game_config=config,
+                encrypted_api_key=encrypted_key,
+            ).start()
+        else:
+            wandb_logger = None
         session_id = str(uuid.uuid4())
         player_tokens = {
             player: derive_session_key(session_id, player)
@@ -63,6 +79,8 @@ class GameSession:
             player_tokens=player_tokens,
             status="ready",
             locked=locked,
+            runtime_config=runtime_config,
+            wandb_logger=wandb_logger,
         )
 
     @classmethod
@@ -122,8 +140,14 @@ class GameSession:
         )
 
     def submit_action(self, player, allocation):
+        before_history_len = len(self.state.history)
         self.state = self.game.apply_action(self.state, player, allocation)
         self._update_status_from_state()
+        after_history_len = len(self.state.history)
+        if after_history_len > before_history_len:
+            self._log_latest_round_to_wandb()
+            if self.game.is_terminal(self.state):
+                self._log_terminal_to_wandb()
 
     def _update_status_from_state(self):
         state_dict = _serialize_state(self.state)
@@ -220,3 +244,56 @@ class GameSession:
             self._update_status_from_state()
         else:
             self.submit_action(player, allocation)
+
+    def _log_latest_round_to_wandb(self):
+        if self.wandb_logger is None:
+            return
+        if not self.state.history:
+            return
+
+        latest = self.state.history[-1]
+        step = latest["round"]
+
+        payload = {
+            "round": latest["round"],
+            "scores/A": latest["scores"]["A"],
+            "scores/B": latest["scores"]["B"],
+            "total_scores/A": latest["total_scores"]["A"],
+            "total_scores/B": latest["total_scores"]["B"],
+            "winner": latest["winner"],
+        }
+
+        allocations = latest.get("allocations", {})
+        for player, allocation in allocations.items():
+            total = sum(allocation)
+            concentration = 0 if total == 0 else max(allocation) / total
+            payload[f"allocation_concentration/{player}"] = concentration
+
+        self.wandb_logger.log_round(payload, step=step)
+
+    def _log_terminal_to_wandb(self):
+        if self.wandb_logger is None or self.wandb_finished:
+            return
+
+        results = self.results()
+        metrics = results.get("metrics", {})
+        total_scores = results.get("total_scores", {})
+
+        payload = {
+            "final/winner": results.get("winner"),
+        }
+
+        for player, score in total_scores.items():
+            payload[f"final/total_scores/{player}"] = score
+
+        average_payoff = metrics.get("average_payoff", {})
+        for player, value in average_payoff.items():
+            payload[f"metrics/average_payoff/{player}"] = value
+
+        round_win_rate = metrics.get("round_win_rate", {})
+        for player, value in round_win_rate.items():
+            payload[f"metrics/round_win_rate/{player}"] = value
+
+        self.wandb_logger.log_terminal(payload)
+        self.wandb_logger.finish()
+        self.wandb_finished = True

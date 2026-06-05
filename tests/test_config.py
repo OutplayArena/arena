@@ -2,6 +2,7 @@ import pytest
 
 from games.core.colonelblotto.engine import ColonelBlottoGame
 from games.core.colonelblotto.config import BattlefieldConfig, ColonelBlottoExperimentConfig
+from nash_arena.game_registry import GameRegistry
 
 
 def test_classic_config_has_platform_shape():
@@ -88,6 +89,30 @@ def test_config_hash_preserves_battlefield_order():
     )
 
     assert config_a.config_hash() != config_b.config_hash()
+
+
+def test_runtime_wandb_config_does_not_change_game_config_hash():
+    registry = GameRegistry()
+    payload = {
+        "game": "colonelblotto",
+        "variant": "classic",
+        "players": 2,
+        "budget": [10, 10],
+        "battlefields": [{"id": "A", "value": 1.0}],
+        "rounds": 1,
+        "seed": 42,
+    }
+    payload_with_wandb = {
+        **payload,
+        "wandb": {
+            "api_key": "wandb-secret",
+            "project": "arena-runs",
+        },
+    }
+
+    assert registry.config_from_request(payload).config_hash() == registry.config_from_request(
+        payload_with_wandb
+    ).config_hash()
 
 
 @pytest.mark.parametrize(

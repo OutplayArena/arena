@@ -26,6 +26,8 @@ dependencies = [
     "python-jose[cryptography]>=3.3",
     "python-dotenv>=1.0",
     "itsdangerous>=2.0",
+    "cryptography>=42.0.0",
+    "wandb>=0.17.0",
 ]
 
 [project.optional-dependencies]

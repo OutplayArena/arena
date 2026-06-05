@@ -17,6 +17,7 @@ from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from nash_arena.db import get_db
+from nash_arena.experiment_config import split_runtime_config
 from nash_arena.game_registry import GameRegistry, GameRegistryError
 from nash_arena.metrics import get_global_registry, MatchEvaluator
 from nash_arena.session import GameSession
@@ -56,7 +57,8 @@ class UserResponse(BaseModel):
 
 
 def config_from_request(request: dict[str, Any]):
-    return GAME_REGISTRY.config_from_request(request)
+    game_payload, _ = split_runtime_config(request)
+    return GAME_REGISTRY.config_from_request(game_payload)
 
 
 async def get_session(session_id: str, db: AsyncSession) -> GameSession:
