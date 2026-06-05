@@ -148,23 +148,25 @@ export function DashboardPage() {
             </svg>
           </button>
           {dropdownOpen && (
-            <div className="absolute left-0 top-full mt-1.5 w-72 rounded-card border border-line/40 bg-surface shadow-elevation-4 z-50 py-1.5">
+            <div className="absolute left-0 top-full mt-1.5 w-[48rem] max-w-[calc(100vw-3rem)] rounded-card border border-line/40 bg-surface shadow-elevation-4 z-50 p-3">
               {gamesMeta.length === 0 ? (
                 <p className="px-4 py-3 text-xs text-muted">No games registered.</p>
               ) : (
-                gamesMeta.map((game) => (
-                  <button
-                    key={game.slug}
-                    type="button"
-                    onClick={() => handleNewGame(game.slug)}
-                    className="w-full text-left px-4 py-2.5 text-sm text-ink hover:bg-surface-container transition-colors"
-                  >
-                    <span className="font-semibold">{game.name}</span>
-                    {game.description && (
-                      <span className="block text-xs text-muted mt-0.5 leading-snug line-clamp-2">{game.description}</span>
-                    )}
-                  </button>
-                ))
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {gamesMeta.map((game) => (
+                    <button
+                      key={game.slug}
+                      type="button"
+                      onClick={() => handleNewGame(game.slug)}
+                      className="text-left p-3 rounded-lg hover:bg-surface-container transition-colors border border-line/20 hover:border-line/40"
+                    >
+                      <span className="font-semibold text-sm text-ink">{game.name}</span>
+                      {game.description && (
+                        <span className="block text-[11px] text-muted mt-1 leading-snug line-clamp-2">{game.description}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
           )}

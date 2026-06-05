@@ -6,6 +6,8 @@ from dataclasses import dataclass
 
 from nash_arena.game_components.game_config import GameConfig
 
+from games.core.prisonersdilemma.scenarios import ALL_SCENARIOS, get_scenario
+
 VALID_VARIANTS = frozenset({"classic", "noisy"})
 
 
@@ -21,6 +23,8 @@ class PDExperimentConfig(GameConfig):
     payoff_S: float = 0.0
     noise: float = 0.0
     seed: int | None = None
+    scenario: str = "prison"
+    system_prompt: str = ""
 
     def __post_init__(self):
         if self.game != "prisonersdilemma":
@@ -37,9 +41,19 @@ class PDExperimentConfig(GameConfig):
             raise ValueError("payoffs must satisfy 2R > T + S")
         if not (0.0 <= self.noise <= 0.5):
             raise ValueError("noise must be in [0.0, 0.5]")
+        if self.scenario not in ALL_SCENARIOS:
+            raise ValueError(
+                f"unknown scenario {self.scenario!r}. "
+                f"Valid: {', '.join(ALL_SCENARIOS)}"
+            )
+        if not isinstance(self.system_prompt, str):
+            raise ValueError("system_prompt must be a string")
 
     def player_ids(self) -> list[str]:
         return ["A", "B"]
+
+    def get_scenario(self):
+        return get_scenario(self.scenario)
 
     def to_dict(self) -> dict:
         return {
@@ -53,6 +67,8 @@ class PDExperimentConfig(GameConfig):
             "payoff_S": self.payoff_S,
             "noise": self.noise,
             "seed": self.seed,
+            "scenario": self.scenario,
+            "system_prompt": self.system_prompt,
         }
 
     def config_hash(self) -> str:
@@ -72,4 +88,6 @@ def config_from_dict(data: dict) -> PDExperimentConfig:
         payoff_S=float(data.get("payoff_S", 0.0)),
         noise=float(data.get("noise", 0.0)),
         seed=data.get("seed"),
+        scenario=data.get("scenario", "prison"),
+        system_prompt=data.get("system_prompt") or "",
     )

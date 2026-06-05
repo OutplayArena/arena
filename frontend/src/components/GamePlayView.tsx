@@ -71,19 +71,24 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
       total_score_a: ((gs.total_scores as Record<string, number>)?.A) || 0,
       total_score_b: ((gs.total_scores as Record<string, number>)?.B) || 0,
       match_winner: undefined as PlayerSide | "Tie" | undefined,
-      history: ((gs.history as Array<Record<string, unknown>>) || []).map((r) => ({
-        round: (r.round as number) || 0,
-        agent_a: pg.agentAName,
-        agent_b: pg.agentBName,
-        action_a: ((r.allocations as Record<string, number[]> | undefined)?.A) || [],
-        action_b: ((r.allocations as Record<string, number[]> | undefined)?.B) || [],
-        score_a: ((r.scores as Record<string, number>)?.A) || 0,
-        score_b: ((r.scores as Record<string, number>)?.B) || 0,
-        total_score_a: ((r.total_scores as Record<string, number>)?.A) || 0,
-        total_score_b: ((r.total_scores as Record<string, number>)?.B) || 0,
-        winner: (r.winner as string || "Tie") as "A" | "B" | "Tie",
-        raw: r,
-      })),
+      history: ((gs.history as Array<Record<string, unknown>>) || []).map((r) => {
+        const moves = (r.allocations || r.actions || {}) as Record<string, unknown>;
+        const scores = (r.payoffs || r.scores || {}) as Record<string, number>;
+        const totals = (r.total_scores || {}) as Record<string, number>;
+        return {
+          round: (r.round as number) || 0,
+          agent_a: pg.agentAName,
+          agent_b: pg.agentBName,
+          action_a: moves.A,
+          action_b: moves.B,
+          score_a: scores.A ?? 0,
+          score_b: scores.B ?? 0,
+          total_score_a: totals.A ?? 0,
+          total_score_b: totals.B ?? 0,
+          winner: (r.winner as string || "Tie") as "A" | "B" | "Tie",
+          raw: r,
+        };
+      }),
       metrics: {},
     });
 
@@ -251,7 +256,7 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
       <TabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
       <div className="flex-1 flex flex-col min-h-0">
         {activeTab === "config" && (
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto overflow-x-visible">
             {customUIMod.config ? (
               <customUIMod.config
                 gameSlug={game.slug || game.name}
@@ -291,12 +296,14 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
                 hasMatch={hasMatch}
                 canvasCollapsed={canvasCollapsed}
                 onExpandCanvas={() => setCanvasCollapsed(false)}
+                gameSlug={game.slug}
               />
             ) : (
               <AutoHistoryView
                 hasMatch={hasMatch}
                 canvasCollapsed={canvasCollapsed}
                 onExpandCanvas={() => setCanvasCollapsed(false)}
+                gameSlug={game.slug}
               />
             )}
           </div>

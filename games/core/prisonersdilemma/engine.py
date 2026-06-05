@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from nash_arena.game_engine import GameEngine
 from games.core.prisonersdilemma.metrics import PDMetrics
+from games.core.prisonersdilemma.scenarios import get_scenario, ScenarioId
 
 VALID_ACTIONS = frozenset({"cooperate", "defect"})
 _OUTCOMES: dict[tuple[str, str], str] = {
@@ -36,6 +37,8 @@ class PDGame(GameEngine):
         S: float = 0.0,
         noise: float = 0.0,
         seed: int | None = None,
+        scenario: ScenarioId = "prison",
+        system_prompt: str = "",
     ):
         self.num_rounds = num_rounds
         self.T = T
@@ -45,6 +48,8 @@ class PDGame(GameEngine):
         self.noise = noise
         self._rng = random.Random(seed)
         self.metrics_engine = PDMetrics()
+        self.scenario = get_scenario(scenario)
+        self._system_prompt = system_prompt
 
     @classmethod
     def from_config(cls, config) -> "PDGame":
@@ -56,6 +61,8 @@ class PDGame(GameEngine):
             S=config.payoff_S,
             noise=config.noise,
             seed=config.seed,
+            scenario=config.scenario,
+            system_prompt=config.system_prompt,
         )
 
     def initial_state(self) -> PDState:
@@ -171,6 +178,7 @@ class PDGame(GameEngine):
         session_id: str,
         config_hash: str,
     ) -> dict:
+        scenario_obj = self.scenario
         return {
             "session_id":   session_id,
             "config_hash":  config_hash,
@@ -180,6 +188,14 @@ class PDGame(GameEngine):
             "awaiting":     list(state.awaiting),
             "total_scores": dict(state.total_scores),
             "history":      list(state.history),
+            "scenario": {
+                "id":               scenario_obj.id,
+                "name":             scenario_obj.name,
+                "description":      scenario_obj.description,
+                "cooperate_label":  scenario_obj.cooperate_label,
+                "defect_label":     scenario_obj.defect_label,
+            },
+            "system_prompt": self._system_prompt,
         }
 
     def forfeit_round(self, state: PDState, player: str) -> PDState:

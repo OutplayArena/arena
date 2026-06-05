@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from nash_arena.game_engine import GameEngine
 from nash_arena.game_registry import GameRegistry
+from nash_arena.metrics.contracts import Match, Move
 from nash_arena.models.session import SessionModel
 from nash_arena.auth.session_key import derive_session_key, validate_session_key
 
@@ -19,6 +20,16 @@ def _serialize_state(state: Any) -> dict:
     if hasattr(state, "to_dict"):
         return state.to_dict()
     return state
+
+
+def _round_metrics(obj: Any, decimals: int = 4) -> Any:
+    if isinstance(obj, float):
+        return round(obj, decimals)
+    if isinstance(obj, dict):
+        return {k: _round_metrics(v, decimals) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_round_metrics(v, decimals) for v in obj]
+    return obj
 
 
 @dataclass
@@ -126,11 +137,54 @@ class GameSession:
         self.status = "failed"
         self.error_message = error
 
-    def results(self):
-        return self.game.compute_results(
+    def results(self, evaluator=None):
+        result = self.game.compute_results(
             state=self.state,
             session_id=self.session_id,
             config_hash=self.config_hash,
+        )
+        result["metrics"] = _round_metrics(result.get("metrics", {}))
+        if evaluator is not None:
+            match = self.to_match()
+            registry = GameRegistry()
+            game_type = match.game_type
+            extension = registry.metrics_extension(game_type)
+            declared = registry.get_metric_names(game_type)
+            config_dict = self.config.to_dict() if hasattr(self.config, "to_dict") else {}
+            rich = evaluator.evaluate(match, extension=extension, game_config=config_dict, declared_metrics=declared)
+            result["rich_metrics"] = _round_metrics(rich)
+        return result
+
+    def to_match(self) -> Match:
+        state_dict = _serialize_state(self.state)
+        history = state_dict.get("history", [])
+        config_dict = self.config.to_dict() if hasattr(self.config, "to_dict") else {}
+        game_type = config_dict.get("game", "unknown")
+        player_ids = list(self.config.player_ids()) if hasattr(self.config, "player_ids") else ["A", "B"]
+
+        moves = []
+        for entry in history:
+            round_num = entry.get("round", 0)
+            actions = entry.get("allocations") or entry.get("actions", {})
+            scores = entry.get("payoffs") or entry.get("scores", {})
+
+            for player in player_ids:
+                action = actions.get(player)
+                payoff = float(scores.get(player, 0))
+                if action is not None:
+                    moves.append(Move(
+                        agent_id=player,
+                        round_number=round_num,
+                        action=action,
+                        payoff=payoff,
+                    ))
+
+        return Match(
+            match_id=self.session_id,
+            game_type=game_type,
+            agent_ids=player_ids,
+            moves=moves,
+            config=config_dict,
         )
 
     def creation_response(self):

@@ -1,8 +1,6 @@
-import { useState } from "react";
 import { useApp } from "@frontend/hooks/useApp";
 import type { AnimatedScores } from "@frontend/hooks/useCanvasRenderer";
 import type { Match, MatchRound } from "@frontend/types";
-import { PlaybackPanel } from "@frontend/components/PlaybackPanel";
 
 interface LiveViewProps {
   onScores?: (scores: AnimatedScores) => void;
@@ -33,29 +31,7 @@ function agentInitial(name: string): string {
 }
 
 function LeaderLine({ match, round }: { match: Match; round: MatchRound | null }) {
-  if (match.match_winner) {
-    if (match.match_winner === "Tie") {
-      return (
-        <span className="text-[11px] font-extrabold text-gold tracking-wide">
-          Match drawn
-        </span>
-      );
-    }
-    const w = match.match_winner;
-    const name = w === "A" ? match.agent_a : match.agent_b;
-    const colorClass = w === "A" ? "text-agent-a" : "text-agent-b";
-    return (
-      <span className="flex items-center gap-1 text-[11px] font-extrabold tracking-wide">
-        <span className={`inline-flex w-4 h-4 rounded-full items-center justify-center border ${w === "A" ? "bg-agent-a/12 border-agent-a/40" : "bg-agent-b/12 border-agent-b/40"}`}>
-          <span className={`text-[8px] font-black ${colorClass}`}>
-            {agentInitial(name)}
-          </span>
-        </span>
-        <span className={colorClass}>{name}</span>
-        <span className="text-ink">wins</span>
-      </span>
-    );
-  }
+  if (match.match_winner) return null;
 
   const scoreA = round ? round.total_score_a : 0;
   const scoreB = round ? round.total_score_b : 0;
@@ -92,7 +68,6 @@ export default function LiveView(_props: LiveViewProps) {
   const { state } = useApp();
   const hasMatch = Boolean(state.activeMatch);
   const isGameRunning = Boolean(state.pendingGame);
-  const [showPlayback, setShowPlayback] = useState(false);
 
   const match = state.activeMatch;
   const round = match?.history[state.activeRoundIndex] ?? null;
@@ -103,6 +78,7 @@ export default function LiveView(_props: LiveViewProps) {
   const totalScoreA = round ? round.total_score_a : 0;
   const totalScoreB = round ? round.total_score_b : 0;
   const roundProgress = totalRounds > 0 ? Math.round((currentRound / totalRounds) * 100) : 0;
+  const matchComplete = match?.match_winner !== undefined;
 
   if (!hasMatch) {
     return (
@@ -172,7 +148,7 @@ export default function LiveView(_props: LiveViewProps) {
         </div>
 
         {/* Center — round counter + leader */}
-        <div className="flex flex-col items-center gap-1 mx-auto min-w-[150px]">
+        <div className="flex flex-col items-center gap-0.5 mx-auto min-w-[150px]">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-extrabold text-muted uppercase tracking-wider pt-px">Round</span>
             <span className="tabular-nums text-sm font-black text-accent tracking-tight">{currentRound}</span>
@@ -185,6 +161,17 @@ export default function LiveView(_props: LiveViewProps) {
             />
           </div>
           <LeaderLine match={match} round={round} />
+          {matchComplete && (
+            <span style={{ fontSize: "12px", color: "var(--color-muted)", lineHeight: 1.2 }}>
+              Outcome:{" "}
+              <span style={{ fontWeight: 700 }}>
+                {match.match_winner === "Tie"
+                  ? "Draw"
+                  : `${match.match_winner === "A" ? match.agent_a : match.agent_b} wins`
+                }
+              </span>
+            </span>
+          )}
         </div>
 
         {/* Agent B */}
@@ -202,32 +189,7 @@ export default function LiveView(_props: LiveViewProps) {
             </span>
           </div>
         </div>
-
-        {/* Toggle */}
-        <div className="flex items-center shrink-0">
-          <button
-            type="button"
-            onClick={() => setShowPlayback(p => !p)}
-            title={showPlayback ? "Hide round controls" : "Show round controls"}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-muted hover:text-ink hover:bg-surface-container/80 cursor-pointer transition-all duration-200 shrink-0 ml-1"
-          >
-            <svg
-              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-              className={`transition-transform duration-200 ${showPlayback ? "" : "rotate-180"}`}
-            >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </button>
-        </div>
       </div>
-
-      {/* Playback controls — toggleable */}
-      {showPlayback && (
-        <div className="shrink-0 border-b border-line/40 bg-surface/80 backdrop-blur-sm">
-          <PlaybackPanel />
-        </div>
-      )}
 
       {/* Battlefield grid */}
       <div className="flex-1 overflow-y-auto p-4">

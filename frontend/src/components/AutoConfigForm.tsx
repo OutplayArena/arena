@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { createExperiment, getGameAgents } from "../api";
+import { createExperiment, getGameAgents, getGameScenarios } from "../api";
 import { copyToClipboard } from "./utils";
 import { randomAgentName } from "./names";
 import { useApp } from "../hooks/useApp";
-import type { GameAgent } from "../types";
+import type { GameAgent, ScenarioInfo } from "../types";
 
 const inputClass =
   "w-full min-h-[40px] text-ink bg-surface-container border rounded-input px-[14px] shadow-none transition-[border-color,background,box-shadow] duration-150 outline-none hover:border-accent/40 focus:border-accent focus:bg-surface focus:shadow-[0_0_0_3px_var(--color-accent-soft)] border-line/40";
@@ -23,10 +23,13 @@ interface SchemaProp {
   maximum?: number;
   default?: unknown;
   enum?: string[];
+  enumLabels?: Record<string, string>;
   items?: SchemaProp;
   properties?: Record<string, SchemaProp>;
   minItems?: number;
   maxItems?: number;
+  description?: string;
+  visibleWhen?: Record<string, unknown>;
 }
 
 function isConst(prop: SchemaProp): boolean {
@@ -55,10 +58,13 @@ function resolveProps(schema: Record<string, unknown>): Record<string, SchemaPro
         maximum: prop.maximum as number | undefined,
         default: prop.default,
         enum: prop.enum as string[] | undefined,
+        enumLabels: prop.enum_labels as Record<string, string> | undefined,
         items: prop.items as SchemaProp | undefined,
         properties: (prop.properties as Record<string, SchemaProp>) ?? undefined,
         minItems: prop.minItems as number | undefined,
         maxItems: prop.maxItems as number | undefined,
+        description: prop.description as string | undefined,
+        visibleWhen: prop.visible_when as Record<string, unknown> | undefined,
       };
     }
   }
@@ -66,7 +72,12 @@ function resolveProps(schema: Record<string, unknown>): Record<string, SchemaPro
 }
 
 function getDefault(prop: SchemaProp): unknown {
-  if (prop.default !== undefined) return prop.default;
+  if (prop.default !== undefined) {
+    if (prop.default === null && (prop.type === "integer" || prop.type === "number")) {
+      return undefined;
+    }
+    return prop.default;
+  }
   if (prop.type === "integer" || prop.type === "number") return prop.minimum ?? 0;
   if (prop.type === "boolean") return false;
   if (prop.type === "array") {
@@ -92,6 +103,7 @@ function getInputType(prop: SchemaProp): string {
 export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initialValues }: AutoConfigFormProps) {
   const { state, startGame } = useApp();
   const [agents, setAgents] = useState<GameAgent[]>([]);
+  const [scenarios, setScenarios] = useState<ScenarioInfo[]>([]);
   const initRanRef = useRef(false);
   const [agentAName, setAgentAName] = useState(() => randomAgentName());
   const [agentBName, setAgentBName] = useState(() => randomAgentName());
@@ -105,13 +117,24 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
   const btnRef = useRef<HTMLButtonElement>(null);
 
   const props = resolveProps(schema);
-  const editableProps = Object.entries(props).filter(([, p]) => !isConst(p));
+  const allEditable = Object.entries(props).filter(([, p]) => !isConst(p));
+  const editableProps = allEditable.filter(([, prop]) => {
+    if (!prop.visibleWhen) return true;
+    for (const [depKey, depVal] of Object.entries(prop.visibleWhen)) {
+      if (formValues[depKey] !== depVal) return false;
+    }
+    return true;
+  });
 
   const isReplay = locked || sessionStatus === "completed";
   const formDisabled = locked || running || state.pendingGame !== null || sessionStatus === "completed" || sessionStatus === "running";
 
   useEffect(() => {
     getGameAgents(gameSlug).then((data) => setAgents(data.agents)).catch(() => {});
+  }, [gameSlug]);
+
+  useEffect(() => {
+    getGameScenarios(gameSlug).then((data) => setScenarios(data.scenarios)).catch(() => {});
   }, [gameSlug]);
 
   useEffect(() => {
@@ -143,12 +166,32 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
     }
   }, [isReplay, initialValues]);
 
+  useEffect(() => {
+    if (scenarios.length === 0) return;
+    const scenarioId = formValues["scenario"];
+    if (scenarioId && !formValues["system_prompt"]) {
+      const matched = scenarios.find((s) => s.id === scenarioId);
+      if (matched) {
+        setFormValues((prev) => ({ ...prev, system_prompt: matched.system_prompt }));
+      }
+    }
+  }, [scenarios, formValues["scenario"], formValues["system_prompt"]]);
+
   const handleValueChange = (key: string, value: unknown, fieldType?: string) => {
     let v = value;
     if (fieldType === "number" && typeof value === "string") {
       v = value === "" ? null : Number(value);
     }
-    setFormValues((prev) => ({ ...prev, [key]: v }));
+    setFormValues((prev) => {
+      const next = { ...prev, [key]: v };
+      if (key === "scenario" && scenarios.length > 0) {
+        const matched = scenarios.find((s) => s.id === value);
+        if (matched) {
+          next["system_prompt"] = matched.system_prompt;
+        }
+      }
+      return next;
+    });
   };
 
   const buildConfig = () => {
@@ -228,7 +271,9 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
           disabled={disabled}
         >
           {prop.enum.map((opt) => (
-            <option key={opt} value={opt}>{opt}</option>
+            <option key={opt} value={opt}>
+              {prop.enumLabels?.[opt] ?? opt}
+            </option>
           ))}
         </select>
       );
@@ -372,10 +417,23 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
       );
     }
 
+    if (key === "system_prompt") {
+      return (
+        <textarea
+          value={value as string ?? ""}
+          onChange={(e) => handleValueChange(key, e.target.value)}
+          className={`${inputClass} min-h-[120px]`}
+          disabled={disabled}
+          placeholder={prop.description ?? undefined}
+          rows={5}
+        />
+      );
+    }
+
     return (
       <input
         type={inputType}
-        value={value as string ?? String(getDefault(prop))}
+        value={inputType === "number" ? (value != null ? String(value) : "") : (value as string ?? String(getDefault(prop)))}
         onChange={(e) => handleValueChange(key, inputType === "number" ? Number(e.target.value) : e.target.value)}
         min={prop.minimum}
         max={prop.maximum}
@@ -449,7 +507,24 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
 
         {editableProps.map(([key, prop]) => (
           <label key={key} className="grid gap-1 text-muted text-[11px] font-extrabold">
-            <span>{key}</span>
+            <span className="flex items-center gap-1">
+              {key}
+              {prop.description && (
+                <span className="relative group cursor-help">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted/50">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                  <span
+                    className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-ink text-white text-[11px] font-medium rounded whitespace-normal text-left leading-relaxed opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50"
+                    style={{ width: "max-content", maxWidth: "520px" }}
+                  >
+                    {prop.description}
+                  </span>
+                </span>
+              )}
+            </span>
             {renderField(key, prop)}
           </label>
         ))}

@@ -71,7 +71,6 @@ function greedyAllocation(player: PlayerSide, state: GameState): number[] {
 
 const RPS_MOVES = ["rock", "paper", "scissors"] as const;
 type RPSMove = typeof RPS_MOVES[number];
-const RPS_BEATS: Record<RPSMove, RPSMove> = { rock: "scissors", paper: "rock", scissors: "paper" };
 const RPS_BEATEN_BY: Record<RPSMove, RPSMove> = { scissors: "rock", rock: "paper", paper: "scissors" };
 
 function randomRPSMove(): RPSMove {

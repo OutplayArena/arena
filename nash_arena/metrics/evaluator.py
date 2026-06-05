@@ -18,6 +18,11 @@ _COOPERATIVE_GAME_TYPES = frozenset({
     "blotto_coalition",
 })
 
+_ZERO_SUM_GAME_TYPES = frozenset({
+    "rock_paper_scissors",
+    "colonellotto",
+})
+
 
 class MatchEvaluator:
     """
@@ -26,7 +31,23 @@ class MatchEvaluator:
 
     Pass a GameMetricsExtension to inject game-specific metrics. Use
     GameRegistry.metrics_extension(game_type) to load one automatically.
+
+    Pass declared_metrics (from GameRegistry.get_metric_names()) to filter
+    the output to only metrics declared in the game's metrics.yaml.
     """
+
+    @staticmethod
+    def _filter_dict(data: dict, declared: set[str]) -> dict:
+        """Keep only keys in *declared*, preserving nested dicts when relevant."""
+        result = {}
+        for key, value in data.items():
+            if key in declared:
+                result[key] = value
+            elif isinstance(value, dict):
+                filtered = MatchEvaluator._filter_dict(value, declared)
+                if filtered:
+                    result[key] = filtered
+        return result
 
     def __init__(self, registry: AgentRegistry):
         self.registry = registry
@@ -36,11 +57,13 @@ class MatchEvaluator:
         match: Match,
         extension: GameMetricsExtension | None = None,
         game_config: dict | None = None,
+        declared_metrics: set[str] | None = None,
     ) -> dict:
         config  = game_config or match.config
         agents  = match.agent_ids
         n       = len(agents)
         payoffs_per_agent = {a: match.payoffs(a) for a in agents}
+        is_zero_sum = match.game_type in _ZERO_SUM_GAME_TYPES
 
         report: dict = {
             "match_id":   match.match_id,
@@ -56,16 +79,18 @@ class MatchEvaluator:
         pareto_opt    = config.get("pareto_optimal_welfare")
         sw            = EquilibriumMetrics.social_welfare(payoffs_per_agent)
 
-        report["joint"] = {
-            "social_welfare":          sw,
-            "pareto_efficiency":       EquilibriumMetrics.pareto_efficiency(joint_payoffs, pareto_opt),
-            "social_efficiency_ratio": EquilibriumMetrics.social_efficiency_ratio(sw, pareto_opt or sw),
-            "gini_coefficient":        CooperativeMetrics.gini_coefficient(
-                                           [float(np.mean(v)) for v in payoffs_per_agent.values() if v]
-                                       ),
-        }
+        report["joint"] = {}
+        if not is_zero_sum:
+            report["joint"]["social_welfare"] = sw
+            report["joint"]["pareto_efficiency"] = EquilibriumMetrics.pareto_efficiency(joint_payoffs, pareto_opt)
+            report["joint"]["social_efficiency_ratio"] = EquilibriumMetrics.social_efficiency_ratio(sw, pareto_opt or sw)
+        report["joint"]["gini_coefficient"] = CooperativeMetrics.gini_coefficient(
+            [float(np.mean(v)) for v in payoffs_per_agent.values() if v]
+        )
 
         best_responses = config.get("best_responses")
+        if best_responses is None and is_zero_sum:
+            best_responses = {a: 0.0 for a in agents}
         nash_gaps = EquilibriumMetrics.nash_gap_nplayer(payoffs_per_agent, best_responses)
         report["joint"]["nash_gap_per_agent"] = nash_gaps
         report["joint"]["total_nash_gap"]     = EquilibriumMetrics.total_nash_gap(nash_gaps)
@@ -96,16 +121,16 @@ class MatchEvaluator:
             payoffs   = match.payoffs(agent_id)
             opponents = [a for a in agents if a != agent_id]
 
+            best_response_payoff = config.get("best_response_payoff")
+            if best_response_payoff is None:
+                best_response_payoff = 0.0 if is_zero_sum else (max(payoffs) if payoffs else 0.0)
+
             ar: dict = {
                 "total_payoff":           match.total_payoff(agent_id),
                 "avg_payoff":             float(np.mean(payoffs)) if payoffs else 0.0,
                 "strategy_entropy":       BehavioralMetrics.strategy_entropy(actions),
                 "behavioral_consistency": BehavioralMetrics.behavioral_consistency(actions),
-                "cumulative_regret":      BehavioralMetrics.regret(
-                                              payoffs,
-                                              config.get("best_response_payoff",
-                                                         max(payoffs) if payoffs else 0.0)
-                                          ),
+                "cumulative_regret":      BehavioralMetrics.regret(payoffs, best_response_payoff),
                 "adaptive_regret_series": BehavioralMetrics.adaptive_regret(payoffs),
                 "nash_gap":               nash_gaps.get(agent_id, 0.0),
             }
@@ -138,6 +163,13 @@ class MatchEvaluator:
         # ── Registry update ───────────────────────────────────────────────────
         avg_results = {a: float(np.mean(v)) for a, v in payoffs_per_agent.items() if v}
         self.registry.record_match(match, avg_results)
+
+        # ── Filter to declared metrics ─────────────────────────────────────────
+        if declared_metrics is not None:
+            report["joint"] = self._filter_dict(report["joint"], declared_metrics)
+            report["pairwise"] = self._filter_dict(report["pairwise"], declared_metrics)
+            for agent_id in agents:
+                report["agents"][agent_id] = self._filter_dict(report["agents"][agent_id], declared_metrics)
 
         return report
 

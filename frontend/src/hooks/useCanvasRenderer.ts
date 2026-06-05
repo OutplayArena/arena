@@ -26,7 +26,8 @@ function clampActionValue(
   index: number,
 ): number {
   if (!round) return 0;
-  const val = round[key]?.[index];
+  const arr = round[key] as unknown[] | undefined;
+  const val = arr?.[index];
   return typeof val === "number" ? val : 0;
 }
 
@@ -411,7 +412,7 @@ function drawBattlefield(
       ctx.fillStyle = gold;
       ctx.font = `900 ${compact ? 16 : 20}px ui-monospace, sans-serif`;
       ctx.textAlign = "center";
-      ctx.fillText("Tie", centerX, winY);
+      ctx.fillText("Draw", centerX, winY);
     } else {
       drawFlag(ctx, centerX, winY + 12, winner === "A" ? agentAColor : agentBColor, winner === "A" ? 1 : -1, 1);
     }
@@ -574,7 +575,7 @@ export function useCanvasRenderer(
       width,
       height,
       match?.num_battlefields ??
-        (round ? round.action_a.length : 5),
+        (round ? (round.action_a as number[]).length : 5),
     );
     const bfCount = bfs.length;
     for (let i = 0; i < bfCount; i += 1) {

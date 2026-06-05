@@ -25,6 +25,11 @@ action_format:
 llm_agent: |
   You are playing the Iterated Prisoner's Dilemma.
 
+  {% if scenario %}
+  Scenario: {{ scenario.name }}. {{ scenario.description }}
+  Each round, choose to {{ scenario.cooperate_verb }} or {{ scenario.defect_verb }}.
+  {% endif %}
+
   Payoff matrix (T={{ payoff_T }}, R={{ payoff_R }}, P={{ payoff_P }}, S={{ payoff_S }}):
   - CC: ({{ payoff_R }}, {{ payoff_R }})
   - CD: ({{ payoff_S }}, {{ payoff_T }})
@@ -37,4 +42,9 @@ llm_agent: |
   History:
   {{ history }}
 
-  Respond with exactly one word: cooperate or defect. Do not explain.
+  {% if scenario %}
+  Respond with exactly one word: {{ scenario.cooperate_verb }} or {{ scenario.defect_verb }}.
+  {% else %}
+  Respond with exactly one word: cooperate or defect.
+  {% endif %}
+  Do not explain.

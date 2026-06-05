@@ -8,6 +8,15 @@ from nash_arena.metrics.cooperative import CooperativeMetrics
 from nash_arena.metrics.equilibrium import EquilibriumMetrics
 from nash_arena.metrics.ranking import RankingMetrics
 
+_global_registry: AgentRegistry | None = None
+
+
+def get_global_registry() -> AgentRegistry:
+    global _global_registry
+    if _global_registry is None:
+        _global_registry = AgentRegistry()
+    return _global_registry
+
 __all__ = [
     "Match",
     "Move",
@@ -18,4 +27,5 @@ __all__ = [
     "CooperativeMetrics",
     "EquilibriumMetrics",
     "RankingMetrics",
+    "get_global_registry",
 ]

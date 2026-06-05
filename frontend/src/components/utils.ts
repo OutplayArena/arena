@@ -37,17 +37,23 @@ export function resultToMatch(result: GameResult, config: RunConfig): Match {
     total_score_b: result.total_scores.B,
     match_winner: result.winner,
     metrics: result.metrics,
-    history: result.history.map((round) => ({
-      round: round.round,
-      agent_a: config.agent_a,
-      agent_b: config.agent_b,
-      action_a: round.allocations.A,
-      action_b: round.allocations.B,
-      score_a: round.scores.A,
-      score_b: round.scores.B,
-      total_score_a: round.total_scores.A,
-      total_score_b: round.total_scores.B,
-      winner: round.winner,
-    })),
+    rich_metrics: result.rich_metrics,
+    history: result.history.map((round) => {
+      const moves = (round.allocations || round.actions || {}) as Record<string, unknown>;
+      const scores = (round.payoffs || round.scores || {}) as Record<string, number>;
+      const totals = (round.total_scores || {}) as Record<string, number>;
+      return {
+        round: round.round,
+        agent_a: config.agent_a,
+        agent_b: config.agent_b,
+        action_a: moves.A,
+        action_b: moves.B,
+        score_a: scores.A ?? 0,
+        score_b: scores.B ?? 0,
+        total_score_a: totals.A ?? 0,
+        total_score_b: totals.B ?? 0,
+        winner: round.winner ?? "Tie",
+      };
+    }),
   };
 }

@@ -1,3 +1,6 @@
+import pytest
+from nash_arena.metrics.contracts import Match, Move
+
 from games.core.rock_paper_scissors.metrics import (
     RPSMetrics,
     _move_frequencies,
@@ -103,3 +106,67 @@ def test_compute_win_rate_sums_to_one():
     result = RPSMetrics().compute(history, scores)
     total = sum(result["round_win_rate"].values())
     assert abs(total - 1.0) < 1e-9
+
+
+class TestRPSMetricsExtension:
+    @staticmethod
+    def _make_match(moves_a: list[str], moves_b: list[str]) -> Match:
+        rps_moves = []
+        scores = {"A": 0.0, "B": 0.0}
+        for i, (a, b) in enumerate(zip(moves_a, moves_b)):
+            if a == b:
+                pa, pb = 0.0, 0.0
+            elif {"rock": "scissors", "paper": "rock", "scissors": "paper"}[a] == b:
+                pa, pb = 1.0, -1.0
+            else:
+                pa, pb = -1.0, 1.0
+            scores["A"] += pa
+            scores["B"] += pb
+            rps_moves.append(Move(agent_id="A", round_number=i, action=a, payoff=pa))
+            rps_moves.append(Move(agent_id="B", round_number=i, action=b, payoff=pb))
+        return Match(match_id="test", game_type="rock_paper_scissors", agent_ids=["A", "B"], moves=rps_moves)
+
+    def test_compute_joint_collision_rate_all_identical(self):
+        match = self._make_match(["rock"] * 5, ["rock"] * 5)
+        joint = RPSMetrics().compute_joint(match, {})
+        assert joint["rps_collision_rate"] == pytest.approx(1.0)
+
+    def test_compute_joint_collision_rate_all_different(self):
+        match = self._make_match(["rock"] * 5, ["paper"] * 5)
+        joint = RPSMetrics().compute_joint(match, {})
+        assert joint["rps_collision_rate"] == pytest.approx(0.0)
+
+    def test_compute_joint_collision_rate_mixed(self):
+        match = self._make_match(
+            ["rock", "rock", "paper", "scissors"],
+            ["rock", "scissors", "paper", "scissors"],
+        )
+        joint = RPSMetrics().compute_joint(match, {})
+        assert joint["rps_collision_rate"] == pytest.approx(0.75)
+
+    def test_compute_agent_move_frequencies(self):
+        match = self._make_match(
+            ["rock", "rock", "paper"],
+            ["scissors", "paper", "rock"],
+        )
+        result = RPSMetrics().compute_agent(match, "A", {}, {})
+        rps = result["rps"]
+        assert rps["move_frequencies"]["rock"] == pytest.approx(2 / 3)
+        assert rps["move_frequencies"]["paper"] == pytest.approx(1 / 3)
+        assert rps["move_frequencies"]["scissors"] == pytest.approx(0.0)
+
+    def test_compute_agent_nash_distance_pure_strategy(self):
+        match = self._make_match(["rock"] * 10, ["paper"] * 10)
+        result = RPSMetrics().compute_agent(match, "A", {}, {})
+        assert result["rps"]["nash_distance"] == pytest.approx(2 / 3)
+
+    def test_compute_agent_pattern_exploitability_constant(self):
+        match = self._make_match(["rock"] * 10, ["scissors"] * 10)
+        result = RPSMetrics().compute_agent(match, "A", {}, {})
+        assert result["rps"]["pattern_exploitability"] == pytest.approx(1.0)
+
+    def test_compute_agent_rejects_invalid_actions(self):
+        moves = [Move(agent_id="A", round_number=0, action="lizard", payoff=0.0)]
+        match = Match(match_id="test", game_type="rock_paper_scissors", agent_ids=["A"], moves=moves)
+        result = RPSMetrics().compute_agent(match, "A", {}, {})
+        assert result["rps"]["move_frequencies"] == {"rock": 0.0, "paper": 0.0, "scissors": 0.0}

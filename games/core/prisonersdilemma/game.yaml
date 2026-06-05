@@ -28,6 +28,10 @@ config_schema:
   variant:
     type: string
     enum: [classic, noisy]
+    enum_labels:
+      classic: "Classic"
+      noisy: "Noisy"
+    description: "Game variant: classic (clean actions) or noisy (actions may randomly flip)"
     default: classic
   players:
     type: integer
@@ -58,11 +62,28 @@ config_schema:
     maximum: 0.5
     description: "Probability that an action is flipped (noisy variant)"
     default: 0.0
+    visible_when:
+      variant: "noisy"
   seed:
     type:
       - integer
       - "null"
     default: null
+  scenario:
+    type: string
+    enum: [prison, business, climate, arms_race, roommates]
+    enum_labels:
+      prison: "Original Prison"
+      business: "Price War"
+      climate: "Climate Treaty"
+      arms_race: "Arms Race"
+      roommates: "Messy Roommates"
+    description: "Narrative framing for LLM prompts"
+    default: prison
+  system_prompt:
+    type: string
+    description: "System prompt for LLM agents. Uses Jinja templates ({{ payoff_T }}, {{ payoff_R }}, etc.) that are rendered with the payoff values above at runtime."
+    default: ""
 example_config:
   game: prisonersdilemma
   variant: classic
@@ -74,3 +95,5 @@ example_config:
   payoff_S: 0.0
   noise: 0.0
   seed: 42
+  scenario: prison
+  system_prompt: ""
