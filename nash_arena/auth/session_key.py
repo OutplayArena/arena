@@ -40,7 +40,7 @@ def validate_session_key(key: str) -> tuple[str, str]:
         encoded += "=" * padding
     try:
         token = base64.urlsafe_b64decode(encoded).decode("utf-8")
-    except Exception:
+    except (ValueError, UnicodeDecodeError):
         raise ValueError("invalid session key")
 
     parts = token.split(":")

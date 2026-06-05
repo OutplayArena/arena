@@ -4,9 +4,12 @@ from nash_arena.client import ArenaClient
 from games.core.colonelblotto.config import ColonelBlottoExperimentConfig
 
 BASE_URL = os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000")
-API_KEY = os.environ["NASH_ARENA_API_KEY"]
+
 
 def main():
+    api_key = os.environ.get("NASH_ARENA_API_KEY")
+    if not api_key:
+        raise SystemExit("NASH_ARENA_API_KEY environment variable is required")
     arena = ArenaClient(BASE_URL)
     config = ColonelBlottoExperimentConfig.classic(
         num_battlefields=3,
@@ -15,7 +18,7 @@ def main():
         seed=42,
     )
 
-    created = arena.create_experiment(config, api_key=API_KEY)
+    created = arena.create_experiment(config, api_key=api_key)
     agent_a = ArenaClient.for_player(BASE_URL, created, "A")
     agent_b = ArenaClient.for_player(BASE_URL, created, "B")
 

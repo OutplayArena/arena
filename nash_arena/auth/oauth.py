@@ -1,6 +1,6 @@
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from authlib.integrations.starlette_client import OAuth, StarletteOAuth2App
@@ -49,7 +49,7 @@ async def _upsert_user(db: AsyncSession, provider: str, provider_user_id: str, e
         user.email = email
         user.name = name
         user.avatar_url = avatar_url
-        user.last_login_at = datetime.utcnow()  # type: ignore[unused-awaitable]
+        user.last_login_at = datetime.now(timezone.utc)
         await db.commit()
         await db.refresh(user)
     else:

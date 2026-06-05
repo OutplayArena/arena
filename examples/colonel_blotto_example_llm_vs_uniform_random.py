@@ -18,12 +18,11 @@ from games.core.colonelblotto.config import ColonelBlottoExperimentConfig
 sys.stdout.reconfigure(line_buffering=True)
 
 NASH_ARENA_BASE_URL = os.environ.get("NASH_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
-NASH_ARENA_API_KEY = os.environ["NASH_ARENA_API_KEY"]
 OPENCODE_GO_API_BASE = "https://opencode.ai/zen/go/v1"
 
 _client = OpenAI(
     base_url=OPENCODE_GO_API_BASE,
-    api_key=(os.environ.get("OPENCODE_GO_API_KEY_2") or os.environ["OPENCODE_GO_API_KEY"]).strip(),
+    api_key=(os.environ.get("OPENCODE_GO_API_KEY_2") or os.environ.get("OPENCODE_GO_API_KEY", "")).strip(),
 )
 
 LLM_MODEL = "mimo-v2.5"
@@ -127,6 +126,10 @@ def extract_tool_text(result):
 
 
 async def run_match():
+    nash_api_key = os.environ["NASH_ARENA_API_KEY"]
+    opencode_api_key = os.environ.get("OPENCODE_GO_API_KEY_2") or os.environ["OPENCODE_GO_API_KEY"]
+    _client.api_key = opencode_api_key.strip()
+
     print(f"=== {LLM_MODEL} (LLM/MCP) vs Uniform Agent ===")
     print(f"Battlefields: {NUM_BATTLEFIELDS}, Troops: {TOTAL_RESOURCES}, Rounds: {NUM_ROUNDS}")
     print()
@@ -155,7 +158,7 @@ async def run_match():
         rounds=NUM_ROUNDS,
         seed=42,
     )
-    created = arena.create_experiment(config, agents={"A": LLM_MODEL, "B": "UniformAgent"}, api_key=NASH_ARENA_API_KEY)
+    created = arena.create_experiment(config, agents={"A": LLM_MODEL, "B": "UniformAgent"}, api_key=nash_api_key)
     session_id = created["session_id"]
     key_a = created["player_tokens"]["A"]
     key_b = created["player_tokens"]["B"]

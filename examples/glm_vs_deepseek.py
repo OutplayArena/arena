@@ -14,7 +14,6 @@ from games.core.colonelblotto.config import ColonelBlottoExperimentConfig
 sys.stdout.reconfigure(line_buffering=True)
 
 NASH_ARENA_BASE_URL = os.environ.get("NASH_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
-NASH_ARENA_API_KEY = os.environ["NASH_ARENA_API_KEY"]
 OPENCODE_GO_API_BASE = "https://opencode.ai/zen/go/v1"
 
 _client = OpenAI(
@@ -117,6 +116,10 @@ async def llm_allocate(model, prompt, extra_body=None):
 
 
 async def run_match():
+    nash_api_key = os.environ["NASH_ARENA_API_KEY"]
+    opencode_api_key = os.environ["OPENCODE_GO_API_KEY"]
+    _client.api_key = opencode_api_key.strip()
+
     print(f"=== {PLAYER_A_MODEL} (A) vs {PLAYER_B_MODEL} (B) ===")
     print(f"Battlefields: {NUM_BATTLEFIELDS}, Troops: {TOTAL_RESOURCES}, Rounds: {NUM_ROUNDS}")
     print(f"GLM 5.1: no thinking mode | DeepSeek V4 Pro: thinking mode")
@@ -151,7 +154,7 @@ async def run_match():
     created = arena.create_experiment(
         config,
         agents={"A": PLAYER_A_MODEL, "B": PLAYER_B_MODEL},
-        api_key=NASH_ARENA_API_KEY,
+        api_key=nash_api_key,
     )
     session_id = created["session_id"]
     key_a = created["player_tokens"]["A"]

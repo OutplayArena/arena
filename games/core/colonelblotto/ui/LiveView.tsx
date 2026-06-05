@@ -34,9 +34,25 @@ function agentInitial(name: string): string {
 
 function LeaderLine({ match, round }: { match: Match; round: MatchRound | null }) {
   if (match.match_winner) {
+    if (match.match_winner === "Tie") {
+      return (
+        <span className="text-[11px] font-extrabold text-gold tracking-wide">
+          Match drawn
+        </span>
+      );
+    }
+    const w = match.match_winner;
+    const name = w === "A" ? match.agent_a : match.agent_b;
+    const colorClass = w === "A" ? "text-agent-a" : "text-agent-b";
     return (
-      <span className="text-[11px] font-extrabold text-gold tracking-wide">
-        {match.match_winner === "Tie" ? "Match drawn" : `${match.match_winner === "A" ? match.agent_a : match.agent_b} wins`}
+      <span className="flex items-center gap-1 text-[11px] font-extrabold tracking-wide">
+        <span className={`inline-flex w-4 h-4 rounded-full items-center justify-center border ${w === "A" ? "bg-agent-a/12 border-agent-a/40" : "bg-agent-b/12 border-agent-b/40"}`}>
+          <span className={`text-[8px] font-black ${colorClass}`}>
+            {agentInitial(name)}
+          </span>
+        </span>
+        <span className={colorClass}>{name}</span>
+        <span className="text-ink">wins</span>
       </span>
     );
   }
@@ -56,11 +72,17 @@ function LeaderLine({ match, round }: { match: Match; round: MatchRound | null }
   }
 
   const name = leader === "A" ? match.agent_a : match.agent_b;
-  const color = leader === "A" ? "text-agent-a" : "text-agent-b";
+  const colorClass = leader === "A" ? "text-agent-a" : "text-agent-b";
+  const bgClass = leader === "A" ? "bg-agent-a/12 border-agent-a/40" : "bg-agent-b/12 border-agent-b/40";
 
   return (
-    <span className="text-[10px] font-semibold">
-      <span className={color}>{name}</span>
+    <span className="flex items-center gap-1 text-[10px] font-semibold">
+      <span className={`inline-flex w-4 h-4 rounded-full items-center justify-center border ${bgClass}`}>
+        <span className={`text-[8px] font-black ${colorClass}`}>
+          {agentInitial(name)}
+        </span>
+      </span>
+      <span className={colorClass}>{name}</span>
       <span className="text-quiet"> leads by {diff}</span>
     </span>
   );
@@ -228,20 +250,26 @@ export default function LiveView(_props: LiveViewProps) {
                     Battlefield {i + 1}
                   </span>
                   {winner !== "Tie" && (
-                    <span
-                      className="text-[10px] font-extrabold px-2 py-0.5 rounded-full"
-                      style={{
-                        backgroundColor: winner === "A" ? "var(--color-agent-a)" : "var(--color-agent-b)",
-                        color: "#fff",
-                      }}
+                    <div
+                      className={`w-6 h-6 rounded-full border flex items-center justify-center shrink-0 ${
+                        winner === "A"
+                          ? "bg-agent-a/12 border-agent-a/40"
+                          : "bg-agent-b/12 border-agent-b/40"
+                      }`}
                     >
-                      {winner === "A" ? match.agent_a : match.agent_b}
-                    </span>
+                      <span
+                        className={`text-[10px] font-black ${
+                          winner === "A" ? "text-agent-a" : "text-agent-b"
+                        }`}
+                      >
+                        {agentInitial(winner === "A" ? match.agent_a : match.agent_b)}
+                      </span>
+                    </div>
                   )}
                   {winner === "Tie" && (
-                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-gold/20 text-gold">
-                      Tie
-                    </span>
+                    <div className="w-6 h-6 rounded-full bg-gold/15 border border-gold/30 flex items-center justify-center shrink-0">
+                      <span className="text-[10px] font-black text-gold">T</span>
+                    </div>
                   )}
                 </div>
 

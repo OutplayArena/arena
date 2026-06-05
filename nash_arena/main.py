@@ -15,7 +15,6 @@ from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.dialects.postgresql import JSONB
 
 from nash_arena.db import get_db
 from nash_arena.game_registry import GameRegistry, GameRegistryError
@@ -297,7 +296,6 @@ async def get_session_summary(session_id: str, db: AsyncSession = Depends(get_db
 
 
 def _agent_filter(agents_json_col, agent: str):
-    from sqlalchemy import func
     return func.coalesce(
         agents_json_col["A"].astext, ""
     ).ilike(f"%{agent}%") | func.coalesce(
