@@ -1,0 +1,4 @@
+agents:
+  - id: example_agent
+    label: Example Agent
+    description: "Describe what this agent does."
