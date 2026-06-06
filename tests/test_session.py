@@ -202,18 +202,30 @@ def test_submit_action_logs_terminal_metrics_and_finishes_wandb():
     session.submit_action("A", [10, 0, 0])
     session.submit_action("B", [0, 5, 5])
 
-    assert fake_logger.terminal_logs == [
-        {
-            "final/winner": "B",
-            "final/total_scores/A": 1,
-            "final/total_scores/B": 2,
-            "metrics/average_payoff/A": 1.0,
-            "metrics/average_payoff/B": 2.0,
-            "metrics/round_win_rate/A": 0.0,
-            "metrics/round_win_rate/B": 1.0,
-            "metrics/round_win_rate/Tie": 0.0,
-        }
-    ]
+    assert len(fake_logger.terminal_logs) == 1
+    payload = fake_logger.terminal_logs[0]
+
+    assert payload["final/winner"] == "B"
+    assert payload["final/total_scores/A"] == 1
+    assert payload["final/total_scores/B"] == 2
+    assert payload["metrics/average_payoff/A"] == 1.0
+    assert payload["metrics/average_payoff/B"] == 2.0
+    assert payload["metrics/round_win_rate/A"] == 0.0
+    assert payload["metrics/round_win_rate/B"] == 1.0
+    assert payload["metrics/round_win_rate/Tie"] == 0.0
+
+    assert payload["rich/A/total_payoff"] == 1.0
+    assert payload["rich/A/strategy_entropy"] == -0.0
+    assert payload["rich/A/behavioral_consistency"] == 1.0
+    assert payload["rich/A/cumulative_regret"] == 0.0
+    assert payload["rich/A/nash_gap"] == 0.0
+    assert payload["rich/B/total_payoff"] == 2.0
+    assert payload["rich/B/strategy_entropy"] == -0.0
+    assert payload["rich/B/behavioral_consistency"] == 1.0
+    assert payload["rich/B/cumulative_regret"] == 0.0
+    assert payload["rich/B/nash_gap"] == 0.0
+    assert payload["rich/joint/gini_coefficient"] == 0.1667
+
     assert fake_logger.finished is True
     assert session.wandb_finished is True
 

@@ -12,6 +12,7 @@ from nash_arena.integrations.wandb_logger import WandbGameLogger, encrypt_api_ke
 from nash_arena.metrics.contracts import Match, Move
 from nash_arena.models.session import SessionModel
 from nash_arena.auth.session_key import derive_session_key, validate_session_key
+from nash_arena.metrics import get_global_registry, MatchEvaluator
 
 
 def _serialize_state(state: Any) -> dict:
@@ -275,11 +276,12 @@ class GameSession:
         if self.wandb_logger is None or self.wandb_finished:
             return
 
-        results = self.results()
+        evaluator = MatchEvaluator(get_global_registry())
+        results = self.results(evaluator=evaluator)
         metrics = results.get("metrics", {})
         total_scores = results.get("total_scores", {})
 
-        payload = {
+        payload: dict[str, object] = {
             "final/winner": results.get("winner"),
         }
 
@@ -293,6 +295,28 @@ class GameSession:
         round_win_rate = metrics.get("round_win_rate", {})
         for player, value in round_win_rate.items():
             payload[f"metrics/round_win_rate/{player}"] = value
+
+        rich = results.get("rich_metrics", {})
+        for agent_id, agent_data in rich.get("agents", {}).items():
+            for key, value in agent_data.items():
+                if isinstance(value, dict):
+                    for sub_key, sub_value in value.items():
+                        if isinstance(sub_value, (int, float)):
+                            payload[f"rich/{agent_id}/{key}/{sub_key}"] = sub_value
+                elif isinstance(value, (int, float)):
+                    payload[f"rich/{agent_id}/{key}"] = value
+
+        for key, value in rich.get("joint", {}).items():
+            if isinstance(value, (int, float)):
+                payload[f"rich/joint/{key}"] = value
+            elif isinstance(value, dict):
+                for sub_key, sub_value in value.items():
+                    if isinstance(sub_value, (int, float)):
+                        payload[f"rich/joint/{key}/{sub_key}"] = sub_value
+
+        for key, value in rich.get("pairwise", {}).items():
+            if isinstance(value, (int, float)):
+                payload[f"rich/pairwise/{key}"] = value
 
         self.wandb_logger.log_terminal(payload)
         self.wandb_logger.finish()
