@@ -7,7 +7,6 @@ from fastapi.testclient import TestClient
 from nash_arena.main import app, bearer_token, config_from_request
 from nash_arena.db import get_db
 from nash_arena.auth.dependencies import require_user, _ensure_local_user
-from nash_arena.models.session import SessionModel
 
 
 class FakeResult:
