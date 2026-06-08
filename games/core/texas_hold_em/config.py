@@ -18,12 +18,16 @@ class TexasHoldEmExperimentConfig(GameConfig):
     def __post_init__(self):
         if self.game != "texas_hold_em":
             raise ValueError(f"expected game='texas_hold_em', got {self.game!r}")
-        if self.variant != "classic":
+        if self.variant not in ("classic", "face_down"):
             raise ValueError(f"unknown variant: {self.variant!r}")
         if self.players != 2:
             raise ValueError("texas_hold_em supports exactly 2 players")
         if self.rounds < 1:
             raise ValueError("rounds must be >= 1")
+
+    @property
+    def is_face_up(self) -> bool:
+        return self.variant == "classic"
 
     def player_ids(self) -> list[str]:
         return ["A", "B"]

@@ -108,6 +108,7 @@ export interface Match {
   match_winner?: PlayerSide | "Tie";
   metrics: Record<string, unknown>;
   history: MatchRound[];
+  currentState?: Record<string, unknown>;
   rich_metrics?: RichMetrics;
 }
 

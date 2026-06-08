@@ -1,16 +1,4 @@
 agents:
-  - id: random
-    label: Random
-    description: "Picks randomly from fold, check, call, and raise with equal probability."
-  - id: conservative
-    label: Conservative
-    description: "Folds and checks frequently; rarely raises."
-  - id: aggressive
-    label: Aggressive
-    description: "Raises and calls aggressively; rarely folds."
-  - id: call_station
-    label: Call Station
-    description: "Calls most of the time; never folds."
   - id: remote
     label: Remote Agent (LLM/MCP)
     description: "LLM-powered agent connecting via MCP server with session key."

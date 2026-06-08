@@ -349,10 +349,18 @@ def test_state_from_dict_round_trip():
 # ── Betting flow ──────────────────────────────────────────────────────────────
 
 def test_to_call_helper():
-    assert _to_call({"A": 97.0, "B": 99.0}, "B") == 2.0
-    assert _to_call({"A": 99.0, "B": 97.0}, "A") == 2.0
-    assert _to_call({"A": 99.0, "B": 99.0}, "A") == 0.0
-    assert _to_call({"A": 99.0, "B": 99.0}, "B") == 0.0
+    hs = {"A": 99.0, "B": 99.0}
+    assert _to_call(hs, {"A": 97.0, "B": 99.0}, "B") == 2.0
+    assert _to_call(hs, {"A": 99.0, "B": 97.0}, "A") == 2.0
+    assert _to_call(hs, {"A": 99.0, "B": 99.0}, "A") == 0.0
+    assert _to_call(hs, {"A": 99.0, "B": 99.0}, "B") == 0.0
+
+
+def test_to_call_ignores_prior_winnings():
+    hs = {"A": 101.0, "B": 97.0}
+    assert _to_call(hs, {"A": 101.0, "B": 97.0}, "A") == 0.0
+    assert _to_call(hs, {"A": 101.0, "B": 97.0}, "B") == 0.0
+    assert _to_call(hs, {"A": 99.0, "B": 97.0}, "B") == 2.0
 
 
 def test_raise_then_fold():
@@ -384,3 +392,66 @@ def test_street_advance_with_community_cards():
     state = play_actions(game, state, [("B", "check"), ("A", "check")])
     assert state.street == "river"
     assert len(state.community_cards) == 5
+
+
+# ── Bug fix: _to_call with prior winnings ──────────────────────────────────────
+
+def test_multi_hand_betting_not_inflated():
+    game = make_game(rounds=3)
+    state = game.initial_state()
+    state = play_actions(game, state, [
+        ("A", "check"), ("B", "check"),
+        ("B", "check"), ("A", "check"),
+        ("B", "check"), ("A", "check"),
+        ("B", "check"), ("A", "check"),
+    ])
+    assert state.hand_number == 2
+    start = dict(state.hand_start_chips)
+    assert start["A"] > 0 and start["B"] > 0
+    state = play_actions(game, state, [("A", "raise")])
+    tc_b = _to_call(state.hand_start_chips, state.chips, "B")
+    assert tc_b == BET_SIZE
+
+
+# ── Bug fix: chip exhaustion ──────────────────────────────────────────────────
+
+def test_cannot_call_with_insufficient_chips():
+    game = make_game(rounds=10)
+    state = game.initial_state()
+    state = play_actions(game, state, [("A", "raise"), ("B", "raise")])
+    state.chips["A"] = 0.5
+    state.hand_start_chips["A"] = state.chips["A"] + 3.0
+    with pytest.raises(ValueError, match="not enough chips to call"):
+        game.apply_action(state, "A", "call")
+
+
+# ── Bug fix: ante affordability ───────────────────────────────────────────────
+
+def test_ante_at_low_chips():
+    game = make_game(rounds=2)
+    state = game.initial_state()
+    state.chips["A"] = 0.0
+    state = play_actions(game, state, [("A", "fold")])
+    assert state.hand_number == 2
+    assert state.chips["A"] == 0.0
+    assert state.chips["B"] >= STARTING_CHIPS - ANTE - ANTE
+
+
+# ── State compat ───────────────────────────────────────────────────────────────
+
+def test_state_from_dict_without_hand_start():
+    game = make_game()
+    d = {
+        "round_number": 1, "phase": "awaiting_action",
+        "awaiting": ["A"], "pending_actions": {}, "history": [],
+        "total_scores": {"A": 0.0, "B": 0.0},
+        "hand_number": 1, "street": "preflop",
+        "deck": [], "hole_cards": {"A": [], "B": []}, "community_cards": [],
+        "chips": {"A": 99.0, "B": 99.0},
+        "pot": 2.0, "current_player": "A",
+        "street_actions": [], "last_raise": 0.0,
+        "raised_this_street": [], "hand_over": False,
+        "hand_result": None,
+    }
+    restored = game.state_from_dict(d)
+    assert restored.hand_start_chips == {"A": 99.0, "B": 99.0}

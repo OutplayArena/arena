@@ -53,6 +53,7 @@ export function resultToMatch(result: GameResult, config: RunConfig): Match {
         total_score_a: totals.A ?? 0,
         total_score_b: totals.B ?? 0,
         winner: round.winner ?? "Tie",
+        raw: round as unknown as Record<string, unknown>,
       };
     }),
   };

@@ -19,11 +19,12 @@ export default function TexasHoldEmConfigForm({ gameSlug, locked, sessionStatus,
   const initRanRef = useRef(false);
   const [agentAName, setAgentAName] = useState(() => randomAgentName());
   const [agentBName, setAgentBName] = useState(() => randomAgentName());
-  const [agentAId, setAgentAId] = useState("random");
-  const [agentBId, setAgentBId] = useState("aggressive");
+  const [agentAId, setAgentAId] = useState("remote");
+  const [agentBId, setAgentBId] = useState("remote");
   const [agents, setAgents] = useState<GameAgent[]>([]);
   const roundsRef = useRef<HTMLInputElement>(null);
   const seedRef = useRef<HTMLInputElement>(null);
+  const [variant, setVariant] = useState("classic");
   const [sessionKeys, setSessionKeys] = useState<Record<string, string> | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [status, setStatus] = useState("");
@@ -63,7 +64,7 @@ export default function TexasHoldEmConfigForm({ gameSlug, locked, sessionStatus,
 
     const config = {
       game: gameSlug,
-      variant: "classic",
+      variant,
       players: 2,
       rounds: numRounds,
       seed: seedVal,
@@ -135,6 +136,14 @@ export default function TexasHoldEmConfigForm({ gameSlug, locked, sessionStatus,
             {agents.map((ag) => <option key={ag.id} value={ag.id}>{ag.label}</option>)}
           </select>
           <input type="text" value={agentBName} onChange={(e) => setAgentBName(e.target.value)} className={inputClass} disabled={formDisabled} placeholder="Agent display name" />
+        </label>
+
+        <label className="grid gap-1 text-muted text-[11px] font-extrabold">
+          <span>variant</span>
+          <select value={variant} onChange={(e) => setVariant(e.target.value)} className={inputClass} disabled={formDisabled}>
+            <option value="classic">Classic (face-up — both players see all cards)</option>
+            <option value="face_down">Face-Down (each player sees only their own cards)</option>
+          </select>
         </label>
 
         <label className="grid gap-1 text-muted text-[11px] font-extrabold">

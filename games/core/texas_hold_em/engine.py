@@ -114,9 +114,11 @@ def _community_count(street: str) -> int:
     return {"preflop": 0, "flop": 3, "turn": 4, "river": 5}[street]
 
 
-def _to_call(chips: dict, player: str) -> float:
+def _to_call(hand_start: dict, chips: dict, player: str) -> float:
     opp = "B" if player == "A" else "A"
-    return max(0.0, chips[player] - chips[opp])
+    player_committed = hand_start[player] - chips[player]
+    opp_committed = hand_start[opp] - chips[opp]
+    return max(0.0, opp_committed - player_committed)
 
 
 @dataclass
@@ -133,6 +135,7 @@ class TexasHoldEmState:
     hole_cards: dict[str, list[str]]
     community_cards: list[str]
     chips: dict[str, float]
+    hand_start_chips: dict[str, float]
     pot: float
     current_player: str
     street_actions: list[dict]
@@ -140,6 +143,7 @@ class TexasHoldEmState:
     raised_this_street: list[str]
     hand_over: bool
     hand_result: dict | None = None
+    final_hand_pot: float = 0.0
 
 
 class TexasHoldEmGame(GameEngine):
@@ -159,13 +163,14 @@ class TexasHoldEmGame(GameEngine):
 
     def initial_state(self) -> TexasHoldEmState:
         deck, hole, _ = self._deal_new_hand(1)
+        start_chips = {"A": STARTING_CHIPS, "B": STARTING_CHIPS}
         state = TexasHoldEmState(
             round_number=1, phase="awaiting_action",
             awaiting=["A"], pending_actions={}, history=[],
             total_scores={"A": 0.0, "B": 0.0},
             hand_number=1, street="preflop",
             deck=deck, hole_cards=hole, community_cards=[],
-            chips={"A": STARTING_CHIPS, "B": STARTING_CHIPS},
+            chips=dict(start_chips), hand_start_chips={},
             pot=0.0, current_player="A",
             street_actions=[], last_raise=0.0,
             raised_this_street=[], hand_over=False,
@@ -173,9 +178,14 @@ class TexasHoldEmGame(GameEngine):
         for p in ("A", "B"):
             state.chips[p] -= ANTE
         state.pot = ANTE * 2
+        state.hand_start_chips = dict(state.chips)
         return state
 
     def state_from_dict(self, d: dict) -> TexasHoldEmState:
+        if "hand_start_chips" not in d:
+            d["hand_start_chips"] = dict(d.get("chips", {"A": STARTING_CHIPS, "B": STARTING_CHIPS}))
+        if "final_hand_pot" not in d:
+            d["final_hand_pot"] = 0.0
         return TexasHoldEmState(**d)
 
     def validate_action(self, action) -> bool:
@@ -190,11 +200,13 @@ class TexasHoldEmGame(GameEngine):
             raise ValueError(f"player {player!r} is not on turn")
         if not self.validate_action(action):
             raise ValueError(f"invalid action {action!r}")
-        tc = _to_call(state.chips, player)
+        tc = _to_call(state.hand_start_chips, state.chips, player)
         if action == "check" and tc > 0:
             raise ValueError("cannot check when facing a bet")
         if action == "call" and tc == 0:
             raise ValueError("cannot call when no bet to match, try check")
+        if action == "call" and state.chips[player] < tc:
+            raise ValueError("not enough chips to call")
         if action == "raise":
             if player in state.raised_this_street:
                 raise ValueError("cannot raise twice on same street")
@@ -211,10 +223,11 @@ class TexasHoldEmGame(GameEngine):
 
     def _process_action(self, state: TexasHoldEmState, player: str, action: str) -> TexasHoldEmState:
         opp = "B" if player == "A" else "A"
-        tc = _to_call(state.chips, player)
+        tc = _to_call(state.hand_start_chips, state.chips, player)
         entry = {"player": player, "action": action, "street": state.street}
 
         if action == "fold":
+            state.final_hand_pot = state.pot
             state.chips[opp] += state.pot
             state.pot = 0
             state.street_actions.append(entry)
@@ -226,9 +239,10 @@ class TexasHoldEmGame(GameEngine):
             return self._advance_if_done(state, opp)
 
         if action == "call":
-            state.chips[player] -= tc
-            state.pot += tc
-            entry["bet"] = tc
+            actual_cost = min(tc, state.chips[player])
+            state.chips[player] -= actual_cost
+            state.pot += actual_cost
+            entry["bet"] = actual_cost
             state.street_actions.append(entry)
             return self._advance_if_done(state, opp)
 
@@ -285,6 +299,7 @@ class TexasHoldEmGame(GameEngine):
         return state
 
     def _do_showdown(self, state: TexasHoldEmState) -> TexasHoldEmState:
+        state.final_hand_pot = state.pot
         ra, ka, h5a = _best_hand(state.hole_cards["A"], state.community_cards)
         rb, kb, h5b = _best_hand(state.hole_cards["B"], state.community_cards)
         if (ra, ka) > (rb, kb):
@@ -316,6 +331,8 @@ class TexasHoldEmGame(GameEngine):
             "community_cards": list(state.community_cards),
             "result": state.hand_result,
             "chips_after": dict(state.chips),
+            "pot": state.final_hand_pot,
+            "street": state.street,
             "total_scores": dict(state.total_scores),
         })
         if state.hand_number >= self.num_rounds:
@@ -338,9 +355,13 @@ class TexasHoldEmGame(GameEngine):
         state.awaiting = ["A"]
         state.pending_actions = {}
         state.current_player = "A"
+        pot_ante = 0.0
         for p in ("A", "B"):
-            state.chips[p] -= ANTE
-        state.pot = ANTE * 2
+            actual = min(ANTE, max(0.0, state.chips[p]))
+            state.chips[p] -= actual
+            pot_ante += actual
+        state.pot = pot_ante
+        state.hand_start_chips = dict(state.chips)
         return state
 
     def is_terminal(self, state: TexasHoldEmState) -> bool:
@@ -384,6 +405,7 @@ class TexasHoldEmGame(GameEngine):
     def forfeit_round(self, state: TexasHoldEmState, player: str) -> TexasHoldEmState:
         opp = "B" if player == "A" else "A"
         state = deepcopy(state)
+        state.final_hand_pot = state.pot
         state.chips[opp] += state.pot
         state.pot = 0
         state.total_scores = {
@@ -396,6 +418,7 @@ class TexasHoldEmGame(GameEngine):
             "hole_cards": dict(state.hole_cards),
             "community_cards": list(state.community_cards),
             "result": state.hand_result, "chips_after": dict(state.chips),
+            "pot": state.final_hand_pot, "street": state.street,
             "total_scores": dict(state.total_scores),
         })
         if state.hand_number >= self.num_rounds:
@@ -418,7 +441,11 @@ class TexasHoldEmGame(GameEngine):
         state.awaiting = ["A"]
         state.pending_actions = {}
         state.current_player = "A"
+        pot_ante = 0.0
         for p in ("A", "B"):
-            state.chips[p] -= ANTE
-        state.pot = ANTE * 2
+            actual = min(ANTE, max(0.0, state.chips[p]))
+            state.chips[p] -= actual
+            pot_ante += actual
+        state.pot = pot_ante
+        state.hand_start_chips = dict(state.chips)
         return state

@@ -26,7 +26,10 @@ config_schema:
     const: texas_hold_em
   variant:
     type: string
-    const: classic
+    enum:
+      - classic
+      - face_down
+    default: classic
   players:
     type: integer
     const: 2
