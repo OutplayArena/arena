@@ -1,6 +1,6 @@
 import pytest
-from games.core.rock_paper_scissors.config import RPSExperimentConfig, config_from_dict
-from games.core.rock_paper_scissors.engine import RPSGame, RPSState
+from games.core.rock_paper_scissors.config import config_from_dict
+from games.core.rock_paper_scissors.engine import RPSGame
 
 
 def make_game(rounds: int = 3) -> RPSGame:

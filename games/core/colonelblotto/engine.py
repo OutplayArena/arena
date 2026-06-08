@@ -260,9 +260,12 @@ class ColonelBlottoGame(GameEngine):
                 score_a += .5
                 score_b += .5
                 
-        if score_a > score_b: winner = "A"
-        elif score_b > score_a: winner = "B"
-        else: winner = "Tie"
+        if score_a > score_b:
+            winner = "A"
+        elif score_b > score_a:
+            winner = "B"
+        else:
+            winner = "Tie"
         
         return {
             "action_a": action_a,
@@ -312,9 +315,12 @@ class ColonelBlottoGame(GameEngine):
                 "winner": result["winner"]
             })
         
-        if total_score_a > total_score_b: match_winner = agent_a.name
-        elif total_score_b > total_score_a: match_winner = agent_b.name
-        else: match_winner = "Tie"
+        if total_score_a > total_score_b:
+            match_winner = agent_a.name
+        elif total_score_b > total_score_a:
+            match_winner = agent_b.name
+        else:
+            match_winner = "Tie"
             
         return {
             "agent_a": agent_a.name,

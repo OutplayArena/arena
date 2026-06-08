@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { copyToClipboard, buildBattlefields, resultToMatch } from "../utils";
-import type { GameResult, RunConfig } from "../types";
+import type { GameResult, RunConfig } from "../../types";
 
 describe("buildBattlefields", () => {
   it("returns empty array for count 0", () => {

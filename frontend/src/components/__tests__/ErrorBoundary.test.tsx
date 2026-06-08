@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ErrorBoundary } from "../ErrorBoundary";
 
-function ThrowError({ message }: { message: string }) {
+function ThrowError({ message }: { message: string }): React.ReactElement {
   throw new Error(message);
 }
 
@@ -30,7 +30,7 @@ describe("ErrorBoundary", () => {
 
   it("shows generic message when error has no message", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    function ThrowEmptyError() {
+    function ThrowEmptyError(): React.ReactElement {
       throw new Error();
     }
     render(
