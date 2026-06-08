@@ -147,6 +147,60 @@ function choosePDAction(agent: string, player: PlayerSide, state: GameState): st
   }
 }
 
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function chooseTexasHoldEmAction(agent: string, player: PlayerSide, state: GameState): string {
+  const gs = state as Record<string, unknown>;
+  const chips = gs.chips as Record<string, number> | undefined;
+  const handStartChips = gs.hand_start_chips as Record<string, number> | undefined;
+  const streetActions = gs.street_actions as Array<{ player: string; action: string }> | undefined;
+
+  const opponent: PlayerSide = player === "A" ? "B" : "A";
+  const hsc = handStartChips ?? chips ?? {};
+  const playerCommitted = (hsc[player] ?? 0) - (chips?.[player] ?? 0);
+  const oppCommitted = (hsc[opponent] ?? 0) - (chips?.[opponent] ?? 0);
+  const toCall = Math.max(0, oppCommitted - playerCommitted);
+  const hasBet = toCall > 0;
+  const alreadyRaised = (streetActions ?? []).some(sa => sa.player === player && sa.action === "raise");
+  const canRaise = !alreadyRaised && (chips?.[player] ?? 0) >= 2;
+
+  const validActions: string[] = [];
+  if (!hasBet) validActions.push("check");
+  if (hasBet) validActions.push("call");
+  if (canRaise) validActions.push("raise");
+  if (validActions.length === 0) validActions.push("fold");
+
+  switch (agent) {
+    case "random": {
+      const all = [...validActions];
+      if (!all.includes("fold")) all.push("fold");
+      return pick(all);
+    }
+    case "conservative": {
+      if (!hasBet) {
+        return Math.random() < 0.15 ? (canRaise ? "raise" : "fold") : "check";
+      }
+      const r = Math.random();
+      if (r < 0.5) return "fold";
+      if (r < 0.85) return "call";
+      return canRaise ? "raise" : "fold";
+    }
+    case "aggressive": {
+      if (canRaise && Math.random() < 0.6) return "raise";
+      if (hasBet) return Math.random() < 0.8 ? "call" : "fold";
+      return "check";
+    }
+    case "call_station": {
+      if (!hasBet) return "check";
+      return Math.random() < 0.9 ? "call" : (canRaise ? "raise" : "call");
+    }
+    default:
+      return pick(validActions);
+  }
+}
+
 // ── Public dispatcher ─────────────────────────────────────────────────────────
 
 export function chooseAction(
@@ -157,6 +211,7 @@ export function chooseAction(
 ): unknown {
   if (gameSlug === "rock_paper_scissors") return chooseRPSAction(agent, player, state);
   if (gameSlug === "prisonersdilemma") return choosePDAction(agent, player, state);
+  if (gameSlug === "texas_hold_em") return chooseTexasHoldEmAction(agent, player, state);
 
   // Default: Blotto allocation
   const count = state.battlefields?.length ?? 0;
