@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { renderHook } from "@testing-library/react";
-import { AppProvider, AppContext } from "../state";
-import { AuthContext } from "../context/AuthContext";
+import { AppProvider } from "../state";
 import { useApp } from "../hooks/useApp";
 import { useAuth } from "../hooks/useAuth";
 import type { ReactNode } from "react";

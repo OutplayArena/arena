@@ -95,10 +95,7 @@ describe("request base function", () => {
 });
 
 describe("API endpoint functions", () => {
-  let mockRequest: ReturnType<typeof vi.fn>;
-
   beforeEach(() => {
-    mockRequest = vi.fn().mockResolvedValue({});
     vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
       text: () => Promise.resolve("{}"),

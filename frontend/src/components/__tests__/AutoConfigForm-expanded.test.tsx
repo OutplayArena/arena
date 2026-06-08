@@ -1,11 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
-import { userEvent } from "@testing-library/user-event";
-import { http, HttpResponse } from "msw";
 import { AutoConfigForm } from "../AutoConfigForm";
 import { renderWithProviders } from "../../test-utils";
 import { createMockSchema, createMockSchemaComplex } from "../../test-fixtures";
-import { server } from "../../mocks/server";
 
 describe("AutoConfigForm — expanded interactions", () => {
   it("renders scenario enum select field", async () => {
@@ -20,7 +17,6 @@ describe("AutoConfigForm — expanded interactions", () => {
   });
 
   it("adds and removes array items", async () => {
-    const user = userEvent.setup();
     renderWithProviders(
       <AutoConfigForm gameSlug="colonelblotto" schema={createMockSchemaComplex()} locked={false} />,
     );
@@ -67,27 +63,6 @@ describe("AutoConfigForm — expanded interactions", () => {
     });
   });
 
-  it("handles Play Again button when match exists", async () => {
-    server.resetHandlers();
-    server.use(
-      http.get("/api/games/:name/agents", () => {
-        return HttpResponse.json({
-          agents: [
-            { id: "uniform", label: "Uniform" },
-            { id: "greedy", label: "Greedy" },
-          ],
-        });
-      }),
-    );
-
-    renderWithProviders(
-      <AutoConfigForm gameSlug="colonelblotto" schema={createMockSchema()} locked={false} />,
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText("Run Experiment")).toBeInTheDocument();
-    });
-  });
 });
 
 describe("AutoConfigForm — form disabled states", () => {

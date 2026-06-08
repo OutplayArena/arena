@@ -12,7 +12,7 @@ export const handlers = [
     });
   }),
 
-  http.get(`${API}/session/:sessionId/state`, ({ params }) => {
+  http.get(`${API}/session/:sessionId/state`, () => {
     return HttpResponse.json<GameState>({
       phase: "complete",
       round: 5,

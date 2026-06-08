@@ -1,11 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { screen } from "@testing-library/react";
-import { userEvent } from "@testing-library/user-event";
 import { PlaybackPanel } from "../PlaybackPanel";
 import { renderWithProviders } from "../../test-utils";
 import { AppContext, type AppContextValue, type AppState } from "../../state";
 import { createMockMatch } from "../../test-fixtures";
-import type { MatchRound } from "../../types";
 
 function createCtx(overrides: Partial<AppState> = {}): AppContextValue {
   const match = createMockMatch();

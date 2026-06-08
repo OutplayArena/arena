@@ -9,6 +9,8 @@ import {
 import type { ReactNode } from "react";
 import type { Match, MatchRound } from "./types";
 
+/* eslint-disable react-refresh/only-export-components */
+
 export interface AppState {
   activeMatch: Match | null;
   activeRoundIndex: number;

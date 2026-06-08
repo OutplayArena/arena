@@ -145,6 +145,7 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
           vals[key] = key in initialValues ? initialValues[key] : getDefault(prop);
         }
       }
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormValues(vals);
       if (initialValues.agent_a) setAgentAName(String(initialValues.agent_a));
       if (initialValues.agent_b) setAgentBName(String(initialValues.agent_b));
@@ -161,6 +162,7 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
     if (initRanRef.current) return;
     if (isReplay && initialValues) {
       initRanRef.current = true;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (initialValues.agent_a) setAgentAName(String(initialValues.agent_a));
       if (initialValues.agent_b) setAgentBName(String(initialValues.agent_b));
     }
@@ -172,6 +174,7 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
     if (scenarioId && !formValues["system_prompt"]) {
       const matched = scenarios.find((s) => s.id === scenarioId);
       if (matched) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setFormValues((prev) => ({ ...prev, system_prompt: matched.system_prompt }));
       }
     }

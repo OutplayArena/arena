@@ -1,11 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
-
-const mockGlob = vi.fn();
-
-vi.mock("@games/**/ui/*.tsx", () => ({
-  default: {},
-  __esModule: true,
-}));
+import { describe, it, expect } from "vitest";
 
 describe("registry — parseGameSlug / parseComponentName", () => {
   function parseGameSlug(key: string): string {

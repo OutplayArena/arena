@@ -1,13 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
-import { screen, render, waitFor } from "@testing-library/react";
-import { userEvent } from "@testing-library/user-event";
+import { screen, waitFor } from "@testing-library/react";
 import { AutoHistoryView } from "../AutoHistoryView";
 import { renderWithProviders } from "../../test-utils";
 import { useApp } from "../../hooks/useApp";
 import { createMockMatch } from "../../test-fixtures";
 import { http, HttpResponse } from "msw";
 import { server } from "../../mocks/server";
-import type { Match } from "../../types";
 
 vi.mock("../../hooks/useApp", () => ({
   useApp: vi.fn(),
@@ -165,7 +163,6 @@ describe("AutoHistoryView — deep coverage", () => {
   });
 
   it("metric label button toggles tooltip", async () => {
-    const user = userEvent.setup();
     server.resetHandlers();
     server.use(
       http.get("/api/games/:name/metrics", () => {

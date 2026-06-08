@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { appReducer, initialState, type AppState } from "../state";
 import { createMockMatch } from "../test-fixtures";
-import type { MatchRound } from "../types";
 
 describe("appReducer — expanded", () => {
   it("SET_MATCH transitions isPlaying to true on new match", () => {

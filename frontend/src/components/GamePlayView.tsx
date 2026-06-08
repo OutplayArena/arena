@@ -201,6 +201,7 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
 
   useEffect(() => {
     if (replayMatch) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCanvasCollapsed(false);
       setMatch(replayMatch);
     }

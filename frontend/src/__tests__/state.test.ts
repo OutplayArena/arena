@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { appReducer, initialState } from "../state";
-import type { AppState, Action } from "../state";
+import type { AppState } from "../state";
 
 function freshState(): AppState {
   return initialState();

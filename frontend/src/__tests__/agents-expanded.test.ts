@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { balancedAllocation, randomAllocation, normalizeAllocation, chooseAction } from "../agents";
+import { describe, it, expect } from "vitest";
+import { normalizeAllocation, chooseAction } from "../agents";
 import type { GameState } from "../types";
 
 describe("agents — expanded", () => {

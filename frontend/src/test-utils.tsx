@@ -5,6 +5,8 @@ import { AppProvider } from "./state";
 import { AuthContext } from "./context/AuthContext";
 import type { AuthState } from "./context/AuthContext";
 
+/* eslint-disable react-refresh/only-export-components */
+
 function createMockAuth(overrides: Partial<AuthState> = {}): AuthState {
   return {
     user: { id: "test-user", email: "test@test.com", name: "Test User", avatar_url: null },

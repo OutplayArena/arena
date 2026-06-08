@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { screen, act } from "@testing-library/react";
-import { userEvent } from "@testing-library/user-event";
+import { act } from "@testing-library/react";
 import { PlaybackPanel } from "../PlaybackPanel";
 import { renderWithProviders } from "../../test-utils";
 import { AppContext, type AppContextValue, type AppState } from "../../state";

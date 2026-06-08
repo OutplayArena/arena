@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { screen } from "@testing-library/react";
 import { GameHeader } from "../GameHeader";
 import { renderWithProviders, createMockAuth } from "../../test-utils";
@@ -11,9 +11,7 @@ describe("GameHeader — expanded", () => {
       <GameHeader game={game} locked={false} status="completed" />,
       { auth: createMockAuth() },
     );
-    const downloadBtn = container.querySelector('button[title="Download match data as JSON"]');
-    // The download button only shows when activeMatch is set via useApp context
-    // which is not set here, so it shouldn't render
+    expect(container.querySelector('button[title="Download match data as JSON"]')).not.toBeInTheDocument();
     expect(screen.getByText("completed")).toBeInTheDocument();
   });
 

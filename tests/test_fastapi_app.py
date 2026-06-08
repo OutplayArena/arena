@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from nash_arena.main import app, bearer_token, config_from_request
 from nash_arena.db import get_db
+from nash_arena.auth.dependencies import require_user, _ensure_local_user
 from nash_arena.models.session import SessionModel
 
 
@@ -52,8 +53,14 @@ class FakeDb:
 def fake_db_fixture():
     db = FakeDb()
     app.dependency_overrides[get_db] = lambda: db
+
+    async def _bypass_auth():
+        return await _ensure_local_user(db)
+    app.dependency_overrides[require_user] = _bypass_auth
+
     yield db
     app.dependency_overrides.pop(get_db, None)
+    app.dependency_overrides.pop(require_user, None)
 
 
 def valid_payload(rounds=1):
