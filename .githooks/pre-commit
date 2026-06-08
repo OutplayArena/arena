@@ -1,0 +1,78 @@
+#!/bin/sh
+# Pre-commit: run tests/lint only for changed files
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+STAGED="$(git diff --cached --name-only --diff-filter=ACM)"
+
+if [ -z "$STAGED" ]; then
+  echo "[pre-commit] Nothing staged. Skipping."
+  exit 0
+fi
+
+# ── Frontend ────────────────────────────────────────────────────────────────
+
+FRONTEND_CHANGED=$(echo "$STAGED" | grep -c '^frontend/src/' || true)
+
+if [ "$FRONTEND_CHANGED" -gt 0 ]; then
+  echo ""
+  echo "━━━ Frontend tests ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  cd "$ROOT/frontend"
+
+  if [ ! -d "node_modules" ]; then
+    echo "[pre-commit] Installing frontend dependencies..."
+    npm ci --ignore-scripts 2>&1 || { echo "npm ci failed"; exit 1; }
+  fi
+
+  npx vitest run 2>&1
+
+  if [ $? -ne 0 ]; then
+    echo ""
+    echo "❌ Frontend tests failed. Commit aborted."
+    echo "   Run 'cd frontend && npm run test:watch' to debug."
+    exit 1
+  fi
+  echo "✅ Frontend tests passed."
+  cd "$ROOT"
+fi
+
+# ── Backend (Python) ────────────────────────────────────────────────────────
+
+PY_CHANGED=$(echo "$STAGED" | grep -c '\.py$' || true)
+
+if [ "$PY_CHANGED" -gt 0 ]; then
+  echo ""
+  echo "━━━ Python lint ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  PY_FILES=$(echo "$STAGED" | grep '\.py$' | tr '\n' ' ')
+  uv run ruff check $PY_FILES 2>&1
+
+  if [ $? -ne 0 ]; then
+    echo ""
+    echo "❌ Python lint failed. Commit aborted."
+    echo "   Run 'uv run ruff check <file>' to see details."
+    exit 1
+  fi
+  echo "✅ Python lint passed."
+
+  echo ""
+  echo "━━━ Python tests ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  uv run pytest 2>&1
+
+  if [ $? -ne 0 ]; then
+    echo ""
+    echo "❌ Python tests failed. Commit aborted."
+    echo "   Run 'uv run pytest -q' to debug."
+    exit 1
+  fi
+  echo "✅ Python tests passed."
+fi
+
+# ── Nothing applicable ──────────────────────────────────────────────────────
+
+if [ "$FRONTEND_CHANGED" -eq 0 ] && [ "$PY_CHANGED" -eq 0 ]; then
+  echo "[pre-commit] No frontend or Python changes. Skipping tests."
+fi
+
+echo ""

@@ -52,7 +52,7 @@ type Action =
   | { type: "END_GAME" }
   | { type: "SET_SESSION_META"; locked: boolean; status: string; config: AppState["sessionConfig"] };
 
-function initialState(): AppState {
+export function initialState(): AppState {
   return {
     activeMatch: null,
     activeRoundIndex: -1,
@@ -66,7 +66,7 @@ function initialState(): AppState {
   };
 }
 
-function appReducer(state: AppState, action: Action): AppState {
+export function appReducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case "SET_MATCH": {
       const sameSession = state.activeMatch?.session_id === action.match.session_id;
