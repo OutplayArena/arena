@@ -97,16 +97,6 @@ def health():
     return {"status": "ok"}
 
 
-@app.get(f"{API_PREFIX}/static-version")
-def static_version():
-    try:
-        mtimes = [p.stat().st_mtime for p in STATIC_ROOT.rglob("*") if p.is_file()]
-        version = max(mtimes) if mtimes else 0
-    except OSError:
-        version = 0
-    return {"version": version}
-
-
 @app.get(f"{API_PREFIX}/games")
 def list_games():
     return GAME_REGISTRY.list_games()
@@ -406,6 +396,7 @@ async def dashboard(
         select(game_expr, func.count().label("game_count"))
         .where(user_filter)
         .group_by(game_expr)
+        .order_by(game_expr)
     )
     game_result = await db.execute(game_stmt)
     game_counts = {row[0]: row.game_count for row in game_result.fetchall()}
@@ -420,7 +411,10 @@ async def dashboard(
         )
         recent_result = await db.execute(recent_stmt)
         rows = recent_result.scalars().all()
-        games[game_slug] = [_session_summary(row) for row in rows]
+        games[game_slug] = {
+            "count": game_counts[game_slug],
+            "sessions": [_session_summary(row) for row in rows],
+        }
 
     return {
         "total_games": total_games,
