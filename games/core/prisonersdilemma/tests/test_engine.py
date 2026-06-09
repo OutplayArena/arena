@@ -1,5 +1,5 @@
 import pytest
-from games.core.prisonersdilemma.config import PDExperimentConfig, config_from_dict
+from games.core.prisonersdilemma.config import config_from_dict
 from games.core.prisonersdilemma.engine import PDGame, PDState
 
 

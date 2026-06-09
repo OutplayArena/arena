@@ -1,4 +1,3 @@
-import pytest
 
 from nash_arena.reasoning import (
     DEFAULT_MODEL_PROFILE,

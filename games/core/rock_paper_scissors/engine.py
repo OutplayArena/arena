@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from nash_arena.game_engine import GameEngine
 from games.core.rock_paper_scissors.metrics import RPSMetrics

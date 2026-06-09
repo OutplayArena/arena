@@ -1,14 +1,17 @@
 import os
 
 os.environ["API_PREFIX"] = ""
-for _var in ("GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"):
-    os.environ.setdefault(_var, "")
+os.environ["GITHUB_CLIENT_ID"] = ""
+os.environ["GITHUB_CLIENT_SECRET"] = ""
+os.environ["GOOGLE_CLIENT_ID"] = ""
+os.environ["GOOGLE_CLIENT_SECRET"] = ""
 
 import pytest
 from fastapi.testclient import TestClient
 
-from nash_arena.main import app, bearer_token, config_from_request
+from nash_arena.main import app, config_from_request
 from nash_arena.db import get_db
+from nash_arena.auth.dependencies import require_user, _ensure_local_user
 
 
 class FakeResult:
@@ -54,8 +57,14 @@ class FakeDb:
 def fake_db_fixture():
     db = FakeDb()
     app.dependency_overrides[get_db] = lambda: db
+
+    async def _bypass_auth():
+        return await _ensure_local_user(db)
+    app.dependency_overrides[require_user] = _bypass_auth
+
     yield db
     app.dependency_overrides.pop(get_db, None)
+    app.dependency_overrides.pop(require_user, None)
 
 
 def _valid_payload(rounds=3):
