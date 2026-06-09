@@ -399,7 +399,7 @@ export default function TexasHoldEmLiveView(_props: LiveViewProps) {
       )}
 
       {/* SVG table */}
-      <div className="shrink-0 h-12 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <svg viewBox="0 0 600 280" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
           {/* drop shadow */}
           <ellipse cx={TCX} cy={TCY + 10} rx={ORX + 6} ry={ORY + 6} fill="rgba(0,0,0,0.12)" />
