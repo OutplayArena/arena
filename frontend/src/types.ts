@@ -177,9 +177,14 @@ export interface SessionsResponse {
   total: number;
 }
 
+export interface DashboardGameEntry {
+  count: number;
+  sessions: SessionSummary[];
+}
+
 export interface DashboardResponse {
   total_games: number;
-  games: Record<string, SessionSummary[]>;
+  games: Record<string, DashboardGameEntry>;
 }
 
 export interface GameEntry {

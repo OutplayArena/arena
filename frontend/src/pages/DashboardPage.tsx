@@ -10,6 +10,14 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [collapsedGames, setCollapsedGames] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem("dashboard-collapsed-games");
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -49,7 +57,7 @@ export function DashboardPage() {
     if (data) {
       const nextData = { ...data, games: { ...data.games } };
       for (const slug of Object.keys(nextData.games)) {
-        nextData.games[slug] = nextData.games[slug].filter((s) => s.id !== sessionId);
+        nextData.games[slug] = { ...nextData.games[slug], sessions: nextData.games[slug].sessions.filter((s) => s.id !== sessionId) };
       }
       nextData.total_games = Math.max(0, nextData.total_games - 1);
       setData(nextData);
@@ -64,7 +72,7 @@ export function DashboardPage() {
     }
   };
 
-  const handleUseAsTemplate = (e: React.MouseEvent, s: DashboardResponse["games"][string][0]) => {
+  const handleUseAsTemplate = (e: React.MouseEvent, s: DashboardResponse["games"][string]["sessions"][0]) => {
     e.stopPropagation();
     const params = new URLSearchParams();
     if (s.agent_a) params.set("agent_a", s.agent_a);
@@ -89,6 +97,15 @@ export function DashboardPage() {
   const handleNewGame = (slug: string) => {
     setDropdownOpen(false);
     navigate(`/play/${slug}`);
+  };
+
+  const toggleGame = (slug: string) => {
+    setCollapsedGames((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug); else next.add(slug);
+      localStorage.setItem("dashboard-collapsed-games", JSON.stringify([...next]));
+      return next;
+    });
   };
 
   if (loading) {
@@ -180,12 +197,29 @@ export function DashboardPage() {
         </div>
       ) : (
         gameSlugs.map((slug) => {
-          const sessions = data?.games[slug] ?? [];
+          const sessions = data?.games[slug]?.sessions ?? [];
           const meta = gamesMeta.find((g) => g.slug === slug);
           return (
             <div key={slug} className="mb-8">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-extrabold text-ink capitalize">{meta?.name ?? slug}</h2>
+                <button
+                  type="button"
+                  onClick={() => toggleGame(slug)}
+                  className="flex items-center gap-2 group cursor-pointer -ml-1"
+                >
+                  <svg
+                    className={`w-4 h-4 text-muted transition-transform duration-200 ${collapsedGames.has(slug) ? "" : "rotate-90"}`}
+                    fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 18l6-6-6-6" />
+                  </svg>
+                  <h2 className="text-lg font-extrabold text-ink capitalize">{meta?.name ?? slug}</h2>
+                  {collapsedGames.has(slug) && (
+                    <span className="text-[11px] font-semibold text-muted bg-surface-container px-2 py-0.5 rounded-full">
+                      {data?.games[slug]?.count ?? 0}
+                    </span>
+                  )}
+                </button>
                 <Link
                   to={`/history?game=${slug}`}
                   className="text-xs font-semibold text-accent hover:underline"
@@ -193,10 +227,15 @@ export function DashboardPage() {
                   View all &rarr;
                 </Link>
               </div>
-              {meta?.description && (
-                <p className="text-xs text-muted mb-3 -mt-1">{meta.description}</p>
-              )}
-              <div className="rounded-card border border-line/40 overflow-hidden">
+              <div
+                className="grid transition-[grid-template-rows] duration-300 ease-out"
+                style={{ gridTemplateRows: collapsedGames.has(slug) ? '0fr' : '1fr' }}
+              >
+                <div className="overflow-hidden">
+                  {meta?.description && (
+                    <p className="text-xs text-muted mb-3 -mt-1">{meta.description}</p>
+                  )}
+                  <div className="rounded-card border border-line/40 overflow-hidden">
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-line/40 bg-surface-container/50">
@@ -281,6 +320,8 @@ export function DashboardPage() {
                   >
                     + Configure new Game
                   </Link>
+              </div>
+                </div>
               </div>
             </div>
           );
