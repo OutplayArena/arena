@@ -1,0 +1,50 @@
+name: Texas Hold'em
+version: "1.0.0"
+status: stable
+author: "NashArena maintainers"
+description: >
+  Heads-up Texas Hold'em with four betting streets (preflop, flop, turn,
+  river) and standard poker hand rankings. Each player starts with 100
+  chips; ante 1, fixed bet size 2. Players alternate actions: fold, check,
+  call, or raise. At showdown the best five-card hand wins the pot.
+tags:
+  - zero-sum
+  - sequential
+  - multi-round
+  - poker
+ontology:
+  action_space: discrete_choice
+  information_structure: sequential
+  payoff_structure: zero_sum
+  timing: multi_round
+players:
+  min: 2
+  max: 2
+config_schema:
+  game:
+    type: string
+    const: texas_hold_em
+  variant:
+    type: string
+    enum:
+      - classic
+      - face_down
+    default: classic
+  players:
+    type: integer
+    const: 2
+  rounds:
+    type: integer
+    minimum: 1
+    default: 10
+  seed:
+    type:
+      - integer
+      - "null"
+    default: null
+example_config:
+  game: texas_hold_em
+  variant: classic
+  players: 2
+  rounds: 10
+  seed: 42

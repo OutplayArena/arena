@@ -40,8 +40,14 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
     { id: "history", label: "History" },
   ];
 
-  const defaultTab = "config";
+  const defaultTab = replayMatch ? "live" : "config";
   const [activeTab, setActiveTab] = useState(defaultTab);
+
+  useEffect(() => {
+    if (replayMatch) {
+      setActiveTab("live");
+    }
+  }, [replayMatch]);
   const [customUIMod, setCustomUIMod] = useState<{ live?: ComponentType<Record<string, unknown>>; config?: ComponentType<Record<string, unknown>>; history?: ComponentType<Record<string, unknown>> }>({});
   const [canvasCollapsed, setCanvasCollapsed] = useState(false);
   const loadedRef = useRef(false);
@@ -90,6 +96,7 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
         };
       }),
       metrics: {},
+      currentState: gs,
     });
 
     const tokens = pg.tokens;

@@ -1,0 +1,16 @@
+metrics:
+  - total_payoff
+  - average_payoff
+  - hand_win_counts
+  - hand_win_rate
+  - fold_rate
+  - raise_rate
+  - showdown_count
+  - fold_count
+  - raise_count
+  - the_showdown_rate
+  - strategy_entropy
+  - behavioral_consistency
+  - cumulative_regret
+  - nash_gap
+  - gini_coefficient

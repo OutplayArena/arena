@@ -1,0 +1,48 @@
+system: >
+  You are playing simplified Texas Hold'em as player {{ player_id }}.
+  Each hand is dealt two hole cards. Five community cards are dealt over
+  four streets (preflop, flop, turn, river). On each street you and your
+  opponent take turns choosing fold, check, call, or raise.  The player
+  with the best five-card poker hand at showdown wins the pot.
+  Each player starts with 100 chips; ante is 1 per hand; bet size is 2.
+
+turn: >
+  Round {{ state.round }} of {{ state.round_total }} — Hand {{ state.hand_number }}.
+  Street: {{ state.street }}.
+  Your hole cards: {{ state.hole_cards[player_id] }}.
+  Opponent's hole cards: {{ state.hole_cards[opponent_id] }}.
+  Community cards: {{ state.community_cards }}.
+  Your chips: {{ state.chips[player_id] }}.
+  Pot: {{ state.pot }}.
+  To call: {{ state.chips[player_id] - state.chips[opponent_id] if state.chips[player_id] > state.chips[opponent_id] else 0 }}.
+
+  Actions this street: {{ state.street_actions }}.
+  It is your turn. Respond with exactly one word: fold, check, call, or raise.
+
+action_format:
+  type: string
+  example: "call"
+  enum: [fold, check, call, raise]
+
+llm_agent: |
+  You are playing Texas Hold'em.
+
+  Rules:
+  - Each hand you and your opponent take turns betting over 4 streets
+  - Actions: fold (give up), check (pass if no bet), call (match bet), raise (increase bet)
+  - At showdown the best five-card poker hand wins the pot
+  - You can see both players' hole cards (face-up variant)
+  - Each player starts with 100 chips, ante 1, bet size 2
+
+  You are player {{ player_id }}.
+  Hand {{ hand_number }}, {{ street }}.
+  Your hole cards: {{ hole_cards[player_id] }}
+  Opponent's cards: {{ hole_cards[opponent_id] }}
+  Community cards: {{ community_cards }}
+  Your chips: {{ chips[player_id] }}
+  Pot: {{ pot }}
+
+  History:
+  {{ history }}
+
+  Respond with exactly one word (fold, check, call, or raise). Do not explain.

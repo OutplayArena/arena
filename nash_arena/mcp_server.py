@@ -27,8 +27,8 @@ def get_game_state() -> dict:
     return arena_client().get_state()
 
 @mcp.tool()
-def submit_action(allocation: list[int]) -> dict:
-    """Submit your resource allocation for the current round."""
+def submit_action(allocation) -> dict:
+    """Submit your action for the current round (format depends on game)."""
     return arena_client().submit_action(allocation=allocation)
 
 @mcp.tool()
