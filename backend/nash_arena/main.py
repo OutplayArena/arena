@@ -24,14 +24,17 @@ from nash_arena.metrics import AgentRegistry, get_global_registry, set_global_re
 from nash_arena.session import GameSession
 from nash_arena.models.session import SessionModel
 from nash_arena.models.api_key import ApiKey
+from nash_arena.models.mcp_auth_key import McpAuthKey
 from nash_arena.auth.oauth import github_login, github_callback, google_login, google_callback, CALLBACK_BASE
 from nash_arena.auth.jwt import create_access_token
 from nash_arena.auth.dependencies import get_current_user, get_local_or_optional_user, require_user
-from nash_arena.auth.apikey import generate_platform_key
+from nash_arena.auth.apikey import generate_platform_key, hash_mcp_key
 from nash_arena.models.user import User
+from nash_arena.mcp_pool import create_pool_manager, PoolManager
 
 
 API_PREFIX = os.environ.get("API_PREFIX", "/api")
+MCP_ALLOWED_IPS = [ip.strip() for ip in os.environ.get("MCP_ALLOWED_IPS", "127.0.0.1").split(",") if ip.strip()]
 _SITE_YAML = Path(__file__).resolve().parent.parent.parent / "frontend" / "site.yaml"
 if not _SITE_YAML.is_file():
     _SITE_YAML = Path(__file__).resolve().parent.parent / "site.yaml"
@@ -40,6 +43,7 @@ app = FastAPI(title="NashArena Agent Arena")
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("JWT_SECRET", "dev-secret-change-me"))
 STATIC_ROOT = Path(__file__).resolve().parent.parent / "static"
 GAME_REGISTRY = GameRegistry()
+POOL_MANAGER: PoolManager | None = None
 
 
 @app.on_event("startup")
@@ -50,6 +54,13 @@ async def _load_registry_from_db() -> None:
             set_global_registry(registry)
     except Exception:
         pass
+
+    global POOL_MANAGER
+    try:
+        POOL_MANAGER = create_pool_manager()
+    except Exception as e:
+        print(f"Warning: Failed to initialize MCP pool manager: {e}")
+        POOL_MANAGER = None
 
 
 class ActionRequest(BaseModel):
@@ -96,6 +107,48 @@ def action_error(exc: ValueError) -> HTTPException:
     if "already submitted" in message or "already complete" in message:
         return HTTPException(status_code=409, detail=message)
     return HTTPException(status_code=400, detail=message)
+
+
+def _check_client_ip(request: Request) -> bool:
+    client_ip = request.client.host if request.client else ""
+    return client_ip in MCP_ALLOWED_IPS
+
+
+async def require_mcp_auth(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    x_mcp_auth_key: str | None = Header(default=None, alias="X-MCP-Auth-Key"),
+) -> None:
+    if not _check_client_ip(request):
+        raise HTTPException(status_code=403, detail="Agent REST API is disabled")
+    if not x_mcp_auth_key:
+        raise HTTPException(status_code=403, detail="Agent REST API is disabled")
+    key_hash = hash_mcp_key(x_mcp_auth_key)
+    result = await db.execute(
+        select(McpAuthKey).where(
+            McpAuthKey.key_hash == key_hash,
+            McpAuthKey.is_active,
+        )
+    )
+    row = result.scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=403, detail="Agent REST API is disabled")
+    row.last_used_at = func.now()
+    await db.commit()
+
+
+async def require_agent_api_dep(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    x_mcp_auth_key: str | None = Header(default=None, alias="X-MCP-Auth-Key"),
+) -> None:
+    if os.environ.get("ENABLE_AGENT_REST_API", "false").lower() == "true":
+        return
+    await require_mcp_auth(request=request, db=db, x_mcp_auth_key=x_mcp_auth_key)
+
+
+def require_agent_api():
+    return Depends(require_agent_api_dep)
 
 
 def game_registry_error(exc: GameRegistryError) -> HTTPException:
@@ -157,6 +210,7 @@ async def create_experiment(
     request: dict[str, Any],
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_user),
+    _: None = require_agent_api(),
 ):
     try:
         config = config_from_request(request)
@@ -186,11 +240,34 @@ async def create_experiment(
         user_id=str(user.id),
         agents=agents,
     )
-    return session.creation_response()
+
+    response = session.creation_response()
+
+    if POOL_MANAGER is not None:
+        try:
+            player_a_token = response["player_tokens"]["A"]
+            mcp_instance = await POOL_MANAGER.assign_container(
+                db=db,
+                session_id=session.session_id,
+                session_key=player_a_token,
+            )
+            # Use public_url if available (gateway/proxy), otherwise fall back to direct access
+            if mcp_instance.public_url:
+                response["mcp_url"] = mcp_instance.public_url
+            else:
+                response["mcp_url"] = f"http://{mcp_instance.dns_name}:{mcp_instance.port}"
+        except Exception as e:
+            print(f"Warning: Failed to assign MCP container: {e}")
+
+    return response
 
 
 @app.get(f"{API_PREFIX}/session/{{session_id}}/state")
-async def get_state(session_id: str, db: AsyncSession = Depends(get_db)):
+async def get_state(
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: None = require_agent_api(),
+):
     session = await get_session(session_id, db)
     return session.public_state()
 
@@ -201,6 +278,7 @@ async def get_observation(
     player: str = Query(..., description="Player ID (e.g. A or B)"),
     variant: str = Query("neutral", description="Prompt variant: neutral, gain_framed, loss_framed"),
     db: AsyncSession = Depends(get_db),
+    _: None = require_agent_api(),
 ):
     session = await get_session(session_id, db)
     state = session.public_state()
@@ -220,6 +298,7 @@ async def submit_action(
     request: ActionRequest,
     db: AsyncSession = Depends(get_db),
     authorization: str | None = Header(default=None),
+    _: None = require_agent_api(),
 ):
     session = await get_session(session_id, db)
     token = bearer_token(authorization)
@@ -246,8 +325,16 @@ async def get_results(session_id: str, db: AsyncSession = Depends(get_db)):
         result = session.results(evaluator=evaluator)
         try:
             await save_registry(registry, db)
+            await db.commit()
         except Exception:
-            pass  # persistence is best-effort; don't fail the response
+            await db.rollback()
+
+        if POOL_MANAGER is not None:
+            try:
+                await POOL_MANAGER.release_container(db=db, session_id=session_id)
+            except Exception as e:
+                print(f"Warning: Failed to release MCP container: {e}")
+
         return result
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -258,10 +345,18 @@ async def fail_session(
     session_id: str,
     request: dict[str, Any],
     db: AsyncSession = Depends(get_db),
+    _: None = require_agent_api(),
 ):
     session = await get_session(session_id, db)
     session.mark_failed(request.get("error", "unknown error"))
     await session.save_state(db)
+
+    if POOL_MANAGER is not None:
+        try:
+            await POOL_MANAGER.release_container(db=db, session_id=session_id)
+        except Exception as e:
+            print(f"Warning: Failed to release MCP container: {e}")
+
     return {"session_id": session_id, "status": session.status, "error_message": session.error_message}
 
 

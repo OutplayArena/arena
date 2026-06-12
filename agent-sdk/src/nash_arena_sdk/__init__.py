@@ -1,6 +1,6 @@
 """NashArena SDK for building and testing agents."""
 
-from nash_arena_sdk.agent import MCPAgent
+from nash_arena_sdk.agent import MCPAgent, RESTAgent
 from nash_arena_sdk.client import ArenaClient
 from nash_arena_sdk.llm_agent import (
     LLMAgent,
@@ -10,6 +10,7 @@ from nash_arena_sdk.llm_agent import (
     parse_allocation,
     parse_offer,
 )
+from nash_arena_sdk.mcp_client import MCPClient
 from nash_arena_sdk.orchestrator import (
     AgentSpec,
     GameOrchestrator,
@@ -23,6 +24,8 @@ __version__ = "0.1.0"
 __all__ = [
     "ArenaClient",
     "MCPAgent",
+    "MCPClient",
+    "RESTAgent",
     "LLMAgent",
     "LLMConfig",
     "LLMAgentConfig",

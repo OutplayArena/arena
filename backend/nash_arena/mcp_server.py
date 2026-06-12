@@ -1,5 +1,6 @@
 import os
 
+import httpx
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -7,7 +8,11 @@ from mcp.server.fastmcp import FastMCP  # noqa: E402
 from nash_arena.client import ArenaClient  # noqa: E402
 from nash_arena.auth.session_key import validate_session_key  # noqa: E402
 
-mcp = FastMCP("nash-arena")
+# Configure host and port from environment variables
+host = os.environ.get("FASTMCP_HOST", "127.0.0.1")
+port = int(os.environ.get("FASTMCP_PORT", "8000"))
+
+mcp = FastMCP("nash-arena", host=host, port=port)
 
 def required_env(name):
     value = os.environ.get(name)
@@ -18,8 +23,13 @@ def required_env(name):
 def arena_client():
     base_url = os.environ.get("NASH_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
     key = required_env("NASH_ARENA_KEY")
+    mcp_auth_key = os.environ.get("MCP_AUTH_KEY")
     session_id, _player = validate_session_key(key)
-    return ArenaClient(base_url=base_url, session_id=session_id, token=key)
+    headers = {}
+    if mcp_auth_key:
+        headers["X-MCP-Auth-Key"] = mcp_auth_key
+    http_client = httpx.Client(timeout=10.0, headers=headers)
+    return ArenaClient(base_url=base_url, session_id=session_id, token=key, http_client=http_client)
 
 
 def player_id() -> str:
@@ -78,4 +88,6 @@ def get_game_prompts(game: str) -> dict:
     return arena_client().get_game_prompts(game)
 
 if __name__ == "__main__":
-    mcp.run()
+    transport = os.environ.get("MCP_TRANSPORT", "stdio")
+    mount_path = os.environ.get("MCP_MOUNT_PATH")
+    mcp.run(transport=transport, mount_path=mount_path if mount_path else None)

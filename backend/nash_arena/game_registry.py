@@ -5,7 +5,28 @@ import yaml
 from jinja2 import Template
 
 
-CATALOG_ROOT = Path(__file__).resolve().parent.parent.parent / "games" / "games"
+def _find_catalog_root() -> Path:
+    """Find the games catalog root directory.
+    
+    Tries multiple locations to support both development and Docker environments:
+    1. /app/games/games (Docker container)
+    2. ../games/games relative to this file (development)
+    """
+    # Docker container: /app/games/games
+    docker_path = Path("/app/games/games")
+    if docker_path.exists():
+        return docker_path
+    
+    # Development: relative to this file
+    dev_path = Path(__file__).resolve().parent.parent.parent / "games" / "games"
+    if dev_path.exists():
+        return dev_path
+    
+    # Fallback to development path
+    return dev_path
+
+
+CATALOG_ROOT = _find_catalog_root()
 
 
 class GameRegistryError(ValueError):

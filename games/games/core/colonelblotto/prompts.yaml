@@ -3,16 +3,16 @@ system: >
   Allocate your fixed resources across battlefields to maximize your score.
 
 turn: >
-  Round {{ state.round }} of {{ state.round_total }}.
-  Your budget is {{ state.budgets[player_id] }}.
+  Round {{ round }} of {{ round_total }}.
+  Your budget is {{ budgets[player_id] }}.
 
   Battlefields:
-  {% for battlefield in state.battlefields %}
+  {% for battlefield in battlefields %}
   - {{ battlefield.id }}: value {{ battlefield.value }}
   {% endfor %}
 
   Previous rounds:
-  {{ state.history }}
+  {{ history }}
 
   Respond with a JSON list of non-negative integers that sums exactly to
   your budget. The list length must match the number of battlefields.

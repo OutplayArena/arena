@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 from mcp import ClientSession, StdioServerParameters, types
+from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
 from openai import OpenAI
 
@@ -98,7 +99,12 @@ def _extract_tool_text(result: Any) -> Any:
 
 
 class LLMAgent:
-    """An LLM-powered agent that can play games via MCP or direct REST."""
+    """An LLM-powered agent that can play games via MCP or direct REST.
+
+    Supports two MCP modes:
+    - mcp_url provided: Connects to remote MCP server via SSE (pool container)
+    - mcp_url not provided: Spawns local MCP server via stdio
+    """
 
     def __init__(
         self,
@@ -110,6 +116,7 @@ class LLMAgent:
         system_prompt: str | None = None,
         use_mcp: bool = True,
         jwt_secret: str | None = None,
+        mcp_url: str | None = None,
     ):
         self.player = player
         self.token = player_token
@@ -119,6 +126,7 @@ class LLMAgent:
         self.system_prompt = system_prompt
         self.use_mcp = use_mcp
         self.jwt_secret = jwt_secret or os.environ.get("JWT_SECRET", "dev-secret-change-me")
+        self.mcp_url = mcp_url
 
         self._openai = OpenAI(
             base_url=llm_config.base_url,
@@ -133,7 +141,11 @@ class LLMAgent:
         self._exit_stack: AsyncExitStack | None = None
 
     async def start_mcp(self) -> None:
-        """Start the MCP server subprocess and connect to it."""
+        """Start the MCP server connection.
+
+        If mcp_url is provided, connects via SSE to the pool container.
+        Otherwise, spawns a local MCP server via stdio.
+        """
         if not self.use_mcp:
             return
 
@@ -146,25 +158,33 @@ class LLMAgent:
         )
 
         self._exit_stack = AsyncExitStack()
-        env = {
-            "NASH_ARENA_BASE_URL": self.arena_url,
-            "NASH_ARENA_KEY": self.token,
-            "JWT_SECRET": self.jwt_secret,
-            "PATH": os.environ.get("PATH", ""),
-            "HOME": os.environ.get("HOME", ""),
-        }
-        server_params = StdioServerParameters(
-            command=sys.executable,
-            args=["-m", "nash_arena.mcp_server"],
-            env=env,
-        )
-        read, write = await self._exit_stack.enter_async_context(stdio_client(server_params))
+
+        if self.mcp_url:
+            sse_url = self.mcp_url.rstrip("/") + "/sse"
+            read, write = await self._exit_stack.enter_async_context(
+                sse_client(sse_url)
+            )
+        else:
+            env = {
+                "NASH_ARENA_BASE_URL": self.arena_url,
+                "NASH_ARENA_KEY": self.token,
+                "JWT_SECRET": self.jwt_secret,
+                "PATH": os.environ.get("PATH", ""),
+                "HOME": os.environ.get("HOME", ""),
+            }
+            server_params = StdioServerParameters(
+                command=sys.executable,
+                args=["-m", "nash_arena.mcp_server"],
+                env=env,
+            )
+            read, write = await self._exit_stack.enter_async_context(stdio_client(server_params))
+
         self._mcp_session = ClientSession(read, write)
         await self._exit_stack.enter_async_context(self._mcp_session)
         await self._mcp_session.initialize()
 
     async def stop_mcp(self) -> None:
-        """Stop the MCP server subprocess."""
+        """Stop the MCP server connection."""
         if self._exit_stack:
             await self._exit_stack.aclose()
             self._exit_stack = None

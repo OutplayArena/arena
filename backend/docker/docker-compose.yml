@@ -13,6 +13,9 @@ services:
       - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - default
+      - nasharena_mcp
     labels:
       - "traefik.enable=true"
 
@@ -62,6 +65,17 @@ services:
       DATABASE_URL: postgresql+asyncpg://nasharena:nasharena@db:5432/nasharena
       API_PREFIX: /api
       OAUTH_CALLBACK_BASE_URL: http://localhost:8000
+      ENABLE_AGENT_REST_API: "true"
+      MCP_BACKEND_URL: http://backend:8000/api
+      MCP_DOCKER_NETWORK: nasharena_mcp
+      MCP_ALLOWED_IPS: 127.0.0.1,backend
+      MCP_EXPOSE_PORTS: "true"
+      # MCP_PUBLIC_BASE_URL: http://localhost  # Uncomment when traefik is working
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - default
+      - nasharena_mcp
     depends_on:
       db:
         condition: service_healthy
@@ -80,10 +94,15 @@ services:
       - "traefik.http.routers.nasharena.entrypoints=websecure"
       - "traefik.http.routers.nasharena.tls=true"
 
-      # API: api.agent-arena.local (HTTP -> HTTPS)
-      - "traefik.http.routers.nasharena-insecure.rule=Host(`api.agent-arena.local`)"
-      - "traefik.http.routers.nasharena-insecure.entrypoints=web"
-      - "traefik.http.routers.nasharena-insecure.middlewares=https-redirect"
+      # API: localhost (HTTP, no redirect for testing)
+      - "traefik.http.routers.nasharena-local.rule=PathPrefix(`/api`)"
+      - "traefik.http.routers.nasharena-local.entrypoints=web"
+      - "traefik.http.routers.nasharena-local.service=nasharena"
 
 volumes:
   pgdata:
+
+networks:
+  nasharena_mcp:
+    name: nasharena_mcp
+    driver: bridge

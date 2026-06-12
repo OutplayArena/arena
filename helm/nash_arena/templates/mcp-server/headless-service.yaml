@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-pool
+  labels:
+    {{- include "nasharena.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp-pool
+spec:
+  clusterIP: None
+  selector:
+    app: mcp-server
+  ports:
+    - name: mcp
+      port: {{ .Values.mcpServer.port }}
+      targetPort: {{ .Values.mcpServer.port }}
+      protocol: TCP

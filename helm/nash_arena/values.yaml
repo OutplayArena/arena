@@ -60,9 +60,10 @@ mcpServer:
     repository: nasharena-mcp
     tag: latest
     pullPolicy: IfNotPresent
-  port: 8001
+  port: 8000
   maxConcurrentJobs: 50
   jobTTL: 300
+  publicBaseUrl: ""  # Set to enable gateway routing, e.g., "https://api.agent-arena.local"
 
 migrations:
   image:

@@ -5,6 +5,7 @@ os.environ["GITHUB_CLIENT_ID"] = ""
 os.environ["GITHUB_CLIENT_SECRET"] = ""
 os.environ["GOOGLE_CLIENT_ID"] = ""
 os.environ["GOOGLE_CLIENT_SECRET"] = ""
+os.environ["ENABLE_AGENT_REST_API"] = "true"
 
 import pytest
 from fastapi.testclient import TestClient
@@ -39,6 +40,9 @@ class FakeDb:
     async def commit(self):
         pass
 
+    async def rollback(self):
+        pass
+
     async def refresh(self, obj):
         stored = self._store.get(str(obj.id))
         if stored is not None:
@@ -65,6 +69,12 @@ def fake_db_fixture():
     yield db
     app.dependency_overrides.pop(get_db, None)
     app.dependency_overrides.pop(require_user, None)
+
+
+@pytest.fixture(autouse=True)
+def enable_agent_rest_api():
+    os.environ["ENABLE_AGENT_REST_API"] = "true"
+    yield
 
 
 def _valid_payload(rounds=3):

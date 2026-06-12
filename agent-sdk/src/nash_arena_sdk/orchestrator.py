@@ -57,6 +57,7 @@ class GameOrchestrator:
         self.agents: dict[str, LLMAgent | Any] = {}
         self.session_id: str | None = None
         self.player_tokens: dict[str, str] = {}
+        self.mcp_url: str | None = None
 
     async def setup(self) -> dict:
         """Create the experiment and set up agents."""
@@ -67,6 +68,7 @@ class GameOrchestrator:
         )
         self.session_id = created["session_id"]
         self.player_tokens = created["player_tokens"]
+        self.mcp_url = created.get("mcp_url")
 
         jwt_secret = self.config.jwt_secret
         for player, spec in self.config.agents.items():
@@ -83,8 +85,9 @@ class GameOrchestrator:
                     system_prompt=spec.system_prompt,
                     use_mcp=spec.use_mcp,
                     jwt_secret=jwt_secret,
+                    mcp_url=self.mcp_url,
                 )
-                if spec.use_mcp:
+                if spec.use_mcp and self.mcp_url:
                     await agent.start_mcp()
                 self.agents[player] = agent
 

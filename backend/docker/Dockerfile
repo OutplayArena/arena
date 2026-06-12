@@ -16,6 +16,6 @@ COPY backend/migrations/ migrations/
 COPY backend/alembic.ini ./
 COPY frontend/site.yaml site.yaml
 COPY --from=frontend /backend/static/ static/
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir ./games && pip install --no-cache-dir .
 EXPOSE 8000
 CMD ["uvicorn", "nash_arena.main:app", "--host", "0.0.0.0", "--port", "8000"]

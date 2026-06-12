@@ -1,13 +1,17 @@
 import os
 os.environ["API_PREFIX"] = ""
+os.environ["ENABLE_AGENT_REST_API"] = "true"
 
 from pathlib import Path
+import importlib
 import pytest
 from fastapi.testclient import TestClient
 
-from nash_arena.main import app, bearer_token, config_from_request
-from nash_arena.db import get_db
-from nash_arena.auth.dependencies import require_user, _ensure_local_user
+import nash_arena.main
+importlib.reload(nash_arena.main)
+from nash_arena.main import app, bearer_token, config_from_request  # noqa: E402
+from nash_arena.db import get_db  # noqa: E402
+from nash_arena.auth.dependencies import require_user, _ensure_local_user  # noqa: E402
 
 
 class FakeResult:
@@ -33,6 +37,9 @@ class FakeDb:
         self._store[str(obj.id)] = obj
 
     async def commit(self):
+        pass
+
+    async def rollback(self):
         pass
 
     async def refresh(self, obj):
