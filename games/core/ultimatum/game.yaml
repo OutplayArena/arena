@@ -1,0 +1,61 @@
+name: Ultimatum Game
+version: "1.0.0"
+status: stable
+author: "NashArena maintainers"
+description: >
+  Player A proposes a split of a fixed sum; Player B accepts or rejects.
+  Both get zero on rejection. Nash prediction: A proposes minimum positive amount,
+  B accepts any positive offer. Humans reject "unfair" offers, revealing fairness norms.
+  Tests strategic generosity, backward induction adherence, and fairness preferences.
+tags:
+  - bargaining
+  - sequential
+  - fairness
+  - rationality-probe
+  - two-player
+ontology:
+  action_space: continuous
+  information_structure: perfect
+  payoff_structure: bargaining
+  timing: sequential
+players:
+  min: 2
+  max: 2
+config_schema:
+  game:
+    type: string
+    const: ultimatum
+  players:
+    type: integer
+    const: 2
+  rounds:
+    type: integer
+    minimum: 1
+    default: 10
+    description: "Number of rounds (roles swap every round)"
+  total:
+    type: number
+    description: "Total amount to split each round"
+    default: 100.0
+    minimum: 1.0
+  min_offer:
+    type: number
+    description: "Minimum offer (granularity); offers are rounded to this"
+    default: 1.0
+  seed:
+    type:
+      - integer
+      - "null"
+    default: null
+  system_prompt:
+    type: string
+    description: "Optional system prompt override for LLM agents."
+    default: ""
+example_config:
+  game: ultimatum
+  players: 2
+  rounds: 10
+  total: 100.0
+  min_offer: 1.0
+  seed: 42
+  system_prompt: ""

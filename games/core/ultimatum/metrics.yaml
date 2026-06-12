@@ -1,0 +1,16 @@
+metrics:
+  - total_payoff
+  - average_payoff
+  - avg_offer_fraction
+  - acceptance_rate
+  - offer_fairness_index
+  - ug_avg_offer_fraction
+  - ug_acceptance_rate
+  - ug_offer_fairness_index
+  - strategy_entropy
+  - behavioral_consistency
+  - cumulative_regret
+  - nash_gap
+  - social_welfare
+  - gini_coefficient
+  - backward_induction_adherence

@@ -1,0 +1,15 @@
+metrics:
+  - total_payoff
+  - average_payoff
+  - coordination_rate
+  - outcome_counts
+  - bos_coordination_rate
+  - bos_a_preferred_rate
+  - bos_b_preferred_rate
+  - equilibrium_selection_rate
+  - strategy_entropy
+  - behavioral_consistency
+  - cumulative_regret
+  - social_welfare
+  - pareto_efficiency
+  - gini_coefficient

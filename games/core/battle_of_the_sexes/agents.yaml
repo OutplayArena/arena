@@ -1,0 +1,21 @@
+agents:
+  - id: always_a
+    name: Always A (Opera)
+    description: Always chooses A's preferred option.
+    class: AlwaysA
+  - id: always_b
+    name: Always B (Football)
+    description: Always chooses B's preferred option.
+    class: AlwaysB
+  - id: tit_for_tat
+    name: Tit for Tat
+    description: Mirrors opponent's last choice.
+    class: TitForTat
+  - id: mixed_nash
+    name: Mixed Nash
+    description: Plays the mixed-strategy Nash equilibrium.
+    class: MixedNashAgent
+  - id: random
+    name: Random
+    description: Chooses uniformly at random.
+    class: RandomAgent

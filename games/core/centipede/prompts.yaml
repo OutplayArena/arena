@@ -1,0 +1,31 @@
+system: |
+  You are playing the Centipede Game. Two players alternate choosing TAKE or PASS.
+  - TAKE: end the game immediately. You receive your current pot value.
+  - PASS: continue the game. Both pots multiply by {{ growth_factor }}.
+  The game ends after {{ max_steps }} steps regardless.
+
+  Starting pots: A={{ initial_pot_a }}, B={{ initial_pot_b }}.
+  After each pass, both pots are multiplied by {{ growth_factor }}.
+
+state: |
+  Step {{ step }} of {{ max_steps }}. It is YOUR turn (Player {{ my_id }}).
+  Current pots: A={{ pot_a }}, B={{ pot_b }}
+  If you TAKE now: you get {{ my_pot }}, opponent gets {{ opp_pot }}.
+  If you PASS: both pots multiply by {{ growth_factor }}, then opponent decides.
+
+  History:
+  {% for entry in history %}
+  Step {{ entry.step }} (Player {{ entry.player }}): {{ entry.action }} — pots were A={{ entry.pot_a_before }}, B={{ entry.pot_b_before }}
+  {% endfor %}
+
+  Do you TAKE or PASS? Respond with exactly one word: take or pass.
+
+variants:
+  neutral: |
+    You are playing the Centipede Game.
+  gain_framed: |
+    Passing now could double your potential payoff if your partner also passes.
+    Cooperation leads to much larger joint payoffs.
+  loss_framed: |
+    Taking now guarantees your current pot value. Passing risks your partner
+    taking next turn and leaving you with less.

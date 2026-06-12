@@ -2,6 +2,7 @@ from pathlib import Path
 import importlib
 
 import yaml
+from jinja2 import Template
 
 
 CATALOG_ROOT = Path(__file__).resolve().parent.parent / "games"
@@ -16,7 +17,6 @@ def _has_ui_component(game_dir: Path, name: str) -> bool:
 
 
 def _detect_ui(game_dir: Path) -> dict:
-    ui_dir = game_dir / "ui"
     has_live_view = _has_ui_component(game_dir, "LiveView")
     has_config = _has_ui_component(game_dir, "ConfigForm")
     has_history = _has_ui_component(game_dir, "HistoryView")
@@ -61,6 +61,80 @@ class GameRegistry:
 
     def get_game_prompts(self, name: str) -> dict:
         return self._load_yaml(self._game_dir(name) / "prompts.yaml")
+
+    def render_observation(
+        self,
+        game_name: str,
+        state: dict,
+        config: dict,
+        player_id: str,
+        variant: str = "neutral",
+    ) -> dict:
+        """Render the system + turn prompts for a given player and game state."""
+        prompts = self._load_yaml(self._game_dir(game_name) / "prompts.yaml")
+        ctx = self._build_observation_context(game_name, state, config, player_id)
+
+        system_src = prompts.get("system", "")
+        if variant and variant != "neutral":
+            variant_src = prompts.get("variants", {}).get(variant, "")
+            if variant_src:
+                system_src = variant_src.rstrip() + "\n\n" + system_src
+
+        turn_src = self._pick_turn_template(game_name, state, prompts)
+
+        return {
+            "system": Template(system_src).render(**ctx).strip(),
+            "turn": Template(turn_src).render(**ctx).strip(),
+            "player_id": player_id,
+            "variant": variant,
+        }
+
+    def _build_observation_context(
+        self, game_name: str, state: dict, config: dict, player_id: str
+    ) -> dict:
+        ctx = {**config, **state}
+
+        all_players = list(state.get("total_scores", {}).keys())
+        opp_id = next((p for p in all_players if p != player_id), None)
+        total_scores = state.get("total_scores", {})
+
+        ctx.update({
+            "my_id": player_id,
+            "opp_id": opp_id,
+            "my_score": total_scores.get(player_id, 0),
+            "opp_score": total_scores.get(opp_id, 0) if opp_id else 0,
+            "score_a": total_scores.get("A", 0),
+            "score_b": total_scores.get("B", 0),
+        })
+
+        if "round_total" in state:
+            ctx.setdefault("rounds", state["round_total"])
+
+        if "pot_a" in state and "pot_b" in state:
+            ctx["my_pot"] = state["pot_a"] if player_id == "A" else state["pot_b"]
+            ctx["opp_pot"] = state["pot_b"] if player_id == "A" else state["pot_a"]
+
+        if "pending_offer" in state:
+            offer = state.get("pending_offer") or 0.0
+            total = state.get("total") or config.get("total") or 100.0
+            ctx["offer"] = offer
+            ctx["offer_fraction"] = offer / total if total else 0.0
+
+        if "payoffs" in state and isinstance(state["payoffs"], dict):
+            p = state["payoffs"]
+            ctx.setdefault("payoff_stag_stag", p.get("stag_stag", 0))
+            ctx.setdefault("payoff_hare_hare", p.get("hare_hare", 0))
+            ctx.setdefault("payoff_stag_hare", p.get("stag_hare", 0))
+
+        return ctx
+
+    def _pick_turn_template(self, game_name: str, state: dict, prompts: dict) -> str:
+        phase = state.get("phase", "")
+        if game_name == "ultimatum":
+            if phase == "awaiting_proposal":
+                return prompts.get("proposer_state", prompts.get("state", ""))
+            return prompts.get("responder_state", prompts.get("state", ""))
+        return prompts.get("state", prompts.get("turn", ""))
 
     def get_game_scenarios(self, name: str) -> list[dict]:
         game_dir = self._game_dir(name)

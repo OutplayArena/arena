@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 import asyncio
 import json
 import os
@@ -24,7 +25,7 @@ from nash_arena.experiment_config import split_runtime_config
 from nash_arena.game_registry import GameRegistry, GameRegistryError
 from nash_arena.messaging import RedisBroker, StatePersister
 from nash_arena.messaging.broker import MessageBroker
-from nash_arena.metrics import get_global_registry, MatchEvaluator
+from nash_arena.metrics import AgentRegistry, get_global_registry, set_global_registry, MatchEvaluator, load_registry, save_registry
 from nash_arena.session import GameSession, _serialize_state
 from nash_arena.models.session import SessionModel
 from nash_arena.models.api_key import ApiKey
@@ -64,6 +65,16 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="NashArena Agent Arena", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("JWT_SECRET", "dev-secret-change-me"))
+
+
+@app.on_event("startup")
+async def _load_registry_from_db() -> None:
+    try:
+        async with async_session() as db:
+            registry = await load_registry(db)
+            set_global_registry(registry)
+    except Exception:
+        pass
 
 
 class ActionRequest(BaseModel):
@@ -228,6 +239,25 @@ async def get_state(
     return session.public_state()
 
 
+@app.get(f"{API_PREFIX}/session/{{session_id}}/observation")
+async def get_observation(
+    session_id: str,
+    player: str = Query(..., description="Player ID (e.g. A or B)"),
+    variant: str = Query("neutral", description="Prompt variant: neutral, gain_framed, loss_framed"),
+    db: AsyncSession = Depends(get_db),
+):
+    session = await get_session(session_id, db)
+    state = session.public_state()
+    config_dict = session.config.to_dict() if hasattr(session.config, "to_dict") else {}
+    game_type = config_dict.get("game", "unknown")
+    try:
+        return GAME_REGISTRY.render_observation(game_type, state, config_dict, player, variant)
+    except GameRegistryError as exc:
+        raise game_registry_error(exc) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
 @app.post(f"{API_PREFIX}/session/{{session_id}}/action")
 async def submit_action(
     session_id: str,
@@ -282,8 +312,14 @@ async def submit_action(
 async def get_results(session_id: str, db: AsyncSession = Depends(get_db)):
     session = await get_session(session_id, db)
     try:
-        evaluator = MatchEvaluator(get_global_registry())
-        return session.results(evaluator=evaluator)
+        registry = get_global_registry()
+        evaluator = MatchEvaluator(registry)
+        result = session.results(evaluator=evaluator)
+        try:
+            await save_registry(registry, db)
+        except Exception:
+            pass  # persistence is best-effort; don't fail the response
+        return result
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
@@ -716,6 +752,64 @@ async def auth_user(
         name=user.name,
         avatar_url=user.avatar_url,
     )
+
+
+# ── Benchmark report ────────────────────────────────────────────────────
+
+
+@app.get(f"{API_PREFIX}/benchmark/report")
+async def benchmark_report(
+    agent_ids: str | None = Query(default=None, description="Comma-separated agent IDs"),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return the current benchmark leaderboard — Elo, α-Rank, and per-dimension scores
+    for all tracked agents. Pass ?agent_ids=a,b,c to restrict to specific agents.
+    """
+    registry = get_global_registry()
+    known_agents = list(registry.elo_ratings.keys())
+    if agent_ids:
+        requested = [a.strip() for a in agent_ids.split(",") if a.strip()]
+        target = [a for a in requested if a in registry.elo_ratings]
+    else:
+        target = known_agents
+
+    if len(target) < 2:
+        return {
+            "agents": {a: {"elo": registry.elo_ratings.get(a), "matches_played": 0} for a in target},
+            "ranking": target,
+            "population": {},
+            "total_matches": len(registry.match_history),
+            "note": "Need at least 2 agents for α-Rank computation.",
+        }
+
+    pop = registry.population_report(target)
+    agent_summaries = {}
+    for agent_id in target:
+        agent_summaries[agent_id] = {
+            "elo": pop["elo_ratings"].get(agent_id),
+            "alpha_rank": pop["alpha_rank_scores"].get(agent_id),
+        }
+
+    return {
+        "agents": agent_summaries,
+        "ranking": pop["alpha_rank_ranking"],
+        "population": pop,
+        "total_matches": len(registry.match_history),
+    }
+
+
+@app.delete(f"{API_PREFIX}/benchmark/reset")
+async def benchmark_reset(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Reset the global AgentRegistry and delete persisted state."""
+    from nash_arena.models.agent_registry import AgentRegistryState
+    await db.execute(delete(AgentRegistryState))
+    await db.commit()
+    set_global_registry(AgentRegistry())
+    return {"reset": True}
 
 
 # ── Site config ────────────────────────────────────────────────────────

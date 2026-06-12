@@ -14,7 +14,7 @@ from games.core.colonelblotto.config import ColonelBlottoExperimentConfig
 sys.stdout.reconfigure(line_buffering=True)
 
 NASH_ARENA_BASE_URL = os.environ.get("NASH_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
-OPENCODE_GO_API_BASE = "https://opencode.ai/zen/go/v1"
+OPENCODE_GO_API_BASE = "https://opencode.ai/zen/v1"
 
 _client = OpenAI(
     base_url=OPENCODE_GO_API_BASE,

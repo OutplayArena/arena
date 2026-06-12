@@ -16,8 +16,6 @@ fi
 FRONTEND_CHANGED=$(echo "$STAGED" | grep -c '^frontend/src/' || true)
 
 if [ "$FRONTEND_CHANGED" -gt 0 ]; then
-  echo ""
-  echo "━━━ Frontend tests ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   cd "$ROOT/frontend"
 
   if [ ! -d "node_modules" ]; then
@@ -25,6 +23,20 @@ if [ "$FRONTEND_CHANGED" -gt 0 ]; then
     npm ci --ignore-scripts 2>&1 || { echo "npm ci failed"; exit 1; }
   fi
 
+  echo ""
+  echo "━━━ TypeScript typecheck ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  npx tsc -b --noEmit 2>&1
+
+  if [ $? -ne 0 ]; then
+    echo ""
+    echo "❌ TypeScript typecheck failed. Commit aborted."
+    echo "   Run 'cd frontend && npx tsc -b --noEmit' to see errors."
+    exit 1
+  fi
+  echo "✅ TypeScript typecheck passed."
+
+  echo ""
+  echo "━━━ Frontend tests ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   npx vitest run 2>&1
 
   if [ $? -ne 0 ]; then

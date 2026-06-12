@@ -3,9 +3,9 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-from mcp.server.fastmcp import FastMCP
-from nash_arena.client import ArenaClient
-from nash_arena.auth.session_key import validate_session_key
+from mcp.server.fastmcp import FastMCP  # noqa: E402
+from nash_arena.client import ArenaClient  # noqa: E402
+from nash_arena.auth.session_key import validate_session_key  # noqa: E402
 
 mcp = FastMCP("nash-arena")
 
@@ -21,9 +21,30 @@ def arena_client():
     session_id, _player = validate_session_key(key)
     return ArenaClient(base_url=base_url, session_id=session_id, token=key)
 
+
+def player_id() -> str:
+    """Return the player ID encoded in the session key."""
+    key = required_env("NASH_ARENA_KEY")
+    _, player = validate_session_key(key)
+    return player
+
+@mcp.tool()
+def get_observation(variant: str = "neutral") -> dict:
+    """
+    Get your rendered system prompt and turn prompt for the current game state.
+
+    Returns {"system": str, "turn": str} — pass system as the LLM system message
+    and turn as the user message. The server selects the correct template for your
+    role (e.g. proposer vs responder in Ultimatum) automatically.
+
+    variant: one of "neutral" (default), "gain_framed", "loss_framed"
+    """
+    return arena_client().get_observation(player_id(), variant=variant)
+
+
 @mcp.tool()
 def get_game_state() -> dict:
-    """Get the current game state for your assigned game session."""
+    """Get the raw current game state for your assigned game session."""
     return arena_client().get_state()
 
 @mcp.tool()

@@ -1,0 +1,17 @@
+agents:
+  - id: spe
+    name: SPE Agent
+    description: Subgame-perfect equilibrium — proposes minimum, accepts any positive offer.
+    class: SPEAgent
+  - id: fair
+    name: Fair Agent
+    description: Proposes equal split; rejects offers below 40%.
+    class: FairAgent
+  - id: greedy
+    name: Greedy Proposer
+    description: Proposes minimum; accepts >30%.
+    class: GreedyProposer
+  - id: random
+    name: Random
+    description: Random offers and random responses.
+    class: RandomAgent

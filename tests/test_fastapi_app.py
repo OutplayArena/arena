@@ -1,6 +1,7 @@
 import os
 os.environ["API_PREFIX"] = ""
 
+from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
@@ -237,6 +238,17 @@ def test_fastapi_serves_visualizer_index():
     assert "/assets/index-" in response.text
 
 
+def _frontend_bundle_ready() -> bool:
+    import re as _re
+    static = Path(__file__).resolve().parent.parent / "static"
+    html = static / "index.html"
+    if not html.exists():
+        return False
+    m = _re.search(r'src="(/assets/index-[^"]+\.js)"', html.read_text())
+    return bool(m) and (static / m.group(1).lstrip("/")).exists()
+
+
+@pytest.mark.skipif(not _frontend_bundle_ready(), reason="frontend bundle not built or stale")
 def test_fastapi_serves_visualizer_javascript():
     client = TestClient(app)
 
@@ -260,9 +272,11 @@ def test_list_games_returns_registered_blotto_game():
 
     assert response.status_code == 200
     games = response.json()
-    assert games[0]["name"] == "Colonel Blotto"
-    assert games[0]["slug"] == "colonelblotto"
-    assert games[0]["players"] == {"min": 2, "max": 2}
+    slugs = {g["slug"]: g for g in games}
+    assert "colonelblotto" in slugs
+    blotto = slugs["colonelblotto"]
+    assert blotto["name"] == "Colonel Blotto"
+    assert blotto["players"] == {"min": 2, "max": 2}
 
 
 def test_get_game_directory_details_metrics_and_prompts():
