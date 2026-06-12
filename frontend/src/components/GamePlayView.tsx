@@ -106,7 +106,7 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
         try {
           let gameState = await getState(pg.sessionId);
 
-          const allPlayers = pg.agentIds ? Object.keys(pg.agentIds) : ["A", "B"];
+          const allPlayers = (pg.agentIds ? Object.keys(pg.agentIds) : ["A", "B"]) as PlayerSide[];
           for (const player of allPlayers) {
             if (!gameState.awaiting.includes(player)) continue;
             const agentId = pg.agentIds?.[player] ?? (player === "A" ? pg.agentAId : pg.agentBId);
