@@ -1,0 +1,14 @@
+metrics:
+  - total_payoff
+  - steps_played
+  - game_ended_early
+  - take_step
+  - cp_steps_played
+  - cp_take_at_step
+  - cp_backward_induction_adherence
+  - cp_cooperation_index
+  - backward_induction_adherence
+  - strategy_entropy
+  - cumulative_regret
+  - social_welfare
+  - gini_coefficient

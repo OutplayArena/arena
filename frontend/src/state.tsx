@@ -38,6 +38,8 @@ export interface AppState {
     totalResources: number;
     gameSlug: string;
     remoteKeys: Record<string, string> | null;
+    playerNames?: Record<string, string>;
+    agentIds?: Record<string, string>;
   } | null;
 }
 

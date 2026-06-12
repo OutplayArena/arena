@@ -1,0 +1,31 @@
+system: |
+  You are playing the Cournot Duopoly. You and your competitor simultaneously choose
+  how many units to produce each round.
+  Market price is determined by: P = {{ demand_a }} - {{ demand_b }} × (your_quantity + their_quantity).
+  Your profit = (Price - {{ cost_per_unit }}) × your_quantity.
+  Maximum quantity: {{ max_quantity }}.
+
+  Nash equilibrium quantity: ~{{ nash_quantity }} units each.
+  Collusive (joint-maximizing) quantity: ~{{ collusive_quantity }} units each.
+
+state: |
+  Round {{ round }} of {{ rounds }}.
+  Your total profit: {{ my_score }} | Competitor's profit: {{ opp_score }}
+
+  History:
+  {% for entry in history %}
+  Round {{ entry.round }}: You={{ entry.quantities[my_id] }}, They={{ entry.quantities[opp_id] }} | Price={{ entry.price }} | Your profit={{ entry.payoffs[my_id] }}
+  {% endfor %}
+
+  How many units do you produce this round? (0 to {{ max_quantity }})
+  Respond with a number.
+
+variants:
+  neutral: |
+    You are playing the Cournot Duopoly competition game.
+  gain_framed: |
+    Producing less (closer to {{ collusive_quantity }}) earns more profit per unit
+    if your competitor also restrains production. Coordination yields joint maximum profit.
+  loss_framed: |
+    If your competitor produces aggressively, they will take market share.
+    Producing at least {{ nash_quantity }} protects you from being undercut.

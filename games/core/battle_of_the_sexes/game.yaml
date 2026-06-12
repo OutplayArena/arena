@@ -1,0 +1,77 @@
+name: Battle of the Sexes
+version: "1.0.0"
+status: stable
+author: "NashArena maintainers"
+description: >
+  Two players must coordinate on one of two events (Opera or Football) with conflicting
+  preferences. Both prefer coordination over miscoordination, but each prefers a
+  different option. Tests asymmetric coordination where agents must resolve conflicting
+  interests through repeated play or signaling.
+tags:
+  - coordination
+  - asymmetric
+  - simultaneous
+  - multi-round
+  - multiple-equilibria
+ontology:
+  action_space: binary_choice
+  information_structure: simultaneous
+  payoff_structure: asymmetric_coordination
+  timing: multi_round
+players:
+  min: 2
+  max: 2
+config_schema:
+  game:
+    type: string
+    const: battle_of_the_sexes
+  players:
+    type: integer
+    const: 2
+  rounds:
+    type: integer
+    minimum: 1
+    default: 10
+  payoff_preferred_a:
+    type: number
+    description: "Payoff for A when both choose A's preferred option"
+    default: 3.0
+  payoff_preferred_b:
+    type: number
+    description: "Payoff for B when both choose B's preferred option"
+    default: 3.0
+  payoff_nonpreferred:
+    type: number
+    description: "Payoff for the player who got the non-preferred option (but both coordinated)"
+    default: 2.0
+  payoff_mismatch:
+    type: number
+    description: "Payoff when players miscoordinate"
+    default: 0.0
+  option_a_label:
+    type: string
+    default: "opera"
+  option_b_label:
+    type: string
+    default: "football"
+  seed:
+    type:
+      - integer
+      - "null"
+    default: null
+  system_prompt:
+    type: string
+    description: "Optional system prompt override for LLM agents."
+    default: ""
+example_config:
+  game: battle_of_the_sexes
+  players: 2
+  rounds: 10
+  payoff_preferred_a: 3.0
+  payoff_preferred_b: 3.0
+  payoff_nonpreferred: 2.0
+  payoff_mismatch: 0.0
+  option_a_label: opera
+  option_b_label: football
+  seed: 42
+  system_prompt: ""

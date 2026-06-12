@@ -1,0 +1,21 @@
+agents:
+  - id: take_first
+    name: Take First (SPE)
+    description: Backward induction — always take on first move.
+    class: TakeFirstAgent
+  - id: always_pass
+    name: Always Pass
+    description: Never takes; maximizes joint payoff (cooperative but exploitable).
+    class: AlwaysPassAgent
+  - id: last_step_take
+    name: Last Step Take
+    description: Passes until the last opportunity, then takes.
+    class: LastStepTakeAgent
+  - id: tit_for_tat
+    name: Tit for Tat
+    description: Passes if opponent passed last time, takes otherwise.
+    class: TitForTatAgent
+  - id: random
+    name: Random
+    description: Chooses randomly between take and pass.
+    class: RandomAgent

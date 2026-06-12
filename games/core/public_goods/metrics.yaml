@@ -1,0 +1,17 @@
+metrics:
+  - total_payoff
+  - average_payoff
+  - avg_contribution
+  - contribution_rate
+  - avg_pool
+  - free_rider_count
+  - pgg_avg_pool
+  - pgg_contribution_efficiency
+  - pgg_price_of_anarchy
+  - strategy_entropy
+  - behavioral_consistency
+  - cumulative_regret
+  - social_welfare
+  - pareto_efficiency
+  - gini_coefficient
+  - multilateral_cooperation_index
