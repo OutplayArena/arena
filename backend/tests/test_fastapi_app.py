@@ -70,6 +70,12 @@ def fake_db_fixture():
     app.dependency_overrides.pop(require_user, None)
 
 
+@pytest.fixture(autouse=True)
+def enable_agent_rest_api():
+    os.environ["ENABLE_AGENT_REST_API"] = "true"
+    yield
+
+
 def valid_payload(rounds=1):
     return {
         "game": "colonelblotto",
