@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import random
 
+from abc import abstractmethod
 from nash_arena.game_components.game_agent import GameAgent
 
 
 class PDAgent(GameAgent):
+    @abstractmethod
     def act(self, history: list[dict]) -> str:
-        raise NotImplementedError
+        ...
 
 
 class AlwaysCooperate(PDAgent):

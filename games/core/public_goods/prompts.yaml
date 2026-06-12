@@ -1,0 +1,30 @@
+system: |
+  You are playing the Public Goods Game with {{ players }} players.
+  Each round, every player receives an endowment of {{ endowment }} tokens.
+  You simultaneously choose how many tokens to contribute to a shared pool (0 to {{ endowment }}).
+  The pool is multiplied by {{ multiplier }} and split equally among all {{ players }} players.
+  You keep whatever you don't contribute, plus your equal share of the pool.
+
+  You are playing {{ rounds }} rounds total.
+
+state: |
+  Round {{ round }} of {{ rounds }}.
+  Your total score so far: {{ my_score }}
+
+  History of previous rounds:
+  {% for entry in history %}
+  Round {{ entry.round }}: Contributions: {{ entry.contributions }} | Pool: {{ entry.pool }} | Your payoff: {{ entry.round_payoffs[my_id] }}
+  {% endfor %}
+
+  You have {{ endowment }} tokens this round. How many do you contribute to the shared pool?
+  Respond with a number between 0 and {{ endowment }}.
+
+variants:
+  neutral: |
+    You are playing the Public Goods Game.
+  gain_framed: |
+    By contributing more, you help maximize the total pool which benefits everyone.
+    Full cooperation yields the highest collective payoff.
+  loss_framed: |
+    Be aware: free-riding (contributing 0) guarantees you keep your full endowment.
+    Other players may also free-ride, reducing everyone's pool share.

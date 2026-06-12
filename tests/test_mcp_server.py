@@ -19,6 +19,9 @@ class FakeClient:
     def get_results(self):
         return {"winner": "A"}
 
+    def get_observation(self, player, variant="neutral"):
+        return {"system": f"You are player {player}.", "turn": "Your move.", "player_id": player, "variant": variant}
+
     def list_games(self):
         return [{"name": "colonelblotto"}]
 
@@ -89,6 +92,31 @@ def test_get_results_calls_client(monkeypatch):
     monkeypatch.setattr(mcp_server, "arena_client", lambda: fake)
 
     assert mcp_server.get_results() == {"winner": "A"}
+
+
+def test_get_observation_uses_player_from_session_key(monkeypatch):
+    session_key = derive_session_key("session-1", "B")
+    monkeypatch.setenv("NASH_ARENA_KEY", session_key)
+    fake = FakeClient()
+    monkeypatch.setattr(mcp_server, "arena_client", lambda: fake)
+
+    result = mcp_server.get_observation()
+
+    assert result["player_id"] == "B"
+    assert result["variant"] == "neutral"
+    assert "system" in result
+    assert "turn" in result
+
+
+def test_get_observation_passes_variant(monkeypatch):
+    session_key = derive_session_key("session-1", "A")
+    monkeypatch.setenv("NASH_ARENA_KEY", session_key)
+    fake = FakeClient()
+    monkeypatch.setattr(mcp_server, "arena_client", lambda: fake)
+
+    result = mcp_server.get_observation(variant="gain_framed")
+
+    assert result["variant"] == "gain_framed"
 
 
 def test_game_directory_tools_call_client(monkeypatch):

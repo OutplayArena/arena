@@ -40,14 +40,12 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
     { id: "history", label: "History" },
   ];
 
-  const defaultTab = replayMatch ? "live" : "config";
-  const [activeTab, setActiveTab] = useState(defaultTab);
-
-  useEffect(() => {
-    if (replayMatch) {
-      setActiveTab("live");
-    }
-  }, [replayMatch]);
+  const [activeTab, setActiveTab] = useState(replayMatch ? "live" : "config");
+  const [prevReplayMatch, setPrevReplayMatch] = useState(replayMatch);
+  if (prevReplayMatch !== replayMatch) {
+    setPrevReplayMatch(replayMatch);
+    if (replayMatch) setActiveTab("live");
+  }
   const [customUIMod, setCustomUIMod] = useState<{ live?: ComponentType<Record<string, unknown>>; config?: ComponentType<Record<string, unknown>>; history?: ComponentType<Record<string, unknown>> }>({});
   const [canvasCollapsed, setCanvasCollapsed] = useState(false);
   const loadedRef = useRef(false);
@@ -67,8 +65,8 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
     setActiveTab("live");
 
     const buildMatch = (gs: Record<string, unknown>) => ({
-      agent_a: pg.agentAName,
-      agent_b: pg.agentBName,
+      agent_a: pg.playerNames?.A ?? pg.agentAName,
+      agent_b: pg.playerNames?.B ?? pg.agentBName,
       session_id: pg.sessionId,
       config_hash: (gs.config_hash as string) || "",
       num_rounds: pg.numRounds,
@@ -78,8 +76,8 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
       total_score_b: ((gs.total_scores as Record<string, number>)?.B) || 0,
       match_winner: undefined as PlayerSide | "Tie" | undefined,
       history: ((gs.history as Array<Record<string, unknown>>) || []).map((r) => {
-        const moves = (r.allocations || r.actions || {}) as Record<string, unknown>;
-        const scores = (r.payoffs || r.scores || {}) as Record<string, number>;
+        const moves = (r.allocations || r.actions || r.quantities || {}) as Record<string, unknown>;
+        const scores = (r.payoffs || r.round_payoffs || r.scores || {}) as Record<string, number>;
         const totals = (r.total_scores || {}) as Record<string, number>;
         return {
           round: (r.round as number) || 0,
@@ -108,12 +106,12 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
         try {
           let gameState = await getState(pg.sessionId);
 
-          for (const player of ["A", "B"] as const) {
+          const allPlayers = (pg.agentIds ? Object.keys(pg.agentIds) : ["A", "B"]) as PlayerSide[];
+          for (const player of allPlayers) {
             if (!gameState.awaiting.includes(player)) continue;
-            const isRemote = player === "A" ? pg.agentAId === "remote" : pg.agentBId === "remote";
-            if (isRemote) continue;
-            const agent = player === "A" ? pg.agentAId : pg.agentBId;
-            const action = chooseAction(agent, player, gameState, pg.gameSlug);
+            const agentId = pg.agentIds?.[player] ?? (player === "A" ? pg.agentAId : pg.agentBId);
+            if (agentId === "remote") continue;
+            const action = chooseAction(agentId, player, gameState, pg.gameSlug);
             const updated = await submitAction(pg.sessionId, action, tokens[player]);
             gameState = updated;
           }

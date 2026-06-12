@@ -1,0 +1,25 @@
+agents:
+  - id: always_max
+    name: Always Contribute Max
+    description: Contributes full endowment every round.
+    class: AlwaysContributeMax
+  - id: always_zero
+    name: Free Rider
+    description: Contributes nothing (Nash equilibrium when r < n).
+    class: AlwaysContributeZero
+  - id: nash_equilibrium
+    name: Nash Equilibrium
+    description: Plays zero contribution (dominant strategy).
+    class: NashEquilibriumAgent
+  - id: linear_decay
+    name: Linear Decay
+    description: Starts at full contribution and decays to zero.
+    class: LinearDecayAgent
+  - id: conditional_cooperator
+    name: Conditional Cooperator
+    description: Matches the average contribution of others.
+    class: ConditionalCooperator
+  - id: random
+    name: Random
+    description: Contributes a uniformly random amount each round.
+    class: RandomAgent

@@ -1,0 +1,29 @@
+agents:
+  - id: always_stag
+    name: Always Stag
+    description: Always hunts stag. Maximizes joint welfare if opponent cooperates.
+    class: AlwaysStag
+  - id: always_hare
+    name: Always Hare
+    description: Always hunts hare. Safe risk-dominant strategy.
+    class: AlwaysHare
+  - id: nash_equilibrium
+    name: Nash Equilibrium (Hare)
+    description: Plays the risk-dominant Nash equilibrium.
+    class: NashEquilibriumAgent
+  - id: pareto_optimal
+    name: Pareto Optimal (Stag)
+    description: Always attempts the Pareto-optimal equilibrium.
+    class: ParetoOptimalAgent
+  - id: tit_for_tat
+    name: Tit for Tat
+    description: Starts with stag, then mirrors opponent's last move.
+    class: TitForTat
+  - id: optimistic
+    name: Optimistic (Grim Trigger)
+    description: Hunts stag until betrayed once, then always hare.
+    class: OptimisticAgent
+  - id: random
+    name: Random
+    description: Chooses uniformly at random each round.
+    class: RandomAgent

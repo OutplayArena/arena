@@ -1,0 +1,66 @@
+name: Centipede Game
+version: "1.0.0"
+status: stable
+author: "NashArena maintainers"
+description: >
+  A sequential game where two players alternately choose to TAKE (end the game)
+  or PASS (increase the pot). Backward induction predicts TAKE immediately,
+  but empirically cooperation persists. A clean probe of whether LLMs follow
+  backward induction or maintain cooperation for joint gain.
+tags:
+  - rationality-probe
+  - sequential
+  - backward-induction
+  - two-player
+  - perfect-information
+ontology:
+  action_space: binary_choice
+  information_structure: perfect
+  payoff_structure: sequential_cooperation
+  timing: sequential
+players:
+  min: 2
+  max: 2
+config_schema:
+  game:
+    type: string
+    const: centipede
+  players:
+    type: integer
+    const: 2
+  max_steps:
+    type: integer
+    minimum: 2
+    maximum: 20
+    default: 6
+    description: "Maximum number of steps before forced payout"
+  initial_pot_a:
+    type: number
+    description: "Initial pot value for player A if they take immediately"
+    default: 4.0
+  initial_pot_b:
+    type: number
+    description: "Initial pot value for player B if they take immediately"
+    default: 1.0
+  growth_factor:
+    type: number
+    description: "Factor by which both pots grow each time a player passes"
+    default: 2.0
+  seed:
+    type:
+      - integer
+      - "null"
+    default: null
+  system_prompt:
+    type: string
+    description: "Optional system prompt override for LLM agents."
+    default: ""
+example_config:
+  game: centipede
+  players: 2
+  max_steps: 6
+  initial_pot_a: 4.0
+  initial_pot_b: 1.0
+  growth_factor: 2.0
+  seed: null
+  system_prompt: ""

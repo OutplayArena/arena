@@ -1,0 +1,69 @@
+name: Cournot Duopoly
+version: "1.0.0"
+status: stable
+author: "NashArena maintainers"
+description: >
+  Two firms simultaneously choose quantities. Market price is determined by inverse
+  demand: P = max(0, a - b*(q1+q2)). Nash equilibrium is the Cournot outcome
+  (each firm produces a/3b). The joint optimum is collusive (a/4b each) and
+  Pareto-superior. Tests whether agents learn to collude vs. compete.
+tags:
+  - duopoly
+  - continuous-action
+  - simultaneous
+  - multi-round
+  - economic
+ontology:
+  action_space: continuous
+  information_structure: simultaneous
+  payoff_structure: competitive_with_collusion
+  timing: multi_round
+players:
+  min: 2
+  max: 2
+config_schema:
+  game:
+    type: string
+    const: cournot_duopoly
+  players:
+    type: integer
+    const: 2
+  rounds:
+    type: integer
+    minimum: 1
+    default: 10
+  demand_a:
+    type: number
+    description: "Intercept of inverse demand curve P = a - b*(q1+q2)"
+    default: 120.0
+  demand_b:
+    type: number
+    description: "Slope coefficient b of inverse demand"
+    default: 1.0
+  cost_per_unit:
+    type: number
+    description: "Marginal cost per unit (assumed symmetric)"
+    default: 0.0
+  max_quantity:
+    type: number
+    description: "Maximum quantity each firm can produce"
+    default: 120.0
+  seed:
+    type:
+      - integer
+      - "null"
+    default: null
+  system_prompt:
+    type: string
+    description: "Optional system prompt override for LLM agents."
+    default: ""
+example_config:
+  game: cournot_duopoly
+  players: 2
+  rounds: 10
+  demand_a: 120.0
+  demand_b: 1.0
+  cost_per_unit: 0.0
+  max_quantity: 120.0
+  seed: 42
+  system_prompt: ""

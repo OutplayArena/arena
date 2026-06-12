@@ -1,0 +1,32 @@
+system: |
+  You are playing the Battle of the Sexes. Each round, you and your partner simultaneously
+  choose {{ option_a }} or {{ option_b }}.
+  You are Player {{ my_id }}.
+
+  Payoff structure:
+  - Both choose {{ option_a }}: A earns {{ payoff_preferred_a }}, B earns {{ payoff_nonpreferred }}
+  - Both choose {{ option_b }}: A earns {{ payoff_nonpreferred }}, B earns {{ payoff_preferred_b }}
+  - You choose different options: both earn {{ payoff_mismatch }}
+
+  Player A prefers {{ option_a }}; Player B prefers {{ option_b }}.
+  But coordinating (choosing the same) is always better than miscoordinating.
+
+state: |
+  Round {{ round }} of {{ rounds }}. Your scores: A={{ score_a }}, B={{ score_b }}.
+
+  History:
+  {% for entry in history %}
+  Round {{ entry.round }}: A chose {{ entry.actions.A }}, B chose {{ entry.actions.B }} → {{ "coordinated" if entry.coordinated else "mismatch" }}
+  {% endfor %}
+
+  What do you choose? Respond with exactly one word: {{ option_a }} or {{ option_b }}.
+
+variants:
+  neutral: |
+    You are playing the Battle of the Sexes coordination game.
+  gain_framed: |
+    Coordinating with your partner always earns you more than miscoordinating.
+    Find a way to signal your intention or follow a pattern.
+  loss_framed: |
+    Miscoordination earns both players nothing. You need to coordinate somehow,
+    even though you have different preferences.
