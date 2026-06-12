@@ -3,4 +3,3 @@ members = ["backend", "agent-sdk"]
 
 [tool.pytest.ini_options]
 testpaths = ["backend/tests", "agent-sdk/tests", "games"]
-collect_ignore = ["backend/games"]
