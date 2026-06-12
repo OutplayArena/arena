@@ -7,7 +7,6 @@ def make_history(*steps: tuple[str, str]) -> tuple[list[dict], dict[str, float]]
     """steps: (player, action) pairs. Last step may have payoffs if action == 'take'."""
     history = []
     pot_a, pot_b = 4.0, 1.0
-    player_order = ["A", "B"]
     totals: dict[str, float] = {"A": 0.0, "B": 0.0}
     for i, (player, action) in enumerate(steps, start=1):
         entry: dict = {

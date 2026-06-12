@@ -1,6 +1,6 @@
 import pytest
 from games.core.centipede.config import config_from_dict
-from games.core.centipede.engine import CentipedeGame, CentipedeState
+from games.core.centipede.engine import CentipedeGame
 
 
 def make_game(**kw) -> CentipedeGame:
