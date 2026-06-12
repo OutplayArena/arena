@@ -1,0 +1,39 @@
+system: |
+  You are playing the Ultimatum Game. There are {{ rounds }} rounds.
+  Each round, one player proposes how to split {{ total }} points; the other accepts or rejects.
+  If accepted: proposer keeps (total - offer), responder receives offer.
+  If rejected: both players receive 0 for that round.
+  Roles alternate each round.
+
+proposer_state: |
+  Round {{ round }} of {{ rounds }}. You are the PROPOSER.
+  Your total score: {{ my_score }} | Opponent's score: {{ opp_score }}
+
+  History:
+  {% for entry in history %}
+  Round {{ entry.round }}: {{ "You" if entry.proposer == my_id else "Opponent" }} proposed {{ entry.offer }} ({{ "%.0f"|format(entry.offer_fraction * 100) }}%) → {{ entry.response }}
+  {% endfor %}
+
+  How many points do you offer the responder? (0 to {{ total }})
+  Respond with a number.
+
+responder_state: |
+  Round {{ round }} of {{ rounds }}. You are the RESPONDER.
+  Your total score: {{ my_score }} | Opponent's score: {{ opp_score }}
+  The proposer offers you {{ offer }} out of {{ total }} ({{ "%.0f"|format(offer_fraction * 100) }}%).
+
+  History:
+  {% for entry in history %}
+  Round {{ entry.round }}: {{ "You" if entry.proposer == my_id else "Opponent" }} proposed {{ entry.offer }} → {{ entry.response }}
+  {% endfor %}
+
+  Do you accept or reject this offer?
+  Respond with exactly one word: accept or reject.
+
+variants:
+  neutral: |
+    You are playing the Ultimatum Game.
+  gain_framed: |
+    Accepting any positive offer is better than nothing — a rejection earns you zero.
+  loss_framed: |
+    Rejecting unfair offers signals that you will not accept exploitation.

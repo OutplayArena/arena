@@ -233,6 +233,276 @@ _METRICS: dict[str, MetricDef] = {
         "description": "Inequality measure across agent payoffs. 0 = perfectly equal, 1 = extreme inequality.",
     },
 
+    # ── Game-specific joint metrics ─────────────────────────────────────
+    "stag_rate": {
+        "name": "stag_rate",
+        "when": "terminal",
+        "type": "object",
+        "description": "Fraction of rounds each player chose to hunt stag.",
+    },
+    "mutual_stag_rate": {
+        "name": "mutual_stag_rate",
+        "when": "terminal",
+        "type": "number",
+        "description": "Fraction of rounds where both players hunted stag.",
+    },
+    "mutual_hare_rate": {
+        "name": "mutual_hare_rate",
+        "when": "terminal",
+        "type": "number",
+        "description": "Fraction of rounds where both players hunted hare.",
+    },
+    "sh_outcome_counts": {
+        "name": "sh_outcome_counts",
+        "when": "terminal",
+        "type": "object",
+        "description": "Normalized frequency of each Stag Hunt outcome (SS, SH, HS, HH).",
+    },
+    "sh_mutual_stag_rate": {
+        "name": "sh_mutual_stag_rate",
+        "when": "terminal",
+        "type": "number",
+        "description": "Fraction of rounds with mutual stag hunt.",
+    },
+    "sh_mutual_hare_rate": {
+        "name": "sh_mutual_hare_rate",
+        "when": "terminal",
+        "type": "number",
+        "description": "Fraction of rounds with mutual hare hunt.",
+    },
+    "sh_price_of_risk": {
+        "name": "sh_price_of_risk",
+        "when": "terminal",
+        "type": "number",
+        "description": "Ratio of risk-dominant welfare to Pareto-optimal welfare in Stag Hunt.",
+    },
+
+    # ── Equilibrium rationality metrics ─────────────────────────────────
+    "equilibrium_selection_rate": {
+        "name": "equilibrium_selection_rate",
+        "when": "terminal",
+        "type": "number",
+        "description": (
+            "When multiple Nash equilibria exist, fraction of rounds the agents played "
+            "the Pareto-optimal equilibrium (vs. the risk-dominant one). Tracks whether "
+            "LLMs converge on socially optimal coordination."
+        ),
+    },
+    "backward_induction_adherence": {
+        "name": "backward_induction_adherence",
+        "when": "terminal",
+        "type": "number",
+        "description": (
+            "Fraction of decisions consistent with subgame-perfect equilibrium (backward induction). "
+            "1.0 means the agent always plays the SPE strategy; lower = more deviation."
+        ),
+    },
+
+    # ── Ultimatum game metrics ────────────────────────────────────────────
+    "avg_offer_fraction": {
+        "name": "avg_offer_fraction",
+        "when": "terminal",
+        "type": "number",
+        "description": "Average offer as a fraction of the total pot (0=nothing, 1=everything, 0.5=equal split).",
+    },
+    "acceptance_rate": {
+        "name": "acceptance_rate",
+        "when": "terminal",
+        "type": "number",
+        "description": "Fraction of proposals accepted by the responder.",
+    },
+    "offer_fairness_index": {
+        "name": "offer_fairness_index",
+        "when": "terminal",
+        "type": "number",
+        "description": "Mean absolute deviation of offer fractions from equal split (0.5). 0=always fair, 0.5=maximally greedy.",
+    },
+    "ug_avg_offer_fraction": {
+        "name": "ug_avg_offer_fraction",
+        "when": "terminal",
+        "type": "number",
+        "description": "Joint average offer fraction in the Ultimatum Game.",
+    },
+    "ug_acceptance_rate": {
+        "name": "ug_acceptance_rate",
+        "when": "terminal",
+        "type": "number",
+        "description": "Overall acceptance rate across all Ultimatum Game rounds.",
+    },
+    "ug_offer_fairness_index": {
+        "name": "ug_offer_fairness_index",
+        "when": "terminal",
+        "type": "number",
+        "description": "Joint offer fairness index in the Ultimatum Game.",
+    },
+
+    # ── Centipede game metrics ────────────────────────────────────────────
+    "steps_played": {
+        "name": "steps_played",
+        "when": "terminal",
+        "type": "number",
+        "description": "Number of steps played before the game ended.",
+    },
+    "game_ended_early": {
+        "name": "game_ended_early",
+        "when": "terminal",
+        "type": "boolean",
+        "description": "Whether the game ended by a player taking rather than reaching the forced payout.",
+    },
+    "take_step": {
+        "name": "take_step",
+        "when": "terminal",
+        "type": "number",
+        "description": "The step at which a player chose TAKE (null if game reached forced payout).",
+    },
+    "cp_steps_played": {
+        "name": "cp_steps_played",
+        "when": "terminal",
+        "type": "number",
+        "description": "Total steps played in the Centipede game.",
+    },
+    "cp_take_at_step": {
+        "name": "cp_take_at_step",
+        "when": "terminal",
+        "type": "number",
+        "description": "Step at which the game-ending TAKE occurred.",
+    },
+    "cp_backward_induction_adherence": {
+        "name": "cp_backward_induction_adherence",
+        "when": "terminal",
+        "type": "number",
+        "description": "Joint backward induction adherence in the Centipede game.",
+    },
+    "cp_cooperation_index": {
+        "name": "cp_cooperation_index",
+        "when": "terminal",
+        "type": "number",
+        "description": "Fraction of available pass opportunities used (higher = more cooperation).",
+    },
+
+    # ── Battle of the Sexes metrics ────────────────────────────────────────
+    "coordination_rate": {
+        "name": "coordination_rate",
+        "when": "terminal",
+        "type": "number",
+        "description": "Fraction of rounds where both players chose the same option (coordinated).",
+    },
+    "bos_coordination_rate": {
+        "name": "bos_coordination_rate",
+        "when": "terminal",
+        "type": "number",
+        "description": "Joint coordination rate in the Battle of the Sexes.",
+    },
+    "bos_a_preferred_rate": {
+        "name": "bos_a_preferred_rate",
+        "when": "terminal",
+        "type": "number",
+        "description": "Fraction of rounds where A's preferred equilibrium was played.",
+    },
+    "bos_b_preferred_rate": {
+        "name": "bos_b_preferred_rate",
+        "when": "terminal",
+        "type": "number",
+        "description": "Fraction of rounds where B's preferred equilibrium was played.",
+    },
+
+    # ── Cournot metrics ────────────────────────────────────────────────────
+    "avg_quantity": {
+        "name": "avg_quantity",
+        "when": "terminal",
+        "type": "object",
+        "description": "Average quantity produced per player per round.",
+    },
+    "avg_price": {
+        "name": "avg_price",
+        "when": "terminal",
+        "type": "number",
+        "description": "Average market price across all rounds.",
+    },
+    "avg_total_quantity": {
+        "name": "avg_total_quantity",
+        "when": "terminal",
+        "type": "number",
+        "description": "Average total quantity produced (both firms combined) per round.",
+    },
+    "cd_avg_quantity_a": {
+        "name": "cd_avg_quantity_a",
+        "when": "terminal",
+        "type": "number",
+        "description": "Average quantity produced by player A in the Cournot game.",
+    },
+    "cd_avg_quantity_b": {
+        "name": "cd_avg_quantity_b",
+        "when": "terminal",
+        "type": "number",
+        "description": "Average quantity produced by player B in the Cournot game.",
+    },
+    "cd_nash_quantity": {
+        "name": "cd_nash_quantity",
+        "when": "terminal",
+        "type": "number",
+        "description": "Theoretical Cournot Nash equilibrium quantity per firm.",
+    },
+    "cd_collusive_quantity": {
+        "name": "cd_collusive_quantity",
+        "when": "terminal",
+        "type": "number",
+        "description": "Theoretical joint-maximizing (collusive) quantity per firm.",
+    },
+    "cd_collusion_index": {
+        "name": "cd_collusion_index",
+        "when": "terminal",
+        "type": "number",
+        "description": (
+            "How close total production is to the collusive optimum vs. Nash. "
+            "1.0 = full collusion, 0.0 = Nash equilibrium, negative = over-production."
+        ),
+    },
+
+    # ── Public Goods metrics ───────────────────────────────────────────────
+    "avg_contribution": {
+        "name": "avg_contribution",
+        "when": "terminal",
+        "type": "object",
+        "description": "Average contribution per round per player in the Public Goods game.",
+    },
+    "contribution_rate": {
+        "name": "contribution_rate",
+        "when": "terminal",
+        "type": "object",
+        "description": "Average contribution as a fraction of endowment per player.",
+    },
+    "avg_pool": {
+        "name": "avg_pool",
+        "when": "terminal",
+        "type": "number",
+        "description": "Average total pool contribution across all rounds.",
+    },
+    "free_rider_count": {
+        "name": "free_rider_count",
+        "when": "terminal",
+        "type": "number",
+        "description": "Number of players whose average contribution is near zero (free riders).",
+    },
+    "pgg_avg_pool": {
+        "name": "pgg_avg_pool",
+        "when": "terminal",
+        "type": "number",
+        "description": "Joint average pool size in the Public Goods game.",
+    },
+    "pgg_contribution_efficiency": {
+        "name": "pgg_contribution_efficiency",
+        "when": "terminal",
+        "type": "number",
+        "description": "Average pool as fraction of maximum possible pool (full contribution by all players).",
+    },
+    "pgg_price_of_anarchy": {
+        "name": "pgg_price_of_anarchy",
+        "when": "terminal",
+        "type": "number",
+        "description": "Ratio of Nash equilibrium welfare (zero contribution) to Pareto-optimal welfare.",
+    },
+
     # ── Rating / ranking metrics ────────────────────────────────────────
     "elo_ratings": {
         "name": "elo_ratings",

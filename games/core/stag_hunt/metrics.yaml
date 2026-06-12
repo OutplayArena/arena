@@ -1,0 +1,24 @@
+metrics:
+  - total_payoff
+  - average_payoff
+  - stag_rate
+  - mutual_stag_rate
+  - mutual_hare_rate
+  - outcome_counts
+  - sh_outcome_counts
+  - sh_mutual_stag_rate
+  - sh_mutual_hare_rate
+  - sh_price_of_risk
+  - equilibrium_selection_rate
+  - strategy_entropy
+  - behavioral_consistency
+  - cumulative_regret
+  - nash_gap
+  - cooperation_rate
+  - tit_for_tat_adherence
+  - forgiveness_index
+  - conditional_cooperation
+  - multilateral_cooperation_index
+  - social_welfare
+  - pareto_efficiency
+  - gini_coefficient

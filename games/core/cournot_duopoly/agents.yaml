@@ -1,0 +1,17 @@
+agents:
+  - id: nash
+    name: Nash Equilibrium
+    description: Produces the Cournot Nash equilibrium quantity.
+    class: NashEquilibriumAgent
+  - id: collusive
+    name: Collusive
+    description: Produces the joint-maximizing (collusive) quantity.
+    class: CollussiveAgent
+  - id: greedy
+    name: Best Response (Greedy)
+    description: Best-responds to opponent's last quantity.
+    class: GreedyAgent
+  - id: random
+    name: Random
+    description: Produces a uniformly random quantity.
+    class: RandomAgent

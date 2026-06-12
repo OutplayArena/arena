@@ -1,0 +1,82 @@
+name: Stag Hunt
+version: "1.0.0"
+status: stable
+author: "NashArena maintainers"
+description: >
+  A 2-player symmetric coordination game with two Nash equilibria. (Stag, Stag) is
+  Pareto-optimal but risky — it requires mutual trust. (Hare, Hare) is risk-dominant
+  and safe but yields less. Tests whether agents converge on socially optimal vs.
+  safe equilibria and whether they can coordinate via repeated interaction.
+tags:
+  - coordination
+  - cooperative
+  - simultaneous
+  - multi-round
+  - multiple-equilibria
+ontology:
+  action_space: binary_choice
+  information_structure: simultaneous
+  payoff_structure: coordination
+  timing: multi_round
+players:
+  min: 2
+  max: 2
+config_schema:
+  game:
+    type: string
+    const: stag_hunt
+  variant:
+    type: string
+    enum: [classic, noisy]
+    enum_labels:
+      classic: "Classic"
+      noisy: "Noisy"
+    description: "Game variant"
+    default: classic
+  players:
+    type: integer
+    const: 2
+  rounds:
+    type: integer
+    minimum: 1
+    default: 10
+  payoff_stag_stag:
+    type: number
+    description: "Payoff when both hunt stag (Pareto-optimal)"
+    default: 4.0
+  payoff_hare_hare:
+    type: number
+    description: "Payoff when both hunt hare (risk-dominant)"
+    default: 2.0
+  payoff_stag_hare:
+    type: number
+    description: "Payoff for hunting stag alone (sucker payoff)"
+    default: 0.0
+  noise:
+    type: number
+    minimum: 0.0
+    maximum: 0.5
+    description: "Probability that an action is flipped (noisy variant)"
+    default: 0.0
+    visible_when:
+      variant: "noisy"
+  seed:
+    type:
+      - integer
+      - "null"
+    default: null
+  system_prompt:
+    type: string
+    description: "Optional system prompt override for LLM agents."
+    default: ""
+example_config:
+  game: stag_hunt
+  variant: classic
+  players: 2
+  rounds: 10
+  payoff_stag_stag: 4.0
+  payoff_hare_hare: 2.0
+  payoff_stag_hare: 0.0
+  noise: 0.0
+  seed: 42
+  system_prompt: ""

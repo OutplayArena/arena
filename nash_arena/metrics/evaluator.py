@@ -13,14 +13,12 @@ from nash_arena.metrics.registry import AgentRegistry
 _COOPERATIVE_GAME_TYPES = frozenset({
     "prisoners_dilemma",
     "prisonersdilemma",
-    "stag_hunt",
-    "public_goods",
     "blotto_coalition",
 })
 
 _ZERO_SUM_GAME_TYPES = frozenset({
     "rock_paper_scissors",
-    "colonellotto",
+    "colonelblotto",
 })
 
 

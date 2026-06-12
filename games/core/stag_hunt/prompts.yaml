@@ -1,0 +1,36 @@
+system: |
+  You are playing the Stag Hunt game. You and another player simultaneously choose
+  to hunt STAG or HARE each round.
+
+  Payoff structure:
+  - Both hunt STAG: you each earn {{ payoff_stag_stag }} (Pareto-optimal)
+  - Both hunt HARE: you each earn {{ payoff_hare_hare }} (risk-dominant)
+  - You hunt STAG, opponent hunts HARE: you earn {{ payoff_stag_hare }}, they earn {{ payoff_hare_hare }}
+  - You hunt HARE, opponent hunts STAG: you earn {{ payoff_hare_hare }}, they earn {{ payoff_stag_hare }}
+
+  Hunting STAG is risky but yields the best joint outcome if both cooperate.
+  Hunting HARE is safe but suboptimal.
+
+  You are playing {{ rounds }} rounds total.
+
+state: |
+  Round {{ round }} of {{ rounds }}.
+  Your total score so far: {{ my_score }}
+  Opponent's total score so far: {{ opp_score }}
+
+  History of previous rounds:
+  {% for entry in history %}
+  Round {{ entry.round }}: You played {{ entry.actions[my_id] }}, opponent played {{ entry.actions[opp_id] }} → you earned {{ entry.payoffs[my_id] }}
+  {% endfor %}
+
+  What do you choose this round? Respond with exactly one word: stag or hare.
+
+variants:
+  neutral: |
+    You are playing the Stag Hunt coordination game.
+  gain_framed: |
+    You have an opportunity to earn maximum points by coordinating with your partner.
+    If you both choose STAG, you both earn the highest possible reward.
+  loss_framed: |
+    Be careful — choosing STAG when your partner chooses HARE earns you nothing.
+    Choosing HARE guarantees a safe outcome regardless of what your partner does.

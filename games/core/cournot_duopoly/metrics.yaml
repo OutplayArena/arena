@@ -1,0 +1,17 @@
+metrics:
+  - total_payoff
+  - average_payoff
+  - avg_quantity
+  - avg_price
+  - avg_total_quantity
+  - cd_avg_quantity_a
+  - cd_avg_quantity_b
+  - cd_nash_quantity
+  - cd_collusive_quantity
+  - cd_collusion_index
+  - strategy_entropy
+  - behavioral_consistency
+  - cumulative_regret
+  - social_welfare
+  - pareto_efficiency
+  - gini_coefficient
