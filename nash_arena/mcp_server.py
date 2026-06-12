@@ -3,9 +3,9 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-from mcp.server.fastmcp import FastMCP
-from nash_arena.client import ArenaClient
-from nash_arena.auth.session_key import validate_session_key
+from mcp.server.fastmcp import FastMCP  # noqa: E402
+from nash_arena.client import ArenaClient  # noqa: E402
+from nash_arena.auth.session_key import validate_session_key  # noqa: E402
 
 mcp = FastMCP("nash-arena")
 

@@ -78,7 +78,7 @@ async def agent_turn(player: str, agent: MCPAgent, extra_body=None):
 async def run():
     _llm.api_key = os.environ.get("OPENCODE_GO_API_KEY", "").strip()
 
-    print(f"=== Public Goods Game [MCP]: 4 players ===")
+    print("=== Public Goods Game [MCP]: 4 players ===")
     for pid, model in PLAYER_MODELS.items():
         print(f"  Player {pid}: {model}")
     print(f"Endowment={ENDOWMENT}, Multiplier={MULTIPLIER}, Rounds={NUM_ROUNDS}")
@@ -131,9 +131,9 @@ async def run():
             pool    = last.get("pool", 0)
             share   = last.get("share", 0)
             payoffs = last.get("round_payoffs", last.get("payoffs", {}))
-            print(f"  Contributions: " + "  ".join(f"{p}={contribs.get(p,0):.1f}" for p in PLAYER_MODELS))
+            print("  Contributions: " + "  ".join(f"{p}={contribs.get(p,0):.1f}" for p in PLAYER_MODELS))
             print(f"  Pool={pool:.1f} → each gets +{share:.1f}")
-            print(f"  Payoffs: " + "  ".join(f"{p}={payoffs.get(p,0):.1f}" for p in PLAYER_MODELS))
+            print("  Payoffs: " + "  ".join(f"{p}={payoffs.get(p,0):.1f}" for p in PLAYER_MODELS))
         print()
 
     results = agents["A"].get_results()

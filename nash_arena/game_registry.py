@@ -17,7 +17,6 @@ def _has_ui_component(game_dir: Path, name: str) -> bool:
 
 
 def _detect_ui(game_dir: Path) -> dict:
-    ui_dir = game_dir / "ui"
     has_live_view = _has_ui_component(game_dir, "LiveView")
     has_config = _has_ui_component(game_dir, "ConfigForm")
     has_history = _has_ui_component(game_dir, "HistoryView")

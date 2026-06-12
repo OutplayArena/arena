@@ -137,8 +137,10 @@ async def run():
             last    = state["history"][-1]
             actions = last.get("actions", {})
             payoffs = last.get("payoffs", {})
-            if actions.get("A") == "stag": stag_count["A"] += 1
-            if actions.get("B") == "stag": stag_count["B"] += 1
+            if actions.get("A") == "stag":
+                stag_count["A"] += 1
+            if actions.get("B") == "stag":
+                stag_count["B"] += 1
             outcome = (
                 "SS" if actions.get("A") == "stag" and actions.get("B") == "stag"
                 else "HH" if actions.get("A") == "hare" and actions.get("B") == "hare"

@@ -129,7 +129,8 @@ async def run():
             actions = last.get("actions", {})
             payoffs = last.get("payoffs", {})
             coordinated = actions.get("A") == actions.get("B")
-            if coordinated: coord_count += 1
+            if coordinated:
+                coord_count += 1
             print(f"  {PLAYER_A_MODEL}={actions.get('A','?')}  {PLAYER_B_MODEL}={actions.get('B','?')}  [{'COORD' if coordinated else 'MISS'}]")
             print(f"  Payoffs: A={payoffs.get('A',0):.1f} B={payoffs.get('B',0):.1f}")
         print()

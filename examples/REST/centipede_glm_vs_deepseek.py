@@ -74,7 +74,7 @@ async def run_match():
 
     print(f"=== Centipede Game: {PLAYER_A_MODEL} (A) vs {PLAYER_B_MODEL} (B) ===")
     print(f"Max steps: {MAX_STEPS}  Initial pots: A={INITIAL_POT_A}, B={INITIAL_POT_B}  Growth: ×{GROWTH_FACTOR}")
-    print(f"Backward induction predicts: TAKE on step 1 (A)")
+    print("Backward induction predicts: TAKE on step 1 (A)")
     print()
 
     print("Warming up LLM APIs...")

@@ -19,8 +19,8 @@ import os
 from dotenv import load_dotenv
 load_dotenv()  # must run before nash_arena.auth imports JWT_SECRET
 
-from nash_arena.client import ArenaClient
-from nash_arena.auth.session_key import validate_session_key
+from nash_arena.client import ArenaClient  # noqa: E402
+from nash_arena.auth.session_key import validate_session_key  # noqa: E402
 
 
 class MCPAgent:

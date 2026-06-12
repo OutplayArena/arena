@@ -165,7 +165,8 @@ async def run():
                 last     = state_after["history"][-1]
                 accepted = last.get("accepted", False)
                 payoffs  = last.get("payoffs", {})
-                if accepted: accept_count += 1
+                if accepted:
+                    accept_count += 1
                 print(f"  {'ACCEPTED ✓' if accepted else 'REJECTED ✗'} | Payoffs: A={payoffs.get('A',0):.1f} B={payoffs.get('B',0):.1f}")
             print()
 

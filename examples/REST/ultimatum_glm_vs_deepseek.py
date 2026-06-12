@@ -107,7 +107,7 @@ async def run_match():
 
     print(f"=== Ultimatum Game: {PLAYER_A_MODEL} (A) vs {PLAYER_B_MODEL} (B) ===")
     print(f"Total={TOTAL:.0f}, MinOffer={MIN_OFFER:.0f}, Rounds={NUM_ROUNDS}")
-    print(f"Roles alternate each round. Round 1: A proposes, B responds.")
+    print("Roles alternate each round. Round 1: A proposes, B responds.")
     print()
 
     print("Warming up LLM APIs...")

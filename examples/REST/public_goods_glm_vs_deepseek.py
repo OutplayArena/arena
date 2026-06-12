@@ -172,7 +172,6 @@ async def run_match():
 
     results = players["A"].get_results()
     total_scores = results.get("total_scores", {})
-    winner = results.get("winner", "Unknown")
     metrics = results.get("metrics", {})
 
     print("=" * 56)
@@ -190,7 +189,7 @@ async def run_match():
         print(f"    {pid} ({model}): {avg_contrib.get(pid, 0):.1f} tokens  ({contrib_rate.get(pid, 0)*100:.0f}% of endowment)")
     print(f"  Avg pool per round: {metrics.get('avg_pool', 0):.1f}")
     print(f"  Free rider rounds: {metrics.get('free_rider_count', 0)}")
-    print(f"  Average payoff: " + "  ".join(f"{p}={metrics.get('average_payoff',{}).get(p,0):.1f}" for p in PLAYER_MODELS))
+    print("  Average payoff: " + "  ".join(f"{p}={metrics.get('average_payoff',{}).get(p,0):.1f}" for p in PLAYER_MODELS))
 
     os.makedirs(RESULTS_DIR, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
