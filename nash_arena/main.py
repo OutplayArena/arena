@@ -195,6 +195,25 @@ async def get_state(session_id: str, db: AsyncSession = Depends(get_db)):
     return session.public_state()
 
 
+@app.get(f"{API_PREFIX}/session/{{session_id}}/observation")
+async def get_observation(
+    session_id: str,
+    player: str = Query(..., description="Player ID (e.g. A or B)"),
+    variant: str = Query("neutral", description="Prompt variant: neutral, gain_framed, loss_framed"),
+    db: AsyncSession = Depends(get_db),
+):
+    session = await get_session(session_id, db)
+    state = session.public_state()
+    config_dict = session.config.to_dict() if hasattr(session.config, "to_dict") else {}
+    game_type = config_dict.get("game", "unknown")
+    try:
+        return GAME_REGISTRY.render_observation(game_type, state, config_dict, player, variant)
+    except GameRegistryError as exc:
+        raise game_registry_error(exc) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
 @app.post(f"{API_PREFIX}/session/{{session_id}}/action")
 async def submit_action(
     session_id: str,

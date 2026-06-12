@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import os
 import re
@@ -9,12 +10,13 @@ from datetime import datetime, timezone
 from openai import OpenAI
 
 from nash_arena.client import ArenaClient
-from games.core.rock_paper_scissors.config import RPSExperimentConfig, config_from_dict
+from games.core.prisonersdilemma.config import PDExperimentConfig, config_from_dict
+from games.core.prisonersdilemma.scenarios import get_scenario, ALL_SCENARIOS, PDScenario
 
 sys.stdout.reconfigure(line_buffering=True)
 
 NASH_ARENA_BASE_URL = os.environ.get("NASH_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
-OPENCODE_GO_API_BASE = "https://opencode.ai/zen/go/v1"
+OPENCODE_GO_API_BASE = "https://opencode.ai/zen/v1"
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "results")
 
 _client = OpenAI(
@@ -24,53 +26,82 @@ _client = OpenAI(
 
 PLAYER_A_MODEL = "glm-5.1"
 PLAYER_B_MODEL = "deepseek-v4-pro"
-NUM_ROUNDS = 10
+NUM_ROUNDS = 3
 
-VALID_MOVES = ("rock", "paper", "scissors")
-BEATS = {"rock": "scissors", "paper": "rock", "scissors": "paper"}
+PAYOFF_T = 5.0
+PAYOFF_R = 3.0
+PAYOFF_P = 1.0
+PAYOFF_S = 0.0
 
 
 def parse_move(text):
     text_lower = text.strip().lower()
-    for move in VALID_MOVES:
-        if move in text_lower:
-            return move
-    return "rock"
+    if "defect" in text_lower:
+        return "defect"
+    if "cooperate" in text_lower:
+        return "cooperate"
+    return "cooperate"
 
 
-def build_prompt(state, player_label):
+def build_prompt(state, player_label, scenario, system_prompt_override=None):
     history = state.get("history", [])
     round_num = state.get("round", 1)
     round_total = state.get("round_total", NUM_ROUNDS)
     total_scores = state.get("total_scores", {})
 
+    opponent = "B" if player_label == "A" else "A"
+
+    coop_v = scenario.cooperate_verb
+    def_v = scenario.defect_verb
+    coop_l = scenario.cooperate_label
+    def_l = scenario.defect_label
+
     lines = [
-        f"You are playing Rock-Paper-Scissors as player {player_label}.",
-        f"Rock beats scissors, scissors beats paper, paper beats rock.",
-        f"Win = +1, tie = 0, loss = -1.",
+        f"You are player {player_label}. {scenario.description}",
+        f"In each round you must choose: {coop_v} or {def_v}.",
+        "",
+        f"Payoff matrix (T={PAYOFF_T}, R={PAYOFF_R}, P={PAYOFF_P}, S={PAYOFF_S}):",
+        f"  Both {coop_v}: you={PAYOFF_R}, opponent={PAYOFF_R}",
+        f"  You {def_v}, opponent {coop_v}s: you={PAYOFF_T}, opponent={PAYOFF_S}",
+        f"  You {coop_v}, opponent {def_v}s: you={PAYOFF_S}, opponent={PAYOFF_T}",
+        f"  Both {def_v}: you={PAYOFF_P}, opponent={PAYOFF_P}",
+        "",
         f"Round {round_num} of {round_total}.",
-        f"Your score: {total_scores.get(player_label, 0)}.",
+        f"Your cumulative score: {total_scores.get(player_label, 0)}.",
     ]
     if history:
         lines.append("Previous rounds:")
         for h in history[-3:]:
             actions = h.get("actions", {})
-            scores = h.get("scores", {})
-            winner = h.get("winner", "Tie")
+            outcome = h.get("outcome", "?")
+            payoffs = h.get("payoffs", {})
+            your_action = actions.get(player_label, "?")
+            opp_action = actions.get(opponent, "?")
+            your_label = scenario.format_action(your_action) if your_action != "?" else "?"
+            opp_label = scenario.format_action(opp_action) if opp_action != "?" else "?"
+            outcome_desc = scenario.outcome_description(outcome)
             lines.append(
-                f"  Round {h.get('round', '?')}: {player_label} chose {actions.get(player_label, '?')}, "
-                f"opponent chose {actions.get('B' if player_label == 'A' else 'A', '?')}. "
-                f"Result: {scores.get(player_label, 0)} points. Winner: {winner}"
+                f"  Round {h.get('round', '?')}: you={your_label}, "
+                f"opponent={opp_label}. "
+                f"Outcome: {outcome_desc}. Your payoff: {payoffs.get(player_label, 0)}"
             )
-    lines.append("Respond with exactly one word: rock, paper, or scissors.")
+    lines.append("")
+    lines.append(f"Respond with exactly one word: {coop_v} or {def_v}.")
     return "\n".join(lines)
 
 
-def make_system_msg():
+def make_system_msg(scenario, system_prompt_override=None):
+    if system_prompt_override:
+        return system_prompt_override
+
+    coop_v = scenario.cooperate_verb
+    def_v = scenario.defect_verb
+
     return (
-        "You are playing Rock-Paper-Scissors. "
-        "Choose rock, paper, or scissors to maximize your cumulative score. "
-        "Output ONLY one word (rock, paper, or scissors). No other text."
+        f"{scenario.name}. {scenario.description} "
+        f"Each round, choose to {coop_v} or {def_v} to maximize your cumulative payoff. "
+        f"Payoffs — T={PAYOFF_T} R={PAYOFF_R} P={PAYOFF_P} S={PAYOFF_S}. "
+        "Output ONLY one word. No other text."
     )
 
 
@@ -104,19 +135,24 @@ def sync_llm_call(model, system_msg, prompt, extra_body=None):
     return None, "LLM call failed"
 
 
-async def llm_move(model, prompt, extra_body=None):
+async def llm_move(model, system_msg, prompt, extra_body=None):
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, sync_llm_call, model, make_system_msg(), prompt, extra_body)
+    return await loop.run_in_executor(None, sync_llm_call, model, system_msg, prompt, extra_body)
 
 
-async def run_match():
+async def run_match(scenario_id="prison", system_prompt_override=None):
+    scenario = get_scenario(scenario_id)
     nash_api_key = os.environ["NASH_ARENA_API_KEY"]
     opencode_api_key = os.environ["OPENCODE_GO_API_KEY"]
     _client.api_key = opencode_api_key.strip()
 
-    print(f"=== Rock-Paper-Scissors: {PLAYER_A_MODEL} (A) vs {PLAYER_B_MODEL} (B) ===")
+    print(f"=== Prisoner's Dilemma: {PLAYER_A_MODEL} (A) vs {PLAYER_B_MODEL} (B) ===")
+    print(f"Scenario: {scenario.name} ({scenario.description})")
     print(f"Rounds: {NUM_ROUNDS}")
+    print(f"Payoffs: T={PAYOFF_T} R={PAYOFF_R} P={PAYOFF_P} S={PAYOFF_S}")
     print(f"Both models: thinking disabled")
+    if system_prompt_override:
+        print(f"Custom system prompt in use ({len(system_prompt_override)} chars)")
     print()
 
     print("Warming up LLM APIs...")
@@ -140,11 +176,17 @@ async def run_match():
 
     arena = ArenaClient(NASH_ARENA_BASE_URL)
     config = config_from_dict({
-        "game": "rock_paper_scissors",
+        "game": "prisonersdilemma",
         "variant": "classic",
         "players": 2,
         "rounds": NUM_ROUNDS,
+        "payoff_T": PAYOFF_T,
+        "payoff_R": PAYOFF_R,
+        "payoff_P": PAYOFF_P,
+        "payoff_S": PAYOFF_S,
         "seed": 42,
+        "scenario": scenario_id,
+        "system_prompt": system_prompt_override,
     })
     created = arena.create_experiment(
         config,
@@ -160,6 +202,7 @@ async def run_match():
     player_a = ArenaClient.for_player(NASH_ARENA_BASE_URL, created, "A")
     player_b = ArenaClient.for_player(NASH_ARENA_BASE_URL, created, "B")
 
+    system_msg = make_system_msg(scenario, system_prompt_override)
     no_thinking = {"thinking": {"type": "disabled"}}
 
     for round_idx in range(NUM_ROUNDS):
@@ -170,19 +213,19 @@ async def run_match():
         if state.get("phase") == "complete":
             break
 
-        prompt_a = build_prompt(state, "A")
-        prompt_b = build_prompt(state, "B")
+        prompt_a = build_prompt(state, "A", scenario, system_prompt_override)
+        prompt_b = build_prompt(state, "B", scenario, system_prompt_override)
 
         (move_a, error_a), (move_b, error_b) = await asyncio.gather(
-            llm_move(PLAYER_A_MODEL, prompt_a, extra_body=no_thinking),
-            llm_move(PLAYER_B_MODEL, prompt_b, extra_body=no_thinking),
+            llm_move(PLAYER_A_MODEL, system_msg, prompt_a, extra_body=no_thinking),
+            llm_move(PLAYER_B_MODEL, system_msg, prompt_b, extra_body=no_thinking),
         )
 
         if error_a:
-            move_a = "rock"
+            move_a = "cooperate"
             print(f"  {PLAYER_A_MODEL} forfeit - using fallback: {move_a}")
         if error_b:
-            move_b = "rock"
+            move_b = "cooperate"
             print(f"  {PLAYER_B_MODEL} forfeit - using fallback: {move_b}")
 
         player_a.submit_action(move_a)
@@ -192,9 +235,13 @@ async def run_match():
         if state_after.get("history"):
             last = state_after["history"][-1]
             actions = last.get("actions", {})
-            scores = last.get("scores", {})
-            print(f"  {PLAYER_A_MODEL}={actions.get('A', '?')}  {PLAYER_B_MODEL}={actions.get('B', '?')}")
-            print(f"  Scores: A={scores.get('A', 0):.1f} B={scores.get('B', 0):.1f} -> {last.get('winner', '?')}")
+            outcome = last.get("outcome", "?")
+            outcome_desc = scenario.outcome_description(outcome)
+            payoffs = last.get("payoffs", {})
+            a_label = scenario.format_action(actions.get("A", "?"))
+            b_label = scenario.format_action(actions.get("B", "?"))
+            print(f"  {PLAYER_A_MODEL}={a_label}  {PLAYER_B_MODEL}={b_label}")
+            print(f"  Outcome: {outcome_desc}  Payoffs: A={payoffs.get('A', 0):.1f} B={payoffs.get('B', 0):.1f}")
         print()
 
     results = player_a.get_results()
@@ -214,31 +261,50 @@ async def run_match():
     print()
 
     print("─ Metrics ─")
-    move_freqs = metrics.get("move_frequencies", {})
-    for player, label in [("A", PLAYER_A_MODEL), ("B", PLAYER_B_MODEL)]:
-        freqs = move_freqs.get(player, {})
-        print(f"  {label}: rock={freqs.get('rock', 0):.2f} paper={freqs.get('paper', 0):.2f} scissors={freqs.get('scissors', 0):.2f}")
-
-    win_counts = metrics.get("round_win_counts", {})
-    print(f"  Win counts: {PLAYER_A_MODEL}={win_counts.get('A', 0)}, {PLAYER_B_MODEL}={win_counts.get('B', 0)}, Ties={win_counts.get('Tie', 0)}")
-    print(f"  Round win rate: A={metrics.get('round_win_rate', {}).get('A', 0):.2f} B={metrics.get('round_win_rate', {}).get('B', 0):.2f}")
+    coop_rate = metrics.get("cooperation_rate", {})
+    print(f"  Cooperation rate: {PLAYER_A_MODEL}={coop_rate.get('A', 0):.2f} {PLAYER_B_MODEL}={coop_rate.get('B', 0):.2f}")
+    print(f"  Mutual cooperation rate: {metrics.get('mutual_cooperation_rate', 0):.2f}")
+    print(f"  Mutual defection rate: {metrics.get('mutual_defection_rate', 0):.2f}")
+    outcome_counts = metrics.get("outcome_counts", {})
+    print(f"  Outcome counts: CC={outcome_counts.get('CC', 0)} CD={outcome_counts.get('CD', 0)} DC={outcome_counts.get('DC', 0)} DD={outcome_counts.get('DD', 0)}")
     print(f"  Average payoff: A={metrics.get('average_payoff', {}).get('A', 0):.2f} B={metrics.get('average_payoff', {}).get('B', 0):.2f}")
 
     os.makedirs(RESULTS_DIR, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    result_file = os.path.join(RESULTS_DIR, f"rps_{PLAYER_A_MODEL}_vs_{PLAYER_B_MODEL}_{timestamp}.json")
+    scenario_slug = scenario.id
+    result_file = os.path.join(RESULTS_DIR, f"pd_{scenario_slug}_{PLAYER_A_MODEL}_vs_{PLAYER_B_MODEL}_{timestamp}.json")
     with open(result_file, "w") as f:
         json.dump({
-            "game": "rock_paper_scissors",
+            "game": "prisonersdilemma",
+            "scenario": scenario_id,
+            "scenario_name": scenario.name,
             "player_a": PLAYER_A_MODEL,
             "player_b": PLAYER_B_MODEL,
             "rounds": NUM_ROUNDS,
             "thinking": "disabled",
+            "payoffs": {"T": PAYOFF_T, "R": PAYOFF_R, "P": PAYOFF_P, "S": PAYOFF_S},
             "session_id": session_id,
             "results": results,
         }, f, indent=2, default=str)
     print(f"\nResults saved to {result_file}")
 
 
+def main():
+    parser = argparse.ArgumentParser(description="Run Prisoner's Dilemma LLM match")
+    parser.add_argument(
+        "--scenario", "-s",
+        choices=list(ALL_SCENARIOS),
+        default="prison",
+        help=f"Scenario framing (default: prison). Options: {', '.join(ALL_SCENARIOS)}",
+    )
+    parser.add_argument(
+        "--system-prompt", "-p",
+        default=None,
+        help="Custom system prompt override (replaces scenario-driven prompt)",
+    )
+    args = parser.parse_args()
+    asyncio.run(run_match(args.scenario, args.system_prompt))
+
+
 if __name__ == "__main__":
-    asyncio.run(run_match())
+    main()

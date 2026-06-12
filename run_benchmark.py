@@ -62,7 +62,7 @@ def _get_agent_classes(game_slug: str) -> dict[str, Any]:
         return {}
 
 
-def _build_agent(game_slug: str, agent_spec: str, config):
+def _build_agent(game_slug: str, agent_spec: str, config, player: str = "A"):
     """Instantiate an agent by spec string (class name or alias)."""
     classes = _get_agent_classes(game_slug)
     # Try direct class name first
@@ -83,7 +83,7 @@ def _build_agent(game_slug: str, agent_spec: str, config):
         pass
     # Try player parameter
     try:
-        return cls(player="A")
+        return cls(player=player)
     except TypeError:
         pass
     return cls.__new__(cls)
@@ -115,16 +115,17 @@ def play_match(game_slug: str, agent_a_spec: str, agent_b_spec: str,
     if hasattr(game, "_rng") and seed_offset:
         game._rng = random.Random(seed_offset)
 
+    player_ids = list(config.player_ids())
+
     # Build agents
     try:
-        agent_a = _build_agent(game_slug, agent_a_spec, config)
-        agent_b = _build_agent(game_slug, agent_b_spec, config)
+        agent_a = _build_agent(game_slug, agent_a_spec, config, player=player_ids[0])
+        agent_b = _build_agent(game_slug, agent_b_spec, config, player=player_ids[1])
     except ValueError as e:
         print(f"  [skip] {e}", file=sys.stderr)
         return None
 
     state = game.initial_state()
-    player_ids = list(config.player_ids())
 
     # Map player ids to agents
     agents = {player_ids[0]: agent_a, player_ids[1]: agent_b}
@@ -134,6 +135,12 @@ def play_match(game_slug: str, agent_a_spec: str, agent_b_spec: str,
     while not game.is_terminal(state) and steps < max_steps:
         state_dict = _serialize(state)
         awaiting = state_dict.get("awaiting", [])
+        # Fallback for games that use current_player/phase instead of awaiting
+        if not awaiting:
+            current_player = state_dict.get("current_player")
+            phase = state_dict.get("phase", "")
+            if current_player and phase != "complete":
+                awaiting = [current_player]
         if not awaiting:
             break
 
@@ -246,8 +253,8 @@ def run_tournament(
                     round_num = entry.get("round", entry.get("step", 0))
                     actions = entry.get("actions") or entry.get("quantities") or \
                               entry.get("contributions") or {}
-                    if isinstance(actions, dict):
-                        payoffs = entry.get("payoffs", {})
+                    if isinstance(actions, dict) and actions:
+                        payoffs = entry.get("payoffs") or entry.get("scores", {})
                         for pid, act in actions.items():
                             if act is not None:
                                 moves.append(Move(
@@ -261,12 +268,25 @@ def run_tournament(
                         pid = entry.get("player", "A")
                         idx = player_ids.index(pid) if pid in player_ids else 0
                         agent_name = combo[idx] if idx < len(combo) else combo[0]
+                        payoffs = entry.get("payoffs") or entry.get("scores", {})
                         moves.append(Move(
                             agent_id=agent_name,
                             round_number=round_num,
                             action=entry["action"],
-                            payoff=float(entry.get("payoffs", {}).get(pid, 0.0)),
+                            payoff=float(payoffs.get(pid, 0.0)),
                         ))
+                        # For terminal entries with payoffs, also record the other player's outcome
+                        if payoffs:
+                            for other_pid, other_payoff in payoffs.items():
+                                if other_pid != pid:
+                                    other_idx = player_ids.index(other_pid) if other_pid in player_ids else 1
+                                    other_agent = combo[other_idx] if other_idx < len(combo) else combo[1]
+                                    moves.append(Move(
+                                        agent_id=other_agent,
+                                        round_number=round_num,
+                                        action="outcome",
+                                        payoff=float(other_payoff),
+                                    ))
 
                 import uuid as _uuid
                 match = Match(

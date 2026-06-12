@@ -104,9 +104,15 @@ class CentipedeGame(GameEngine):
         }
 
         if action == "take":
-            # Taker gets their pot; other player gets theirs
-            payoff_a = state.pot_a if player == "A" else state.pot_b
-            payoff_b = state.pot_b if player == "B" else state.pot_a
+            # Standard centipede: taker gets the larger pot, other gets smaller
+            # When A takes: A gets pot_a (larger), B gets pot_b (smaller)
+            # When B takes: B gets pot_a (larger), A gets pot_b (smaller)
+            if player == "A":
+                payoff_a = state.pot_a
+                payoff_b = state.pot_b
+            else:
+                payoff_a = state.pot_b
+                payoff_b = state.pot_a
             state.total_scores["A"] = payoff_a
             state.total_scores["B"] = payoff_b
             state.game_ended_by = player

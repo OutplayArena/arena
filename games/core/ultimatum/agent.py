@@ -68,13 +68,16 @@ class GreedyProposer(UltimatumAgent):
 
 
 class RandomAgent(UltimatumAgent):
-    def __init__(self, total: float = 100.0):
+    def __init__(self, player: str = "A", total: float = 100.0):
+        self.player = player
         self.total = total
 
     def act(self, history: list[dict]) -> float | str:
         if not history:
             return random.uniform(0.0, self.total)
         last = history[-1]
-        if last.get("response") is None and last.get("offer") is not None:
+        # Check if we're the responder (offer pending)
+        if last.get("responder") == self.player and last.get("response") is None:
             return random.choice(["accept", "reject"])
+        # Otherwise we're proposing
         return random.uniform(0.0, self.total)

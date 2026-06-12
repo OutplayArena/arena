@@ -86,6 +86,16 @@ class ArenaClient:
         )
         return self._json_or_raise(response)
 
+    def get_observation(self, player: str, variant: str = "neutral") -> dict:
+        """Return server-rendered system + turn prompts for the given player."""
+        session_id = self._require_session_id()
+        response = self.http_client.get(
+            f"{self.base_url}/session/{session_id}/observation",
+            params={"player": player, "variant": variant},
+            timeout=self.timeout,
+        )
+        return self._json_or_raise(response)
+
     @classmethod
     def for_player(
         cls,
