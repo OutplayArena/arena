@@ -17,13 +17,13 @@ from pydantic import BaseModel
 from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from nash_arena.db import get_db
+from nash_arena.db import get_db, async_session as _async_session_factory
 from nash_arena.experiment_config import split_runtime_config
 from nash_arena.game_registry import GameRegistry, GameRegistryError
-from nash_arena.messaging import RedisBroker
+from nash_arena.messaging import RedisBroker, StatePersister
 from nash_arena.messaging.broker import MessageBroker
 from nash_arena.metrics import get_global_registry, MatchEvaluator
-from nash_arena.session import GameSession
+from nash_arena.session import GameSession, _serialize_state
 from nash_arena.models.session import SessionModel
 from nash_arena.models.api_key import ApiKey
 from nash_arena.auth.oauth import github_login, github_callback, google_login, google_callback, CALLBACK_BASE
@@ -42,13 +42,19 @@ STATIC_ROOT = Path(__file__).resolve().parent.parent / "static"
 GAME_REGISTRY = GameRegistry()
 
 _broker: RedisBroker | None = None
+_persister: StatePersister | None = None
 
 
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
-    global _broker
+    global _broker, _persister
     _broker = RedisBroker()
+    _persister = StatePersister(_broker, _async_session_factory)
+    await _persister.start()
     yield
+    if _persister is not None:
+        await _persister.stop()
+        _persister = None
     if _broker is not None:
         await _broker.close()
         _broker = None
@@ -208,7 +214,14 @@ async def create_experiment(
 
 
 @app.get(f"{API_PREFIX}/session/{{session_id}}/state")
-async def get_state(session_id: str, db: AsyncSession = Depends(get_db)):
+async def get_state(
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    broker: MessageBroker = Depends(get_broker),
+):
+    cached = await broker.cache_get(f"session:{session_id}:state")
+    if cached is not None:
+        return cached
     session = await get_session(session_id, db)
     return session.public_state()
 
@@ -230,19 +243,36 @@ async def submit_action(
         raise action_error(exc) from exc
     except Exception as exc:
         session.mark_failed(str(exc))
-        await session.save_state(db)
+        state_dict = _serialize_state(session.state)
+        await broker.enqueue("state:persist", {
+            "session_id": session_id,
+            "state": state_dict,
+            "status": session.status,
+            "error_message": session.error_message,
+            "locked": session.locked,
+            "player_tokens": session.player_tokens,
+        })
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-    await session.save_state(db)
-
     player = session.player_for_token(token)
+    state_dict = _serialize_state(session.state)
+    public = session.public_state()
+
+    await broker.cache_set(f"session:{session_id}:state", public, ttl=600)
+    await broker.enqueue("state:persist", {
+        "session_id": session_id,
+        "state": state_dict,
+        "status": session.status,
+        "player_tokens": session.player_tokens,
+        "locked": session.locked,
+    })
     await broker.publish(f"session:{session_id}:events", {
         "event": "action_submitted",
         "session_id": session_id,
         "player": player,
         "status": session.status,
     })
-    return session.public_state()
+    return public
 
 
 @app.get(f"{API_PREFIX}/session/{{session_id}}/results")
@@ -260,10 +290,19 @@ async def fail_session(
     session_id: str,
     request: dict[str, Any],
     db: AsyncSession = Depends(get_db),
+    broker: MessageBroker = Depends(get_broker),
 ):
     session = await get_session(session_id, db)
     session.mark_failed(request.get("error", "unknown error"))
-    await session.save_state(db)
+    state_dict = _serialize_state(session.state)
+    await broker.enqueue("state:persist", {
+        "session_id": session_id,
+        "state": state_dict,
+        "status": session.status,
+        "error_message": session.error_message,
+        "locked": session.locked,
+        "player_tokens": session.player_tokens,
+    })
     return {"session_id": session_id, "status": session.status, "error_message": session.error_message}
 
 

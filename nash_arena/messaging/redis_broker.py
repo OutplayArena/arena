@@ -66,6 +66,19 @@ class RedisBroker(MessageBroker):
             return json.loads(raw)
         return None
 
+    async def cache_set(self, key: str, value: dict, ttl: int = 300) -> None:
+        r = await self._get_redis()
+        await r.setex(key, ttl, json.dumps(value))
+
+    async def cache_get(self, key: str) -> dict | None:
+        r = await self._get_redis()
+        raw = await r.get(key)
+        if raw is None:
+            return None
+        if isinstance(raw, str):
+            return json.loads(raw)
+        return None
+
     async def close(self) -> None:
         if self._pubsub is not None:
             await self._pubsub.close()

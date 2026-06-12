@@ -20,5 +20,13 @@ class MessageBroker(ABC):
         ...
 
     @abstractmethod
+    async def cache_set(self, key: str, value: dict, ttl: int = 300) -> None:
+        ...
+
+    @abstractmethod
+    async def cache_get(self, key: str) -> dict | None:
+        ...
+
+    @abstractmethod
     async def close(self) -> None:
         ...
