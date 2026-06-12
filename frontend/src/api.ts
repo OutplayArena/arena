@@ -182,4 +182,20 @@ export function getGameScenarios(name: string): Promise<{ scenarios: ScenarioInf
   return request<{ scenarios: ScenarioInfo[] }>(`/api/games/${name}/scenarios`);
 }
 
+export function connectSessionStream(
+  sessionId: string,
+  onStateChange: (state: GameState) => void,
+  onError?: (err: Event) => void,
+): EventSource {
+  const source = new EventSource(`/api/session/${sessionId}/stream`);
+  source.addEventListener("state_change", (e: MessageEvent) => {
+    const state = JSON.parse(e.data) as GameState;
+    onStateChange(state);
+  });
+  if (onError) {
+    source.onerror = onError;
+  }
+  return source;
+}
+
 

@@ -1,3 +1,5 @@
+import asyncio
+import json
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -10,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
@@ -259,6 +261,7 @@ async def submit_action(
     public = session.public_state()
 
     await broker.cache_set(f"session:{session_id}:state", public, ttl=600)
+    await broker.publish(f"session:{session_id}:state", public)
     await broker.enqueue("state:persist", {
         "session_id": session_id,
         "state": state_dict,
@@ -304,6 +307,29 @@ async def fail_session(
         "player_tokens": session.player_tokens,
     })
     return {"session_id": session_id, "status": session.status, "error_message": session.error_message}
+
+
+@app.get(f"{API_PREFIX}/session/{{session_id}}/stream")
+async def stream_session(
+    session_id: str,
+    broker: MessageBroker = Depends(get_broker),
+):
+    async def event_generator():
+        try:
+            async for state in broker.subscribe(f"session:{session_id}:state"):
+                yield f"event: state_change\ndata: {json.dumps(state)}\n\n"
+        except asyncio.CancelledError:
+            pass
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ── Session history & dashboard ────────────────────────────────────────
