@@ -1,6 +1,7 @@
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, AsyncIterator
 from uuid import uuid4
 
 import yaml
@@ -19,6 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from nash_arena.db import get_db
 from nash_arena.experiment_config import split_runtime_config
 from nash_arena.game_registry import GameRegistry, GameRegistryError
+from nash_arena.messaging import RedisBroker
+from nash_arena.messaging.broker import MessageBroker
 from nash_arena.metrics import get_global_registry, MatchEvaluator
 from nash_arena.session import GameSession
 from nash_arena.models.session import SessionModel
@@ -27,7 +30,6 @@ from nash_arena.auth.oauth import github_login, github_callback, google_login, g
 from nash_arena.auth.jwt import create_access_token
 from nash_arena.auth.dependencies import get_current_user, get_optional_user, get_local_or_optional_user, require_user
 from nash_arena.auth.apikey import generate_platform_key, hash_platform_key, PLATFORM_KEY_PREFIX
-from nash_arena.auth.session_key import validate_session_key
 from nash_arena.models.user import User
 
 
@@ -36,10 +38,24 @@ _SITE_YAML = Path(__file__).resolve().parent.parent / "site.yaml"
 if not _SITE_YAML.is_file():
     _SITE_YAML = Path(__file__).resolve().parent.parent / "frontend" / "site.yaml"
 SITE_YAML = _SITE_YAML
-app = FastAPI(title="NashArena Agent Arena")
-app.add_middleware(SessionMiddleware, secret_key=os.environ.get("JWT_SECRET", "dev-secret-change-me"))
 STATIC_ROOT = Path(__file__).resolve().parent.parent / "static"
 GAME_REGISTRY = GameRegistry()
+
+_broker: RedisBroker | None = None
+
+
+@asynccontextmanager
+async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+    global _broker
+    _broker = RedisBroker()
+    yield
+    if _broker is not None:
+        await _broker.close()
+        _broker = None
+
+
+app = FastAPI(title="NashArena Agent Arena", lifespan=lifespan)
+app.add_middleware(SessionMiddleware, secret_key=os.environ.get("JWT_SECRET", "dev-secret-change-me"))
 
 
 class ActionRequest(BaseModel):
@@ -90,6 +106,12 @@ def action_error(exc: ValueError) -> HTTPException:
 
 def game_registry_error(exc: GameRegistryError) -> HTTPException:
     return HTTPException(status_code=404, detail=str(exc))
+
+
+async def get_broker() -> AsyncIterator[MessageBroker]:
+    if _broker is None:
+        raise RuntimeError("broker not initialized")
+    yield _broker
 
 
 @app.get(f"{API_PREFIX}/health")
@@ -147,6 +169,7 @@ async def create_experiment(
     request: dict[str, Any],
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_user),
+    broker: MessageBroker = Depends(get_broker),
 ):
     try:
         config = config_from_request(request)
@@ -176,6 +199,11 @@ async def create_experiment(
         user_id=str(user.id),
         agents=agents,
     )
+    await broker.publish(f"session:{session.session_id}:events", {
+        "event": "session_created",
+        "session_id": session.session_id,
+        "status": session.status,
+    })
     return session.creation_response()
 
 
@@ -191,6 +219,7 @@ async def submit_action(
     request: ActionRequest,
     db: AsyncSession = Depends(get_db),
     authorization: str | None = Header(default=None),
+    broker: MessageBroker = Depends(get_broker),
 ):
     session = await get_session(session_id, db)
     token = bearer_token(authorization)
@@ -205,6 +234,14 @@ async def submit_action(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     await session.save_state(db)
+
+    player = session.player_for_token(token)
+    await broker.publish(f"session:{session_id}:events", {
+        "event": "action_submitted",
+        "session_id": session_id,
+        "player": player,
+        "status": session.status,
+    })
     return session.public_state()
 
 
@@ -633,4 +670,5 @@ def site_config():
     }
 
 
-app.mount("/", StaticFiles(directory=STATIC_ROOT, html=True), name="static")
+if STATIC_ROOT.is_dir():
+    app.mount("/", StaticFiles(directory=STATIC_ROOT, html=True), name="static")
