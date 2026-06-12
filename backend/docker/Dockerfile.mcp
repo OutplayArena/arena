@@ -2,11 +2,10 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY pyproject.toml README.md ./
-COPY nash_arena/ nash_arena/
-COPY legacy_blotto/ legacy_blotto/
+COPY backend/pyproject.toml pyproject.toml
+COPY README.md ../README.md
+COPY backend/nash_arena/ nash_arena/
 COPY games/ games/
-COPY static/ static/
 
 RUN pip install --no-cache-dir .
 

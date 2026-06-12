@@ -5,7 +5,7 @@ import yaml
 from jinja2 import Template
 
 
-CATALOG_ROOT = Path(__file__).resolve().parent.parent / "games"
+CATALOG_ROOT = Path(__file__).resolve().parent.parent.parent / "games"
 
 
 class GameRegistryError(ValueError):

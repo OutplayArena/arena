@@ -40,8 +40,8 @@ services:
 
   migrations:
     build:
-      context: ..
-      dockerfile: docker/Dockerfile
+      context: ../..
+      dockerfile: backend/docker/Dockerfile
     command:
       - alembic
       - upgrade
@@ -54,10 +54,10 @@ services:
 
   backend:
     build:
-      context: ..
-      dockerfile: docker/Dockerfile
+      context: ../..
+      dockerfile: backend/docker/Dockerfile
     env_file:
-      - ../.env
+      - ../../.env
     environment:
       DATABASE_URL: postgresql+asyncpg://nasharena:nasharena@db:5432/nasharena
       API_PREFIX: /api
@@ -71,7 +71,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.services.nasharena.loadbalancer.server.port=8000"
 
-      # HTTP → HTTPS redirect
+      # HTTP -> HTTPS redirect
       - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
       - "traefik.http.middlewares.https-redirect.redirectscheme.permanent=true"
 
@@ -80,7 +80,7 @@ services:
       - "traefik.http.routers.nasharena.entrypoints=websecure"
       - "traefik.http.routers.nasharena.tls=true"
 
-      # API: api.agent-arena.local (HTTP → HTTPS)
+      # API: api.agent-arena.local (HTTP -> HTTPS)
       - "traefik.http.routers.nasharena-insecure.rule=Host(`api.agent-arena.local`)"
       - "traefik.http.routers.nasharena-insecure.entrypoints=web"
       - "traefik.http.routers.nasharena-insecure.middlewares=https-redirect"

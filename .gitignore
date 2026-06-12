@@ -155,12 +155,10 @@ data/
 
 # Frontend
 frontend/node_modules/
-frontend/dist/
-frontend/dist-ssr/
 frontend/*.local
 frontend/coverage/
 frontend/.husky/
-static/assets/
+backend/static/assets/
 !package.json
 !package-lock.json
 !tsconfig.json

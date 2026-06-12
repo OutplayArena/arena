@@ -1,7 +1,6 @@
 import argparse
 import asyncio
 import os
-import re
 import sys
 import time
 import json
@@ -9,9 +8,9 @@ from datetime import datetime, timezone
 
 from openai import OpenAI
 
-from nash_arena.client import ArenaClient
-from games.core.prisonersdilemma.config import PDExperimentConfig, config_from_dict
-from games.core.prisonersdilemma.scenarios import get_scenario, ALL_SCENARIOS, PDScenario
+from nash_arena_sdk import ArenaClient
+from games.core.prisonersdilemma.config import config_from_dict
+from games.core.prisonersdilemma.scenarios import get_scenario, ALL_SCENARIOS
 
 sys.stdout.reconfigure(line_buffering=True)
 
@@ -53,8 +52,6 @@ def build_prompt(state, player_label, scenario, system_prompt_override=None):
 
     coop_v = scenario.cooperate_verb
     def_v = scenario.defect_verb
-    coop_l = scenario.cooperate_label
-    def_l = scenario.defect_label
 
     lines = [
         f"You are player {player_label}. {scenario.description}",
@@ -150,7 +147,7 @@ async def run_match(scenario_id="prison", system_prompt_override=None):
     print(f"Scenario: {scenario.name} ({scenario.description})")
     print(f"Rounds: {NUM_ROUNDS}")
     print(f"Payoffs: T={PAYOFF_T} R={PAYOFF_R} P={PAYOFF_P} S={PAYOFF_S}")
-    print(f"Both models: thinking disabled")
+    print("Both models: thinking disabled")
     if system_prompt_override:
         print(f"Custom system prompt in use ({len(system_prompt_override)} chars)")
     print()
@@ -194,8 +191,8 @@ async def run_match(scenario_id="prison", system_prompt_override=None):
         api_key=nash_api_key,
     )
     session_id = created["session_id"]
-    key_a = created["player_tokens"]["A"]
-    key_b = created["player_tokens"]["B"]
+    created["player_tokens"]["A"]
+    created["player_tokens"]["B"]
     print(f"Session: {session_id}")
     print()
 

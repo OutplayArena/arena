@@ -43,6 +43,8 @@ def render_llm_agent_prompt(num_battlefields, total_resources, history):
     )
 
 
+# DUPLICATE: Also defined in agent-sdk/src/nash_arena_sdk/llm_agent.py as _balanced_allocation
+# Keep implementations in sync.
 def balanced_allocation(num_battlefields, total_resources):
     base = total_resources // num_battlefields
     allocation = [base] * num_battlefields
@@ -144,6 +146,8 @@ class LLMAgent(Agent):
             return base_prompt
         return reasoning.build_system_prompt(base_prompt)
 
+    # DUPLICATE: Also defined in agent-sdk/src/nash_arena_sdk/llm_agent.py as a standalone function
+    # Keep implementations in sync. This version has the bool guard that the SDK version should also have.
     def parse_allocation(self, text):
         match = re.search(r"\[[^\]]+\]", text)
 
@@ -220,6 +224,8 @@ class LiteLLMAgent(Agent):
     def _fallback_allocation(self):
         return balanced_allocation(self.num_battlefields, self.total_resources)
 
+    # DUPLICATE: Also defined in agent-sdk/src/nash_arena_sdk/llm_agent.py as a standalone function
+    # Keep implementations in sync. Note: This version is missing the bool guard that the LLMAgent version has.
     def parse_allocation(self, text):
         match = re.search(r"\[[^\]]+\]", text)
         if match is None:

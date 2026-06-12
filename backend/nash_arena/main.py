@@ -32,9 +32,9 @@ from nash_arena.models.user import User
 
 
 API_PREFIX = os.environ.get("API_PREFIX", "/api")
-_SITE_YAML = Path(__file__).resolve().parent.parent / "site.yaml"
+_SITE_YAML = Path(__file__).resolve().parent.parent.parent / "frontend" / "site.yaml"
 if not _SITE_YAML.is_file():
-    _SITE_YAML = Path(__file__).resolve().parent.parent / "frontend" / "site.yaml"
+    _SITE_YAML = Path(__file__).resolve().parent.parent / "site.yaml"
 SITE_YAML = _SITE_YAML
 app = FastAPI(title="NashArena Agent Arena")
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("JWT_SECRET", "dev-secret-change-me"))

@@ -9,6 +9,8 @@ def _session_key_secret() -> bytes:
     return hashlib.sha256(JWT_SECRET.encode("utf-8")).digest()
 
 
+# DUPLICATE: Also defined in agent-sdk/src/nash_arena_sdk/client.py
+# Keep implementations in sync. The SDK version accepts secret as a parameter.
 SESSION_KEY_PREFIX = "nks_"
 
 
@@ -28,6 +30,8 @@ def derive_session_key(session_id: str, player: str) -> str:
     return f"{SESSION_KEY_PREFIX}{encoded}"
 
 
+# DUPLICATE: Also defined in agent-sdk/src/nash_arena_sdk/client.py
+# Keep implementations in sync. The SDK version accepts secret as a parameter.
 def validate_session_key(key: str) -> tuple[str, str]:
     import base64
 
