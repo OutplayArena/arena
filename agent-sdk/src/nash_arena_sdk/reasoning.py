@@ -1,3 +1,10 @@
+"""Reasoning control module for LLM agents in the Nash Arena SDK.
+
+Provides enums, dataclasses, and utility functions for managing model-specific
+reasoning behaviour, including effort levels, strategy selection, API parameter
+construction, and system prompt augmentation.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
@@ -5,6 +12,18 @@ from enum import Enum
 
 
 class ReasoningEffort(str, Enum):
+    """Enumeration of reasoning effort levels available to agents.
+
+    Controls how much computational budget a model should devote to
+    chain-of-thought reasoning before producing a final answer.
+
+    Values:
+        NONE: No reasoning; respond immediately with no deliberation.
+        LOW: Minimal reasoning; brief internal deliberation.
+        MEDIUM: Moderate reasoning; short assessment before responding.
+        HIGH: Extensive reasoning; thorough analysis before responding.
+    """
+
     NONE = "none"
     LOW = "low"
     MEDIUM = "medium"
@@ -12,13 +31,48 @@ class ReasoningEffort(str, Enum):
 
 
 class ReasoningStrategy(str, Enum):
-    API_CONTROL = "api_control"  # This flags models that have a dedicated API parameter to set the available reasoning budget
-    BUDGET_PROMPT = "budget_prompt"  # This flags models that respond to prompt-based reasoning constraints 
-    STUBBORN = "stubborn"  # This flags models that do not respond to any reasoning moderating attempts and keep using extensive efforts regardless.
+    """Enumeration of strategies used to control model reasoning behaviour.
+
+    Each strategy corresponds to a different mechanism for constraining or
+    directing the reasoning process of an LLM.
+
+    Values:
+        API_CONTROL: The model exposes a dedicated API parameter (e.g.
+            ``reasoning_effort``, ``thinking``) to set the reasoning budget.
+        BUDGET_PROMPT: The model responds to prompt-level instructions that
+            describe the desired amount of deliberation.
+        STUBBORN: The model does not respond to any reasoning moderation
+            attempts and always uses extensive reasoning regardless of
+            configuration.
+    """
+
+    API_CONTROL = "api_control"
+    BUDGET_PROMPT = "budget_prompt"
+    STUBBORN = "stubborn"
 
 
 @dataclass(frozen=True)
 class ModelProfile:
+    """Immutable profile describing the reasoning capabilities of a specific LLM.
+
+    Each profile captures which reasoning-control mechanisms a model supports
+    and which strategy should be preferred when interacting with it.
+
+    Attributes:
+        model_id: Unique identifier for the model (e.g. ``"deepseek-v4-flash"``).
+        provider: Name of the model provider (e.g. ``"openai"``, ``"anthropic"``).
+        supports_thinking_toggle: Whether the model accepts a ``thinking``
+            parameter to enable or disable its internal reasoning trace.
+        supports_reasoning_effort: Whether the model accepts a
+            ``reasoning_effort`` parameter (e.g. ``"low"``, ``"medium"``).
+        supports_enable_thinking: Whether the model accepts an
+            ``enable_thinking`` boolean parameter.
+        baseline_response_time: Expected baseline response time in seconds for
+            the model under normal load, used to compute dynamic timeouts.
+        preferred_strategy: The reasoning strategy that works best for this
+            model. Defaults to ``ReasoningStrategy.API_CONTROL``.
+    """
+
     model_id: str
     provider: str
     supports_thinking_toggle: bool
@@ -39,6 +93,11 @@ DEFAULT_MODEL_PROFILE = ModelProfile(
 )
 
 
+# Registry of known model profiles keyed by model identifier.
+#
+# Maps model IDs (e.g. "deepseek-v4-flash", "gpt-5") to their corresponding
+# :class:`ModelProfile` instances. Used by :func:`get_model_profile` to look
+# up capability information at runtime.
 MODEL_PROFILES: dict[str, ModelProfile] = {
     "deepseek-v4-flash": ModelProfile(
         model_id="deepseek-v4-flash",
@@ -357,6 +416,18 @@ MODEL_PROFILES: dict[str, ModelProfile] = {
 
 @dataclass(frozen=True)
 class ReasoningConfig:
+    """User-facing configuration for reasoning behaviour in a single request.
+
+    Combines the desired effort level with an option to include prompt-level
+    hints that guide the model's deliberation budget.
+
+    Attributes:
+        effort: The reasoning effort level to apply. Defaults to
+            ``ReasoningEffort.NONE``.
+        prompt_hint: Whether to append prompt-level budget instructions to
+            the system prompt. Defaults to ``True``.
+    """
+
     effort: ReasoningEffort = ReasoningEffort.NONE
     prompt_hint: bool = True
 
@@ -378,6 +449,18 @@ _BUDGET_PROMPTS: dict[ReasoningEffort, str] = {
 }
 
 def get_model_profile(model_id: str) -> ModelProfile:
+    """Look up the :class:`ModelProfile` for a given model identifier.
+
+    If the model is not found in :data:`MODEL_PROFILES`, a default profile is
+    returned with the supplied *model_id* substituted in.
+
+    Args:
+        model_id: Unique model identifier (e.g. ``"deepseek-v4-flash"``).
+
+    Returns:
+        The matching :class:`ModelProfile`, or a default profile if the model
+        is unknown.
+    """
     profile = MODEL_PROFILES.get(model_id)
     if profile is not None:
         return profile
@@ -385,11 +468,37 @@ def get_model_profile(model_id: str) -> ModelProfile:
 
 
 def get_strategy(model_id: str) -> ReasoningStrategy:
+    """Return the preferred reasoning strategy for a given model.
+
+    Convenience wrapper around :func:`get_model_profile` that extracts only
+    the :attr:`ModelProfile.preferred_strategy` field.
+
+    Args:
+        model_id: Unique model identifier (e.g. ``"gpt-5"``).
+
+    Returns:
+        The :class:`ReasoningStrategy` preferred for the model.
+    """
     profile = get_model_profile(model_id)
     return profile.preferred_strategy
 
 
 def build_api_params(config: ReasoningConfig, model_id: str) -> dict:
+    """Build provider-specific API parameters for reasoning control.
+
+    Translates the high-level :class:`ReasoningConfig` into the concrete
+    keyword arguments expected by a model provider's chat-completion API,
+    based on the model's supported capabilities.
+
+    Args:
+        config: The desired reasoning configuration.
+        model_id: Unique model identifier used to look up the model profile.
+
+    Returns:
+        A dict of API parameters to merge into the request body. May be empty
+        if the model does not support any reasoning-control parameters or if
+        the strategy is ``BUDGET_PROMPT`` or ``STUBBORN``.
+    """
     profile = get_model_profile(model_id)
     strategy = profile.preferred_strategy
 
@@ -421,6 +530,21 @@ def build_api_params(config: ReasoningConfig, model_id: str) -> dict:
 
 
 def build_system_prompt(base_prompt: str, config: ReasoningConfig, model_id: str) -> str:
+    """Augment a base system prompt with reasoning-budget instructions.
+
+    Appends effort-level guidance to *base_prompt* when the model's strategy
+    is ``BUDGET_PROMPT`` or when prompt hints are applicable. Returns the
+    original prompt unchanged for ``STUBBORN`` models or when
+    :attr:`ReasoningConfig.prompt_hint` is ``False``.
+
+    Args:
+        base_prompt: The original system prompt text.
+        config: The desired reasoning configuration.
+        model_id: Unique model identifier used to look up the model profile.
+
+    Returns:
+        The system prompt, potentially augmented with budget instructions.
+    """
     if not config.prompt_hint:
         return base_prompt
 
@@ -443,7 +567,20 @@ def build_system_prompt(base_prompt: str, config: ReasoningConfig, model_id: str
 
 
 def get_limits(config: ReasoningConfig, model_id: str) -> dict[str, float | int]:
-    """Get token and timeout limits based on config and model."""
+    """Compute token and timeout limits based on config and model profile.
+
+    Maps the current reasoning effort to a maximum token count and derives a
+    dynamic timeout by multiplying the model's baseline response time by an
+    effort-dependent factor.
+
+    Args:
+        config: The desired reasoning configuration.
+        model_id: Unique model identifier used to look up the model profile.
+
+    Returns:
+        A dict with keys ``"max_tokens"`` (int) and ``"timeout"`` (float,
+        in seconds, with a minimum of 15.0).
+    """
     profile = get_model_profile(model_id)
     baseline = profile.baseline_response_time
 
@@ -491,31 +628,75 @@ class ReasoningModerator:
     def from_config(
         cls, model_id: str, config: ReasoningConfig
     ) -> "ReasoningModerator":
-        """Create engine from existing ReasoningConfig."""
+        """Create a :class:`ReasoningModerator` from an existing config.
+
+        Args:
+            model_id: Model identifier (e.g. ``"deepseek-v4-flash"``).
+            config: A :class:`ReasoningConfig` instance providing effort and
+                prompt-hint settings.
+
+        Returns:
+            A new :class:`ReasoningModerator` initialised with the given
+            parameters.
+        """
         return cls(
             model_id, effort=config.effort, prompt_hint=config.prompt_hint
         )
 
     @property
     def strategy(self) -> ReasoningStrategy:
-        """Get the reasoning strategy for this model."""
+        """Return the preferred reasoning strategy for this moderator's model.
+
+        Returns:
+            The :class:`ReasoningStrategy` associated with the model profile.
+        """
         return get_strategy(self.model_id)
 
     @property
     def effort(self) -> ReasoningEffort:
-        """Get the current effort level."""
+        """Return the current reasoning effort level.
+
+        Returns:
+            The :class:`ReasoningEffort` set on this moderator's config.
+        """
         return self.config.effort
 
     def get_api_params(self) -> dict:
-        """Get provider-specific API parameters."""
+        """Build provider-specific API parameters for reasoning control.
+
+        Delegates to :func:`build_api_params` using this moderator's config
+        and model.
+
+        Returns:
+            A dict of API parameters to merge into the request body.
+        """
         return build_api_params(self.config, self.model_id)
 
     def get_limits(self) -> dict[str, float | int]:
-        """Get token and timeout limits."""
+        """Compute token and timeout limits for the current configuration.
+
+        Delegates to :func:`get_limits` using this moderator's config and
+        model.
+
+        Returns:
+            A dict with ``"max_tokens"`` (int) and ``"timeout"`` (float,
+            seconds).
+        """
         return get_limits(self.config, self.model_id)
 
     def build_system_prompt(self, base_prompt: str) -> str:
-        """Build system prompt with reasoning budget instructions."""
+        """Augment a base system prompt with reasoning-budget instructions.
+
+        Delegates to :func:`build_system_prompt` using this moderator's
+        config and model.
+
+        Args:
+            base_prompt: The original system prompt text.
+
+        Returns:
+            The system prompt, potentially augmented with budget
+            instructions.
+        """
         return build_system_prompt(base_prompt, self.config, self.model_id)
 
     def prepare_request_body(

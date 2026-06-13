@@ -1,0 +1,111 @@
+/* Custom theme colors matching NashArena frontend */
+
+:root {
+  --md-primary-fg-color: #12a594;
+  --md-primary-fg-color--light: #2dd4bf;
+  --md-primary-fg-color--dark: #0d8a7b;
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: #f6f5ef;
+  
+  --md-accent-fg-color: #12a594;
+  --md-accent-fg-color--transparent: rgba(18, 165, 148, 0.12);
+  --md-accent-bg-color: #ffffff;
+  --md-accent-bg-color--light: #f6f5ef;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #2dd4bf;
+  --md-primary-fg-color--light: #5eead4;
+  --md-primary-fg-color--dark: #14b8a6;
+  --md-primary-bg-color: #161b22;
+  --md-primary-bg-color--light: #0b1014;
+  
+  --md-accent-fg-color: #2dd4bf;
+  --md-accent-fg-color--transparent: rgba(45, 212, 191, 0.12);
+  --md-accent-bg-color: #161b22;
+  --md-accent-bg-color--light: #0b1014;
+  
+  --md-default-bg-color: #0b1014;
+  --md-default-fg-color: #e6edf3;
+  --md-default-fg-color--light: #8b949e;
+  --md-default-fg-color--lighter: #6e7681;
+  --md-default-fg-color--lightest: #484f58;
+}
+
+[data-md-color-scheme="default"] {
+  --md-default-bg-color: #f6f5ef;
+  --md-default-fg-color: #263238;
+  --md-default-fg-color--light: #6c747a;
+  --md-default-fg-color--lighter: #9aa3a8;
+  --md-default-fg-color--lightest: #c6d0ce;
+}
+
+/* Agent colors for special callouts */
+.agent-a {
+  color: #f28c38;
+}
+
+.agent-b {
+  color: #2d9cdb;
+}
+
+[data-md-color-scheme="slate"] .agent-a {
+  color: #fb923c;
+}
+
+[data-md-color-scheme="slate"] .agent-b {
+  color: #60a5fa;
+}
+
+/* Code block styling */
+.highlight pre {
+  border-radius: 8px;
+}
+
+/* Admonition styling */
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 12px;
+}
+
+/* Button styling */
+.md-typeset .md-button {
+  border-radius: 28px;
+  padding: 0.5rem 1.5rem;
+}
+
+/* Navigation tabs */
+.md-tabs {
+  background-color: var(--md-primary-fg-color);
+}
+
+.md-tabs__item--active .md-tabs__link {
+  font-weight: 700;
+}
+
+/* Search highlighting */
+.md-search-result__mark {
+  background-color: var(--md-accent-fg-color--transparent);
+}
+
+/* Table styling */
+.md-typeset table:not([class]) {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.24);
+}
+
+/* Card-like containers */
+.md-typeset .admonition,
+.md-typeset details {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+[data-md-color-scheme="slate"] .md-typeset .admonition,
+[data-md-color-scheme="slate"] .md-typeset details {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}

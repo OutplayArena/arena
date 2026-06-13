@@ -157,16 +157,19 @@ def game_registry_error(exc: GameRegistryError) -> HTTPException:
 
 @app.get(f"{API_PREFIX}/health")
 def health():
+    """Health check endpoint."""
     return {"status": "ok"}
 
 
 @app.get(f"{API_PREFIX}/games")
 def list_games():
+    """List all registered games."""
     return GAME_REGISTRY.list_games()
 
 
 @app.get(f"{API_PREFIX}/games/{{name}}")
 def get_game(name: str):
+    """Get configuration details for a specific game."""
     try:
         return GAME_REGISTRY.get_game(name)
     except GameRegistryError as exc:
@@ -175,6 +178,7 @@ def get_game(name: str):
 
 @app.get(f"{API_PREFIX}/games/{{name}}/metrics")
 def get_game_metrics(name: str):
+    """Get scoring metrics for a specific game."""
     try:
         return GAME_REGISTRY.get_game_metrics(name)
     except GameRegistryError as exc:
@@ -183,6 +187,7 @@ def get_game_metrics(name: str):
 
 @app.get(f"{API_PREFIX}/games/{{name}}/prompts")
 def get_game_prompts(name: str):
+    """Get prompt templates for a specific game."""
     try:
         return GAME_REGISTRY.get_game_prompts(name)
     except GameRegistryError as exc:
@@ -191,6 +196,7 @@ def get_game_prompts(name: str):
 
 @app.get(f"{API_PREFIX}/games/{{name}}/scenarios")
 def get_game_scenarios(name: str):
+    """Get available scenarios for a specific game."""
     try:
         return {"scenarios": GAME_REGISTRY.get_game_scenarios(name)}
     except GameRegistryError as exc:
@@ -199,6 +205,7 @@ def get_game_scenarios(name: str):
 
 @app.get(f"{API_PREFIX}/games/{{name}}/agents")
 def get_game_agents(name: str):
+    """Get registered agents for a specific game."""
     try:
         return GAME_REGISTRY.get_game_agents(name)
     except GameRegistryError as exc:
@@ -212,6 +219,7 @@ async def create_experiment(
     user: User = Depends(require_user),
     _: None = require_agent_api(),
 ):
+    """Create a new experiment session for a game."""
     try:
         config = config_from_request(request)
         game = GAME_REGISTRY.game_from_config(config)
@@ -268,6 +276,7 @@ async def get_state(
     db: AsyncSession = Depends(get_db),
     _: None = require_agent_api(),
 ):
+    """Get the current state of a session."""
     session = await get_session(session_id, db)
     return session.public_state()
 
@@ -280,6 +289,7 @@ async def get_observation(
     db: AsyncSession = Depends(get_db),
     _: None = require_agent_api(),
 ):
+    """Get the observation for a player in the current session state."""
     session = await get_session(session_id, db)
     state = session.public_state()
     config_dict = session.config.to_dict() if hasattr(session.config, "to_dict") else {}
@@ -300,6 +310,7 @@ async def submit_action(
     authorization: str | None = Header(default=None),
     _: None = require_agent_api(),
 ):
+    """Submit an action (allocation or forfeit) for a player in a session."""
     session = await get_session(session_id, db)
     token = bearer_token(authorization)
 
@@ -318,6 +329,7 @@ async def submit_action(
 
 @app.get(f"{API_PREFIX}/session/{{session_id}}/results")
 async def get_results(session_id: str, db: AsyncSession = Depends(get_db)):
+    """Get the final results and scores for a completed session."""
     session = await get_session(session_id, db)
     try:
         registry = get_global_registry()
@@ -347,6 +359,7 @@ async def fail_session(
     db: AsyncSession = Depends(get_db),
     _: None = require_agent_api(),
 ):
+    """Mark a session as failed with an error message."""
     session = await get_session(session_id, db)
     session.mark_failed(request.get("error", "unknown error"))
     await session.save_state(db)
@@ -420,6 +433,7 @@ def _session_summary(row: SessionModel) -> dict[str, Any]:
 
 @app.get(f"{API_PREFIX}/session/{{session_id}}/summary")
 async def get_session_summary(session_id: str, db: AsyncSession = Depends(get_db)):
+    """Get a summary of a session including agents, scores, and winner."""
     result = await db.execute(select(SessionModel).where(SessionModel.id == session_id))
     row = result.scalar_one_or_none()
     if row is None:
@@ -446,6 +460,7 @@ async def list_sessions(
     db: AsyncSession = Depends(get_db),
     user: User | None = Depends(get_local_or_optional_user),
 ):
+    """List sessions with optional filters for game, agent, and date range."""
     stmt = select(SessionModel)
 
     if user:
@@ -495,6 +510,7 @@ async def delete_session(
     db: AsyncSession = Depends(get_db),
     user: User | None = Depends(get_local_or_optional_user),
 ):
+    """Delete a session by ID."""
     stmt = select(SessionModel).where(SessionModel.id == session_id)
     if user:
         stmt = stmt.where(SessionModel.user_id == user.id)
@@ -514,6 +530,7 @@ async def dashboard(
     db: AsyncSession = Depends(get_db),
     user: User | None = Depends(get_local_or_optional_user),
 ):
+    """Get dashboard summary with game counts and recent sessions."""
     user_filter = SessionModel.user_id == user.id if user else SessionModel.user_id.is_(None)
 
     count_result = await db.execute(
@@ -588,6 +605,7 @@ async def list_keys(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_user),
 ):
+    """List all API keys for the current user."""
     result = await db.execute(
         select(ApiKey)
         .where(ApiKey.user_id == user.id)
@@ -603,6 +621,7 @@ async def create_key(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_user),
 ):
+    """Create a new API key for the current user."""
     full_key, key_hash, key_prefix = generate_platform_key()
     row = ApiKey(
         id=uuid4(),
@@ -632,6 +651,7 @@ async def delete_key(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_user),
 ):
+    """Delete an API key by ID."""
     result = await db.execute(
         select(ApiKey).where(ApiKey.id == key_id, ApiKey.user_id == user.id)
     )
@@ -649,6 +669,7 @@ async def disable_key(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_user),
 ):
+    """Disable an API key without deleting it."""
     result = await db.execute(
         select(ApiKey).where(ApiKey.id == key_id, ApiKey.user_id == user.id)
     )
@@ -666,6 +687,7 @@ async def enable_key(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_user),
 ):
+    """Re-enable a previously disabled API key."""
     result = await db.execute(
         select(ApiKey).where(ApiKey.id == key_id, ApiKey.user_id == user.id)
     )
@@ -685,6 +707,7 @@ def _provider_configured(client_id: str | None, client_secret: str | None) -> bo
 
 @app.get(f"{API_PREFIX}/auth/providers")
 def auth_providers():
+    """List available OAuth providers and their configuration status."""
     return {
         "github": _provider_configured(
             os.environ.get("GITHUB_CLIENT_ID"),
@@ -699,11 +722,13 @@ def auth_providers():
 
 @app.get(f"{API_PREFIX}/auth/github/login")
 async def auth_github_login(request: Request):
+    """Initiate GitHub OAuth login flow."""
     return await github_login(request)
 
 
 @app.get(f"{API_PREFIX}/auth/github/callback")
 async def auth_github_callback(request: Request, db: AsyncSession = Depends(get_db)):
+    """Handle GitHub OAuth callback and issue a JWT."""
     user = await github_callback(request, db)
     token = create_access_token(str(user.id))
     return RedirectResponse(url=f"{CALLBACK_BASE}/?token={token}")
@@ -711,11 +736,13 @@ async def auth_github_callback(request: Request, db: AsyncSession = Depends(get_
 
 @app.get(f"{API_PREFIX}/auth/google/login")
 async def auth_google_login(request: Request):
+    """Initiate Google OAuth login flow."""
     return await google_login(request)
 
 
 @app.get(f"{API_PREFIX}/auth/google/callback")
 async def auth_google_callback(request: Request, db: AsyncSession = Depends(get_db)):
+    """Handle Google OAuth callback and issue a JWT."""
     user = await google_callback(request, db)
     token = create_access_token(str(user.id))
     return RedirectResponse(url=f"{CALLBACK_BASE}/?token={token}")
@@ -723,6 +750,7 @@ async def auth_google_callback(request: Request, db: AsyncSession = Depends(get_
 
 @app.get(f"{API_PREFIX}/auth/me", response_model=UserResponse)
 async def auth_me(user: User = Depends(get_current_user)):
+    """Get the currently authenticated user profile."""
     return UserResponse(
         id=str(user.id),
         email=user.email,
@@ -736,6 +764,7 @@ async def auth_user(
     db: AsyncSession = Depends(get_db),
     user: User | None = Depends(get_local_or_optional_user),
 ):
+    """Get the authenticated user profile (supports local auth)."""
     if user is None:
         raise HTTPException(status_code=401, detail="authentication required")
     return UserResponse(
@@ -808,6 +837,7 @@ async def benchmark_reset(
 
 @app.get(f"{API_PREFIX}/site-config")
 def site_config():
+    """Return site configuration from site.yaml."""
     if SITE_YAML.is_file():
         data = yaml.safe_load(SITE_YAML.read_text(encoding="utf-8")) or {}
     else:

@@ -240,6 +240,21 @@ cd backend/docker && docker compose up -d --build
 
 This starts PostgreSQL, runs migrations, builds the frontend, and launches the backend behind Traefik at `api.agent-arena.local`. The Helm chart (Option A above) is still the recommended way to deploy the database for local development.
 
+## Documentation
+
+Full documentation is available at https://nash-arena-docs.pages.dev.
+
+To build and preview locally:
+
+```bash
+# Install dependencies
+pip install mkdocs-material mkdocstrings-python pyyaml
+
+# Generate game docs and serve
+python scripts/build_game_docs.py
+mkdocs serve
+```
+
 ## Game Directory
 
 The repo separates platform code from game definitions:
