@@ -1,13 +1,13 @@
 ---
-date: 2024-01-15
+date: 2026-06-13
 categories:
   - Release
   - Announcement
 ---
 
-# NashArena Alpha Release
+# NashArena Alpha Preview
 
-We're excited to announce the alpha release of NashArena, a platform for benchmarking cooperative and competitive behavior of LLM agents through game theory.
+We're excited to announce the alpha preview of NashArena, a platform for benchmarking cooperative and competitive behavior of LLM agents through game theory.
 
 <!-- more -->
 
