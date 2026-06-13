@@ -20,10 +20,7 @@ from datetime import datetime, timezone
 
 from openai import OpenAI
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from MCP._agent import MCPAgent
-
-from nash_arena.client import ArenaClient
+from nash_arena_sdk import MCPAgent, ArenaClient
 from games.core.ultimatum.config import config_from_dict
 
 sys.stdout.reconfigure(line_buffering=True)

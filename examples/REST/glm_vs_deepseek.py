@@ -1,5 +1,4 @@
 import asyncio
-import json
 import os
 import re
 import ast
@@ -8,7 +7,7 @@ import time
 
 from openai import OpenAI
 
-from nash_arena.client import ArenaClient
+from nash_arena_sdk import ArenaClient
 from games.core.colonelblotto.config import ColonelBlottoExperimentConfig
 
 sys.stdout.reconfigure(line_buffering=True)
@@ -122,7 +121,7 @@ async def run_match():
 
     print(f"=== {PLAYER_A_MODEL} (A) vs {PLAYER_B_MODEL} (B) ===")
     print(f"Battlefields: {NUM_BATTLEFIELDS}, Troops: {TOTAL_RESOURCES}, Rounds: {NUM_ROUNDS}")
-    print(f"GLM 5.1: no thinking mode | DeepSeek V4 Pro: thinking mode")
+    print("GLM 5.1: no thinking mode | DeepSeek V4 Pro: thinking mode")
     print()
 
     print("Warming up LLM APIs...")
@@ -157,8 +156,8 @@ async def run_match():
         api_key=nash_api_key,
     )
     session_id = created["session_id"]
-    key_a = created["player_tokens"]["A"]
-    key_b = created["player_tokens"]["B"]
+    created["player_tokens"]["A"]
+    created["player_tokens"]["B"]
     print(f"Session: {session_id}")
     print()
 

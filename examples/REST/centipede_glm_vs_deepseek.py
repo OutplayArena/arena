@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 
 from openai import OpenAI
 
-from nash_arena.client import ArenaClient
+from nash_arena_sdk import ArenaClient
 from games.core.centipede.config import config_from_dict
 
 sys.stdout.reconfigure(line_buffering=True)

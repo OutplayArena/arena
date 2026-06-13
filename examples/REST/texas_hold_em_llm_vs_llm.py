@@ -2,7 +2,6 @@ import argparse
 import asyncio
 import json
 import os
-import re
 import sys
 import time
 from contextlib import AsyncExitStack
@@ -12,7 +11,7 @@ from mcp import ClientSession, StdioServerParameters, types
 from mcp.client.stdio import stdio_client
 from openai import OpenAI
 
-from nash_arena.client import ArenaClient
+from nash_arena_sdk import ArenaClient
 from games.core.texas_hold_em.config import config_from_dict
 
 sys.stdout.reconfigure(line_buffering=True)
@@ -183,7 +182,7 @@ async def run_match(variant="classic", num_hands=3):
     print(f"=== Texas Hold'em: {PLAYER_A_MODEL} (A) vs {PLAYER_B_MODEL} (B) ===")
     print(f"Variant: {variant} ({'face-up' if is_face_up else 'face-down'})")
     print(f"Hands: {num_hands}")
-    print(f"Both models: thinking disabled")
+    print("Both models: thinking disabled")
     print()
 
     print("Warming up LLM APIs...")
