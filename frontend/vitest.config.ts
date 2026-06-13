@@ -4,7 +4,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: {
-      "@games": path.resolve(__dirname, "../games"),
+      "@games": path.resolve(__dirname, "../games/games"),
       "@frontend": path.resolve(__dirname, "src"),
       "react": path.resolve(__dirname, "node_modules/react"),
       "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
@@ -15,7 +15,7 @@ export default defineConfig({
   },
   server: {
     fs: {
-      allow: [".", "../games"],
+      allow: [".", "../games/games"],
     },
   },
   test: {

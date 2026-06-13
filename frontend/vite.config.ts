@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@games": path.resolve(__dirname, "../games"),
+      "@games": path.resolve(__dirname, "../games/games"),
       "@frontend": path.resolve(__dirname, "src"),
       "react": path.resolve(__dirname, "node_modules/react"),
       "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
@@ -15,7 +15,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: "../static",
+    outDir: "../backend/static",
     emptyOutDir: true,
   },
   server: {
@@ -23,7 +23,7 @@ export default defineConfig({
       "/api": "http://localhost:8000",
     },
     fs: {
-      allow: ["..", "../games"],
+      allow: ["..", "../games/games"],
     },
   },
 });

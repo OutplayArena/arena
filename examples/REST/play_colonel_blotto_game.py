@@ -1,6 +1,6 @@
 import os
 
-from nash_arena.client import ArenaClient
+from nash_arena_sdk import ArenaClient
 from games.core.colonelblotto.config import ColonelBlottoExperimentConfig
 
 BASE_URL = os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000")
