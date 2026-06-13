@@ -1,5 +1,5 @@
 
-from nash_arena.reasoning import (
+from nash_arena_sdk.reasoning import (
     DEFAULT_MODEL_PROFILE,
     MODEL_PROFILES,
     ReasoningConfig,

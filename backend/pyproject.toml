@@ -31,6 +31,7 @@ dependencies = [
     "wandb>=0.17.0",
     "jinja2>=3.1",
     "games",
+    "nash-arena-sdk",
 ]
 
 [project.optional-dependencies]
@@ -49,3 +50,4 @@ packages = ["nash_arena"]
 
 [tool.uv.sources]
 games = { path = "../games", editable = true }
+nash-arena-sdk = { workspace = true }

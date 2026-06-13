@@ -16,6 +16,7 @@ from mcp.client.stdio import stdio_client
 from openai import OpenAI
 
 from nash_arena_sdk.client import ArenaClient
+from nash_arena_sdk.reasoning import ReasoningEffort, ReasoningModerator
 
 
 @dataclass
@@ -28,6 +29,7 @@ class LLMConfig:
     extra_body: dict[str, Any] | None = None
     fallback_model: str | None = None
     max_retries: int = 2
+    reasoning_effort: ReasoningEffort = ReasoningEffort.NONE
 
 
 @dataclass
@@ -139,6 +141,7 @@ class LLMAgent:
         )
         self._mcp_session: ClientSession | None = None
         self._exit_stack: AsyncExitStack | None = None
+        self._reasoning = ReasoningModerator(llm_config.model, effort=llm_config.reasoning_effort)
 
     async def start_mcp(self) -> None:
         """Start the MCP server connection.
@@ -225,22 +228,31 @@ class LLMAgent:
             models_to_try.append(self.llm_config.fallback_model)
 
         for model in models_to_try:
+            reasoning = ReasoningModerator(model, effort=self.llm_config.reasoning_effort)
+            augmented_system = reasoning.build_system_prompt(system_msg)
+            limits = reasoning.get_limits()
+            api_params = reasoning.get_api_params()
+
             for attempt in range(self.llm_config.max_retries):
                 try:
                     kwargs: dict[str, Any] = {
                         "model": model,
                         "messages": [
-                            {"role": "system", "content": system_msg},
+                            {"role": "system", "content": augmented_system},
                             {"role": "user", "content": user_msg},
                         ],
-                        "max_tokens": self.llm_config.max_tokens,
+                        "max_tokens": limits["max_tokens"],
                         "temperature": self.llm_config.temperature,
+                        **api_params,
                     }
                     if self.llm_config.extra_body:
                         kwargs["extra_body"] = self.llm_config.extra_body
 
                     completion = self._openai.chat.completions.create(**kwargs)
-                    return completion.choices[0].message.content or ""
+                    message = completion.choices[0].message
+                    content = message.content or ""
+                    reasoning_content = getattr(message, "reasoning_content", "") or ""
+                    return content or reasoning_content
                 except Exception:
                     if attempt < self.llm_config.max_retries - 1:
                         time.sleep(2)

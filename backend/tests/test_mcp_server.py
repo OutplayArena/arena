@@ -1,7 +1,7 @@
 import pytest
 
 from nash_arena import mcp_server
-from nash_arena.client import ArenaClient
+from nash_arena_sdk.client import ArenaClient
 from nash_arena.auth.session_key import derive_session_key
 
 

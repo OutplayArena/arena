@@ -17,6 +17,14 @@ from nash_arena_sdk.orchestrator import (
     OrchestratorConfig,
 )
 from nash_arena_sdk.quick_launch import quick_play
+from nash_arena_sdk.reasoning import (
+    MODEL_PROFILES,
+    ModelProfile,
+    ReasoningConfig,
+    ReasoningEffort,
+    ReasoningModerator,
+    ReasoningStrategy,
+)
 from nash_arena_sdk.results import format_results, save_results
 
 __version__ = "0.1.0"
@@ -38,4 +46,10 @@ __all__ = [
     "parse_allocation",
     "parse_offer",
     "parse_accept_reject",
+    "MODEL_PROFILES",
+    "ModelProfile",
+    "ReasoningConfig",
+    "ReasoningEffort",
+    "ReasoningModerator",
+    "ReasoningStrategy",
 ]

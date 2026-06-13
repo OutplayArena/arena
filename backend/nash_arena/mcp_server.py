@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from mcp.server.fastmcp import FastMCP  # noqa: E402
-from nash_arena.client import ArenaClient  # noqa: E402
+from nash_arena_sdk.client import ArenaClient  # noqa: E402
 from nash_arena.auth.session_key import validate_session_key  # noqa: E402
 
 # Configure host and port from environment variables

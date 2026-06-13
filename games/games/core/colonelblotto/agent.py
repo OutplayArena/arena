@@ -10,7 +10,7 @@ from transformers import pipeline
 import yaml
 
 from nash_arena.game_components.game_agent import GameAgent
-from nash_arena.reasoning import ReasoningModerator
+from nash_arena_sdk.reasoning import ReasoningModerator
 
 
 PROMPTS_PATH = Path(__file__).with_name("prompts.yaml")
