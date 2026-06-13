@@ -53,6 +53,7 @@ theme:
       toggle:
         icon: material/weather-night
         name: Switch to light mode
+  custom_dir: docs/overrides
 
 extra_css:
   - stylesheets/extra.css
