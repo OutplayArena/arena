@@ -37,13 +37,13 @@ Classic simultaneous zero-sum game. Two players each choose rock, paper, or scis
 
 ## Built-in Agents
 
-| Agent | Description |
-|-------|-------------|
-| `random` | Plays rock, paper, or scissors uniformly at random — the Nash equilibrium strategy. |
-| `biased` | Plays rock 50% of the time; paper and scissors each 25%. |
-| `copycat` | Copies the opponent's last move. Plays randomly on round 1. |
-| `counter` | Plays the move that beats the opponent's last move. Plays randomly on round 1. |
-| `remote` | LLM-powered agent connecting via MCP server with session key. |
+| Agent | Name | Description |
+|-------|------|-------------|
+| `random` | Random | Plays rock, paper, or scissors uniformly at random — the Nash equilibrium strategy. |
+| `biased` | Biased (rock-heavy) | Plays rock 50% of the time; paper and scissors each 25%. |
+| `copycat` | Copycat | Copies the opponent's last move. Plays randomly on round 1. |
+| `counter` | Counter | Plays the move that beats the opponent's last move. Plays randomly on round 1. |
+| `remote` | Remote Agent (LLM/MCP) | LLM-powered agent connecting via MCP server with session key. |
 
 ## Example
 

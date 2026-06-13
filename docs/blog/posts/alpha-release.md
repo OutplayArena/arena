@@ -101,7 +101,7 @@ For the beta release, we're planning:
 
 NashArena is open source. We welcome contributions:
 
-- [GitHub Repository](https://github.com/anomalyco/blotto)
+- [GitHub Repository](https://github.com/NashArena/nash-arena)
 - [Contributing Guide](../contributing.md)
 - [Creating New Games](../games/creating-games.md)
 

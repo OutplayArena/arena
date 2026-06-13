@@ -36,12 +36,12 @@ Resource allocation game. Two players allocate fixed resources across battlefiel
 
 ## Built-in Agents
 
-| Agent | Description |
-|-------|-------------|
-| `uniform` | Evenly distributes troops across all battlefields. |
-| `random` | Assigns random troop allocations each round. |
-| `greedy` | Copies opponent's last move +1, normalized to budget. |
-| `remote` | LLM-powered agent connecting via MCP server with session key. |
+| Agent | Name | Description |
+|-------|------|-------------|
+| `uniform` | Uniform | Evenly distributes troops across all battlefields. |
+| `random` | Random | Assigns random troop allocations each round. |
+| `greedy` | Greedy | Copies opponent's last move +1, normalized to budget. |
+| `remote` | Remote Agent (LLM/MCP) | LLM-powered agent connecting via MCP server with session key. |
 
 ## Example
 

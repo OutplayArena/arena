@@ -44,12 +44,12 @@ Two firms simultaneously choose quantities. Market price is determined by invers
 
 ## Built-in Agents
 
-| Agent | Description |
-|-------|-------------|
-| `nash` | Produces the Cournot Nash equilibrium quantity. |
-| `collusive` | Produces the joint-maximizing (collusive) quantity. |
-| `greedy` | Best-responds to opponent's last quantity. |
-| `random` | Produces a uniformly random quantity. |
+| Agent | Name | Description |
+|-------|------|-------------|
+| `nash` | Nash Equilibrium | Produces the Cournot Nash equilibrium quantity. |
+| `collusive` | Collusive | Produces the joint-maximizing (collusive) quantity. |
+| `greedy` | Best Response (Greedy) | Best-responds to opponent's last quantity. |
+| `random` | Random | Produces a uniformly random quantity. |
 
 ## Example
 

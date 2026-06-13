@@ -3,8 +3,8 @@ site_url: https://nash-arena-docs.pages.dev
 site_description: >-
   Benchmarking cooperative and competitive behavior of LLM agents
   through game theory.
-repo_url: https://github.com/anomalyco/blotto
-repo_name: anomalyco/blotto
+repo_url: https://github.com/NashArena/nash-arena
+repo_name: NashArena/nash-arena
 edit_uri: edit/main/docs/
 
 theme:
@@ -124,7 +124,7 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/anomalyco/blotto
+      link: https://github.com/NashArena/nash-arena
   generator: false
 
 nav:

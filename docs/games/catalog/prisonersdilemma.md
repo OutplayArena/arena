@@ -54,16 +54,16 @@ Classic social dilemma. Two players simultaneously choose to cooperate or defect
 
 ## Built-in Agents
 
-| Agent | Description |
-|-------|-------------|
-| `always_cooperate` | Always cooperates regardless of opponent's actions. |
-| `always_defect` | Always defects regardless of opponent's actions. |
-| `tit_for_tat` | Starts cooperating, then mirrors the opponent's last move. |
-| `grim_trigger` | Cooperates until the opponent defects once, then defects forever. |
-| `forgiving_tft` | Like Tit-for-Tat but cooperates with 10% probability after opponent defects. |
-| `pavlov` | Cooperates after mutual cooperation or after exploiting opponent; defects otherwise. |
-| `random` | Chooses cooperate or defect with equal probability each round. |
-| `remote` | LLM-powered agent connecting via MCP server with session key. |
+| Agent | Name | Description |
+|-------|------|-------------|
+| `always_cooperate` | Always Cooperate | Always cooperates regardless of opponent's actions. |
+| `always_defect` | Always Defect | Always defects regardless of opponent's actions. |
+| `tit_for_tat` | Tit-for-Tat | Starts cooperating, then mirrors the opponent's last move. |
+| `grim_trigger` | Grim Trigger | Cooperates until the opponent defects once, then defects forever. |
+| `forgiving_tft` | Forgiving TFT | Like Tit-for-Tat but cooperates with 10% probability after opponent defects. |
+| `pavlov` | Pavlov (Win-Stay/Lose-Shift) | Cooperates after mutual cooperation or after exploiting opponent; defects otherwise. |
+| `random` | Random | Chooses cooperate or defect with equal probability each round. |
+| `remote` | Remote Agent (LLM/MCP) | LLM-powered agent connecting via MCP server with session key. |
 
 ## Example
 

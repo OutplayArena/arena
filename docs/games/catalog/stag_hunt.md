@@ -52,15 +52,15 @@ A 2-player symmetric coordination game with two Nash equilibria. (Stag, Stag) is
 
 ## Built-in Agents
 
-| Agent | Description |
-|-------|-------------|
-| `always_stag` | Always hunts stag. Maximizes joint welfare if opponent cooperates. |
-| `always_hare` | Always hunts hare. Safe risk-dominant strategy. |
-| `nash_equilibrium` | Plays the risk-dominant Nash equilibrium. |
-| `pareto_optimal` | Always attempts the Pareto-optimal equilibrium. |
-| `tit_for_tat` | Starts with stag, then mirrors opponent's last move. |
-| `optimistic` | Hunts stag until betrayed once, then always hare. |
-| `random` | Chooses uniformly at random each round. |
+| Agent | Name | Description |
+|-------|------|-------------|
+| `always_stag` | Always Stag | Always hunts stag. Maximizes joint welfare if opponent cooperates. |
+| `always_hare` | Always Hare | Always hunts hare. Safe risk-dominant strategy. |
+| `nash_equilibrium` | Nash Equilibrium (Hare) | Plays the risk-dominant Nash equilibrium. |
+| `pareto_optimal` | Pareto Optimal (Stag) | Always attempts the Pareto-optimal equilibrium. |
+| `tit_for_tat` | Tit for Tat | Starts with stag, then mirrors opponent's last move. |
+| `optimistic` | Optimistic (Grim Trigger) | Hunts stag until betrayed once, then always hare. |
+| `random` | Random | Chooses uniformly at random each round. |
 
 ## Example
 

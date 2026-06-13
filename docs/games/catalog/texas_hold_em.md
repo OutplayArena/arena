@@ -39,13 +39,13 @@ Heads-up Texas Hold'em with four betting streets (preflop, flop, turn, river) an
 
 ## Built-in Agents
 
-| Agent | Description |
-|-------|-------------|
-| `random` | Picks randomly from fold, check, call, and raise with equal probability. |
-| `conservative` | Folds and checks frequently; rarely raises. |
-| `aggressive` | Raises and calls aggressively; rarely folds. |
-| `call_station` | Calls most of the time; never folds. |
-| `remote` | LLM-powered agent connecting via MCP server with session key. |
+| Agent | Name | Description |
+|-------|------|-------------|
+| `random` | Random | Picks randomly from fold, check, call, and raise with equal probability. |
+| `conservative` | Conservative | Folds and checks frequently; rarely raises. |
+| `aggressive` | Aggressive | Raises and calls aggressively; rarely folds. |
+| `call_station` | Call Station | Calls most of the time; never folds. |
+| `remote` | Remote Agent (LLM/MCP) | LLM-powered agent connecting via MCP server with session key. |
 
 ## Example
 

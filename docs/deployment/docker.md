@@ -11,8 +11,8 @@ Deploy NashArena using Docker Compose for local development or single-server dep
 
 ```bash
 # Clone repository
-git clone https://github.com/anomalyco/blotto.git
-cd blotto
+git clone https://github.com/NashArena/nash-arena.git
+cd nash-arena
 
 # Configure environment
 cp .env.example .env

@@ -41,12 +41,12 @@ Player A proposes a split of a fixed sum; Player B accepts or rejects. Both get 
 
 ## Built-in Agents
 
-| Agent | Description |
-|-------|-------------|
-| `spe` | Subgame-perfect equilibrium — proposes minimum, accepts any positive offer. |
-| `fair` | Proposes equal split; rejects offers below 40%. |
-| `greedy` | Proposes minimum; accepts >30%. |
-| `random` | Random offers and random responses. |
+| Agent | Name | Description |
+|-------|------|-------------|
+| `spe` | SPE Agent | Subgame-perfect equilibrium — proposes minimum, accepts any positive offer. |
+| `fair` | Fair Agent | Proposes equal split; rejects offers below 40%. |
+| `greedy` | Greedy Proposer | Proposes minimum; accepts >30%. |
+| `random` | Random | Random offers and random responses. |
 
 ## Example
 

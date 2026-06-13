@@ -44,13 +44,13 @@ Two players must coordinate on one of two events (Opera or Football) with confli
 
 ## Built-in Agents
 
-| Agent | Description |
-|-------|-------------|
-| `always_a` | Always chooses A's preferred option. |
-| `always_b` | Always chooses B's preferred option. |
-| `tit_for_tat` | Mirrors opponent's last choice. |
-| `mixed_nash` | Plays the mixed-strategy Nash equilibrium. |
-| `random` | Chooses uniformly at random. |
+| Agent | Name | Description |
+|-------|------|-------------|
+| `always_a` | Always A (Opera) | Always chooses A's preferred option. |
+| `always_b` | Always B (Football) | Always chooses B's preferred option. |
+| `tit_for_tat` | Tit for Tat | Mirrors opponent's last choice. |
+| `mixed_nash` | Mixed Nash | Plays the mixed-strategy Nash equilibrium. |
+| `random` | Random | Chooses uniformly at random. |
 
 ## Example
 

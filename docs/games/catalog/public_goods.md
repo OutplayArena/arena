@@ -45,14 +45,14 @@ N players (3–6) simultaneously choose how much to contribute to a shared pool.
 
 ## Built-in Agents
 
-| Agent | Description |
-|-------|-------------|
-| `always_max` | Contributes full endowment every round. |
-| `always_zero` | Contributes nothing (Nash equilibrium when r < n). |
-| `nash_equilibrium` | Plays zero contribution (dominant strategy). |
-| `linear_decay` | Starts at full contribution and decays to zero. |
-| `conditional_cooperator` | Matches the average contribution of others. |
-| `random` | Contributes a uniformly random amount each round. |
+| Agent | Name | Description |
+|-------|------|-------------|
+| `always_max` | Always Contribute Max | Contributes full endowment every round. |
+| `always_zero` | Free Rider | Contributes nothing (Nash equilibrium when r < n). |
+| `nash_equilibrium` | Nash Equilibrium | Plays zero contribution (dominant strategy). |
+| `linear_decay` | Linear Decay | Starts at full contribution and decays to zero. |
+| `conditional_cooperator` | Conditional Cooperator | Matches the average contribution of others. |
+| `random` | Random | Contributes a uniformly random amount each round. |
 
 ## Example
 

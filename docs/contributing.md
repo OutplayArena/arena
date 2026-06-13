@@ -50,8 +50,8 @@ Have an idea? Open an issue describing:
 ### Clone and Install
 
 ```bash
-git clone https://github.com/anomalyco/blotto.git
-cd blotto
+git clone https://github.com/NashArena/nash-arena.git
+cd nash-arena
 
 # Install Python packages
 uv sync

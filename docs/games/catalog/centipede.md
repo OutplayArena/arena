@@ -40,13 +40,13 @@ A sequential game where two players alternately choose to TAKE (end the game) or
 
 ## Built-in Agents
 
-| Agent | Description |
-|-------|-------------|
-| `take_first` | Backward induction — always take on first move. |
-| `always_pass` | Never takes; maximizes joint payoff (cooperative but exploitable). |
-| `last_step_take` | Passes until the last opportunity, then takes. |
-| `tit_for_tat` | Passes if opponent passed last time, takes otherwise. |
-| `random` | Chooses randomly between take and pass. |
+| Agent | Name | Description |
+|-------|------|-------------|
+| `take_first` | Take First (SPE) | Backward induction — always take on first move. |
+| `always_pass` | Always Pass | Never takes; maximizes joint payoff (cooperative but exploitable). |
+| `last_step_take` | Last Step Take | Passes until the last opportunity, then takes. |
+| `tit_for_tat` | Tit for Tat | Passes if opponent passed last time, takes otherwise. |
+| `random` | Random | Chooses randomly between take and pass. |
 
 ## Example
 
