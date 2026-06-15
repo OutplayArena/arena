@@ -45,6 +45,7 @@ class GameSession:
     status: str = "ready"
     error_message: str | None = None
     locked: bool = False
+    agents: dict[str, str] | None = None
     runtime_config: ExperimentRuntimeConfig | None = None
     wandb_logger: WandbGameLogger | None = None
     wandb_finished: bool = False
@@ -102,6 +103,7 @@ class GameSession:
             status=row.status,
             error_message=row.error_message,
             locked=row.locked,
+            agents=row.agents_json,
         )
 
     async def save_new(self, db: AsyncSession, user_id: str | None = None, agents: dict[str, str] | None = None) -> None:

@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from nash_arena.db import get_db, async_session as _async_session_factory
 from nash_arena.experiment_config import split_runtime_config
 from nash_arena.game_registry import GameRegistry, GameRegistryError
-from nash_arena.messaging import RedisBroker, StatePersister
+from nash_arena.messaging import RedisBroker, StatePersister, MessageLogger
 from nash_arena.messaging.broker import MessageBroker
 from nash_arena.metrics import AgentRegistry, get_global_registry, set_global_registry, MatchEvaluator, load_registry, save_registry
 from nash_arena.session import GameSession, _serialize_state
@@ -50,15 +50,21 @@ POOL_MANAGER: PoolManager | None = None
 
 _broker: RedisBroker | None = None
 _persister: StatePersister | None = None
+_logger: MessageLogger | None = None
 
 
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
-    global _broker, _persister
+    global _broker, _persister, _logger
     _broker = RedisBroker()
     _persister = StatePersister(_broker, _async_session_factory)
     await _persister.start()
+    _logger = MessageLogger(_broker, _async_session_factory)
+    await _logger.start()
     yield
+    if _logger is not None:
+        await _logger.stop()
+        _logger = None
     if _persister is not None:
         await _persister.stop()
         _persister = None
@@ -74,7 +80,7 @@ app.add_middleware(SessionMiddleware, secret_key=os.environ.get("JWT_SECRET", "d
 @app.on_event("startup")
 async def _load_registry_from_db() -> None:
     try:
-        async with async_session() as db:
+        async with _async_session_factory() as db:
             registry = await load_registry(db)
             set_global_registry(registry)
     except Exception:
@@ -360,11 +366,23 @@ async def submit_action(
             "locked": session.locked,
             "player_tokens": session.player_tokens,
         })
+        player = session.player_for_token(token)
+        round_number = state_dict.get("round_number", 0)
+        agent_id = (session.agents or {}).get(player)
+        await broker.enqueue("message:log", {
+            "session_id": session_id,
+            "player": player,
+            "round_number": round_number,
+            "agent_id": agent_id,
+            "payload": request.allocation,
+        })
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     player = session.player_for_token(token)
     state_dict = _serialize_state(session.state)
     public = session.public_state()
+    round_number = public.get("round", 0) or state_dict.get("round_number", 0)
+    agent_id = (session.agents or {}).get(player)
 
     await broker.cache_set(f"session:{session_id}:state", public, ttl=600)
     await broker.publish(f"session:{session_id}:state", public)
@@ -374,6 +392,13 @@ async def submit_action(
         "status": session.status,
         "player_tokens": session.player_tokens,
         "locked": session.locked,
+    })
+    await broker.enqueue("message:log", {
+        "session_id": session_id,
+        "player": player,
+        "round_number": round_number,
+        "agent_id": agent_id,
+        "payload": request.allocation,
     })
     await broker.publish(f"session:{session_id}:events", {
         "event": "action_submitted",
