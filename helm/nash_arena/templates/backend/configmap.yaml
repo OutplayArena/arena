@@ -7,5 +7,14 @@ metadata:
     app.kubernetes.io/component: backend
 data:
   API_PREFIX: {{ .Values.backend.env.apiPrefix | quote }}
+  ENABLE_AGENT_REST_API: {{ .Values.backend.env.enableAgentRestApi | default "true" | quote }}
   MCP_NAMESPACE: {{ .Release.Namespace | quote }}
   MCP_IMAGE: "{{ .Values.mcpServer.image.repository }}:{{ .Values.mcpServer.image.tag }}"
+  MCP_BACKEND_URL: "http://{{ include "nasharena.fullname" . }}-backend:8000{{ .Values.backend.env.apiPrefix }}"
+  MCP_MAX_CONCURRENT: {{ .Values.mcpServer.maxConcurrentJobs | quote }}
+  MCP_JOB_TTL: {{ .Values.mcpServer.jobTTL | quote }}
+  MCP_PORT: {{ .Values.mcpServer.port | quote }}
+  MCP_ALLOWED_IPS: "127.0.0.1,{{ include "nasharena.fullname" . }}-mcp-pool.{{ .Release.Namespace }}.svc.cluster.local"
+  {{- if .Values.mcpServer.publicBaseUrl }}
+  MCP_PUBLIC_BASE_URL: {{ .Values.mcpServer.publicBaseUrl | quote }}
+  {{- end }}

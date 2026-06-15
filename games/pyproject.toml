@@ -1,0 +1,18 @@
+[project]
+name = "games"
+version = "0.1.0"
+description = "Game implementations for NashArena"
+requires-python = ">=3.10"
+dependencies = [
+    "nash-arena-sdk",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["games"]
+
+[tool.uv.sources]
+nash-arena-sdk = { path = "../agent-sdk", editable = true }

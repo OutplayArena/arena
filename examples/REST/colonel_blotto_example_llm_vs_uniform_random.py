@@ -12,7 +12,7 @@ from mcp import ClientSession, StdioServerParameters, types
 from mcp.client.stdio import stdio_client
 from openai import OpenAI
 
-from nash_arena.client import ArenaClient
+from nash_arena_sdk import ArenaClient
 from games.core.colonelblotto.config import ColonelBlottoExperimentConfig
 
 sys.stdout.reconfigure(line_buffering=True)

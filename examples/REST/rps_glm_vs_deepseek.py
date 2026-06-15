@@ -1,6 +1,5 @@
 import asyncio
 import os
-import re
 import sys
 import time
 import json
@@ -8,8 +7,8 @@ from datetime import datetime, timezone
 
 from openai import OpenAI
 
-from nash_arena.client import ArenaClient
-from games.core.rock_paper_scissors.config import RPSExperimentConfig, config_from_dict
+from nash_arena_sdk import ArenaClient
+from games.core.rock_paper_scissors.config import config_from_dict
 
 sys.stdout.reconfigure(line_buffering=True)
 
@@ -46,8 +45,8 @@ def build_prompt(state, player_label):
 
     lines = [
         f"You are playing Rock-Paper-Scissors as player {player_label}.",
-        f"Rock beats scissors, scissors beats paper, paper beats rock.",
-        f"Win = +1, tie = 0, loss = -1.",
+        "Rock beats scissors, scissors beats paper, paper beats rock.",
+        "Win = +1, tie = 0, loss = -1.",
         f"Round {round_num} of {round_total}.",
         f"Your score: {total_scores.get(player_label, 0)}.",
     ]
@@ -116,7 +115,7 @@ async def run_match():
 
     print(f"=== Rock-Paper-Scissors: {PLAYER_A_MODEL} (A) vs {PLAYER_B_MODEL} (B) ===")
     print(f"Rounds: {NUM_ROUNDS}")
-    print(f"Both models: thinking disabled")
+    print("Both models: thinking disabled")
     print()
 
     print("Warming up LLM APIs...")
@@ -152,8 +151,8 @@ async def run_match():
         api_key=nash_api_key,
     )
     session_id = created["session_id"]
-    key_a = created["player_tokens"]["A"]
-    key_b = created["player_tokens"]["B"]
+    created["player_tokens"]["A"]
+    created["player_tokens"]["B"]
     print(f"Session: {session_id}")
     print()
 
