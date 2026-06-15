@@ -3,6 +3,7 @@ import { GameHeader } from "./GameHeader";
 import { TabBar } from "./TabBar";
 import { AutoConfigForm } from "./AutoConfigForm";
 import { AutoHistoryView } from "./AutoHistoryView";
+import { InteractiveAgentPanel } from "./InteractiveAgentPanel";
 import { loadLiveView, loadConfigForm, loadHistoryView } from "../games/registry";
 import type { GameMetadata, Match } from "../types";
 import { useApp } from "../hooks/useApp";
@@ -306,6 +307,7 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
             ) : (
               <LoadingSpinner className="flex-1" />
             )}
+            <InteractiveAgentPanel />
           </div>
         )}
         {activeTab === "history" && (
