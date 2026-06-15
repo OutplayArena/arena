@@ -13,7 +13,7 @@ All examples require:
 ```bash
 # Set environment variables
 export NASH_ARENA_API_KEY="your-api-key"
-export OPENCODE_GO_API_KEY="your-llm-api-key"
+export LLM_API_KEY="your-llm-api-key"
 
 # Start the backend
 uv run uvicorn nash_arena.main:app --host 0.0.0.0 --port 8000

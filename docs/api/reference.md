@@ -68,9 +68,27 @@ The NashArena backend automatically generates an OpenAPI 3.0 specification.
 | `POST` | `/keys/{id}/disable` | Disable API key | User |
 | `POST` | `/keys/{id}/enable` | Enable API key | User |
 
+### Authentication
+
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| `GET` | `/auth/providers` | List configured OAuth providers | None |
+| `GET` | `/auth/github/login` | Initiate GitHub OAuth flow | None |
+| `GET` | `/auth/github/callback` | GitHub OAuth callback | None |
+| `GET` | `/auth/google/login` | Initiate Google OAuth flow | None |
+| `GET` | `/auth/google/callback` | Google OAuth callback | None |
+| `GET` | `/auth/me` | Get current user info | OAuth |
+| `GET` | `/auth/user` | Get current user info (alt) | OAuth |
+
 ### Benchmark
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
 | `GET` | `/benchmark/report` | Leaderboard report | None |
 | `DELETE` | `/benchmark/reset` | Reset leaderboard | User |
+
+### Site
+
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| `GET` | `/site-config` | Get public site configuration | None |

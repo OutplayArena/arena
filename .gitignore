@@ -167,3 +167,4 @@ backend/static/assets/
 !*.cfg
 !frontend/package.json
 !frontend/package-lock.json
+minikube-linux-amd64

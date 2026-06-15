@@ -19,6 +19,23 @@ SESSION_KEY_PREFIX = "nks_"
 # Keep implementations in sync. The SDK version accepts secret as a parameter
 # since it cannot import the backend's module-level JWT_SECRET constant.
 def validate_session_key(key: str, secret: str) -> tuple[str, str]:
+    """Validate a player session key and extract the session ID and player.
+
+    Decodes and verifies the HMAC signature of a session key (``nks_...``)
+    against the provided secret. This is the SDK-side counterpart of the
+    backend's session key validation.
+
+    Args:
+        key: The session key to validate, starting with ``nks_``.
+        secret: The JWT secret used to verify the HMAC signature.
+
+    Returns:
+        A tuple of ``(session_id, player)`` extracted from the key.
+
+    Raises:
+        ValueError: If the key format is invalid, the HMAC signature does
+            not match, or the key cannot be decoded.
+    """
     if not key or not key.startswith(SESSION_KEY_PREFIX):
         raise ValueError("invalid session key")
 

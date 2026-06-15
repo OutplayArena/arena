@@ -33,6 +33,21 @@ class MCPAgent:
         jwt_secret: str | None = None,
         use_mcp: bool = True,
     ):
+        """Initialize an MCP-first agent with REST fallback.
+
+        Args:
+            player_token: The player token (``nks_...``) obtained from
+                ``create_experiment`` response's ``player_tokens``.
+            mcp_url: Optional MCP server URL for SSE transport. When provided
+                and ``use_mcp`` is True, the agent connects via MCP protocol.
+            base_url: Base URL for the arena REST API fallback. Falls back to
+                the ``NASH_ARENA_BASE_URL`` or ``ARENA_BASE_URL`` environment
+                variables, then to ``"http://127.0.0.1:8000/api"``.
+            jwt_secret: Secret used to validate the player token's JWT.
+                Falls back to the ``JWT_SECRET`` environment variable.
+            use_mcp: Whether to attempt MCP connection when ``mcp_url`` is
+                provided. Defaults to True.
+        """
         self.token = player_token
         self.mcp_url = mcp_url
         self.use_mcp = use_mcp and mcp_url is not None
@@ -61,38 +76,77 @@ class MCPAgent:
         return "mcp" if self.use_mcp and self._mcp_client else "rest"
 
     def get_observation(self, variant: str = "neutral") -> dict:
-        """Return rendered system + turn prompts for the current game state."""
+        """Return rendered system and turn prompts for the current game state.
+
+        Args:
+            variant: The prompt variant to retrieve. Defaults to ``"neutral"``.
+
+        Returns:
+            A dictionary with ``"system"`` and ``"turn"`` keys containing
+            the rendered prompt strings for the current game state.
+        """
         if self._mcp_client:
             return self._mcp_client.get_observation(variant=variant)
         return self._rest_client.get_observation(self.player, variant=variant)
 
     def submit_action(self, allocation: object) -> dict:
-        """Submit this agent's action for the current round."""
+        """Submit this agent's action for the current round.
+
+        Args:
+            allocation: The action to submit. The expected structure
+                depends on the game being played (e.g., a list of troop
+                allocations for Colonel Blotto, or a string for binary
+                choice games).
+
+        Returns:
+            A dictionary containing the server's response after processing
+            the submitted action.
+        """
         if self._mcp_client:
             return self._mcp_client.submit_action(allocation)
         return self._rest_client.submit_action(allocation)
 
     def get_game_state(self) -> dict:
-        """Return the raw current game state."""
+        """Return the raw current game state.
+
+        Returns:
+            A dictionary representing the full game state, including
+            phase, round number, scores, history, and any game-specific
+            data.
+        """
         if self._mcp_client:
             return self._mcp_client.get_game_state()
         return self._rest_client.get_state()
 
     def get_results(self) -> dict:
-        """Return final scores and metrics once the game is complete."""
+        """Return final scores and metrics once the game is complete.
+
+        Returns:
+            A dictionary containing ``"winner"``, ``"total_scores"``,
+            ``"metrics"``, and ``"history"`` keys with the final game
+            results.
+        """
         if self._mcp_client:
             return self._mcp_client.get_results()
         return self._rest_client.get_results()
 
     def is_terminal(self) -> bool:
-        """Return True if the game is complete."""
+        """Check whether the game has reached a terminal state.
+
+        Returns:
+            ``True`` if the game is complete, ``False`` otherwise.
+        """
         if self._mcp_client:
             state = self._mcp_client.get_game_state()
             return state.get("phase") == "complete"
         return self._rest_client.is_terminal()
 
     def close(self) -> None:
-        """Close the MCP connection if open."""
+        """Close the MCP connection if open.
+
+        Disconnects the MCP client and cleans up resources. Safe to call
+        multiple times; no-op if already closed or if MCP was not in use.
+        """
         if getattr(self, '_mcp_client', None):
             self._mcp_client.disconnect()
             self._mcp_client = None

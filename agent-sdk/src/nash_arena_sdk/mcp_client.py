@@ -36,6 +36,16 @@ class MCPClient:
         headers: dict[str, str] | None = None,
         timeout: float = 10.0,
     ):
+        """Initialize the MCP client.
+
+        Args:
+            mcp_url: The base URL of the MCP server. The ``/sse`` suffix
+                is appended automatically.
+            headers: Optional HTTP headers to include in the SSE connection
+                (e.g., authorization tokens).
+            timeout: Connection and request timeout in seconds. Defaults
+                to 10.0.
+        """
         self.mcp_url = mcp_url.rstrip("/") + "/sse"
         self.headers = headers or {}
         self.timeout = timeout
@@ -46,7 +56,15 @@ class MCPClient:
         self._thread: threading.Thread | None = None
 
     def connect(self) -> None:
-        """Connect to the MCP server. Must be called before using tools."""
+        """Connect to the MCP server via SSE transport.
+
+        Must be called before using any tool methods. Sets up the event
+        loop in a background thread and initializes the MCP session.
+        Retries up to 5 times if the server is not ready yet.
+
+        Raises:
+            RuntimeError: If the connection fails after all retries.
+        """
         if self._connected:
             return
 
@@ -84,7 +102,12 @@ class MCPClient:
                     raise
 
     def disconnect(self) -> None:
-        """Disconnect from the MCP server."""
+        """Disconnect from the MCP server and clean up resources.
+
+        Closes the MCP session, stops the event loop, and joins the
+        background thread. Safe to call multiple times; no-op if already
+        disconnected.
+        """
         if not self._connected or not self._exit_stack or not self._loop:
             return
 
@@ -120,35 +143,92 @@ class MCPClient:
         return future.result(timeout=60)
 
     def get_observation(self, variant: str = "neutral") -> dict:
-        """Get rendered system + turn prompts for the current game state."""
+        """Get rendered system and turn prompts for the current game state.
+
+        Args:
+            variant: The prompt variant to retrieve. Defaults to
+                ``"neutral"``.
+
+        Returns:
+            A dictionary with ``"system"`` and ``"turn"`` keys containing
+            the rendered prompt strings.
+        """
         return self._call_tool("get_observation", {"variant": variant})
 
     def get_game_state(self) -> dict:
-        """Get the raw current game state."""
+        """Get the raw current game state.
+
+        Returns:
+            A dictionary representing the full game state, including
+            phase, round, scores, history, and game-specific data.
+        """
         return self._call_tool("get_game_state")
 
     def submit_action(self, allocation: Any) -> dict:
-        """Submit an action for the current round."""
+        """Submit an action for the current round.
+
+        Args:
+            allocation: The action to submit. Format depends on the game
+                (e.g., a list of integers for Colonel Blotto, a string
+                for Prisoner's Dilemma).
+
+        Returns:
+            A dictionary containing the server's action submission result.
+        """
         return self._call_tool("submit_action", {"allocation": allocation})
 
     def get_results(self) -> dict:
-        """Get final scores and metrics after the game is complete."""
+        """Get final scores and metrics after the game is complete.
+
+        Returns:
+            A dictionary containing ``"winner"``, ``"total_scores"``,
+            ``"metrics"``, and ``"history"``.
+        """
         return self._call_tool("get_results")
 
     def list_games(self) -> list[dict]:
-        """List available games."""
+        """List all available games in the catalog.
+
+        Returns:
+            A list of dictionaries, each with game metadata including
+            ``"slug"``, ``"name"``, ``"description"``, and ``"status"``.
+        """
         return self._call_tool("list_games")
 
     def get_game_details(self, game: str) -> dict:
-        """Get metadata and config schema for a game."""
+        """Get metadata and config schema for a specific game.
+
+        Args:
+            game: The game slug (e.g., ``"ultimatum"``).
+
+        Returns:
+            A dictionary with full game metadata, ontology, config schema,
+            and example config.
+        """
         return self._call_tool("get_game_details", {"game": game})
 
     def get_game_metrics(self, game: str) -> dict:
-        """Get metric declarations for a game."""
+        """Get the list of metrics computed for a specific game.
+
+        Args:
+            game: The game slug (e.g., ``"ultimatum"``).
+
+        Returns:
+            A dictionary containing a ``"metrics"`` key with a list of
+            metric names.
+        """
         return self._call_tool("get_game_metrics", {"game": game})
 
     def get_game_prompts(self, game: str) -> dict:
-        """Get default prompt templates for a game."""
+        """Get the default prompt templates for a specific game.
+
+        Args:
+            game: The game slug (e.g., ``"ultimatum"``).
+
+        Returns:
+            A dictionary containing ``"system"``, ``"state"``,
+            ``"action_format"``, and ``"variants"`` prompt templates.
+        """
         return self._call_tool("get_game_prompts", {"game": game})
 
     def __enter__(self):

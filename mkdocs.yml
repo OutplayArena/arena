@@ -165,6 +165,7 @@ nav:
       - mcp/overview.md
       - mcp/gateway.md
       - mcp/setup.md
+      - Gateway Architecture: MCP_GATEWAY.md
   - Deployment:
       - deployment/docker.md
       - deployment/kubernetes.md
