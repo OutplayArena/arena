@@ -383,8 +383,17 @@ async def submit_action(
     public = session.public_state()
     round_number = public.get("round", 0) or state_dict.get("round_number", 0)
     agent_id = (session.agents or {}).get(player)
+    action_meta = {
+        "player": player,
+        "action": request.allocation,
+        "agent_id": agent_id,
+        "round_number": round_number,
+    }
+    public["_last_action"] = action_meta
 
-    await broker.cache_set(f"session:{session_id}:state", public, ttl=600)
+    cache_payload = {**public}
+    cache_payload.pop("_last_action", None)
+    await broker.cache_set(f"session:{session_id}:state", cache_payload, ttl=600)
     await broker.publish(f"session:{session_id}:state", public)
     await broker.enqueue("state:persist", {
         "session_id": session_id,

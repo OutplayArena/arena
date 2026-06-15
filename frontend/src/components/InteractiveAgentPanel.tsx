@@ -5,6 +5,7 @@ import { submitAction } from "../api";
 type PlayerSide = "A" | "B";
 
 interface ChatMessage {
+  id: string;
   player: PlayerSide;
   text: string;
   round: number;
@@ -28,6 +29,8 @@ export function InteractiveAgentPanel() {
 
   const [inputValue, setInputValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [liveMessages, setLiveMessages] = useState<ChatMessage[]>([]);
+  const prevHistoryLenRef = useRef(0);
 
   const interactivePlayers: PlayerSide[] = [];
   if (pg?.agentAId === "interactive") interactivePlayers.push("A");
@@ -37,16 +40,47 @@ export function InteractiveAgentPanel() {
   const awaiting = (currentState?.awaiting as PlayerSide[]) ?? [];
   const phase = currentState?.phase as string | undefined;
 
-  const messages: ChatMessage[] = (match?.history ?? []).flatMap((r) => {
+  const historyMessages: ChatMessage[] = (match?.history ?? []).flatMap((r) => {
     const msgs: ChatMessage[] = [];
     if (r.action_a !== undefined)
-      msgs.push({ player: "A", text: formatAction(r.action_a), round: r.round });
+      msgs.push({ id: `h-A-${r.round}`, player: "A", text: formatAction(r.action_a), round: r.round });
     if (r.action_b !== undefined)
-      msgs.push({ player: "B", text: formatAction(r.action_b), round: r.round });
+      msgs.push({ id: `h-B-${r.round}`, player: "B", text: formatAction(r.action_b), round: r.round });
     return msgs;
   });
 
+  const messages = historyMessages.length > 0 ? historyMessages : liveMessages;
+
   const awaitingInteractive = awaiting.filter((p) => interactivePlayers.includes(p));
+
+  useEffect(() => {
+    const lastAction = currentState?._last_action as
+      | { player: PlayerSide; action: unknown; agent_id?: string; round_number: number }
+      | undefined;
+    if (lastAction?.action !== undefined) {
+      setLiveMessages((prev) => {
+        const key = `${lastAction.player}-${lastAction.round_number}-${JSON.stringify(lastAction.action)}`;
+        if (prev.length > 0 && prev[prev.length - 1].id === key) return prev;
+        return [
+          ...prev,
+          {
+            id: key,
+            player: lastAction.player,
+            text: formatAction(lastAction.action),
+            round: lastAction.round_number,
+          },
+        ];
+      });
+    }
+  }, [currentState]);
+
+  useEffect(() => {
+    const hLen = historyMessages.length;
+    if (hLen > prevHistoryLenRef.current) {
+      prevHistoryLenRef.current = hLen;
+      setLiveMessages([]);
+    }
+  }, [historyMessages]);
 
   useEffect(() => {
     if (listRef.current) {
@@ -96,8 +130,8 @@ export function InteractiveAgentPanel() {
             Waiting for the game to start...
           </p>
         )}
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex items-start gap-2 text-xs`}>
+        {messages.map((msg) => (
+          <div key={msg.id} className={`flex items-start gap-2 text-xs`}>
             <span
               className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-extrabold border ${PLAYER_COLORS[msg.player]}`}
             >
