@@ -15,3 +15,6 @@ agents:
     name: Random
     description: Produces a uniformly random quantity.
     class: RandomAgent
+  - id: interactive
+    label: Interactive (Human)
+    description: "You play directly via the Live View panel."

@@ -127,8 +127,10 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
 
       for (const player of ["A", "B"] as const) {
         if (!gameState.awaiting.includes(player)) continue;
-        const isRemote = player === "A" ? pg.agentAId === "remote" : pg.agentBId === "remote";
-        if (isRemote) continue;
+        const skipAgent = player === "A"
+          ? pg.agentAId === "remote" || pg.agentAId === "interactive"
+          : pg.agentBId === "remote" || pg.agentBId === "interactive";
+        if (skipAgent) continue;
         const agent = player === "A" ? pg.agentAId : pg.agentBId;
         const action = chooseAction(agent, player, gameState, pg.gameSlug);
         await submitAction(pg.sessionId, action, tokens[player]);
