@@ -19,9 +19,13 @@ class CooperativeMetrics:
 
     @staticmethod
     def _to_binary(actions: list[Any]) -> list[int]:
-        _STR_MAP = {"cooperate": 1, "cooperated": 1, "defect": 0, "defected": 0}
+        _STR_MAP = {
+            "cooperate": 1, "cooperated": 1, "defect": 0, "defected": 0,
+            "stag": 1, "hare": 0,
+            "pass": 1, "take": 0,
+        }
         return [
-            _STR_MAP[a] if isinstance(a, str) else int(a)
+            _STR_MAP[a] if isinstance(a, str) else (1 if int(a) > 0 else 0)
             for a in actions
         ]
 
