@@ -390,8 +390,16 @@ async def submit_action(
         })
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-    player = session.player_for_token(token)
     state_dict = _serialize_state(session.state)
+    session_row = await db.execute(select(SessionModel).where(SessionModel.id == session_id))
+    row = session_row.scalar_one()
+    row.state_json = state_dict
+    row.status = session.status
+    row.locked = session.locked
+    row.player_tokens_json = session.player_tokens
+    await db.commit()
+
+    player = session.player_for_token(token)
     public = session.public_state()
     round_number = public.get("round", 0) or state_dict.get("round_number", 0)
     agent_id = (session.agents or {}).get(player)
@@ -407,13 +415,6 @@ async def submit_action(
     cache_payload.pop("_last_action", None)
     await broker.cache_set(f"session:{session_id}:state", cache_payload, ttl=600)
     await broker.publish(f"session:{session_id}:state", public)
-    await broker.enqueue("state:persist", {
-        "session_id": session_id,
-        "state": state_dict,
-        "status": session.status,
-        "player_tokens": session.player_tokens,
-        "locked": session.locked,
-    })
     await broker.enqueue("message:log", {
         "session_id": session_id,
         "player": player,

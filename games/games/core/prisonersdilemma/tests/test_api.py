@@ -51,6 +51,11 @@ class FakeResult:
     def scalar_one_or_none(self):
         return self._value
 
+    def scalar_one(self):
+        if self._value is None:
+            raise Exception("No row found")
+        return self._value
+
 
 class FakeDb:
     def __init__(self):

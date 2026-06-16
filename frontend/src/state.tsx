@@ -56,6 +56,32 @@ type Action =
   | { type: "END_GAME" }
   | { type: "SET_SESSION_META"; locked: boolean; status: string; config: AppState["sessionConfig"] };
 
+const PENDING_GAME_KEY = "nasharena_pending_game";
+
+function loadPendingGame(): AppState["pendingGame"] {
+  try {
+    const stored = localStorage.getItem(PENDING_GAME_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch {
+    // ignore parse errors
+  }
+  return null;
+}
+
+function savePendingGame(pendingGame: AppState["pendingGame"]): void {
+  try {
+    if (pendingGame) {
+      localStorage.setItem(PENDING_GAME_KEY, JSON.stringify(pendingGame));
+    } else {
+      localStorage.removeItem(PENDING_GAME_KEY);
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
 export function initialState(): AppState {
   return {
     activeMatch: null,
@@ -66,7 +92,7 @@ export function initialState(): AppState {
     sessionLocked: false,
     sessionStatus: "",
     sessionConfig: null,
-    pendingGame: null,
+    pendingGame: loadPendingGame(),
   };
 }
 
@@ -125,8 +151,10 @@ export function appReducer(state: AppState, action: Action): AppState {
     case "STOP_PLAY":
       return { ...state, isPlaying: false };
     case "START_GAME":
+      savePendingGame(action.payload);
       return { ...state, pendingGame: action.payload, status: "Starting game..." };
     case "END_GAME":
+      savePendingGame(null);
       return { ...state, pendingGame: null };
     case "CLEAR_MATCH":
       return initialState();

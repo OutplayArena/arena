@@ -106,6 +106,7 @@ class ArenaClient:
         config: Any,
         agents: dict[str, str] | None = None,
         api_key: str | None = None,
+        interactive: bool = False,
     ) -> dict:
         """Create a new game experiment on the NashArena backend.
         
@@ -122,6 +123,8 @@ class ArenaClient:
             agents: Optional dict mapping player IDs to agent identifiers.
             api_key: Optional API key for authentication. Required if the backend
                 has authentication enabled.
+            interactive: If True, creates an interactive session where human players
+                can submit actions via the UI. Default is False (locked session).
         
         Returns:
             Dictionary containing:
@@ -143,6 +146,7 @@ class ArenaClient:
         payload = self._config_payload(config)
         if agents:
             payload["agents"] = agents
+        payload["interactive"] = interactive
         headers = {}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"

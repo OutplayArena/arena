@@ -25,7 +25,7 @@ def test_create_experiment_posts_config_dict_to_endpoint():
     assert result == {"session_id": "s1"}
     assert requests[0].method == "POST"
     assert requests[0].url.path == "/api/experiment"
-    assert json.loads(requests[0].content) == {"game": "colonelblotto"}
+    assert json.loads(requests[0].content) == {"game": "colonelblotto", "interactive": False}
     assert requests[0].headers["Authorization"] == "Bearer nka_testkey"
 
 
@@ -45,7 +45,9 @@ def test_create_experiment_serializes_config_object():
 
     client.create_experiment(config, api_key="nka_testkey")
 
-    assert json.loads(requests[0].content) == config.to_dict()
+    expected = config.to_dict()
+    expected["interactive"] = False
+    assert json.loads(requests[0].content) == expected
     assert requests[0].headers["Authorization"] == "Bearer nka_testkey"
 
 

@@ -22,6 +22,18 @@ database:
       cpu: 500m
       memory: 512Mi
 
+redis:
+  image: redis:7-alpine
+  port: 6379
+  storage: 2Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
 oauth:
   callbackBaseUrl: "http://localhost:8000"
   githubClientId: ""

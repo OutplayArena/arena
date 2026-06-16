@@ -50,6 +50,11 @@ class FakeResult:
     def scalar_one_or_none(self):
         return self._value
 
+    def scalar_one(self):
+        if self._value is None:
+            raise Exception("No row found")
+        return self._value
+
 
 class FakeDb:
     def __init__(self):
@@ -160,6 +165,32 @@ def test_create_experiment_rejects_invalid_config(fake_db):
 
     assert response.status_code == 400
     assert "2 players" in response.json()["detail"]
+
+
+def test_create_experiment_interactive_sets_locked_false(fake_db):
+    client = TestClient(app)
+    payload = valid_payload()
+    payload["interactive"] = True
+
+    response = client.post("/experiment", json=payload)
+
+    assert response.status_code == 200
+    session_id = response.json()["session_id"]
+    row = fake_db._store[session_id]
+    assert row.locked is False
+
+
+def test_create_experiment_non_interactive_sets_locked_true(fake_db):
+    client = TestClient(app)
+    payload = valid_payload()
+    payload["interactive"] = False
+
+    response = client.post("/experiment", json=payload)
+
+    assert response.status_code == 200
+    session_id = response.json()["session_id"]
+    row = fake_db._store[session_id]
+    assert row.locked is True
 
 
 def test_get_state_returns_public_state_without_tokens(fake_db):

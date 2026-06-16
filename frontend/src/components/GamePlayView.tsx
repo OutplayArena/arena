@@ -12,10 +12,12 @@ import { getState, submitAction, getResults } from "../api";
 import { chooseAction } from "../agents";
 import { resultToMatch, copyToClipboard } from "./utils";
 import { LoadingSpinner } from "./LoadingSpinner";
+import { InteractiveAgentPanel } from "./InteractiveAgentPanel";
 import type { RunConfig, PlayerSide } from "../types";
 
 interface GamePlayViewProps {
   game: GameMetadata;
+  sessionId?: string | null;
   locked: boolean;
   sessionStatus: string;
   replayMatch: Match | null;
@@ -30,7 +32,7 @@ interface GamePlayViewProps {
   createdAt?: string | null;
 }
 
-function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionConfig, createdAt }: GamePlayViewProps) {
+function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch, sessionConfig, createdAt }: GamePlayViewProps) {
   const { state, setMatch, setSessionMeta, stopPlay, endGame } = useApp();
   const hasLiveView = game.ui?.live_view ?? false;
 
@@ -40,7 +42,9 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
     { id: "history", label: "History" },
   ];
 
-  const [activeTab, setActiveTab] = useState(replayMatch ? "live" : "config");
+  const isActiveSession = sessionStatus === "ready" || sessionStatus === "running";
+  const initialTab = replayMatch || isActiveSession || state.pendingGame ? "live" : "config";
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [prevReplayMatch, setPrevReplayMatch] = useState(replayMatch);
   if (prevReplayMatch !== replayMatch) {
     setPrevReplayMatch(replayMatch);
@@ -110,7 +114,7 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
           for (const player of allPlayers) {
             if (!gameState.awaiting.includes(player)) continue;
             const agentId = pg.agentIds?.[player] ?? (player === "A" ? pg.agentAId : pg.agentBId);
-            if (agentId === "remote") continue;
+            if (agentId === "remote" || agentId === "interactive") continue;
             const action = chooseAction(agentId, player, gameState, pg.gameSlug);
             const updated = await submitAction(pg.sessionId, action, tokens[player]);
             gameState = updated;
@@ -212,6 +216,55 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
     }
   }, [replayMatch, setMatch]);
 
+  // Fetch state for active sessions without pendingGame (read-only mode)
+  useEffect(() => {
+    if (!sessionId || state.pendingGame || replayMatch) return;
+    if (sessionStatus !== "ready" && sessionStatus !== "running") return;
+
+    const fetchState = async () => {
+      try {
+        const gameState = await getState(sessionId);
+        const match = {
+          agent_a: sessionConfig?.agent_a ?? "Player A",
+          agent_b: sessionConfig?.agent_b ?? "Player B",
+          session_id: sessionId,
+          config_hash: (gameState.config_hash as string) || "",
+          num_rounds: gameState.round_total,
+          num_battlefields: (gameState.battlefields as Array<Record<string, unknown>> | undefined)?.length ?? 0,
+          total_resources: (gameState.budgets as Record<string, number> | undefined)?.A ?? 0,
+          total_score_a: ((gameState.total_scores as Record<string, number>)?.A) || 0,
+          total_score_b: ((gameState.total_scores as Record<string, number>)?.B) || 0,
+          match_winner: undefined as PlayerSide | "Tie" | undefined,
+          history: ((gameState.history as unknown as Array<Record<string, unknown>>) || []).map((r) => {
+            const moves = (r.allocations || r.actions || r.quantities || {}) as Record<string, unknown>;
+            const scores = (r.payoffs || r.round_payoffs || r.scores || {}) as Record<string, number>;
+            const totals = (r.total_scores || {}) as Record<string, number>;
+            return {
+              round: (r.round as number) || 0,
+              agent_a: sessionConfig?.agent_a ?? "Player A",
+              agent_b: sessionConfig?.agent_b ?? "Player B",
+              action_a: moves.A,
+              action_b: moves.B,
+              score_a: scores.A ?? 0,
+              score_b: scores.B ?? 0,
+              total_score_a: totals.A ?? 0,
+              total_score_b: totals.B ?? 0,
+              winner: (r.winner as string || "Tie") as "A" | "B" | "Tie",
+              raw: r,
+            };
+          }),
+          metrics: {},
+          currentState: gameState,
+        };
+        setMatch(match);
+      } catch (err) {
+        console.error("Failed to fetch session state:", err);
+      }
+    };
+
+    fetchState();
+  }, [sessionId, sessionStatus, state.pendingGame, replayMatch, sessionConfig, setMatch]);
+
   const hasMatch = !!replayMatch;
   const scoresRef = useRef<AnimatedScores>({ displayedScoreA: 0, displayedScoreB: 0 });
 
@@ -292,6 +345,9 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
               </div>
             ) : (
               <LoadingSpinner className="flex-1" />
+            )}
+            {state.pendingGame && (state.pendingGame.agentAId === "interactive" || state.pendingGame.agentBId === "interactive") && (
+              <InteractiveAgentPanel />
             )}
           </div>
         )}

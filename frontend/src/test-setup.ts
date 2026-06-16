@@ -29,6 +29,7 @@ beforeAll(() => {
 afterEach(() => {
   cleanup();
   server.resetHandlers();
+  localStorage.clear();
 });
 
 afterAll(() => {

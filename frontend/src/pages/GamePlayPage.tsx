@@ -105,6 +105,7 @@ export function GamePlayPage() {
     <div className="flex-1 min-h-0 flex flex-col">
       <GamePlayView
         game={game}
+        sessionId={sessionId ?? null}
         locked={sessionMeta?.locked ?? false}
         sessionStatus={sessionMeta?.status ?? ""}
         replayMatch={replayMatch}
