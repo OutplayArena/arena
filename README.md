@@ -74,7 +74,7 @@ For production deployments with Kubernetes and Helm, see [Kubernetes Deployment]
 ### Setup
 
 ```bash
-# Install Python packages
+# Install all Python workspace packages (backend, agent-sdk, games)
 uv sync
 
 # Install frontend dependencies

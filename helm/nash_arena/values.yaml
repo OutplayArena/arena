@@ -3,7 +3,7 @@ fullnameOverride: ""
 
 dev:
   liveReload: false
-  staticSourcePath: /home/herbert/code/nash-arena/backend/static
+  staticSourcePath: /home/herbert/code/blotto/backend/static
 
 database:
   image: postgres:16-alpine
