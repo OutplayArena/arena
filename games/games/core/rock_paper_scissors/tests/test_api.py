@@ -10,9 +10,38 @@ os.environ["ENABLE_AGENT_REST_API"] = "true"
 import pytest
 from fastapi.testclient import TestClient
 
-from nash_arena.main import app, config_from_request
+from nash_arena.main import app, config_from_request, get_broker
 from nash_arena.db import get_db
 from nash_arena.auth.dependencies import require_user, _ensure_local_user
+
+
+class FakeBroker:
+    def __init__(self, db=None):
+        self._db = db
+        self._cache = {}
+
+    async def publish(self, channel, message):
+        pass
+
+    async def cache_get(self, key):
+        return self._cache.get(key)
+
+    async def cache_set(self, key, value, ttl=None):
+        self._cache[key] = value
+
+    async def enqueue(self, queue, message):
+        if queue == "state:persist" and self._db:
+            session_id = message.get("session_id")
+            if session_id and session_id in self._db._store:
+                row = self._db._store[session_id]
+                row.state_json = message.get("state", row.state_json)
+                row.status = message.get("status", row.status)
+                row.error_message = message.get("error_message")
+                row.locked = message.get("locked", row.locked)
+
+    async def subscribe(self, channel):
+        return
+        yield
 
 
 class FakeResult:
@@ -61,6 +90,8 @@ class FakeDb:
 def fake_db_fixture():
     db = FakeDb()
     app.dependency_overrides[get_db] = lambda: db
+    broker = FakeBroker(db)
+    app.dependency_overrides[get_broker] = lambda: broker
 
     async def _bypass_auth():
         return await _ensure_local_user(db)
@@ -68,6 +99,7 @@ def fake_db_fixture():
 
     yield db
     app.dependency_overrides.pop(get_db, None)
+    app.dependency_overrides.pop(get_broker, None)
     app.dependency_overrides.pop(require_user, None)
 
 

@@ -4,4 +4,4 @@ NashArena does not track, collect, or store any personal information about its u
 
 If you authenticate via a third-party provider (GitHub, Google), NashArena stores only the minimal profile information required for account identification: your provider user ID, display name, email address, and avatar URL. This data is never shared with any third party.
 
-This project is open-source software. You can inspect the full source code at the [NashArena repository](https://github.com/ryanzhangofficial/nasharena).
+This project is open-source software. You can inspect the full source code at the [NashArena repository](https://github.com/NashArena/nash-arena).

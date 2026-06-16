@@ -9,9 +9,38 @@ from fastapi.testclient import TestClient
 
 import nash_arena.main
 importlib.reload(nash_arena.main)
-from nash_arena.main import app, bearer_token, config_from_request  # noqa: E402
+from nash_arena.main import app, bearer_token, config_from_request, get_broker  # noqa: E402
 from nash_arena.db import get_db  # noqa: E402
 from nash_arena.auth.dependencies import require_user, _ensure_local_user  # noqa: E402
+
+
+class FakeBroker:
+    def __init__(self, db=None):
+        self._db = db
+        self._cache = {}
+
+    async def publish(self, channel, message):
+        pass
+
+    async def cache_get(self, key):
+        return self._cache.get(key)
+
+    async def cache_set(self, key, value, ttl=None):
+        self._cache[key] = value
+
+    async def enqueue(self, queue, message):
+        if queue == "state:persist" and self._db:
+            session_id = message.get("session_id")
+            if session_id and session_id in self._db._store:
+                row = self._db._store[session_id]
+                row.state_json = message.get("state", row.state_json)
+                row.status = message.get("status", row.status)
+                row.error_message = message.get("error_message")
+                row.locked = message.get("locked", row.locked)
+
+    async def subscribe(self, channel):
+        return
+        yield
 
 
 class FakeResult:
@@ -61,12 +90,16 @@ def fake_db_fixture():
     db = FakeDb()
     app.dependency_overrides[get_db] = lambda: db
 
+    broker = FakeBroker(db)
+    app.dependency_overrides[get_broker] = lambda: broker
+
     async def _bypass_auth():
         return await _ensure_local_user(db)
     app.dependency_overrides[require_user] = _bypass_auth
 
     yield db
     app.dependency_overrides.pop(get_db, None)
+    app.dependency_overrides.pop(get_broker, None)
     app.dependency_overrides.pop(require_user, None)
 
 

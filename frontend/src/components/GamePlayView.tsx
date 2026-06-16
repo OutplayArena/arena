@@ -3,17 +3,16 @@ import { GameHeader } from "./GameHeader";
 import { TabBar } from "./TabBar";
 import { AutoConfigForm } from "./AutoConfigForm";
 import { AutoHistoryView } from "./AutoHistoryView";
-import { InteractiveAgentPanel } from "./InteractiveAgentPanel";
 import { loadLiveView, loadConfigForm, loadHistoryView } from "../games/registry";
 import type { GameMetadata, Match } from "../types";
 import { useApp } from "../hooks/useApp";
 import { AppProvider } from "../state";
 import type { AnimatedScores } from "../hooks/useCanvasRenderer";
-import { connectSessionStream, getState, submitAction, getResults } from "../api";
+import { getState, submitAction, getResults } from "../api";
 import { chooseAction } from "../agents";
 import { resultToMatch, copyToClipboard } from "./utils";
 import { LoadingSpinner } from "./LoadingSpinner";
-import type { RunConfig, PlayerSide, GameState } from "../types";
+import type { RunConfig, PlayerSide } from "../types";
 
 interface GamePlayViewProps {
   game: GameMetadata;
@@ -51,9 +50,10 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
   const [canvasCollapsed, setCanvasCollapsed] = useState(false);
   const loadedRef = useRef(false);
   const gameLoopRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const completedRef = useRef(false);
   const sessionRef = useRef<string | null>(null);
-  const sseRef = useRef<EventSource | null>(null);
+  const backoffRef = useRef(0);
 
   useEffect(() => {
     const pg = state.pendingGame;
@@ -61,9 +61,8 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
     gameLoopRef.current = true;
     completedRef.current = false;
     sessionRef.current = pg.sessionId;
+    backoffRef.current = 1000;
     setActiveTab("live");
-
-    const tokens = pg.tokens;
 
     const buildMatch = (gs: Record<string, unknown>) => ({
       agent_a: pg.playerNames?.A ?? pg.agentAName,
@@ -98,78 +97,65 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
       currentState: gs,
     });
 
-    const completeGame = async () => {
-      if (completedRef.current) return;
-      completedRef.current = true;
-      try {
-        const result = await getResults(pg.sessionId);
+    const tokens = pg.tokens;
+
+    const scheduleTick = () => {
+      timerRef.current = setTimeout(async () => {
+        if (!gameLoopRef.current || completedRef.current) return;
         if (sessionRef.current !== pg.sessionId) return;
-        const payload: RunConfig = {
-          agent_a: pg.agentAName,
-          agent_b: pg.agentBName,
-          num_rounds: pg.numRounds,
-          num_battlefields: pg.numFields,
-          total_resources: pg.totalResources,
-          session_id: pg.sessionId,
-        };
-        setMatch(resultToMatch(result as never, payload));
-      } catch {
-        // results may not be ready yet
-      }
-      stopPlay();
-      gameLoopRef.current = false;
-      endGame();
-    };
-
-    const handleStateChange = async (gameState: GameState) => {
-      if (completedRef.current || sessionRef.current !== pg.sessionId) return;
-
-      setMatch(buildMatch(gameState as unknown as Record<string, unknown>));
-
-      for (const player of ["A", "B"] as const) {
-        if (!gameState.awaiting.includes(player)) continue;
-        const skipAgent = player === "A"
-          ? pg.agentAId === "remote" || pg.agentAId === "interactive"
-          : pg.agentBId === "remote" || pg.agentBId === "interactive";
-        if (skipAgent) continue;
-        const agent = player === "A" ? pg.agentAId : pg.agentBId;
-        const action = chooseAction(agent, player, gameState, pg.gameSlug);
-        await submitAction(pg.sessionId, action, tokens[player]);
-      }
-
-      if (gameState.phase === "complete") {
-        await completeGame();
-      }
-    };
-
-    sseRef.current = connectSessionStream(pg.sessionId, handleStateChange, () => {
-      console.warn("SSE connection error, falling back to polling");
-      const fallbackTimer = setInterval(async () => {
-        if (completedRef.current || sessionRef.current !== pg.sessionId) {
-          clearInterval(fallbackTimer);
-          return;
-        }
         try {
-          const gs = await getState(pg.sessionId);
-          await handleStateChange(gs);
-        } catch {
-          // retry on next interval
-        }
-      }, 2000);
-    });
+          let gameState = await getState(pg.sessionId);
 
-    // Fetch initial state in case SSE events haven't arrived yet
-    getState(pg.sessionId)
-      .then((gs) => handleStateChange(gs))
-      .catch(() => {});
+          const allPlayers = (pg.agentIds ? Object.keys(pg.agentIds) : ["A", "B"]) as PlayerSide[];
+          for (const player of allPlayers) {
+            if (!gameState.awaiting.includes(player)) continue;
+            const agentId = pg.agentIds?.[player] ?? (player === "A" ? pg.agentAId : pg.agentBId);
+            if (agentId === "remote") continue;
+            const action = chooseAction(agentId, player, gameState, pg.gameSlug);
+            const updated = await submitAction(pg.sessionId, action, tokens[player]);
+            gameState = updated;
+          }
+
+          gameState = await getState(pg.sessionId);
+          if (sessionRef.current !== pg.sessionId) return;
+          setMatch(buildMatch(gameState));
+
+          if (gameState.phase === "complete") {
+            completedRef.current = true;
+            const result = await getResults(pg.sessionId);
+            if (sessionRef.current !== pg.sessionId) return;
+            const payload: RunConfig = {
+              agent_a: pg.agentAName,
+              agent_b: pg.agentBName,
+              num_rounds: pg.numRounds,
+              num_battlefields: pg.numFields,
+              total_resources: pg.totalResources,
+              session_id: pg.sessionId,
+            };
+            setMatch(resultToMatch(result as never, payload));
+            stopPlay();
+            gameLoopRef.current = false;
+            endGame();
+            return;
+          }
+
+          backoffRef.current = 1000;
+          scheduleTick();
+        } catch (err) {
+          if (!gameLoopRef.current || sessionRef.current !== pg.sessionId) return;
+          console.error("Game poll error:", err);
+          backoffRef.current = Math.min(backoffRef.current * 2, 16000);
+          scheduleTick();
+        }
+      }, backoffRef.current);
+    };
+
+    scheduleTick();
 
     return () => {
       gameLoopRef.current = false;
       sessionRef.current = null;
-      if (sseRef.current) {
-        sseRef.current.close();
-        sseRef.current = null;
-      }
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [state.pendingGame, setMatch, stopPlay, endGame]);
 
@@ -307,7 +293,6 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
             ) : (
               <LoadingSpinner className="flex-1" />
             )}
-            <InteractiveAgentPanel />
           </div>
         )}
         {activeTab === "history" && (
