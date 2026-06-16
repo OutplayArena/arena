@@ -48,3 +48,7 @@ example_config:
   players: 2
   rounds: 10
   seed: 42
+ui:
+  interactive_play: true
+  live_view: true
+  custom_config: true

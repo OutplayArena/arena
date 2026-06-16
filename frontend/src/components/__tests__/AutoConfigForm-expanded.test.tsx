@@ -66,13 +66,13 @@ describe("AutoConfigForm — expanded interactions", () => {
 });
 
 describe("AutoConfigForm — form disabled states", () => {
-  it("disables form fields but shows button when session running", async () => {
+  it("hides run button when session running", async () => {
     renderWithProviders(
       <AutoConfigForm gameSlug="colonelblotto" schema={createMockSchema()} locked={false} sessionStatus="running" />,
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Run Experiment")).toBeInTheDocument();
+      expect(screen.queryByText("Run Experiment")).not.toBeInTheDocument();
     });
   });
 

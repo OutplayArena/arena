@@ -1,7 +1,7 @@
 from copy import deepcopy
 from dataclasses import dataclass
 
-from nash_arena.game_engine import GameEngine
+from nash_arena.interactive_game_engine import InteractiveGameEngine
 from .metrics import ColonelBlottoMetrics
 
 from .agent import Agent
@@ -17,17 +17,7 @@ class ColonelBlottoState:
     total_scores: dict[str, float]
 
 
-# ** GAME DEFINITION **
-#
-# Parameters: 2 agents, 5 battlefields, 100 total troops, 10 rounds
-#
-# Agent submits a list like: [20,10,30,25,15]
-# Each number is how many troops it puts on each battlefield
-#
-# Scoring: higher allocation wins that battlefield, 
-#          tie gives both 0.5 pts, 
-#          winner of round is whoever wins more battlefield points!
-class ColonelBlottoGame(GameEngine):
+class ColonelBlottoGame(InteractiveGameEngine):
     def __init__(self, num_battlefields=5, total_resources=100, num_rounds=10):
         if num_battlefields < 1:
             raise ValueError("num_battlefields must be at least 1")
@@ -330,3 +320,65 @@ class ColonelBlottoGame(GameEngine):
             "match_winner": match_winner,
             "history": full_history
         }
+
+    def human_action_schema(self, config) -> dict:
+        return {
+            "type": "array",
+            "items": {"type": "integer", "minimum": 0},
+            "minItems": self.num_battlefields,
+            "maxItems": self.num_battlefields,
+            "description": f"Allocate {self.total_resources} troops across {self.num_battlefields} battlefields",
+        }
+
+    def format_human_action(self, raw_action, config) -> list[int]:
+        if isinstance(raw_action, list):
+            action = [int(x) for x in raw_action]
+        elif isinstance(raw_action, dict):
+            action = [int(raw_action.get(str(i), 0)) for i in range(self.num_battlefields)]
+        else:
+            raise ValueError(f"invalid action format: {type(raw_action)}")
+
+        if len(action) != self.num_battlefields:
+            raise ValueError(f"expected {self.num_battlefields} allocations, got {len(action)}")
+
+        total = sum(action)
+        if total != self.total_resources:
+            raise ValueError(f"allocations must sum to {self.total_resources}, got {total}")
+
+        return action
+
+    def validate_human_action(self, state, player: str, action, config) -> bool:
+        if self.is_terminal(state):
+            raise ValueError("game is already complete")
+        if player not in ("A", "B"):
+            raise ValueError(f"unknown player: {player}")
+        if player not in state.awaiting:
+            raise ValueError(f"action already submitted for player {player}")
+        if not self.validate_action(action):
+            raise ValueError(f"invalid action for player {player}: {action}")
+        return True
+
+    def interactive_public_state(self, state, config, session_id: str, config_hash: str, player: str | None = None) -> dict:
+        base = self.public_state(state, config, session_id, config_hash)
+        base["num_battlefields"] = self.num_battlefields
+        base["total_resources"] = self.total_resources
+        if player:
+            base["current_player"] = player
+            base["is_my_turn"] = player in state.awaiting
+        return base
+
+    def ui_metadata(self, config) -> dict:
+        return {
+            "input_type": "allocation",
+            "layout": "battlefields",
+            "num_battlefields": self.num_battlefields,
+            "total_resources": self.total_resources,
+        }
+
+    def get_available_agents(self, config) -> list[dict]:
+        return [
+            {"id": "uniform", "label": "Uniform", "description": "Distributes troops evenly across all battlefields"},
+            {"id": "random", "label": "Random", "description": "Randomly distributes troops"},
+            {"id": "greedy", "label": "Greedy", "description": "Mimics opponent's last strategy + 1"},
+            {"id": "remote", "label": "Remote Agent", "description": "Connect your own LLM agent via API"},
+        ]

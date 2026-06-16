@@ -40,6 +40,7 @@ export interface AppState {
     remoteKeys: Record<string, string> | null;
     playerNames?: Record<string, string>;
     agentIds?: Record<string, string>;
+    interactive?: boolean;
   } | null;
 }
 
@@ -54,7 +55,8 @@ type Action =
   | { type: "SET_STATUS"; status: string }
   | { type: "START_GAME"; payload: AppState["pendingGame"] }
   | { type: "END_GAME" }
-  | { type: "SET_SESSION_META"; locked: boolean; status: string; config: AppState["sessionConfig"] };
+  | { type: "SET_SESSION_META"; locked: boolean; status: string; config: AppState["sessionConfig"] }
+  | { type: "USE_AS_TEMPLATE" };
 
 const PENDING_GAME_KEY = "nasharena_pending_game";
 
@@ -167,6 +169,8 @@ export function appReducer(state: AppState, action: Action): AppState {
         sessionStatus: action.status,
         sessionConfig: action.config,
       };
+    case "USE_AS_TEMPLATE":
+      return { ...state, sessionLocked: false, sessionStatus: "ready" };
     default:
       return state;
   }
@@ -186,6 +190,7 @@ interface AppContextValue {
   startGame: (payload: NonNullable<AppState["pendingGame"]>) => void;
   endGame: () => void;
   setSessionMeta: (locked: boolean, status: string, config: AppState["sessionConfig"]) => void;
+  useAsTemplate: () => void;
   currentRound: () => MatchRound | null;
 }
 
@@ -252,6 +257,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     () => dispatch({ type: "END_GAME" }),
     [],
   );
+  const useAsTemplate = useCallback(
+    () => dispatch({ type: "USE_AS_TEMPLATE" }),
+    [],
+  );
 
   const value = useMemo(() => ({
     state,
@@ -265,10 +274,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     clearMatch,
     setStatus,
     setSessionMeta,
+    useAsTemplate,
     currentRound,
     startGame,
     endGame,
-  }), [state, dispatch, setMatch, showRound, nextRound, prevRound, togglePlay, stopPlay, clearMatch, setStatus, setSessionMeta, currentRound, startGame, endGame]);
+  }), [state, dispatch, setMatch, showRound, nextRound, prevRound, togglePlay, stopPlay, clearMatch, setStatus, setSessionMeta, useAsTemplate, currentRound, startGame, endGame]);
 
   return (
     <AppContext.Provider value={value}>

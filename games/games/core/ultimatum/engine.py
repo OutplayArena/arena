@@ -3,7 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from dataclasses import dataclass
 
-from nash_arena.game_engine import GameEngine
+from nash_arena.interactive_game_engine import InteractiveGameEngine
 from games.core.ultimatum.metrics import UltimatumMetrics
 
 
@@ -19,7 +19,7 @@ class UltimatumState:
     total_scores: dict[str, float]
 
 
-class UltimatumGame(GameEngine):
+class UltimatumGame(InteractiveGameEngine):
     def __init__(
         self,
         num_rounds: int = 10,
@@ -43,6 +43,49 @@ class UltimatumGame(GameEngine):
             seed=config.seed,
             system_prompt=config.system_prompt,
         )
+
+    def human_action_schema(self, config):
+        endowment = config.total if hasattr(config, 'total') else 100
+
+        return {
+            "type": "object",
+            "properties": {
+                "offer": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": endowment,
+                    "description": f"Offer to responder (0 to {endowment})",
+                },
+                "accept": {
+                    "type": "boolean",
+                    "description": "Accept or reject the offer (responder only)",
+                }
+            },
+        }
+
+    def format_human_action(self, raw_action, config):
+        if isinstance(raw_action, dict):
+            if "offer" in raw_action:
+                return {"offer": float(raw_action["offer"])}
+            if "accept" in raw_action:
+                return {"accept": bool(raw_action["accept"])}
+        return raw_action
+
+    def ui_metadata(self, config):
+        endowment = config.total if hasattr(config, 'total') else 100
+        return {
+            "input_type": "ultimatum",
+            "endowment": endowment,
+            "layout": "ultimatum",
+        }
+
+    def get_available_agents(self, config):
+        return [
+            {"id": "spe", "label": "SPE", "description": "Subgame perfect equilibrium"},
+            {"id": "fair", "label": "Fair", "description": "Offers/accepts fair split"},
+            {"id": "greedy_proposer", "label": "Greedy Proposer", "description": "Offers minimum"},
+            {"id": "random", "label": "Random", "description": "Random offers/decisions"},
+        ]
 
     def _proposer_for_round(self, round_number: int) -> tuple[str, str]:
         """Roles alternate each round."""
@@ -104,6 +147,8 @@ class UltimatumGame(GameEngine):
         if isinstance(action, str):
             return action.lower().strip()
         if isinstance(action, dict):
+            if "accept" in action:
+                return "accept" if action["accept"] else "reject"
             return str(action.get("response", "reject")).lower()
         return "reject"
 

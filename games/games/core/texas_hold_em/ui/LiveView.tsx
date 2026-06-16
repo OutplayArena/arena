@@ -392,7 +392,7 @@ export default function TexasHoldEmLiveView(_props: LiveViewProps) {
             <span className="text-[8px] font-bold text-muted shrink-0">
               {match.match_winner === "Tie"
                 ? "Draw"
-                : `${match.match_winner === "A" ? match.agent_a : match.agent_b} wins`}
+                : `Player ${match.match_winner} wins`}
             </span>
           )}
         </div>

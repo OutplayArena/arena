@@ -46,6 +46,7 @@ class KubernetesRuntime:
             client.V1EnvVar(name="FASTMCP_PORT", value=str(port)),
             client.V1EnvVar(name="FASTMCP_HOST", value="0.0.0.0"),
             client.V1EnvVar(name="MCP_TRANSPORT", value="sse"),
+            client.V1EnvVar(name="JWT_SECRET", value=os.environ.get("JWT_SECRET", "")),
         ]
 
         # Set mount path for public URL routing (only when using gateway)
@@ -221,8 +222,7 @@ class KubernetesRuntime:
                 name=ingress_name,
                 labels={"app": "mcp-server", "mcp-instance": container_name},
                 annotations={
-                    # Use regex to capture the path and strip it
-                    "traefik.ingress.kubernetes.io/router.middlewares": f"{self.namespace}-strip-mcp-prefix@kubernetescrd",
+                    # No middleware needed - MCP server handles mount_path via MCP_MOUNT_PATH env var
                 },
             ),
             spec=client.V1IngressSpec(

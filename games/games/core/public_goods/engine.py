@@ -4,7 +4,7 @@ import random
 from copy import deepcopy
 from dataclasses import dataclass
 
-from nash_arena.game_engine import GameEngine
+from nash_arena.interactive_game_engine import InteractiveGameEngine
 from games.core.public_goods.metrics import PublicGoodsMetrics
 
 
@@ -19,7 +19,7 @@ class PGGState:
     total_scores: dict[str, float]
 
 
-class PublicGoodsGame(GameEngine):
+class PublicGoodsGame(InteractiveGameEngine):
     def __init__(
         self,
         num_players: int = 4,
@@ -57,6 +57,65 @@ class PublicGoodsGame(GameEngine):
             seed=config.seed,
             system_prompt=config.system_prompt,
         )
+
+    def human_action_schema(self, config):
+        endowment = config.endowment if hasattr(config, "endowment") else 10
+        has_punishment = hasattr(config, "punishment_cost") and config.punishment_cost is not None
+
+        properties = {
+            "contribution": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": endowment,
+                "description": f"Contribution to public goods (0 to {endowment})",
+            }
+        }
+
+        if has_punishment:
+            properties["punishment"] = {
+                "type": "number",
+                "minimum": 0,
+                "description": "Punishment points to apply to opponent (optional)",
+            }
+
+        return {
+            "type": "object",
+            "properties": properties,
+            "required": ["contribution"],
+        }
+
+    def format_human_action(self, raw_action, config):
+        if isinstance(raw_action, (int, float)):
+            return float(raw_action)
+        if isinstance(raw_action, dict):
+            contribution = float(raw_action.get("contribution", 0))
+            if "punishment" in raw_action:
+                return {
+                    "contribution": contribution,
+                    "punishment": float(raw_action["punishment"]),
+                }
+            return contribution
+        return float(raw_action)
+
+    def ui_metadata(self, config):
+        endowment = config.endowment if hasattr(config, "endowment") else 10
+        has_punishment = hasattr(config, "punishment_cost") and config.punishment_cost is not None
+        return {
+            "input_type": "slider",
+            "min": 0,
+            "max": endowment,
+            "step": 1,
+            "has_punishment": has_punishment,
+            "layout": "public_goods",
+        }
+
+    def get_available_agents(self, config):
+        return [
+            {"id": "always_contribute_max", "label": "Always Max", "description": "Always contributes maximum"},
+            {"id": "always_contribute_zero", "label": "Always Zero", "description": "Always contributes zero"},
+            {"id": "nash_equilibrium", "label": "Nash Equilibrium", "description": "Always contributes zero (Nash)"},
+            {"id": "linear_decay", "label": "Linear Decay", "description": "Contribution decreases linearly"},
+        ]
 
     def initial_state(self) -> PGGState:
         return PGGState(

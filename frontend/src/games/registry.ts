@@ -43,3 +43,9 @@ export async function loadHistoryView(
 ): Promise<ComponentModule | null> {
   return loadComponent(gameSlug, "HistoryView");
 }
+
+export async function loadPlayView(
+  gameSlug: string,
+): Promise<ComponentModule | null> {
+  return loadComponent(gameSlug, "PlayView");
+}

@@ -167,7 +167,7 @@ export default function LiveView(_props: LiveViewProps) {
               <span style={{ fontWeight: 700 }}>
                 {match.match_winner === "Tie"
                   ? "Draw"
-                  : `${match.match_winner === "A" ? match.agent_a : match.agent_b} wins`
+                  : `Player ${match.match_winner} wins`
                 }
               </span>
             </span>

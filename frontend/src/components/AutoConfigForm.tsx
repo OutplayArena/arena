@@ -105,10 +105,10 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
   const [agents, setAgents] = useState<GameAgent[]>([]);
   const [scenarios, setScenarios] = useState<ScenarioInfo[]>([]);
   const initRanRef = useRef(false);
-  const [agentAName, setAgentAName] = useState(() => randomAgentName());
-  const [agentBName, setAgentBName] = useState(() => randomAgentName());
-  const [agentAId, setAgentAId] = useState("uniform");
-  const [agentBId, setAgentBId] = useState("greedy");
+  const [playerAName, setPlayerAName] = useState(() => randomAgentName());
+  const [playerBName, setPlayerBName] = useState(() => randomAgentName());
+  const [playerAId, setPlayerAId] = useState("uniform");
+  const [playerBId, setPlayerBId] = useState("greedy");
   const [formValues, setFormValues] = useState<Record<string, unknown>>({});
   const [status, setStatus] = useState("");
   const [running, setRunning] = useState(false);
@@ -126,8 +126,11 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
     return true;
   });
 
-  const isReplay = locked || sessionStatus === "completed";
-  const formDisabled = locked || running || state.pendingGame !== null || sessionStatus === "completed" || sessionStatus === "running";
+  const effectiveLocked = locked || state.sessionLocked;
+  const effectiveStatus = sessionStatus || state.sessionStatus;
+  const isReplay = effectiveLocked || effectiveStatus === "completed" || effectiveStatus === "running" || effectiveStatus === "failed";
+  const formDisabled = effectiveLocked || running || state.pendingGame !== null || effectiveStatus === "completed" || effectiveStatus === "running" || effectiveStatus === "failed";
+  const showRunButton = !isReplay && !state.pendingGame;
 
   useEffect(() => {
     getGameAgents(gameSlug).then((data) => setAgents(data.agents)).catch(() => {});
@@ -147,8 +150,8 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
       }
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormValues(vals);
-      if (initialValues.agent_a) setAgentAName(String(initialValues.agent_a));
-      if (initialValues.agent_b) setAgentBName(String(initialValues.agent_b));
+      if (initialValues.agent_a) setPlayerAName(String(initialValues.agent_a));
+      if (initialValues.agent_b) setPlayerBName(String(initialValues.agent_b));
     } else if (!isReplay) {
       const vals: Record<string, unknown> = {};
       for (const [key, prop] of Object.entries(props)) {
@@ -163,8 +166,8 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
     if (isReplay && initialValues) {
       initRanRef.current = true;
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (initialValues.agent_a) setAgentAName(String(initialValues.agent_a));
-      if (initialValues.agent_b) setAgentBName(String(initialValues.agent_b));
+      if (initialValues.agent_a) setPlayerAName(String(initialValues.agent_a));
+      if (initialValues.agent_b) setPlayerBName(String(initialValues.agent_b));
     }
   }, [isReplay, initialValues]);
 
@@ -206,8 +209,8 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
         config[key] = key in formValues ? formValues[key] : getDefault(prop);
       }
     }
-    config.agents = { A: agentAName.trim(), B: agentBName.trim() };
-    config.interactive = true;
+    config.agents = { A: playerAName.trim(), B: playerBName.trim() };
+    config.interactive = playerAId === "interactive" || playerBId === "interactive";
     return config;
   };
 
@@ -227,30 +230,33 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
       const created = await createExperiment(config as never);
       setSessionId(created.session_id);
 
-      const hasRemote = agentAId === "remote" || agentBId === "remote";
+      const hasRemote = playerAId === "remote" || playerBId === "remote";
       const remoteKeys: Record<string, string> | null = hasRemote
         ? (() => {
             const keys: Record<string, string> = {};
-            if (agentAId === "remote") keys.A = created.player_tokens.A;
-            if (agentBId === "remote") keys.B = created.player_tokens.B;
+            if (playerAId === "remote") keys.A = created.player_tokens.A;
+            if (playerBId === "remote") keys.B = created.player_tokens.B;
             return keys;
           })()
         : null;
 
       if (remoteKeys) setSessionKeys(remoteKeys);
 
+      const isInteractive = playerAId === "interactive" || playerBId === "interactive";
+
       startGame({
         sessionId: created.session_id,
         tokens: created.player_tokens,
-        agentAName: agentAName.trim(),
-        agentBName: agentBName.trim(),
-        agentAId,
-        agentBId,
+        agentAName: playerAName.trim(),
+        agentBName: playerBName.trim(),
+        agentAId: playerAId,
+        agentBId: playerBId,
         numRounds,
         numFields: (config.num_battlefields as number) ?? 5,
         totalResources: (config.total_resources as number) ?? 100,
         gameSlug,
         remoteKeys,
+        interactive: isInteractive,
       });
       setStatus("Game started — switch to Live View to watch.");
     } catch (err) {
@@ -461,14 +467,20 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
         )}
 
         <label className="grid gap-1 text-muted text-[11px] font-extrabold">
-          <span>Agent A</span>
+          <span>Player A</span>
           {agents.length > 0 && (
             <select
-              value={agentAId}
-              onChange={(e) => setAgentAId(e.target.value)}
+              value={playerAId}
+              onChange={(e) => {
+                setPlayerAId(e.target.value);
+                if (e.target.value === "interactive") {
+                  setPlayerAName("You");
+                }
+              }}
               className={inputClass}
               disabled={formDisabled}
             >
+              <option value="interactive">Interactive (Human Player)</option>
               {agents.map((ag) => (
                 <option key={ag.id} value={ag.id}>{ag.label}</option>
               ))}
@@ -476,23 +488,29 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
           )}
           <input
             type="text"
-            value={agentAName}
-            onChange={(e) => setAgentAName(e.target.value)}
+            value={playerAName}
+            onChange={(e) => setPlayerAName(e.target.value)}
             className={inputClass}
-            disabled={formDisabled}
-            placeholder="Agent display name"
+            disabled={formDisabled || playerAId === "interactive"}
+            placeholder="Player display name"
           />
         </label>
 
         <label className="grid gap-1 text-muted text-[11px] font-extrabold">
-          <span>Agent B</span>
+          <span>Player B</span>
           {agents.length > 0 && (
             <select
-              value={agentBId}
-              onChange={(e) => setAgentBId(e.target.value)}
+              value={playerBId}
+              onChange={(e) => {
+                setPlayerBId(e.target.value);
+                if (e.target.value === "interactive") {
+                  setPlayerBName("You");
+                }
+              }}
               className={inputClass}
               disabled={formDisabled}
             >
+              <option value="interactive">Interactive (Human Player)</option>
               {agents.map((ag) => (
                 <option key={ag.id} value={ag.id}>{ag.label}</option>
               ))}
@@ -500,11 +518,11 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
           )}
           <input
             type="text"
-            value={agentBName}
-            onChange={(e) => setAgentBName(e.target.value)}
+            value={playerBName}
+            onChange={(e) => setPlayerBName(e.target.value)}
             className={inputClass}
-            disabled={formDisabled}
-            placeholder="Agent display name"
+            disabled={formDisabled || playerBId === "interactive"}
+            placeholder="Player display name"
           />
         </label>
 
@@ -532,7 +550,7 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
           </label>
         ))}
 
-        {!isReplay && !state.pendingGame && (
+        {showRunButton && (
           <button
             ref={btnRef}
             type="submit"
@@ -561,7 +579,7 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
             <div key={player} className="mb-2 last:mb-0">
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-extrabold text-muted uppercase">Player {player}</span>
-                <span className="text-xs text-ink font-medium">{player === "A" ? agentAName : agentBName}</span>
+                <span className="text-xs text-ink font-medium">{player === "A" ? playerAName : playerBName}</span>
               </div>
               <div className="flex items-center gap-2 mt-1">
                 <code className="flex-1 text-[11px] bg-ink/6 px-2 py-1.5 rounded text-ink break-all font-mono">{key}</code>

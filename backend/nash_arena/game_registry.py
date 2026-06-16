@@ -41,10 +41,12 @@ def _detect_ui(game_dir: Path) -> dict:
     has_live_view = _has_ui_component(game_dir, "LiveView")
     has_config = _has_ui_component(game_dir, "ConfigForm")
     has_history = _has_ui_component(game_dir, "HistoryView")
+    has_play = _has_ui_component(game_dir, "PlayView")
     return {
         "live_view": has_live_view,
         "custom_config": has_config,
         "custom_history": has_history,
+        "interactive_play": has_play,
     }
 
 

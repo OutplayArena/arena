@@ -41,8 +41,11 @@ export default function PGGConfigForm({ gameSlug, locked, sessionStatus, initial
     getGameAgents(gameSlug).then((data) => setAgents(data.agents)).catch(() => {});
   }, [gameSlug]);
 
-  const isReplay = locked || sessionStatus === "completed";
-  const formDisabled = locked || running || state.pendingGame !== null || sessionStatus === "completed" || sessionStatus === "running";
+  const effectiveLocked = locked || state.sessionLocked;
+  const effectiveStatus = sessionStatus || state.sessionStatus;
+  const isReplay = effectiveLocked || effectiveStatus === "completed" || effectiveStatus === "running" || effectiveStatus === "failed";
+  const formDisabled = effectiveLocked || running || state.pendingGame !== null || effectiveStatus === "completed" || effectiveStatus === "running" || effectiveStatus === "failed";
+  const showRunButton = !isReplay && !state.pendingGame;
 
   useEffect(() => {
     if (initRanRef.current) return;
@@ -111,6 +114,7 @@ export default function PGGConfigForm({ gameSlug, locked, sessionStatus, initial
         remoteKeys,
         playerNames: agentsMap,
         agentIds: agentIdsMap,
+        interactive: Object.values(agentIdsMap).includes("interactive"),
       });
       setStatus("Game started — switch to Live View to watch.");
     } catch (err) {
@@ -156,10 +160,16 @@ export default function PGGConfigForm({ gameSlug, locked, sessionStatus, initial
                 <span className="text-[10px] font-extrabold text-muted uppercase">Player {id}</span>
                 <select
                   value={playerAgentIds[id] || "random"}
-                  onChange={(e) => setPlayerAgentIds((prev) => ({ ...prev, [id]: e.target.value }))}
+                  onChange={(e) => {
+                    setPlayerAgentIds((prev) => ({ ...prev, [id]: e.target.value }));
+                    if (e.target.value === "interactive") {
+                      setPlayerNames((prev) => ({ ...prev, [id]: "You" }));
+                    }
+                  }}
                   className={inputClass}
                   disabled={formDisabled}
                 >
+                  <option value="interactive">Interactive (Human Player)</option>
                   {agents.map((ag) => <option key={ag.id} value={ag.id}>{ag.label}</option>)}
                 </select>
                 <input
@@ -167,7 +177,7 @@ export default function PGGConfigForm({ gameSlug, locked, sessionStatus, initial
                   value={playerNames[id] || ""}
                   onChange={(e) => setPlayerNames((prev) => ({ ...prev, [id]: e.target.value }))}
                   className={inputClass}
-                  disabled={formDisabled}
+                  disabled={formDisabled || playerAgentIds[id] === "interactive"}
                   placeholder={`Player ${id} display name`}
                 />
               </div>
@@ -196,7 +206,7 @@ export default function PGGConfigForm({ gameSlug, locked, sessionStatus, initial
           <input ref={seedRef} type="number" className={inputClass} disabled={formDisabled} placeholder="Random" />
         </label>
 
-        {!isReplay && !state.pendingGame && (
+        {showRunButton && (
           <button
             type="submit"
             disabled={running}

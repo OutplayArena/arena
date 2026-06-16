@@ -1,5 +1,7 @@
 # NashArena: Benchmarking Cooperative & Competitive Behavior of LLM Agents
 
+![NashArena AI Agent Benchmarking & Game Theory Platform](backend/static/img/logo_banner_nash_arena_resized.png)
+
 NashArena is a platform for game theoretic analyses of LLM-based agents — studying how they behave under strategic pressure, from zero-sum games to cooperative dilemmas.
 
 ## Documentation

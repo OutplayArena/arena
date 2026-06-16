@@ -18,13 +18,13 @@ describe("AutoConfigForm — basic rendering", () => {
     });
   });
 
-  it("renders agent A and agent B selectors", async () => {
+  it("renders player A and player B selectors", async () => {
     renderWithProviders(
       <AutoConfigForm gameSlug="colonelblotto" schema={createMockSchema()} locked={false} />,
     );
     await waitFor(() => {
-      expect(screen.getByText("Agent A")).toBeInTheDocument();
-      expect(screen.getByText("Agent B")).toBeInTheDocument();
+      expect(screen.getByText("Player A")).toBeInTheDocument();
+      expect(screen.getByText("Player B")).toBeInTheDocument();
     });
   });
 

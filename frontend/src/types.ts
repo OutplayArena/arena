@@ -207,6 +207,7 @@ export interface GameUIFlags {
   live_view: boolean;
   custom_config: boolean;
   custom_history: boolean;
+  interactive_play: boolean;
 }
 
 export interface GameAgent {

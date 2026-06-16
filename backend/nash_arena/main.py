@@ -170,11 +170,20 @@ async def require_mcp_auth(
 
 async def require_agent_api_dep(
     request: Request,
+    authorization: str | None = Header(default=None),
     db: AsyncSession = Depends(get_db),
     x_mcp_auth_key: str | None = Header(default=None, alias="X-MCP-Auth-Key"),
 ) -> None:
     if os.environ.get("ENABLE_AGENT_REST_API", "false").lower() == "true":
         return
+    # Allow requests with valid user authentication (from frontend)
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            from nash_arena.auth.dependencies import get_current_user
+            await get_current_user(authorization, db)
+            return  # User authenticated, allow access
+        except HTTPException:
+            pass  # Not a valid user token, fall through to MCP auth
     await require_mcp_auth(request=request, db=db, x_mcp_auth_key=x_mcp_auth_key)
 
 
@@ -431,6 +440,128 @@ async def submit_action(
     return public
 
 
+class HumanActionRequest(BaseModel):
+    action: Any = None
+    forfeit: bool = False
+
+
+@app.get(f"{API_PREFIX}/session/{{session_id}}/interactive/schema")
+async def get_interactive_schema(
+    session_id: str,
+    player: str = Query(..., description="Player ID (e.g. A or B)"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get the action schema for interactive play."""
+    session = await get_session(session_id, db)
+    game = session.game
+
+    from nash_arena.interactive_game_engine import InteractiveGameEngine
+    if not isinstance(game, InteractiveGameEngine):
+        raise HTTPException(status_code=400, detail="game does not support interactive play")
+
+    return {
+        "schema": game.human_action_schema(session.config),
+        "ui_metadata": game.ui_metadata(session.config),
+        "state": game.interactive_public_state(session.state, session.config, session_id, session.config_hash, player),
+    }
+
+
+@app.post(f"{API_PREFIX}/session/{{session_id}}/interactive/action")
+async def submit_human_action(
+    session_id: str,
+    request: HumanActionRequest,
+    player: str = Query(..., description="Player ID (e.g. A or B)"),
+    db: AsyncSession = Depends(get_db),
+    authorization: str | None = Header(default=None),
+):
+    """Submit a human player action with automatic formatting."""
+    session = await get_session(session_id, db)
+    token = bearer_token(authorization)
+
+    from nash_arena.interactive_game_engine import InteractiveGameEngine
+    if not isinstance(session.game, InteractiveGameEngine):
+        raise HTTPException(status_code=400, detail="game does not support interactive play")
+
+    game = session.game
+
+    try:
+        token_player = session.player_for_token(token)
+        if token_player != player:
+            raise HTTPException(status_code=403, detail="token does not match player")
+
+        if request.forfeit:
+            if hasattr(game, "forfeit_round"):
+                session.state = game.forfeit_round(session.state, player)
+            else:
+                raise HTTPException(status_code=400, detail="game does not support forfeit")
+        else:
+            formatted_action = game.format_human_action(request.action, session.config)
+            game.validate_human_action(session.state, player, formatted_action, session.config)
+            session.submit_action(player, formatted_action)
+
+        session._update_status_from_state()
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise action_error(exc) from exc
+    except Exception as exc:
+        session.mark_failed(str(exc))
+        await session.save_state(db)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    await session.save_state(db)
+    return game.interactive_public_state(session.state, session.config, session_id, session.config_hash, player)
+
+
+@app.get(f"{API_PREFIX}/session/{{session_id}}/interactive/state")
+async def get_interactive_state(
+    session_id: str,
+    player: str = Query(..., description="Player ID (e.g. A or B)"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get interactive state with player-specific context."""
+    session = await get_session(session_id, db)
+    game = session.game
+
+    from nash_arena.interactive_game_engine import InteractiveGameEngine
+    if not isinstance(game, InteractiveGameEngine):
+        return session.public_state()
+
+    return game.interactive_public_state(session.state, session.config, session_id, session.config_hash, player)
+
+
+@app.get(f"{API_PREFIX}/games/{{name}}/interactive/agents")
+async def get_interactive_agents(name: str):
+    """Get available agents for interactive play."""
+    try:
+        game_info = GAME_REGISTRY.get_game(name)
+        config = GAME_REGISTRY.config_from_request({"game": name, **game_info.get("example_config", {})})
+        game = GAME_REGISTRY.game_from_config(config)
+
+        from nash_arena.interactive_game_engine import InteractiveGameEngine
+        if isinstance(game, InteractiveGameEngine):
+            return {"agents": game.get_available_agents(config)}
+        return {"agents": []}
+    except GameRegistryError as exc:
+        raise game_registry_error(exc) from exc
+    except Exception:
+        return {"agents": []}
+
+
+def sanitize_for_json(obj: Any) -> Any:
+    """Recursively sanitize an object to ensure JSON compatibility."""
+    import math
+    if isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return 0.0
+        return obj
+    if isinstance(obj, dict):
+        return {k: sanitize_for_json(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [sanitize_for_json(item) for item in obj]
+    return obj
+
+
 @app.get(f"{API_PREFIX}/session/{{session_id}}/results")
 async def get_results(session_id: str, db: AsyncSession = Depends(get_db)):
     """Get the final results and scores for a completed session."""
@@ -439,6 +570,7 @@ async def get_results(session_id: str, db: AsyncSession = Depends(get_db)):
         registry = get_global_registry()
         evaluator = MatchEvaluator(registry)
         result = session.results(evaluator=evaluator)
+        result = sanitize_for_json(result)
         try:
             await save_registry(registry, db)
             await db.commit()

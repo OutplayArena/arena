@@ -146,11 +146,15 @@ class CooperativeMetrics:
             j_responds = acts_j[1:min_len]
             i_prev     = acts_i[:min_len-1]
             if np.std(i_responds) > 1e-8 and np.std(j_prev) > 1e-8:
-                matrix[(i, j)] = float(np.corrcoef(i_responds, j_prev)[0, 1])
+                with np.errstate(invalid="ignore", divide="ignore"):
+                    corr = float(np.corrcoef(i_responds, j_prev)[0, 1])
+                matrix[(i, j)] = 0.0 if np.isnan(corr) else corr
             else:
                 matrix[(i, j)] = 0.0
             if np.std(j_responds) > 1e-8 and np.std(i_prev) > 1e-8:
-                matrix[(j, i)] = float(np.corrcoef(j_responds, i_prev)[0, 1])
+                with np.errstate(invalid="ignore", divide="ignore"):
+                    corr = float(np.corrcoef(j_responds, i_prev)[0, 1])
+                matrix[(j, i)] = 0.0 if np.isnan(corr) else corr
             else:
                 matrix[(j, i)] = 0.0
         return matrix

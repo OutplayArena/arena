@@ -35,8 +35,11 @@ export default function UltimatumConfigForm({ gameSlug, locked, sessionStatus, i
     getGameAgents(gameSlug).then((data) => setAgents(data.agents)).catch(() => {});
   }, [gameSlug]);
 
-  const isReplay = locked || sessionStatus === "completed";
-  const formDisabled = locked || running || state.pendingGame !== null || sessionStatus === "completed" || sessionStatus === "running";
+  const effectiveLocked = locked || state.sessionLocked;
+  const effectiveStatus = sessionStatus || state.sessionStatus;
+  const isReplay = effectiveLocked || effectiveStatus === "completed" || effectiveStatus === "running" || effectiveStatus === "failed";
+  const formDisabled = effectiveLocked || running || state.pendingGame !== null || effectiveStatus === "completed" || effectiveStatus === "running" || effectiveStatus === "failed";
+  const showRunButton = !isReplay && !state.pendingGame;
 
   useEffect(() => {
     if (initRanRef.current) return;
@@ -70,7 +73,7 @@ export default function UltimatumConfigForm({ gameSlug, locked, sessionStatus, i
       rounds: numRounds,
       seed: seedVal,
       agents: { A: agentAName.trim(), B: agentBName.trim() },
-      interactive: true,
+      interactive: agentAId === "interactive" || agentBId === "interactive",
       total: totalRef.current ? Number(totalRef.current.value) : 100.0,
       min_offer: minOfferRef.current ? Number(minOfferRef.current.value) : 1.0,
     };
@@ -103,6 +106,7 @@ export default function UltimatumConfigForm({ gameSlug, locked, sessionStatus, i
         totalResources: 0,
         gameSlug,
         remoteKeys,
+        interactive: agentAId === "interactive" || agentBId === "interactive",
       });
       setStatus("Game started — switch to Live View to watch.");
     } catch (err) {
@@ -130,19 +134,41 @@ export default function UltimatumConfigForm({ gameSlug, locked, sessionStatus, i
         </div>
 
         <label className="grid gap-1 text-muted text-[11px] font-extrabold">
-          <span>Agent A</span>
-          <select value={agentAId} onChange={(e) => setAgentAId(e.target.value)} className={inputClass} disabled={formDisabled}>
+          <span>Player A</span>
+          <select
+            value={agentAId}
+            onChange={(e) => {
+              setAgentAId(e.target.value);
+              if (e.target.value === "interactive") {
+                setAgentAName("You");
+              }
+            }}
+            className={inputClass}
+            disabled={formDisabled}
+          >
+            <option value="interactive">Interactive (Human Player)</option>
             {agents.map((ag) => <option key={ag.id} value={ag.id}>{ag.label}</option>)}
           </select>
-          <input type="text" value={agentAName} onChange={(e) => setAgentAName(e.target.value)} className={inputClass} disabled={formDisabled} placeholder="Agent display name" />
+          <input type="text" value={agentAName} onChange={(e) => setAgentAName(e.target.value)} className={inputClass} disabled={formDisabled || agentAId === "interactive"} placeholder="Player display name" />
         </label>
 
         <label className="grid gap-1 text-muted text-[11px] font-extrabold">
-          <span>Agent B</span>
-          <select value={agentBId} onChange={(e) => setAgentBId(e.target.value)} className={inputClass} disabled={formDisabled}>
+          <span>Player B</span>
+          <select
+            value={agentBId}
+            onChange={(e) => {
+              setAgentBId(e.target.value);
+              if (e.target.value === "interactive") {
+                setAgentBName("You");
+              }
+            }}
+            className={inputClass}
+            disabled={formDisabled}
+          >
+            <option value="interactive">Interactive (Human Player)</option>
             {agents.map((ag) => <option key={ag.id} value={ag.id}>{ag.label}</option>)}
           </select>
-          <input type="text" value={agentBName} onChange={(e) => setAgentBName(e.target.value)} className={inputClass} disabled={formDisabled} placeholder="Agent display name" />
+          <input type="text" value={agentBName} onChange={(e) => setAgentBName(e.target.value)} className={inputClass} disabled={formDisabled || agentBId === "interactive"} placeholder="Player display name" />
         </label>
 
         <label className="grid gap-1 text-muted text-[11px] font-extrabold">
@@ -166,7 +192,7 @@ export default function UltimatumConfigForm({ gameSlug, locked, sessionStatus, i
           <input ref={seedRef} type="number" className={inputClass} disabled={formDisabled} placeholder="Random" />
         </label>
 
-        {!isReplay && !state.pendingGame && (
+        {showRunButton && (
           <button
             type="submit"
             disabled={running}

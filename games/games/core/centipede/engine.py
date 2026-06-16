@@ -3,7 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from dataclasses import dataclass
 
-from nash_arena.game_engine import GameEngine
+from nash_arena.interactive_game_engine import InteractiveGameEngine
 from games.core.centipede.metrics import CentipedeMetrics
 
 VALID_ACTIONS = frozenset({"take", "pass"})
@@ -21,7 +21,7 @@ class CentipedeState:
     game_ended_by: str | None  # player who took, or "forced" at max_steps
 
 
-class CentipedeGame(GameEngine):
+class CentipedeGame(InteractiveGameEngine):
     """
     Standard centipede payoff structure:
       Step 1 (A moves): A can take (4,1) or pass → pots double
@@ -60,6 +60,41 @@ class CentipedeGame(GameEngine):
             seed=config.seed,
             system_prompt=config.system_prompt,
         )
+
+    def human_action_schema(self, config):
+        return {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["take", "pass"],
+                    "description": "Take the pot or pass to opponent",
+                }
+            },
+            "required": ["action"],
+        }
+
+    def format_human_action(self, raw_action, config):
+        if isinstance(raw_action, str):
+            return raw_action.lower()
+        if isinstance(raw_action, dict):
+            return raw_action.get("action", "").lower()
+        return str(raw_action).lower()
+
+    def ui_metadata(self, config):
+        return {
+            "input_type": "choice",
+            "choices": ["take", "pass"],
+            "layout": "centipede",
+        }
+
+    def get_available_agents(self, config):
+        return [
+            {"id": "take_first", "label": "Take First", "description": "Takes on first opportunity"},
+            {"id": "always_pass", "label": "Always Pass", "description": "Always passes"},
+            {"id": "last_step_take", "label": "Last Step Take", "description": "Passes until last round, then takes"},
+            {"id": "tit_for_tat", "label": "Tit for Tat", "description": "Copies opponent's last move"},
+        ]
 
     def initial_state(self) -> CentipedeState:
         return CentipedeState(

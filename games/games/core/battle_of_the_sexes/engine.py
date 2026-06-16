@@ -4,7 +4,7 @@ import random
 from copy import deepcopy
 from dataclasses import dataclass
 
-from nash_arena.game_engine import GameEngine
+from nash_arena.interactive_game_engine import InteractiveGameEngine
 from games.core.battle_of_the_sexes.metrics import BoSMetrics
 
 
@@ -18,7 +18,7 @@ class BoSState:
     total_scores: dict[str, float]
 
 
-class BoSGame(GameEngine):
+class BoSGame(InteractiveGameEngine):
     """
     Player A prefers option_a; Player B prefers option_b.
     Payoff matrix:
@@ -64,6 +64,41 @@ class BoSGame(GameEngine):
             seed=config.seed,
             system_prompt=config.system_prompt,
         )
+
+    def human_action_schema(self, config):
+        return {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [self.option_a, self.option_b],
+                    "description": f"Choose {self.option_a} or {self.option_b}",
+                }
+            },
+            "required": ["action"],
+        }
+
+    def format_human_action(self, raw_action, config):
+        if isinstance(raw_action, str):
+            return raw_action.lower()
+        if isinstance(raw_action, dict):
+            return raw_action.get("action", "").lower()
+        return str(raw_action).lower()
+
+    def ui_metadata(self, config):
+        return {
+            "input_type": "choice",
+            "choices": [self.option_a, self.option_b],
+            "layout": "bos",
+        }
+
+    def get_available_agents(self, config):
+        return [
+            {"id": "always_opera", "label": "Always Opera", "description": "Always chooses opera"},
+            {"id": "always_football", "label": "Always Football", "description": "Always chooses football"},
+            {"id": "tit_for_tat", "label": "Tit for Tat", "description": "Copies opponent's last move"},
+            {"id": "mixed_nash", "label": "Mixed Nash", "description": "Plays mixed Nash equilibrium"},
+        ]
 
     def initial_state(self) -> BoSState:
         return BoSState(

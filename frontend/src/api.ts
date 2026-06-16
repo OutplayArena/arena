@@ -198,4 +198,46 @@ export function connectSessionStream(
   return source;
 }
 
+export function getInteractiveSchema(
+  sessionId: string,
+  player: string,
+): Promise<{
+  schema: Record<string, unknown>;
+  ui_metadata: Record<string, unknown>;
+  state: GameState;
+}> {
+  return request<{
+    schema: Record<string, unknown>;
+    ui_metadata: Record<string, unknown>;
+    state: GameState;
+  }>(`/api/session/${sessionId}/interactive/schema?player=${player}`);
+}
+
+export function submitHumanAction(
+  sessionId: string,
+  player: string,
+  action: unknown,
+  token: string,
+  forfeit: boolean = false,
+): Promise<GameState> {
+  return request<GameState>(`/api/session/${sessionId}/interactive/action?player=${player}`, {
+    method: "POST",
+    body: JSON.stringify({ action, forfeit }),
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function getInteractiveState(
+  sessionId: string,
+  player: string,
+): Promise<GameState> {
+  return request<GameState>(`/api/session/${sessionId}/interactive/state?player=${player}`);
+}
+
+export function getInteractiveAgents(
+  gameName: string,
+): Promise<{ agents: GameAgent[] }> {
+  return request<{ agents: GameAgent[] }>(`/api/games/${gameName}/interactive/agents`);
+}
+
 

@@ -17,10 +17,10 @@ interface RPSConfigFormProps {
 export default function RPSConfigForm({ gameSlug, locked, sessionStatus, initialValues }: RPSConfigFormProps) {
   const { state, startGame } = useApp();
   const initRanRef = useRef(false);
-  const [agentAName, setAgentAName] = useState(() => randomAgentName());
-  const [agentBName, setAgentBName] = useState(() => randomAgentName());
-  const [agentAId, setAgentAId] = useState("random");
-  const [agentBId, setAgentBId] = useState("counter");
+  const [playerAName, setPlayerAName] = useState(() => randomAgentName());
+  const [playerBName, setPlayerBName] = useState(() => randomAgentName());
+  const [playerAId, setPlayerAId] = useState("random");
+  const [playerBId, setPlayerBId] = useState("counter");
   const [agents, setAgents] = useState<GameAgent[]>([]);
   const roundsRef = useRef<HTMLInputElement>(null);
   const seedRef = useRef<HTMLInputElement>(null);
@@ -33,17 +33,20 @@ export default function RPSConfigForm({ gameSlug, locked, sessionStatus, initial
     getGameAgents(gameSlug).then((data) => setAgents(data.agents)).catch(() => {});
   }, []);
 
-  const isReplay = locked || sessionStatus === "completed";
-  const formDisabled = locked || running || state.pendingGame !== null || sessionStatus === "completed" || sessionStatus === "running";
+  const effectiveLocked = locked || state.sessionLocked;
+  const effectiveStatus = sessionStatus || state.sessionStatus;
+  const isReplay = effectiveLocked || effectiveStatus === "completed" || effectiveStatus === "running" || effectiveStatus === "failed";
+  const formDisabled = effectiveLocked || running || state.pendingGame !== null || effectiveStatus === "completed" || effectiveStatus === "running" || effectiveStatus === "failed";
+  const showRunButton = !isReplay && !state.pendingGame;
 
   useEffect(() => {
     if (initRanRef.current) return;
     if (isReplay && initialValues) {
       initRanRef.current = true;
-      if (initialValues.agent_a) setAgentAName(String(initialValues.agent_a));
-      if (initialValues.agent_b) setAgentBName(String(initialValues.agent_b));
-      if (initialValues.agent_a_id) setAgentAId(String(initialValues.agent_a_id));
-      if (initialValues.agent_b_id) setAgentBId(String(initialValues.agent_b_id));
+      if (initialValues.agent_a) setPlayerAName(String(initialValues.agent_a));
+      if (initialValues.agent_b) setPlayerBName(String(initialValues.agent_b));
+      if (initialValues.agent_a_id) setPlayerAId(String(initialValues.agent_a_id));
+      if (initialValues.agent_b_id) setPlayerBId(String(initialValues.agent_b_id));
       if (roundsRef.current && initialValues.rounds !== undefined) roundsRef.current.value = String(initialValues.rounds);
       if (seedRef.current && initialValues.seed !== undefined && initialValues.seed !== null) seedRef.current.value = String(initialValues.seed);
     }
@@ -67,38 +70,41 @@ export default function RPSConfigForm({ gameSlug, locked, sessionStatus, initial
       players: 2,
       rounds: numRounds,
       seed: seedVal,
-      agents: { A: agentAName.trim(), B: agentBName.trim() },
-      interactive: true,
+      agents: { A: playerAName.trim(), B: playerBName.trim() },
+      interactive: playerAId === "interactive" || playerBId === "interactive",
     };
 
     try {
       const created = await createExperiment(config);
       setSessionId(created.session_id);
 
-      const hasRemote = agentAId === "remote" || agentBId === "remote";
+      const hasRemote = playerAId === "remote" || playerBId === "remote";
       const remoteKeys: Record<string, string> | null = hasRemote
         ? (() => {
             const keys: Record<string, string> = {};
-            if (agentAId === "remote") keys.A = created.player_tokens.A;
-            if (agentBId === "remote") keys.B = created.player_tokens.B;
+            if (playerAId === "remote") keys.A = created.player_tokens.A;
+            if (playerBId === "remote") keys.B = created.player_tokens.B;
             return keys;
           })()
         : null;
 
       if (remoteKeys) setSessionKeys(remoteKeys);
 
+      const isInteractive = playerAId === "interactive" || playerBId === "interactive";
+
       startGame({
         sessionId: created.session_id,
         tokens: created.player_tokens,
-        agentAName: agentAName.trim(),
-        agentBName: agentBName.trim(),
-        agentAId,
-        agentBId,
+        agentAName: playerAName.trim(),
+        agentBName: playerBName.trim(),
+        agentAId: playerAId,
+        agentBId: playerBId,
         numRounds,
         numFields: 0,
         totalResources: 0,
         gameSlug,
         remoteKeys,
+        interactive: isInteractive,
       });
       setStatus("Game started — switch to Live View to watch.");
     } catch (err) {
@@ -122,19 +128,41 @@ export default function RPSConfigForm({ gameSlug, locked, sessionStatus, initial
         )}
 
         <label className="grid gap-1 text-muted text-[11px] font-extrabold">
-          <span>Agent A</span>
-          <select value={agentAId} onChange={(e) => setAgentAId(e.target.value)} className={inputClass} disabled={formDisabled}>
+          <span>Player A</span>
+          <select
+            value={playerAId}
+            onChange={(e) => {
+              setPlayerAId(e.target.value);
+              if (e.target.value === "interactive") {
+                setPlayerAName("You");
+              }
+            }}
+            className={inputClass}
+            disabled={formDisabled}
+          >
+            <option value="interactive">Interactive (Human Player)</option>
             {agents.map((ag) => <option key={ag.id} value={ag.id}>{ag.label}</option>)}
           </select>
-          <input type="text" value={agentAName} onChange={(e) => setAgentAName(e.target.value)} className={inputClass} disabled={formDisabled} placeholder="Agent display name" />
+          <input type="text" value={playerAName} onChange={(e) => setPlayerAName(e.target.value)} className={inputClass} disabled={formDisabled || playerAId === "interactive"} placeholder="Player display name" />
         </label>
 
         <label className="grid gap-1 text-muted text-[11px] font-extrabold">
-          <span>Agent B</span>
-          <select value={agentBId} onChange={(e) => setAgentBId(e.target.value)} className={inputClass} disabled={formDisabled}>
+          <span>Player B</span>
+          <select
+            value={playerBId}
+            onChange={(e) => {
+              setPlayerBId(e.target.value);
+              if (e.target.value === "interactive") {
+                setPlayerBName("You");
+              }
+            }}
+            className={inputClass}
+            disabled={formDisabled}
+          >
+            <option value="interactive">Interactive (Human Player)</option>
             {agents.map((ag) => <option key={ag.id} value={ag.id}>{ag.label}</option>)}
           </select>
-          <input type="text" value={agentBName} onChange={(e) => setAgentBName(e.target.value)} className={inputClass} disabled={formDisabled} placeholder="Agent display name" />
+          <input type="text" value={playerBName} onChange={(e) => setPlayerBName(e.target.value)} className={inputClass} disabled={formDisabled || playerBId === "interactive"} placeholder="Player display name" />
         </label>
 
         <label className="grid gap-1 text-muted text-[11px] font-extrabold">
@@ -147,7 +175,7 @@ export default function RPSConfigForm({ gameSlug, locked, sessionStatus, initial
           <input ref={seedRef} type="number" className={inputClass} disabled={formDisabled} placeholder="Random" />
         </label>
 
-        {!isReplay && !state.pendingGame && (
+        {showRunButton && (
           <button
             type="submit"
             disabled={running}
@@ -175,7 +203,7 @@ export default function RPSConfigForm({ gameSlug, locked, sessionStatus, initial
             <div key={player} className="mb-2 last:mb-0">
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-extrabold text-muted uppercase">Player {player}</span>
-                <span className="text-xs text-ink font-medium">{player === "A" ? agentAName : agentBName}</span>
+                <span className="text-xs text-ink font-medium">{player === "A" ? playerAName : playerBName}</span>
               </div>
               <code className="text-[11px] bg-ink/6 px-2 py-1.5 rounded text-ink break-all font-mono block mt-1">{key}</code>
             </div>

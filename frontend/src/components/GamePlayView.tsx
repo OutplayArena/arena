@@ -3,7 +3,7 @@ import { GameHeader } from "./GameHeader";
 import { TabBar } from "./TabBar";
 import { AutoConfigForm } from "./AutoConfigForm";
 import { AutoHistoryView } from "./AutoHistoryView";
-import { loadLiveView, loadConfigForm, loadHistoryView } from "../games/registry";
+import { loadLiveView, loadConfigForm, loadHistoryView, loadPlayView } from "../games/registry";
 import type { GameMetadata, Match } from "../types";
 import { useApp } from "../hooks/useApp";
 import { AppProvider } from "../state";
@@ -35,10 +35,19 @@ interface GamePlayViewProps {
 function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch, sessionConfig, createdAt }: GamePlayViewProps) {
   const { state, setMatch, setSessionMeta, stopPlay, endGame } = useApp();
   const hasLiveView = game.ui?.live_view ?? false;
+  const hasInteractivePlay = game.ui?.interactive_play ?? false;
+  const isInteractiveGame = state.pendingGame?.interactive ?? false;
+  const effectiveLocked = locked || state.sessionLocked;
+  const effectiveStatus = sessionStatus || state.sessionStatus;
+  const isGameComplete = !!replayMatch || effectiveStatus === "completed";
+
+  const showPlayTab = hasInteractivePlay && isInteractiveGame && !isGameComplete;
+  const showLiveViewTab = hasLiveView && (isGameComplete || !isInteractiveGame);
 
   const tabs = [
     { id: "config", label: "Config" },
-    ...(hasLiveView ? [{ id: "live", label: "Live View" }] : []),
+    ...(showPlayTab ? [{ id: "play", label: "Play" }] : []),
+    ...(showLiveViewTab ? [{ id: "live", label: "Live View" }] : []),
     { id: "history", label: "History" },
   ];
 
@@ -50,7 +59,7 @@ function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch
     setPrevReplayMatch(replayMatch);
     if (replayMatch) setActiveTab("live");
   }
-  const [customUIMod, setCustomUIMod] = useState<{ live?: ComponentType<Record<string, unknown>>; config?: ComponentType<Record<string, unknown>>; history?: ComponentType<Record<string, unknown>> }>({});
+  const [customUIMod, setCustomUIMod] = useState<{ live?: ComponentType<Record<string, unknown>>; config?: ComponentType<Record<string, unknown>>; history?: ComponentType<Record<string, unknown>>; play?: ComponentType<Record<string, unknown>> }>({});
   const [canvasCollapsed, setCanvasCollapsed] = useState(false);
   const loadedRef = useRef(false);
   const gameLoopRef = useRef(false);
@@ -66,7 +75,9 @@ function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch
     completedRef.current = false;
     sessionRef.current = pg.sessionId;
     backoffRef.current = 1000;
-    setActiveTab("live");
+    // Switch to Play tab for interactive games, Live View for agent-only games
+    const isInteractive = pg.interactive === true;
+    setActiveTab(isInteractive ? "play" : "live");
 
     const buildMatch = (gs: Record<string, unknown>) => ({
       agent_a: pg.playerNames?.A ?? pg.agentAName,
@@ -139,6 +150,7 @@ function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch
             setMatch(resultToMatch(result as never, payload));
             stopPlay();
             gameLoopRef.current = false;
+            setActiveTab("live");
             endGame();
             return;
           }
@@ -192,11 +204,20 @@ function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch
         console.error("Failed to load HistoryView:", err);
       });
     }
-  }, [game.name, game.slug, game.ui, hasLiveView]);
+    if (hasInteractivePlay) {
+      loadPlayView(slug).then((mod) => {
+        if (mod) setCustomUIMod(prev => ({ ...prev, play: mod.default as ComponentType<Record<string, unknown>> }));
+        else setDynamicLoadError(true);
+      }).catch((err) => {
+        console.error("Failed to load PlayView:", err);
+        setDynamicLoadError(true);
+      });
+    }
+  }, [game.name, game.slug, game.ui, hasLiveView, hasInteractivePlay]);
 
   useEffect(() => {
     if (sessionConfig) {
-      setSessionMeta(locked, sessionStatus, locked ? {
+      setSessionMeta(effectiveLocked, effectiveStatus, effectiveLocked ? {
         agent_a: sessionConfig.agent_a,
         agent_b: sessionConfig.agent_b,
         num_rounds: sessionConfig.rounds,
@@ -206,7 +227,7 @@ function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch
     } else {
       setSessionMeta(false, "", null);
     }
-  }, [sessionConfig, sessionStatus, locked, setSessionMeta]);
+  }, [sessionConfig, effectiveStatus, effectiveLocked, setSessionMeta]);
 
   useEffect(() => {
     if (replayMatch) {
@@ -285,7 +306,7 @@ function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <GameHeader game={game} locked={locked} status={sessionStatus} createdAt={createdAt} />
+      <GameHeader game={game} locked={effectiveLocked} status={effectiveStatus} createdAt={createdAt} />
       {state.pendingGame?.remoteKeys && Object.keys(state.pendingGame.remoteKeys).length > 0 && (
         <div className="shrink-0 mx-4 mt-3 p-3 rounded-card border border-accent/30 bg-accent/5">
           <h3 className="text-xs font-extrabold text-ink mb-1.5">Remote Agent Keys</h3>
@@ -320,22 +341,40 @@ function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch
               <customUIMod.config
                 gameSlug={game.slug || game.name}
                 schema={schema}
-                locked={locked}
-                sessionStatus={sessionStatus}
+                locked={effectiveLocked}
+                sessionStatus={effectiveStatus}
                 initialValues={initialValues}
               />
             ) : (
               <AutoConfigForm
                 gameSlug={game.slug || game.name}
                 schema={schema}
-                locked={locked}
-                sessionStatus={sessionStatus}
+                locked={effectiveLocked}
+                sessionStatus={effectiveStatus}
                 initialValues={initialValues}
               />
             )}
           </div>
         )}
-        {activeTab === "live" && hasLiveView && (
+        {activeTab === "play" && showPlayTab && (
+          <div className="flex-1 min-h-0 flex flex-col">
+            {customUIMod.play ? (
+              <customUIMod.play
+                gameSlug={game.slug || game.name}
+                game={game}
+                sessionConfig={sessionConfig}
+                onGameEnd={() => setActiveTab("live")}
+              />
+            ) : dynamicLoadError ? (
+              <div className="flex items-center justify-center flex-1 text-muted text-sm">
+                Failed to load Play View. Check the browser console for details.
+              </div>
+            ) : (
+              <LoadingSpinner className="flex-1" />
+            )}
+          </div>
+        )}
+        {activeTab === "live" && showLiveViewTab && (
           <div className="flex-1 min-h-0 flex flex-col">
             {customUIMod.live ? (
               <customUIMod.live onScores={handleScores} onToggleCollapse={() => setCanvasCollapsed(true)} createdAt={createdAt || null} />
