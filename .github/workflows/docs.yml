@@ -1,0 +1,67 @@
+name: Documentation
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'agent-sdk/src/**'
+      - 'games/games/core/*/game.yaml'
+      - 'games/games/core/*/metrics.yaml'
+      - 'games/games/core/*/agents.yaml'
+      - 'scripts/build_game_docs.py'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "docs-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install mkdocs-material mkdocstrings-python pyyaml
+          pip install -e agent-sdk/
+          pip install -e games/
+
+      - name: Generate game documentation
+        run: python scripts/build_game_docs.py
+
+      - name: Build documentation
+        run: mkdocs build
+
+      - name: Install Wrangler
+        run: npm install -g wrangler
+
+      - name: Create Pages project if not exists
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          wrangler pages project create nash-arena-docs --production-branch=main || true
+
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: wrangler pages deploy site --project-name=nash-arena-docs

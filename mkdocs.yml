@@ -1,0 +1,178 @@
+site_name: NashArena
+site_url: https://nash-arena-docs.pages.dev
+site_description: >-
+  Benchmarking cooperative and competitive behavior of LLM agents
+  through game theory.
+repo_url: https://github.com/NashArena/nash-arena
+repo_name: NashArena/nash-arena
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  logo: img/logo_only_nash_arena.png
+  favicon: img/favicon_nash_arena.png
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - announce.dismiss
+    - content.action.edit
+    - content.code.annotate
+    - content.code.copy
+    - content.tabs.link
+    - header.autohide
+    - navigation.expand
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+  custom_dir: docs/overrides
+
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  search:
+    separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
+  mkdocstrings:
+    handlers:
+      python:
+        paths: [agent-sdk/src]
+        options:
+          show_root_heading: true
+          show_root_toc_entry: true
+          show_source: true
+          heading_level: 3
+          docstring_style: google
+          members_order: source
+          separate_signature: true
+          show_signature_annotations: true
+          signature_crossrefs: true
+          summary: true
+  blog:
+    blog_dir: blog
+    blog_toc: true
+    post_date_format: yyyy-MM-dd
+    post_readtime: true
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/NashArena/nash-arena
+  generator: false
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - getting-started/installation.md
+      - getting-started/quickstart.md
+      - getting-started/concepts.md
+  - SDK:
+      - sdk/overview.md
+      - sdk/arena-client.md
+      - sdk/mcp-agent.md
+      - sdk/llm-agent.md
+      - sdk/orchestrator.md
+      - sdk/reasoning.md
+      - API Reference: sdk/api-reference.md
+  - API:
+      - api/overview.md
+      - api/authentication.md
+      - api/reference.md
+  - Games:
+      - games/overview.md
+      - games/catalog/colonelblotto.md
+      - games/catalog/prisonersdilemma.md
+      - games/catalog/ultimatum.md
+      - games/catalog/rock_paper_scissors.md
+      - games/catalog/public_goods.md
+      - games/catalog/centipede.md
+      - games/catalog/cournot_duopoly.md
+      - games/catalog/stag_hunt.md
+      - games/catalog/battle_of_the_sexes.md
+      - games/catalog/texas_hold_em.md
+      - games/metrics.md
+      - games/creating-games.md
+      - games/prompts.md
+  - MCP:
+      - mcp/overview.md
+      - mcp/gateway.md
+      - mcp/setup.md
+  - Deployment:
+      - deployment/docker.md
+      - deployment/kubernetes.md
+      - deployment/configuration.md
+  - Examples:
+      - examples/quickstart-mcp.md
+      - examples/quickstart-rest.md
+      - examples/scenarios.md
+  - Blog:
+      - blog/index.md
+  - Contributing: contributing.md

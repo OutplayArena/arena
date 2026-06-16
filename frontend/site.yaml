@@ -1,9 +1,9 @@
 # NashArena site configuration
 # Edit this file to customize links and content on the landing page
 
-github_url: "https://github.com/ryanzhangofficial/nasharena"
-docs_url: "https://github.com/ryanzhangofficial/nasharena/wiki"
-privacy_notice_url: "https://github.com/ryanzhangofficial/nasharena/blob/main/PRIVACY.md"
+github_url: "https://github.com/NashArena/nash-arena"
+docs_url: "https://nash-arena-docs.pages.dev"
+privacy_notice_url: "https://github.com/NashArena/nash-arena/blob/main/PRIVACY.md"
 
 about_text: >
   NashArena is an open-source platform for game theory simulation and
