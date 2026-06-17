@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Ultimatum bot: GLM-5.1 plays Player B against a human (Player A)."""
 
-import json
 import os
 import time
 
@@ -161,13 +160,13 @@ def main():
             break
 
         if PLAYER not in state.get("awaiting", []):
-            print(f"Waiting for Player A...")
+            print("Waiting for Player A...")
             time.sleep(2)
             continue
 
         if phase == "awaiting_proposal":
             system, user = build_proposer_prompts(state)
-            print(f"\nAsking GLM-5.1 (as proposer)...")
+            print("\nAsking GLM-5.1 (as proposer)...")
             response = ask_glm(system, user)
             print(f"GLM-5.1 response: {response}")
 
@@ -179,7 +178,7 @@ def main():
 
         elif phase == "awaiting_response":
             system, user = build_responder_prompts(state)
-            print(f"\nAsking GLM-5.1 (as responder)...")
+            print("\nAsking GLM-5.1 (as responder)...")
             response = ask_glm(system, user)
             print(f"GLM-5.1 response: {response}")
 

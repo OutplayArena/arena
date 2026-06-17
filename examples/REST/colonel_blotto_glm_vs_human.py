@@ -87,7 +87,7 @@ def sync_llm_call(observation, extra_body=None):
         kwargs["extra_body"] = extra_body
     for attempt in range(2):
         try:
-            t0 = time.time()
+            time.time()
             content = _client.chat.completions.create(**kwargs).choices[0].message.content or ""
             print(f"  [{MODEL}] raw: {content[:200]}")
             return content, None
@@ -186,7 +186,7 @@ async def play_game():
             alloc = parse_allocation(raw_response, num_battlefields, total_resources)
             print(f"  {MODEL} -> {alloc}")
 
-        result = agent.submit_action(alloc)
+        agent.submit_action(alloc)
         print(f"  Submitted: {alloc}")
         print()
 

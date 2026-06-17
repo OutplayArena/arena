@@ -150,7 +150,7 @@ async def play_game():
             move = "pass"
             print(f"  {MODEL} error - using fallback: {move}")
 
-        result = agent.submit_action(move)
+        agent.submit_action(move)
         print(f"  Action submitted: {move}")
         print()
 

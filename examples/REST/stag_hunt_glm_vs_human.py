@@ -125,12 +125,12 @@ def main():
             break
 
         if PLAYER not in state.get("awaiting", []):
-            print(f"Waiting for Player A...")
+            print("Waiting for Player A...")
             time.sleep(2)
             continue
 
         system, user = build_prompts(state)
-        print(f"\nAsking GLM-5.1...")
+        print("\nAsking GLM-5.1...")
         response = ask_glm(system, user)
         print(f"GLM-5.1 response: {response}")
 

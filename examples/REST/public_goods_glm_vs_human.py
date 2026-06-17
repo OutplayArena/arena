@@ -6,9 +6,6 @@ Plays as players B, C, D in a 4-player game
 
 import os
 import time
-import json
-from pathlib import Path
-import base64
 import httpx
 from openai import OpenAI
 
@@ -127,7 +124,7 @@ def main():
 
     # Check initial state
     state = get_state("B", PLAYER_KEYS["B"])
-    print(f"\nInitial state:")
+    print("\nInitial state:")
     print(f"  Phase: {state.get('phase')}")
     print(f"  Round: {state.get('round')}/{state.get('round_total')}")
     print(f"  Endowment: {state.get('endowment')}")

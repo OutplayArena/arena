@@ -81,7 +81,7 @@ def sync_llm_call(observation, extra_body=None):
         kwargs["extra_body"] = extra_body
     for attempt in range(2):
         try:
-            t0 = time.time()
+            time.time()
             content = _client.chat.completions.create(**kwargs).choices[0].message.content or ""
             print(f"  [{MODEL}] raw: {content[:100]}")
             return content, None
