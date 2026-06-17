@@ -212,7 +212,7 @@ class PublicGoodsGame(InteractiveGameEngine):
 
         if resolve_final:
             for p in self.player_ids:
-                state.total_scores[p] += round_payoffs[p]
+                state.total_scores[p] = round(state.total_scores[p] + round_payoffs[p], 2)
             state.history[-1]["total_scores"] = dict(state.total_scores)
             state = self._advance_round(state)
 
@@ -222,7 +222,7 @@ class PublicGoodsGame(InteractiveGameEngine):
         round_payoffs = getattr(state, "_round_payoffs", {})
         # Apply contributions to total first
         for p in self.player_ids:
-            state.total_scores[p] += round_payoffs.get(p, 0.0)
+            state.total_scores[p] = round(state.total_scores[p] + round_payoffs.get(p, 0.0), 2)
 
         punishment_costs: dict[str, float] = {p: 0.0 for p in self.player_ids}
         punishment_received: dict[str, float] = {p: 0.0 for p in self.player_ids}

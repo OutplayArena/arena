@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { GamePlayView } from "../components/GamePlayView";
 import { LoadingSpinner } from "../components/LoadingSpinner";
-import { getGameMetadata, getSessionSummary, getState, getResults } from "../api";
+import { getGameMetadata, getSessionSummary, getState, getInteractiveState, getResults } from "../api";
 import { resultToMatch } from "../components/utils";
 import type { GameMetadata, Match, RunConfig, GameState } from "../types";
 
@@ -53,7 +53,9 @@ export function GamePlayPage() {
             created_at: summary.created_at,
           });
 
-          const state: GameState = await getState(sessionId);
+          const state: GameState = gameMeta.ui?.interactive_play && !summary.locked
+            ? await getInteractiveState(sessionId, "A")
+            : await getState(sessionId);
           if (cancelled) return;
 
           if (state.phase === "complete") {

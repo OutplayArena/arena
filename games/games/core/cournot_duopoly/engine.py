@@ -154,8 +154,8 @@ class CournotGame(InteractiveGameEngine):
         profit_a = self._profit(qa, qb)
         profit_b = self._profit(qb, qa)
 
-        state.total_scores["A"] += profit_a
-        state.total_scores["B"] += profit_b
+        state.total_scores["A"] = round(state.total_scores["A"] + profit_a, 2)
+        state.total_scores["B"] = round(state.total_scores["B"] + profit_b, 2)
 
         state.history.append({
             "round":          state.round_number,

@@ -156,8 +156,8 @@ class BoSGame(InteractiveGameEngine):
             payoff_b = self.payoff_mismatch
             outcome = "AB" if a_act == self.option_a else "BA"
 
-        state.total_scores["A"] += payoff_a
-        state.total_scores["B"] += payoff_b
+        state.total_scores["A"] = round(state.total_scores["A"] + payoff_a, 2)
+        state.total_scores["B"] = round(state.total_scores["B"] + payoff_b, 2)
 
         state.history.append({
             "round":        state.round_number,

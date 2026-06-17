@@ -27,8 +27,8 @@ class PublicGoodsConfig(GameConfig):
             raise ValueError(f"expected game='public_goods', got {self.game!r}")
         if self.variant not in VALID_VARIANTS:
             raise ValueError(f"unknown variant: {self.variant!r}")
-        if not (3 <= self.players <= 6):
-            raise ValueError("public_goods requires 3–6 players")
+        if not (3 <= self.players <= 10):
+            raise ValueError("public_goods requires 3–10 players")
         if self.rounds < 1:
             raise ValueError("rounds must be >= 1")
         if self.endowment <= 0:

@@ -136,20 +136,20 @@ class TestPGGConfig:
         assert config.multiplier == 2.0
 
     def test_config_rejects_too_few_players(self):
-        with pytest.raises(ValueError, match="3–6 players"):
+        with pytest.raises(ValueError, match="3–10 players"):
             config_from_request(_valid_payload(players=2))
 
     def test_config_rejects_too_many_players(self):
-        with pytest.raises(ValueError, match="3–6 players"):
-            config_from_request(_valid_payload(players=7))
+        with pytest.raises(ValueError, match="3–10 players"):
+            config_from_request(_valid_payload(players=11))
 
     def test_config_accepts_3_players(self):
         config = config_from_request(_valid_payload(players=3))
         assert config.player_ids() == ["A", "B", "C"]
 
-    def test_config_accepts_6_players(self):
-        config = config_from_request(_valid_payload(players=6))
-        assert len(config.player_ids()) == 6
+    def test_config_accepts_10_players(self):
+        config = config_from_request(_valid_payload(players=10))
+        assert len(config.player_ids()) == 10
 
     def test_config_rejects_low_multiplier(self):
         with pytest.raises(ValueError, match="multiplier"):

@@ -179,8 +179,8 @@ class UltimatumGame(InteractiveGameEngine):
                 proposer_payoff = 0.0
                 responder_payoff = 0.0
 
-            state.total_scores[state.proposer] += proposer_payoff
-            state.total_scores[state.responder] += responder_payoff
+            state.total_scores[state.proposer] = round(state.total_scores[state.proposer] + proposer_payoff, 2)
+            state.total_scores[state.responder] = round(state.total_scores[state.responder] + responder_payoff, 2)
 
             entry = {
                 "round":            state.round_number,

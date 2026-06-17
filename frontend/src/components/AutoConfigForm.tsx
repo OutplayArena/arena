@@ -32,6 +32,12 @@ interface SchemaProp {
   visibleWhen?: Record<string, unknown>;
 }
 
+interface PlayerConfig {
+  id: string;
+  name: string;
+  agentId: string;
+}
+
 function isConst(prop: SchemaProp): boolean {
   return prop.const !== undefined;
 }
@@ -105,14 +111,15 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
   const [agents, setAgents] = useState<GameAgent[]>([]);
   const [scenarios, setScenarios] = useState<ScenarioInfo[]>([]);
   const initRanRef = useRef(false);
-  const [playerAName, setPlayerAName] = useState(() => randomAgentName());
-  const [playerBName, setPlayerBName] = useState(() => randomAgentName());
-  const [playerAId, setPlayerAId] = useState("uniform");
-  const [playerBId, setPlayerBId] = useState("greedy");
+  const [players, setPlayers] = useState<PlayerConfig[]>([
+    { id: "A", name: randomAgentName(), agentId: "interactive" },
+    { id: "B", name: randomAgentName(), agentId: "remote" },
+  ]);
   const [formValues, setFormValues] = useState<Record<string, unknown>>({});
   const [status, setStatus] = useState("");
   const [running, setRunning] = useState(false);
   const [sessionKeys, setSessionKeys] = useState<Record<string, string> | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
@@ -150,8 +157,13 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
       }
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormValues(vals);
-      if (initialValues.agent_a) setPlayerAName(String(initialValues.agent_a));
-      if (initialValues.agent_b) setPlayerBName(String(initialValues.agent_b));
+      setPlayers((prev) =>
+        prev.map((p) => ({
+          ...p,
+          name: (initialValues[`agent_${p.id.toLowerCase()}`] as string) ?? p.name,
+          agentId: (initialValues[`agent_${p.id.toLowerCase()}_id`] as string) ?? p.agentId,
+        }))
+      );
     } else if (!isReplay) {
       const vals: Record<string, unknown> = {};
       for (const [key, prop] of Object.entries(props)) {
@@ -166,8 +178,12 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
     if (isReplay && initialValues) {
       initRanRef.current = true;
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (initialValues.agent_a) setPlayerAName(String(initialValues.agent_a));
-      if (initialValues.agent_b) setPlayerBName(String(initialValues.agent_b));
+      setPlayers((prev) =>
+        prev.map((p) => ({
+          ...p,
+          name: (initialValues[`agent_${p.id.toLowerCase()}`] as string) ?? p.name,
+        }))
+      );
     }
   }, [isReplay, initialValues]);
 
@@ -209,8 +225,11 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
         config[key] = key in formValues ? formValues[key] : getDefault(prop);
       }
     }
-    config.agents = { A: playerAName.trim(), B: playerBName.trim() };
-    config.interactive = playerAId === "interactive" || playerBId === "interactive";
+    const agentsDict: Record<string, string> = {};
+    players.forEach((p) => { agentsDict[p.id] = p.name.trim(); });
+    config.agents = agentsDict;
+    config.players = players.length;
+    config.interactive = players.some((p) => p.agentId === "interactive");
     return config;
   };
 
@@ -230,32 +249,37 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
       const created = await createExperiment(config as never);
       setSessionId(created.session_id);
 
-      const hasRemote = playerAId === "remote" || playerBId === "remote";
-      const remoteKeys: Record<string, string> | null = hasRemote
-        ? (() => {
-            const keys: Record<string, string> = {};
-            if (playerAId === "remote") keys.A = created.player_tokens.A;
-            if (playerBId === "remote") keys.B = created.player_tokens.B;
-            return keys;
-          })()
-        : null;
+      const remoteKeys: Record<string, string> = {};
+      players.forEach((p) => {
+        if (p.agentId === "remote") {
+          remoteKeys[p.id] = created.player_tokens[p.id];
+        }
+      });
+      const hasRemoteKeys = Object.keys(remoteKeys).length > 0;
+      if (hasRemoteKeys) setSessionKeys(remoteKeys);
 
-      if (remoteKeys) setSessionKeys(remoteKeys);
-
-      const isInteractive = playerAId === "interactive" || playerBId === "interactive";
+      const isInteractive = players.some((p) => p.agentId === "interactive");
+      const playerNames: Record<string, string> = {};
+      const agentIds: Record<string, string> = {};
+      players.forEach((p) => {
+        playerNames[p.id] = p.name.trim();
+        agentIds[p.id] = p.agentId;
+      });
 
       startGame({
         sessionId: created.session_id,
         tokens: created.player_tokens,
-        agentAName: playerAName.trim(),
-        agentBName: playerBName.trim(),
-        agentAId: playerAId,
-        agentBId: playerBId,
+        agentAName: playerNames.A ?? "",
+        agentBName: playerNames.B ?? "",
+        agentAId: agentIds.A ?? "",
+        agentBId: agentIds.B ?? "",
         numRounds,
         numFields: (config.num_battlefields as number) ?? 5,
         totalResources: (config.total_resources as number) ?? 100,
         gameSlug,
-        remoteKeys,
+        remoteKeys: hasRemoteKeys ? remoteKeys : null,
+        playerNames,
+        agentIds,
         interactive: isInteractive,
       });
       setStatus("Game started — switch to Live View to watch.");
@@ -466,65 +490,52 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
           </div>
         )}
 
-        <label className="grid gap-1 text-muted text-[11px] font-extrabold">
-          <span>Player A</span>
-          {agents.length > 0 && (
-            <select
-              value={playerAId}
+        {players.map((player, index) => (
+          <div key={player.id} className="grid gap-1 text-muted text-[11px] font-extrabold">
+            <span>Player {player.id}</span>
+            {agents.length > 0 && (
+              <select
+                value={player.agentId}
+                onChange={(e) => {
+                  const agentId = e.target.value;
+                  setPlayers((prev) =>
+                    prev.map((p, i) => {
+                      if (i !== index) return p;
+                      let name = p.name;
+                      if (agentId === "interactive") name = "You";
+                      else if (agentId === "remote") name = `Remote ${p.id}`;
+                      else {
+                        const agent = agents.find((a) => a.id === agentId);
+                        if (agent) name = agent.label;
+                      }
+                      return { ...p, agentId, name };
+                    })
+                  );
+                }}
+                className={inputClass}
+                disabled={formDisabled}
+              >
+                <option value="interactive">Interactive (Human Player)</option>
+                <option value="remote">Remote Agent (API)</option>
+                {agents.filter((a) => a.id !== "interactive" && a.id !== "remote").map((ag) => (
+                  <option key={ag.id} value={ag.id}>{ag.label}</option>
+                ))}
+              </select>
+            )}
+            <input
+              type="text"
+              value={player.name}
               onChange={(e) => {
-                setPlayerAId(e.target.value);
-                if (e.target.value === "interactive") {
-                  setPlayerAName("You");
-                }
+                setPlayers((prev) =>
+                  prev.map((p, i) => i === index ? { ...p, name: e.target.value } : p)
+                );
               }}
               className={inputClass}
-              disabled={formDisabled}
-            >
-              <option value="interactive">Interactive (Human Player)</option>
-              {agents.map((ag) => (
-                <option key={ag.id} value={ag.id}>{ag.label}</option>
-              ))}
-            </select>
-          )}
-          <input
-            type="text"
-            value={playerAName}
-            onChange={(e) => setPlayerAName(e.target.value)}
-            className={inputClass}
-            disabled={formDisabled || playerAId === "interactive"}
-            placeholder="Player display name"
-          />
-        </label>
-
-        <label className="grid gap-1 text-muted text-[11px] font-extrabold">
-          <span>Player B</span>
-          {agents.length > 0 && (
-            <select
-              value={playerBId}
-              onChange={(e) => {
-                setPlayerBId(e.target.value);
-                if (e.target.value === "interactive") {
-                  setPlayerBName("You");
-                }
-              }}
-              className={inputClass}
-              disabled={formDisabled}
-            >
-              <option value="interactive">Interactive (Human Player)</option>
-              {agents.map((ag) => (
-                <option key={ag.id} value={ag.id}>{ag.label}</option>
-              ))}
-            </select>
-          )}
-          <input
-            type="text"
-            value={playerBName}
-            onChange={(e) => setPlayerBName(e.target.value)}
-            className={inputClass}
-            disabled={formDisabled || playerBId === "interactive"}
-            placeholder="Player display name"
-          />
-        </label>
+              disabled={formDisabled || player.agentId === "interactive" || player.agentId === "remote"}
+              placeholder="Player display name"
+            />
+          </div>
+        ))}
 
         {editableProps.map(([key, prop]) => (
           <label key={key} className="grid gap-1 text-muted text-[11px] font-extrabold">
@@ -575,28 +586,43 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
           <p className="text-xs text-muted mb-3">
             Pass these to your LLM agents as <code className="bg-ink/8 px-1 rounded text-[11px]">NASH_ARENA_KEY</code>.
           </p>
-          {Object.entries(sessionKeys).map(([player, key]) => (
-            <div key={player} className="mb-2 last:mb-0">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-extrabold text-muted uppercase">Player {player}</span>
-                <span className="text-xs text-ink font-medium">{player === "A" ? playerAName : playerBName}</span>
-              </div>
+          {Object.entries(sessionKeys).map(([player, key]) => {
+            const playerName = players.find((p) => p.id === player)?.name ?? player;
+            return (
+              <div key={player} className="mb-2 last:mb-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-extrabold text-muted uppercase">Player {player}</span>
+                  <span className="text-xs text-ink font-medium">{playerName}</span>
+                </div>
               <div className="flex items-center gap-2 mt-1">
                 <code className="flex-1 text-[11px] bg-ink/6 px-2 py-1.5 rounded text-ink break-all font-mono">{key}</code>
                 <button
                   type="button"
-                  onClick={() => copyToClipboard(key)}
-                  title="Copy key"
+                  onClick={async () => {
+                    const ok = await copyToClipboard(key);
+                    if (ok) {
+                      setCopiedKey(player);
+                      setTimeout(() => setCopiedKey(null), 1500);
+                    }
+                  }}
+                  title={copiedKey === player ? "Copied!" : "Copy key"}
                   className="w-7 h-7 flex items-center justify-center rounded-md text-muted hover:text-accent hover:bg-accent/[0.12] cursor-pointer transition-colors shrink-0"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                  </svg>
+                  {copiedKey === player ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                  )}
                 </button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

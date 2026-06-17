@@ -26,7 +26,7 @@ describe("Rock Paper Scissors UI Contract", () => {
     renderWithProviders(
       <ConfigForm gameSlug="rock_paper_scissors" locked={false} />,
     );
-    expect(screen.getByText("Run Experiment")).toBeInTheDocument();
+    expect(screen.getByText("Start Game")).toBeInTheDocument();
   });
 
   it("ConfigForm renders in replay mode", async () => {

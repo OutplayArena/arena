@@ -41,12 +41,12 @@ class TestConfig:
         assert cfg.player_ids() == ["A", "B", "C"]
 
     def test_rejects_too_few_players(self):
-        with pytest.raises(ValueError, match="3–6 players"):
+        with pytest.raises(ValueError, match="3–10 players"):
             config_from_dict({"game": "public_goods", "variant": "classic", "players": 2, "rounds": 5})
 
     def test_rejects_too_many_players(self):
-        with pytest.raises(ValueError, match="3–6 players"):
-            config_from_dict({"game": "public_goods", "variant": "classic", "players": 7, "rounds": 5})
+        with pytest.raises(ValueError, match="3–10 players"):
+            config_from_dict({"game": "public_goods", "variant": "classic", "players": 11, "rounds": 5})
 
     def test_rejects_invalid_variant(self):
         with pytest.raises(ValueError, match="unknown variant"):

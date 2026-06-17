@@ -29,6 +29,7 @@ from nash_arena.metrics import AgentRegistry, get_global_registry, set_global_re
 from nash_arena.session import GameSession, _serialize_state
 from nash_arena.models.session import SessionModel
 from nash_arena.models.api_key import ApiKey
+from nash_arena.models.message_log import MessageLog
 from nash_arena.models.mcp_auth_key import McpAuthKey
 from nash_arena.auth.oauth import github_login, github_callback, google_login, google_callback, CALLBACK_BASE
 from nash_arena.auth.jwt import create_access_token
@@ -176,14 +177,23 @@ async def require_agent_api_dep(
 ) -> None:
     if os.environ.get("ENABLE_AGENT_REST_API", "false").lower() == "true":
         return
-    # Allow requests with valid user authentication (from frontend)
     if authorization and authorization.startswith("Bearer "):
+        token = authorization[len("Bearer "):]
+        # Allow requests with valid session player tokens (nks_...) — used by the frontend game loop
+        from nash_arena.auth.session_key import SESSION_KEY_PREFIX, validate_session_key
+        if token.startswith(SESSION_KEY_PREFIX):
+            try:
+                validate_session_key(token)
+                return
+            except ValueError:
+                pass
+        # Allow requests with valid user authentication (from frontend UI)
         try:
             from nash_arena.auth.dependencies import get_current_user
             await get_current_user(authorization, db)
-            return  # User authenticated, allow access
+            return
         except HTTPException:
-            pass  # Not a valid user token, fall through to MCP auth
+            pass
     await require_mcp_auth(request=request, db=db, x_mcp_auth_key=x_mcp_auth_key)
 
 
@@ -788,6 +798,7 @@ async def delete_session(
     row = result.scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="session not found")
+    await db.execute(delete(MessageLog).where(MessageLog.session_id == session_id))
     await db.delete(row)
     await db.commit()
     return {"deleted": session_id}

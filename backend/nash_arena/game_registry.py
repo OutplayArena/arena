@@ -37,7 +37,7 @@ def _has_ui_component(game_dir: Path, name: str) -> bool:
     return (game_dir / "ui" / f"{name}.tsx").exists()
 
 
-def _detect_ui(game_dir: Path) -> dict:
+def _detect_ui(game_dir: Path, metadata: dict | None = None) -> dict:
     has_live_view = _has_ui_component(game_dir, "LiveView")
     has_config = _has_ui_component(game_dir, "ConfigForm")
     has_history = _has_ui_component(game_dir, "HistoryView")
@@ -62,7 +62,7 @@ class GameRegistry:
         game_dir = self._game_dir(name)
         metadata = self._load_yaml(game_dir / "game.yaml")
         metadata["slug"] = name
-        metadata["ui"] = _detect_ui(game_dir)
+        metadata["ui"] = _detect_ui(game_dir, metadata)
         return metadata
 
     def get_game_metrics(self, name: str) -> dict:
@@ -118,16 +118,21 @@ class GameRegistry:
         ctx = {**config, **state}
 
         all_players = list(state.get("total_scores", {}).keys())
-        opp_id = next((p for p in all_players if p != player_id), None)
+        opp_ids = [p for p in all_players if p != player_id]
+        opp_id = opp_ids[0] if opp_ids else None
         total_scores = state.get("total_scores", {})
 
         ctx.update({
             "my_id": player_id,
             "opp_id": opp_id,
+            "opp_ids": opp_ids,
             "my_score": total_scores.get(player_id, 0),
             "opp_score": total_scores.get(opp_id, 0) if opp_id else 0,
+            "opp_scores": {p: total_scores.get(p, 0) for p in opp_ids},
             "score_a": total_scores.get("A", 0),
             "score_b": total_scores.get("B", 0),
+            "total_scores": total_scores,
+            "players": len(all_players),
         })
 
         if "round_total" in state:

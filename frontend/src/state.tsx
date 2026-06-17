@@ -60,16 +60,17 @@ type Action =
 
 const PENDING_GAME_KEY = "nasharena_pending_game";
 
-function loadPendingGame(): AppState["pendingGame"] {
+function loadPendingGame(gameSlug?: string): AppState["pendingGame"] {
   try {
     const stored = localStorage.getItem(PENDING_GAME_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
+    if (!stored) return null;
+    const parsed = JSON.parse(stored);
+    // Only restore if it belongs to the current game — prevents cross-game contamination
+    if (gameSlug && parsed?.gameSlug !== gameSlug) return null;
+    return parsed;
   } catch {
-    // ignore parse errors
+    return null;
   }
-  return null;
 }
 
 function savePendingGame(pendingGame: AppState["pendingGame"]): void {
@@ -84,7 +85,7 @@ function savePendingGame(pendingGame: AppState["pendingGame"]): void {
   }
 }
 
-export function initialState(): AppState {
+export function initialState(gameSlug?: string): AppState {
   return {
     activeMatch: null,
     activeRoundIndex: -1,
@@ -94,7 +95,7 @@ export function initialState(): AppState {
     sessionLocked: false,
     sessionStatus: "",
     sessionConfig: null,
-    pendingGame: loadPendingGame(),
+    pendingGame: loadPendingGame(gameSlug),
   };
 }
 
@@ -198,8 +199,8 @@ const AppContext = createContext<AppContextValue | null>(null);
 export { AppContext };
 export type { AppContextValue };
 
-export function AppProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(appReducer, null, initialState);
+export function AppProvider({ children, gameSlug }: { children: ReactNode; gameSlug?: string }) {
+  const [state, dispatch] = useReducer(appReducer, gameSlug, initialState);
   const stateRef = useRef(state);
 
   useEffect(() => {

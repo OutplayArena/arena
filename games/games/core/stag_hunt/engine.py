@@ -150,8 +150,8 @@ class StagHuntGame(InteractiveGameEngine):
         else:
             payoff_a = payoff_b = self.payoff_hare_hare
 
-        state.total_scores["A"] += payoff_a
-        state.total_scores["B"] += payoff_b
+        state.total_scores["A"] = round(state.total_scores["A"] + payoff_a, 2)
+        state.total_scores["B"] = round(state.total_scores["B"] + payoff_b, 2)
 
         entry: dict = {
             "round":        state.round_number,

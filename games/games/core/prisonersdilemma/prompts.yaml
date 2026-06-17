@@ -9,11 +9,11 @@ system: >
   - Both defect (DD): you get {{ payoff_P }}, opponent gets {{ payoff_P }}
 
 turn: >
-  Round {{ state.round }} of {{ state.round_total }}.
-  Your current score: {{ state.total_scores[player_id] }}.
+  Round {{ round }} of {{ round_total }}.
+  Your current score: {{ my_score }}.
 
   Previous rounds:
-  {{ state.history }}
+  {{ history }}
 
   Choose your action: cooperate or defect.
 

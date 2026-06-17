@@ -120,8 +120,8 @@ class ColonelBlottoGame(InteractiveGameEngine):
             state.pending_actions["B"],
         )
 
-        state.total_scores["A"] += result["score_a"]
-        state.total_scores["B"] += result["score_b"]
+        state.total_scores["A"] = round(state.total_scores["A"] + result["score_a"], 2)
+        state.total_scores["B"] = round(state.total_scores["B"] + result["score_b"], 2)
 
         state.history.append({
             "round": state.round_number,
@@ -219,7 +219,7 @@ class ColonelBlottoGame(InteractiveGameEngine):
             "forfeit": True,
             "forfeit_by": player,
         })
-        next_state.total_scores[opponent] += fields
+        next_state.total_scores[opponent] = round(next_state.total_scores[opponent] + fields, 2)
 
         if next_state.round_number >= self.num_rounds:
             next_state.phase = "complete"

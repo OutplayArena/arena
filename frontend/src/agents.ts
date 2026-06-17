@@ -201,6 +201,174 @@ function chooseTexasHoldEmAction(agent: string, player: PlayerSide, state: GameS
   }
 }
 
+// ── Battle of Sexes agents ───────────────────────────────────────────────────
+
+function chooseBoSAction(agent: string, player: PlayerSide, state: GameState): string {
+  const gs = state as Record<string, unknown>;
+  const optionA = (gs.option_a as string) ?? "opera";
+  const optionB = (gs.option_b as string) ?? "football";
+  const opponent: PlayerSide = player === "A" ? "B" : "A";
+  const history = (gs.history as Array<Record<string, unknown>> | undefined) ?? [];
+
+  switch (agent) {
+    case "always_opera":
+      return optionA;
+    case "always_football":
+      return optionB;
+    case "tit_for_tat": {
+      if (!history.length) return Math.random() < 0.5 ? optionA : optionB;
+      const last = history[history.length - 1];
+      const actions = last.actions as Record<string, string> | undefined;
+      return actions?.[opponent] ?? (Math.random() < 0.5 ? optionA : optionB);
+    }
+    case "mixed_nash":
+    default:
+      return Math.random() < 0.5 ? optionA : optionB;
+  }
+}
+
+// ── Stag Hunt agents ─────────────────────────────────────────────────────────
+
+function chooseStagHuntAction(agent: string, player: PlayerSide, state: GameState): string {
+  const gs = state as Record<string, unknown>;
+  const opponent: PlayerSide = player === "A" ? "B" : "A";
+  const history = (gs.history as Array<Record<string, unknown>> | undefined) ?? [];
+
+  switch (agent) {
+    case "always_stag":
+      return "stag";
+    case "always_hare":
+      return "hare";
+    case "tit_for_tat": {
+      if (!history.length) return "stag";
+      const last = history[history.length - 1];
+      const actions = last.actions as Record<string, string> | undefined;
+      return actions?.[opponent] ?? "stag";
+    }
+    default:
+      return Math.random() < 0.5 ? "stag" : "hare";
+  }
+}
+
+// ── Centipede agents ─────────────────────────────────────────────────────────
+
+function chooseCentipedeAction(agent: string, _player: PlayerSide, state: GameState): string {
+  const gs = state as Record<string, unknown>;
+  const step = (gs.step as number) ?? 1;
+  const maxSteps = (gs.max_steps as number) ?? 10;
+
+  switch (agent) {
+    case "take_first":
+      return "take";
+    case "always_pass":
+      return step < maxSteps ? "pass" : "take";
+    case "last_step_take":
+      return step >= maxSteps - 1 ? "take" : "pass";
+    case "tit_for_tat": {
+      const history = (gs.history as Array<Record<string, unknown>> | undefined) ?? [];
+      if (!history.length) return "pass";
+      const last = history[history.length - 1];
+      return (last.action as string) === "take" ? "take" : "pass";
+    }
+    default:
+      return Math.random() < 0.5 ? "take" : "pass";
+  }
+}
+
+// ── Ultimatum agents ─────────────────────────────────────────────────────────
+
+function chooseUltimatumAction(agent: string, _player: PlayerSide, state: GameState): unknown {
+  const gs = state as Record<string, unknown>;
+  const phase = (gs.phase as string) ?? "awaiting_proposal";
+  const total = (gs.total as number) ?? 100;
+  const pendingOffer = gs.pending_offer as number | null | undefined;
+
+  if (phase === "awaiting_proposal") {
+    // Agent is the proposer — return an offer amount
+    switch (agent) {
+      case "spe":
+      case "greedy_proposer":
+        return total * 0.1; // offer 10%
+      case "fair":
+        return total * 0.5; // offer 50%
+      case "random":
+        return Math.random() * total;
+      default:
+        return total * 0.3;
+    }
+  } else {
+    // Agent is the responder — return "accept" or "reject"
+    const offer = pendingOffer ?? 0;
+    switch (agent) {
+      case "spe":
+        return offer > 0 ? "accept" : "reject";
+      case "fair":
+        return offer >= total * 0.4 ? "accept" : "reject";
+      case "greedy_proposer":
+        return offer >= total * 0.3 ? "accept" : "reject";
+      case "random":
+        return Math.random() < 0.5 ? "accept" : "reject";
+      default:
+        return offer > 0 ? "accept" : "reject";
+    }
+  }
+}
+
+// ── Cournot Duopoly agents ────────────────────────────────────────────────────
+
+function chooseCournotAction(agent: string, player: PlayerSide, state: GameState): number {
+  const gs = state as Record<string, unknown>;
+  const nashQ = (gs.nash_quantity as number) ?? 40;
+  const collusiveQ = (gs.collusive_quantity as number) ?? 30;
+  const maxQ = (gs.max_quantity as number) ?? 120;
+  const opponent: PlayerSide = player === "A" ? "B" : "A";
+  const history = (gs.history as Array<Record<string, unknown>> | undefined) ?? [];
+  const demandA = (gs.demand_a as number) ?? 120;
+  const demandB = (gs.demand_b as number) ?? 1;
+  const cost = (gs.cost_per_unit as number) ?? 0;
+
+  switch (agent) {
+    case "nash_equilibrium":
+      return nashQ;
+    case "collusive":
+    case "collussive":
+      return collusiveQ;
+    case "greedy": {
+      // Best response to opponent's last quantity: q* = (a - c - b*q_opp) / (2b)
+      if (!history.length) return nashQ;
+      const last = history[history.length - 1];
+      const quantities = last.quantities as Record<string, number> | undefined;
+      const qOpp = quantities?.[opponent] ?? nashQ;
+      return Math.max(0, Math.min(maxQ, Math.round((demandA - cost - demandB * qOpp) / (2 * demandB))));
+    }
+    case "random":
+      return Math.floor(Math.random() * (maxQ + 1));
+    default:
+      return nashQ;
+  }
+}
+
+// ── Public Goods agents ───────────────────────────────────────────────────────
+
+function choosePublicGoodsAction(agent: string, _player: PlayerSide, state: GameState): number {
+  const gs = state as Record<string, unknown>;
+  const endowment = (gs.endowment as number) ?? 10;
+  const round = (gs.round as number) ?? 1;
+  const roundTotal = (gs.round_total as number) ?? 10;
+
+  switch (agent) {
+    case "always_contribute_max":
+      return endowment;
+    case "always_contribute_zero":
+    case "nash_equilibrium":
+      return 0;
+    case "linear_decay":
+      return endowment * (1 - (round - 1) / Math.max(1, roundTotal - 1));
+    default:
+      return Math.random() * endowment;
+  }
+}
+
 // ── Public dispatcher ─────────────────────────────────────────────────────────
 
 export function chooseAction(
@@ -212,6 +380,12 @@ export function chooseAction(
   if (gameSlug === "rock_paper_scissors") return chooseRPSAction(agent, player, state);
   if (gameSlug === "prisonersdilemma") return choosePDAction(agent, player, state);
   if (gameSlug === "texas_hold_em") return chooseTexasHoldEmAction(agent, player, state);
+  if (gameSlug === "battle_of_the_sexes") return chooseBoSAction(agent, player, state);
+  if (gameSlug === "stag_hunt") return chooseStagHuntAction(agent, player, state);
+  if (gameSlug === "centipede") return chooseCentipedeAction(agent, player, state);
+  if (gameSlug === "ultimatum") return chooseUltimatumAction(agent, player, state);
+  if (gameSlug === "cournot_duopoly") return chooseCournotAction(agent, player, state);
+  if (gameSlug === "public_goods") return choosePublicGoodsAction(agent, player, state);
 
   // Default: Blotto allocation
   const count = state.battlefields?.length ?? 0;

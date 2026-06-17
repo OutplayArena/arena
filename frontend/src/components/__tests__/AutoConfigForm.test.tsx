@@ -151,6 +151,9 @@ describe("AutoConfigForm — submission", () => {
       expect(screen.getByText("Run Experiment")).toBeInTheDocument();
     });
 
+    const agentBSelect = screen.getAllByRole("combobox")[1];
+    await user.selectOptions(agentBSelect, "uniform");
+
     await user.click(screen.getByText("Run Experiment"));
 
     await waitFor(() => {

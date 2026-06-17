@@ -29,7 +29,7 @@ describe("ColonelBlotto UI Contract", () => {
     renderWithProviders(
       <ConfigForm gameSlug="colonelblotto" locked={false} />,
     );
-    expect(screen.getByText("Run Experiment")).toBeInTheDocument();
+    expect(screen.getByText("Start Game")).toBeInTheDocument();
   });
 
   it("ConfigForm renders in locked mode", async () => {
