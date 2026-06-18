@@ -56,3 +56,11 @@ Database selector labels
 {{ include "nasharena.selectorLabels" . }}
 app.kubernetes.io/component: database
 {{- end }}
+
+{{/*
+Redis selector labels
+*/}}
+{{- define "nasharena.redis.selectorLabels" -}}
+{{ include "nasharena.selectorLabels" . }}
+app.kubernetes.io/component: redis
+{{- end }}

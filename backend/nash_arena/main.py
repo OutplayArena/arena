@@ -1,7 +1,10 @@
 # ruff: noqa: E402
+import asyncio
+import json
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, AsyncIterator
 from uuid import uuid4
 
 import yaml
@@ -10,20 +13,23 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from nash_arena.db import get_db, async_session
+from nash_arena.db import get_db, async_session as _async_session_factory
 from nash_arena.experiment_config import split_runtime_config
 from nash_arena.game_registry import GameRegistry, GameRegistryError
+from nash_arena.messaging import RedisBroker, StatePersister, MessageLogger
+from nash_arena.messaging.broker import MessageBroker
 from nash_arena.metrics import AgentRegistry, get_global_registry, set_global_registry, MatchEvaluator, load_registry, save_registry
-from nash_arena.session import GameSession
+from nash_arena.session import GameSession, _serialize_state
 from nash_arena.models.session import SessionModel
 from nash_arena.models.api_key import ApiKey
+from nash_arena.models.message_log import MessageLog
 from nash_arena.models.mcp_auth_key import McpAuthKey
 from nash_arena.auth.oauth import github_login, github_callback, google_login, google_callback, CALLBACK_BASE
 from nash_arena.auth.jwt import create_access_token
@@ -39,17 +45,43 @@ _SITE_YAML = Path(__file__).resolve().parent.parent.parent / "frontend" / "site.
 if not _SITE_YAML.is_file():
     _SITE_YAML = Path(__file__).resolve().parent.parent / "site.yaml"
 SITE_YAML = _SITE_YAML
-app = FastAPI(title="NashArena Agent Arena")
-app.add_middleware(SessionMiddleware, secret_key=os.environ.get("JWT_SECRET", "dev-secret-change-me"))
 STATIC_ROOT = Path(__file__).resolve().parent.parent / "static"
 GAME_REGISTRY = GameRegistry()
 POOL_MANAGER: PoolManager | None = None
+
+_broker: RedisBroker | None = None
+_persister: StatePersister | None = None
+_logger: MessageLogger | None = None
+
+
+@asynccontextmanager
+async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+    global _broker, _persister, _logger
+    _broker = RedisBroker()
+    _persister = StatePersister(_broker, _async_session_factory)
+    await _persister.start()
+    _logger = MessageLogger(_broker, _async_session_factory)
+    await _logger.start()
+    yield
+    if _logger is not None:
+        await _logger.stop()
+        _logger = None
+    if _persister is not None:
+        await _persister.stop()
+        _persister = None
+    if _broker is not None:
+        await _broker.close()
+        _broker = None
+
+
+app = FastAPI(title="NashArena Agent Arena", lifespan=lifespan)
+app.add_middleware(SessionMiddleware, secret_key=os.environ.get("JWT_SECRET", "dev-secret-change-me"))
 
 
 @app.on_event("startup")
 async def _load_registry_from_db() -> None:
     try:
-        async with async_session() as db:
+        async with _async_session_factory() as db:
             registry = await load_registry(db)
             set_global_registry(registry)
     except Exception:
@@ -139,11 +171,29 @@ async def require_mcp_auth(
 
 async def require_agent_api_dep(
     request: Request,
+    authorization: str | None = Header(default=None),
     db: AsyncSession = Depends(get_db),
     x_mcp_auth_key: str | None = Header(default=None, alias="X-MCP-Auth-Key"),
 ) -> None:
     if os.environ.get("ENABLE_AGENT_REST_API", "false").lower() == "true":
         return
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization[len("Bearer "):]
+        # Allow requests with valid session player tokens (nks_...) — used by the frontend game loop
+        from nash_arena.auth.session_key import SESSION_KEY_PREFIX, validate_session_key
+        if token.startswith(SESSION_KEY_PREFIX):
+            try:
+                validate_session_key(token)
+                return
+            except ValueError:
+                pass
+        # Allow requests with valid user authentication (from frontend UI)
+        try:
+            from nash_arena.auth.dependencies import get_current_user
+            await get_current_user(authorization, db)
+            return
+        except HTTPException:
+            pass
     await require_mcp_auth(request=request, db=db, x_mcp_auth_key=x_mcp_auth_key)
 
 
@@ -153,6 +203,12 @@ def require_agent_api():
 
 def game_registry_error(exc: GameRegistryError) -> HTTPException:
     return HTTPException(status_code=404, detail=str(exc))
+
+
+async def get_broker() -> AsyncIterator[MessageBroker]:
+    if _broker is None:
+        raise RuntimeError("broker not initialized")
+    yield _broker
 
 
 @app.get(f"{API_PREFIX}/health")
@@ -217,6 +273,7 @@ async def create_experiment(
     request: dict[str, Any],
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_user),
+    broker: MessageBroker = Depends(get_broker),
     _: None = require_agent_api(),
 ):
     """Create a new experiment session for a game."""
@@ -251,6 +308,12 @@ async def create_experiment(
 
     response = session.creation_response()
 
+    await broker.publish(f"session:{session.session_id}:events", {
+        "event": "session_created",
+        "session_id": session.session_id,
+        "status": session.status,
+    })
+
     if POOL_MANAGER is not None:
         try:
             player_a_token = response["player_tokens"]["A"]
@@ -274,9 +337,13 @@ async def create_experiment(
 async def get_state(
     session_id: str,
     db: AsyncSession = Depends(get_db),
+    broker: MessageBroker = Depends(get_broker),
     _: None = require_agent_api(),
 ):
     """Get the current state of a session."""
+    cached = await broker.cache_get(f"session:{session_id}:state")
+    if cached is not None:
+        return cached
     session = await get_session(session_id, db)
     return session.public_state()
 
@@ -308,6 +375,7 @@ async def submit_action(
     request: ActionRequest,
     db: AsyncSession = Depends(get_db),
     authorization: str | None = Header(default=None),
+    broker: MessageBroker = Depends(get_broker),
     _: None = require_agent_api(),
 ):
     """Submit an action (allocation or forfeit) for a player in a session."""
@@ -320,11 +388,188 @@ async def submit_action(
         raise action_error(exc) from exc
     except Exception as exc:
         session.mark_failed(str(exc))
+        state_dict = _serialize_state(session.state)
+        await broker.enqueue("state:persist", {
+            "session_id": session_id,
+            "state": state_dict,
+            "status": session.status,
+            "error_message": session.error_message,
+            "locked": session.locked,
+            "player_tokens": session.player_tokens,
+        })
+        player = session.player_for_token(token)
+        round_number = state_dict.get("round_number", 0)
+        agent_id = (session.agents or {}).get(player)
+        await broker.enqueue("message:log", {
+            "session_id": session_id,
+            "player": player,
+            "round_number": round_number,
+            "agent_id": agent_id,
+            "payload": request.allocation,
+        })
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    state_dict = _serialize_state(session.state)
+    session_row = await db.execute(select(SessionModel).where(SessionModel.id == session_id))
+    row = session_row.scalar_one()
+    row.state_json = state_dict
+    row.status = session.status
+    row.locked = session.locked
+    row.player_tokens_json = session.player_tokens
+    await db.commit()
+
+    player = session.player_for_token(token)
+    public = session.public_state()
+    round_number = public.get("round", 0) or state_dict.get("round_number", 0)
+    agent_id = (session.agents or {}).get(player)
+    action_meta = {
+        "player": player,
+        "action": request.allocation,
+        "agent_id": agent_id,
+        "round_number": round_number,
+    }
+    public["_last_action"] = action_meta
+
+    cache_payload = {**public}
+    cache_payload.pop("_last_action", None)
+    await broker.cache_set(f"session:{session_id}:state", cache_payload, ttl=600)
+    await broker.publish(f"session:{session_id}:state", public)
+    await broker.enqueue("message:log", {
+        "session_id": session_id,
+        "player": player,
+        "round_number": round_number,
+        "agent_id": agent_id,
+        "payload": request.allocation,
+    })
+    await broker.publish(f"session:{session_id}:events", {
+        "event": "action_submitted",
+        "session_id": session_id,
+        "player": player,
+        "status": session.status,
+    })
+    return public
+
+
+class HumanActionRequest(BaseModel):
+    action: Any = None
+    forfeit: bool = False
+
+
+@app.get(f"{API_PREFIX}/session/{{session_id}}/interactive/schema")
+async def get_interactive_schema(
+    session_id: str,
+    player: str = Query(..., description="Player ID (e.g. A or B)"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get the action schema for interactive play."""
+    session = await get_session(session_id, db)
+    game = session.game
+
+    from nash_arena.interactive_game_engine import InteractiveGameEngine
+    if not isinstance(game, InteractiveGameEngine):
+        raise HTTPException(status_code=400, detail="game does not support interactive play")
+
+    return {
+        "schema": game.human_action_schema(session.config),
+        "ui_metadata": game.ui_metadata(session.config),
+        "state": game.interactive_public_state(session.state, session.config, session_id, session.config_hash, player),
+    }
+
+
+@app.post(f"{API_PREFIX}/session/{{session_id}}/interactive/action")
+async def submit_human_action(
+    session_id: str,
+    request: HumanActionRequest,
+    player: str = Query(..., description="Player ID (e.g. A or B)"),
+    db: AsyncSession = Depends(get_db),
+    authorization: str | None = Header(default=None),
+):
+    """Submit a human player action with automatic formatting."""
+    session = await get_session(session_id, db)
+    token = bearer_token(authorization)
+
+    from nash_arena.interactive_game_engine import InteractiveGameEngine
+    if not isinstance(session.game, InteractiveGameEngine):
+        raise HTTPException(status_code=400, detail="game does not support interactive play")
+
+    game = session.game
+
+    try:
+        token_player = session.player_for_token(token)
+        if token_player != player:
+            raise HTTPException(status_code=403, detail="token does not match player")
+
+        if request.forfeit:
+            if hasattr(game, "forfeit_round"):
+                session.state = game.forfeit_round(session.state, player)
+            else:
+                raise HTTPException(status_code=400, detail="game does not support forfeit")
+        else:
+            formatted_action = game.format_human_action(request.action, session.config)
+            game.validate_human_action(session.state, player, formatted_action, session.config)
+            session.submit_action(player, formatted_action)
+
+        session._update_status_from_state()
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise action_error(exc) from exc
+    except Exception as exc:
+        session.mark_failed(str(exc))
         await session.save_state(db)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     await session.save_state(db)
-    return session.public_state()
+    return game.interactive_public_state(session.state, session.config, session_id, session.config_hash, player)
+
+
+@app.get(f"{API_PREFIX}/session/{{session_id}}/interactive/state")
+async def get_interactive_state(
+    session_id: str,
+    player: str = Query(..., description="Player ID (e.g. A or B)"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get interactive state with player-specific context."""
+    session = await get_session(session_id, db)
+    game = session.game
+
+    from nash_arena.interactive_game_engine import InteractiveGameEngine
+    if not isinstance(game, InteractiveGameEngine):
+        return session.public_state()
+
+    return game.interactive_public_state(session.state, session.config, session_id, session.config_hash, player)
+
+
+@app.get(f"{API_PREFIX}/games/{{name}}/interactive/agents")
+async def get_interactive_agents(name: str):
+    """Get available agents for interactive play."""
+    try:
+        game_info = GAME_REGISTRY.get_game(name)
+        config = GAME_REGISTRY.config_from_request({"game": name, **game_info.get("example_config", {})})
+        game = GAME_REGISTRY.game_from_config(config)
+
+        from nash_arena.interactive_game_engine import InteractiveGameEngine
+        if isinstance(game, InteractiveGameEngine):
+            return {"agents": game.get_available_agents(config)}
+        return {"agents": []}
+    except GameRegistryError as exc:
+        raise game_registry_error(exc) from exc
+    except Exception:
+        return {"agents": []}
+
+
+def sanitize_for_json(obj: Any) -> Any:
+    """Recursively sanitize an object to ensure JSON compatibility."""
+    import math
+    if isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return 0.0
+        return obj
+    if isinstance(obj, dict):
+        return {k: sanitize_for_json(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [sanitize_for_json(item) for item in obj]
+    return obj
 
 
 @app.get(f"{API_PREFIX}/session/{{session_id}}/results")
@@ -335,6 +580,7 @@ async def get_results(session_id: str, db: AsyncSession = Depends(get_db)):
         registry = get_global_registry()
         evaluator = MatchEvaluator(registry)
         result = session.results(evaluator=evaluator)
+        result = sanitize_for_json(result)
         try:
             await save_registry(registry, db)
             await db.commit()
@@ -357,12 +603,21 @@ async def fail_session(
     session_id: str,
     request: dict[str, Any],
     db: AsyncSession = Depends(get_db),
+    broker: MessageBroker = Depends(get_broker),
     _: None = require_agent_api(),
 ):
     """Mark a session as failed with an error message."""
     session = await get_session(session_id, db)
     session.mark_failed(request.get("error", "unknown error"))
-    await session.save_state(db)
+    state_dict = _serialize_state(session.state)
+    await broker.enqueue("state:persist", {
+        "session_id": session_id,
+        "state": state_dict,
+        "status": session.status,
+        "error_message": session.error_message,
+        "locked": session.locked,
+        "player_tokens": session.player_tokens,
+    })
 
     if POOL_MANAGER is not None:
         try:
@@ -371,6 +626,29 @@ async def fail_session(
             print(f"Warning: Failed to release MCP container: {e}")
 
     return {"session_id": session_id, "status": session.status, "error_message": session.error_message}
+
+
+@app.get(f"{API_PREFIX}/session/{{session_id}}/stream")
+async def stream_session(
+    session_id: str,
+    broker: MessageBroker = Depends(get_broker),
+):
+    async def event_generator():
+        try:
+            async for state in broker.subscribe(f"session:{session_id}:state"):
+                yield f"event: state_change\ndata: {json.dumps(state)}\n\n"
+        except asyncio.CancelledError:
+            pass
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ── Session history & dashboard ────────────────────────────────────────
@@ -520,6 +798,7 @@ async def delete_session(
     row = result.scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="session not found")
+    await db.execute(delete(MessageLog).where(MessageLog.session_id == session_id))
     await db.delete(row)
     await db.commit()
     return {"deleted": session_id}
@@ -851,4 +1130,5 @@ def site_config():
     }
 
 
-app.mount("/", StaticFiles(directory=STATIC_ROOT, html=True), name="static")
+if STATIC_ROOT.is_dir():
+    app.mount("/", StaticFiles(directory=STATIC_ROOT, html=True), name="static")

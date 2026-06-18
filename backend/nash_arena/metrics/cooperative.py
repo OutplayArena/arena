@@ -19,9 +19,13 @@ class CooperativeMetrics:
 
     @staticmethod
     def _to_binary(actions: list[Any]) -> list[int]:
-        _STR_MAP = {"cooperate": 1, "cooperated": 1, "defect": 0, "defected": 0}
+        _STR_MAP = {
+            "cooperate": 1, "cooperated": 1, "defect": 0, "defected": 0,
+            "stag": 1, "hare": 0,
+            "pass": 1, "take": 0,
+        }
         return [
-            _STR_MAP[a] if isinstance(a, str) else int(a)
+            _STR_MAP[a] if isinstance(a, str) else (1 if int(a) > 0 else 0)
             for a in actions
         ]
 
@@ -142,11 +146,15 @@ class CooperativeMetrics:
             j_responds = acts_j[1:min_len]
             i_prev     = acts_i[:min_len-1]
             if np.std(i_responds) > 1e-8 and np.std(j_prev) > 1e-8:
-                matrix[(i, j)] = float(np.corrcoef(i_responds, j_prev)[0, 1])
+                with np.errstate(invalid="ignore", divide="ignore"):
+                    corr = float(np.corrcoef(i_responds, j_prev)[0, 1])
+                matrix[(i, j)] = 0.0 if np.isnan(corr) else corr
             else:
                 matrix[(i, j)] = 0.0
             if np.std(j_responds) > 1e-8 and np.std(i_prev) > 1e-8:
-                matrix[(j, i)] = float(np.corrcoef(j_responds, i_prev)[0, 1])
+                with np.errstate(invalid="ignore", divide="ignore"):
+                    corr = float(np.corrcoef(j_responds, i_prev)[0, 1])
+                matrix[(j, i)] = 0.0 if np.isnan(corr) else corr
             else:
                 matrix[(j, i)] = 0.0
         return matrix

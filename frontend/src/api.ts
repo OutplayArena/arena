@@ -182,4 +182,62 @@ export function getGameScenarios(name: string): Promise<{ scenarios: ScenarioInf
   return request<{ scenarios: ScenarioInfo[] }>(`/api/games/${name}/scenarios`);
 }
 
+export function connectSessionStream(
+  sessionId: string,
+  onStateChange: (state: GameState) => void,
+  onError?: (err: Event) => void,
+): EventSource {
+  const source = new EventSource(`/api/session/${sessionId}/stream`);
+  source.addEventListener("state_change", (e: MessageEvent) => {
+    const state = JSON.parse(e.data) as GameState;
+    onStateChange(state);
+  });
+  if (onError) {
+    source.onerror = onError;
+  }
+  return source;
+}
+
+export function getInteractiveSchema(
+  sessionId: string,
+  player: string,
+): Promise<{
+  schema: Record<string, unknown>;
+  ui_metadata: Record<string, unknown>;
+  state: GameState;
+}> {
+  return request<{
+    schema: Record<string, unknown>;
+    ui_metadata: Record<string, unknown>;
+    state: GameState;
+  }>(`/api/session/${sessionId}/interactive/schema?player=${player}`);
+}
+
+export function submitHumanAction(
+  sessionId: string,
+  player: string,
+  action: unknown,
+  token: string,
+  forfeit: boolean = false,
+): Promise<GameState> {
+  return request<GameState>(`/api/session/${sessionId}/interactive/action?player=${player}`, {
+    method: "POST",
+    body: JSON.stringify({ action, forfeit }),
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function getInteractiveState(
+  sessionId: string,
+  player: string,
+): Promise<GameState> {
+  return request<GameState>(`/api/session/${sessionId}/interactive/state?player=${player}`);
+}
+
+export function getInteractiveAgents(
+  gameName: string,
+): Promise<{ agents: GameAgent[] }> {
+  return request<{ agents: GameAgent[] }>(`/api/games/${gameName}/interactive/agents`);
+}
+
 

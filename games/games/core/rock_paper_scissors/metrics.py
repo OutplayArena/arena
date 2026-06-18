@@ -32,7 +32,9 @@ def _pattern_exploitability(actions: list[str]) -> float:
     if np.std(arr) < 1e-8:
         return 1.0
     n = (arr - np.mean(arr)) / np.std(arr)
-    return float(abs(np.corrcoef(n[:-1], n[1:])[0, 1]))
+    with np.errstate(invalid="ignore", divide="ignore"):
+        corr = float(abs(np.corrcoef(n[:-1], n[1:])[0, 1]))
+    return 0.0 if np.isnan(corr) else corr
 
 
 class RPSMetrics(GameMetrics, GameMetricsExtension):

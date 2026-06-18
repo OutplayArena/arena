@@ -64,6 +64,8 @@ spec:
                 secretKeyRef:
                   name: {{ include "nasharena.fullname" . }}-oauth
                   key: jwt-secret
+            - name: REDIS_URL
+              value: "redis://{{ include "nasharena.fullname" . }}-redis:{{ .Values.redis.port }}/0"
           livenessProbe:
             httpGet:
               path: {{ .Values.backend.env.apiPrefix }}/health

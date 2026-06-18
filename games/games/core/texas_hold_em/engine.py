@@ -4,9 +4,8 @@ import random
 from copy import deepcopy
 from dataclasses import dataclass
 from itertools import combinations
-from typing import Any
 
-from nash_arena.game_engine import GameEngine
+from nash_arena.interactive_game_engine import InteractiveGameEngine
 from games.core.texas_hold_em.metrics import TexasHoldEmMetrics
 
 RANKS = "23456789TJQKA"
@@ -146,7 +145,7 @@ class TexasHoldEmState:
     final_hand_pot: float = 0.0
 
 
-class TexasHoldEmGame(GameEngine):
+class TexasHoldEmGame(InteractiveGameEngine):
     def __init__(self, num_rounds: int = 10, seed: int | None = None):
         self.num_rounds = num_rounds
         self.seed = seed
@@ -155,6 +154,60 @@ class TexasHoldEmGame(GameEngine):
     @classmethod
     def from_config(cls, config) -> TexasHoldEmGame:
         return cls(num_rounds=config.rounds, seed=config.seed)
+
+    def human_action_schema(self, config):
+        return {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["fold", "call", "raise", "check"],
+                    "description": "Poker action",
+                },
+                "raise_amount": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Raise amount (only if action is 'raise')",
+                }
+            },
+            "required": ["action"],
+        }
+
+    def format_human_action(self, raw_action, config):
+        if isinstance(raw_action, str):
+            return raw_action.lower()
+        if isinstance(raw_action, dict):
+            action = raw_action.get("action", "").lower()
+            if action == "raise" and "raise_amount" in raw_action:
+                return {
+                    "action": action,
+                    "raise_amount": float(raw_action["raise_amount"]),
+                }
+            return action
+        return str(raw_action).lower()
+
+    def ui_metadata(self, config):
+        return {
+            "input_type": "poker",
+            "actions": ["fold", "call", "raise", "check"],
+            "layout": "texas_hold_em",
+        }
+
+    def get_available_agents(self, config):
+        return [
+            {"id": "random", "label": "Random", "description": "Random actions"},
+            {"id": "conservative", "label": "Conservative", "description": "Plays tight, folds often"},
+            {"id": "aggressive", "label": "Aggressive", "description": "Bets and raises often"},
+            {"id": "call_station", "label": "Call Station", "description": "Calls frequently, rarely raises"},
+        ]
+
+    def interactive_public_state(self, state, config, session_id, config_hash, player=None):
+        base_state = self.public_state(state, config, session_id, config_hash)
+        if player == "A" and hasattr(state, "hole_cards") and "A" in state.hole_cards:
+            base_state["player_cards"] = state.hole_cards["A"]
+        elif player == "B" and hasattr(state, "hole_cards") and "B" in state.hole_cards:
+            base_state["player_cards"] = state.hole_cards["B"]
+        return base_state
 
     def _deal_new_hand(self, hand_number: int) -> tuple[list[str], dict, list[str]]:
         s = (self.seed or 0) + hand_number

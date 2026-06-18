@@ -14,6 +14,9 @@ _COOPERATIVE_GAME_TYPES = frozenset({
     "prisoners_dilemma",
     "prisonersdilemma",
     "blotto_coalition",
+    "stag_hunt",
+    "centipede",
+    "public_goods",
 })
 
 _ZERO_SUM_GAME_TYPES = frozenset({

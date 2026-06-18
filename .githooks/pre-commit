@@ -36,6 +36,18 @@ if [ "$FRONTEND_CHANGED" -gt 0 ]; then
   echo "✅ TypeScript typecheck passed."
 
   echo ""
+  echo "━━━ ESLint ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  npx eslint . 2>&1
+
+  if [ $? -ne 0 ]; then
+    echo ""
+    echo "❌ ESLint failed. Commit aborted."
+    echo "   Run 'cd frontend && npx eslint .' to see errors."
+    exit 1
+  fi
+  echo "✅ ESLint passed."
+
+  echo ""
   echo "━━━ Frontend tests ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   npx vitest run 2>&1
 

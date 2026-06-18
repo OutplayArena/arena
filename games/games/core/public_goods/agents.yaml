@@ -23,3 +23,6 @@ agents:
     name: Random
     description: Contributes a uniformly random amount each round.
     class: RandomAgent
+  - id: interactive
+    label: Interactive (Human)
+    description: "You play directly via the Live View panel."

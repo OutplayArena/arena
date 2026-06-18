@@ -12,6 +12,7 @@ export interface ProvidersResponse {
 
 export type AgentName = "uniform" | "random" | "greedy";
 export type PlayerSide = "A" | "B";
+export type PlayerId = string;
 
 export interface Battlefield {
   id: string;
@@ -110,6 +111,9 @@ export interface Match {
   history: MatchRound[];
   currentState?: Record<string, unknown>;
   rich_metrics?: RichMetrics;
+  agents?: Record<string, string>;
+  total_scores?: Record<string, number>;
+  player_ids?: string[];
 }
 
 export interface MatchRound {
@@ -207,6 +211,7 @@ export interface GameUIFlags {
   live_view: boolean;
   custom_config: boolean;
   custom_history: boolean;
+  interactive_play: boolean;
 }
 
 export interface GameAgent {

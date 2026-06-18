@@ -3,7 +3,7 @@ fullnameOverride: ""
 
 dev:
   liveReload: false
-  staticSourcePath: /home/herbert/code/nash-arena/backend/static
+  staticSourcePath: /home/herbert/code/blotto/backend/static
 
 database:
   image: postgres:16-alpine
@@ -21,6 +21,18 @@ database:
     limits:
       cpu: 500m
       memory: 512Mi
+
+redis:
+  image: redis:7-alpine
+  port: 6379
+  storage: 2Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
 
 oauth:
   callbackBaseUrl: "http://localhost:8000"
@@ -63,7 +75,7 @@ mcpServer:
   port: 8000
   maxConcurrentJobs: 50
   jobTTL: 300
-  publicBaseUrl: ""  # Set to enable gateway routing, e.g., "https://api.agent-arena.local"
+  publicBaseUrl: "http://192.168.49.2:30173"  # Minikube IP + Traefik NodePort
 
 migrations:
   image:

@@ -4,7 +4,7 @@ import random
 from copy import deepcopy
 from dataclasses import dataclass
 
-from nash_arena.game_engine import GameEngine
+from nash_arena.interactive_game_engine import InteractiveGameEngine
 from games.core.stag_hunt.metrics import StagHuntMetrics
 
 VALID_ACTIONS = frozenset({"stag", "hare"})
@@ -27,7 +27,7 @@ class StagHuntState:
     total_scores: dict[str, float]
 
 
-class StagHuntGame(GameEngine):
+class StagHuntGame(InteractiveGameEngine):
     def __init__(
         self,
         num_rounds: int = 10,
@@ -58,6 +58,40 @@ class StagHuntGame(GameEngine):
             seed=config.seed,
             system_prompt=config.system_prompt,
         )
+
+    def human_action_schema(self, config):
+        return {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["stag", "hare"],
+                    "description": "Hunt stag (cooperate) or hunt hare (defect)",
+                }
+            },
+            "required": ["action"],
+        }
+
+    def format_human_action(self, raw_action, config):
+        if isinstance(raw_action, str):
+            return raw_action.lower()
+        if isinstance(raw_action, dict):
+            return raw_action.get("action", "").lower()
+        return str(raw_action).lower()
+
+    def ui_metadata(self, config):
+        return {
+            "input_type": "choice",
+            "choices": ["stag", "hare"],
+            "layout": "stag_hunt",
+        }
+
+    def get_available_agents(self, config):
+        return [
+            {"id": "always_stag", "label": "Always Stag", "description": "Always hunts stag"},
+            {"id": "always_hare", "label": "Always Hare", "description": "Always hunts hare"},
+            {"id": "tit_for_tat", "label": "Tit for Tat", "description": "Copies opponent's last move"},
+        ]
 
     def initial_state(self) -> StagHuntState:
         return StagHuntState(
@@ -116,8 +150,8 @@ class StagHuntGame(GameEngine):
         else:
             payoff_a = payoff_b = self.payoff_hare_hare
 
-        state.total_scores["A"] += payoff_a
-        state.total_scores["B"] += payoff_b
+        state.total_scores["A"] = round(state.total_scores["A"] + payoff_a, 2)
+        state.total_scores["B"] = round(state.total_scores["B"] + payoff_b, 2)
 
         entry: dict = {
             "round":        state.round_number,

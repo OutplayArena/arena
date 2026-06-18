@@ -4,7 +4,7 @@ import random
 from copy import deepcopy
 from dataclasses import dataclass
 
-from nash_arena.game_engine import GameEngine
+from nash_arena.interactive_game_engine import InteractiveGameEngine
 from games.core.cournot_duopoly.metrics import CournotMetrics
 
 
@@ -18,7 +18,7 @@ class CournotState:
     total_scores: dict[str, float]
 
 
-class CournotGame(GameEngine):
+class CournotGame(InteractiveGameEngine):
     def __init__(
         self,
         num_rounds: int = 10,
@@ -49,6 +49,46 @@ class CournotGame(GameEngine):
             seed=config.seed,
             system_prompt=config.system_prompt,
         )
+
+    def human_action_schema(self, config):
+        max_qty = config.max_quantity if hasattr(config, 'max_quantity') else 100
+        return {
+            "type": "object",
+            "properties": {
+                "quantity": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": max_qty,
+                    "description": f"Production quantity (0 to {max_qty})",
+                }
+            },
+            "required": ["quantity"],
+        }
+
+    def format_human_action(self, raw_action, config):
+        if isinstance(raw_action, (int, float)):
+            return float(raw_action)
+        if isinstance(raw_action, dict):
+            return float(raw_action.get("quantity", 0))
+        return float(raw_action)
+
+    def ui_metadata(self, config):
+        max_qty = config.max_quantity if hasattr(config, 'max_quantity') else 100
+        return {
+            "input_type": "slider",
+            "min": 0,
+            "max": max_qty,
+            "step": 1,
+            "layout": "cournot",
+        }
+
+    def get_available_agents(self, config):
+        return [
+            {"id": "nash_equilibrium", "label": "Nash Equilibrium", "description": "Plays Nash equilibrium quantity"},
+            {"id": "collussive", "label": "Collusive", "description": "Plays collusive quantity"},
+            {"id": "greedy", "label": "Greedy", "description": "Best response to opponent's last move"},
+            {"id": "random", "label": "Random", "description": "Random quantity"},
+        ]
 
     @property
     def nash_quantity(self) -> float:
@@ -114,8 +154,8 @@ class CournotGame(GameEngine):
         profit_a = self._profit(qa, qb)
         profit_b = self._profit(qb, qa)
 
-        state.total_scores["A"] += profit_a
-        state.total_scores["B"] += profit_b
+        state.total_scores["A"] = round(state.total_scores["A"] + profit_a, 2)
+        state.total_scores["B"] = round(state.total_scores["B"] + profit_b, 2)
 
         state.history.append({
             "round":          state.round_number,
