@@ -537,7 +537,9 @@ async def get_interactive_state(
     if not isinstance(game, InteractiveGameEngine):
         return session.public_state()
 
-    return game.interactive_public_state(session.state, session.config, session_id, session.config_hash, player)
+    state = game.interactive_public_state(session.state, session.config, session_id, session.config_hash, player)
+    state["messages"] = session.messages or []
+    return state
 
 
 @app.get(f"{API_PREFIX}/games/{{name}}/interactive/agents")
@@ -556,6 +558,63 @@ async def get_interactive_agents(name: str):
         raise game_registry_error(exc) from exc
     except Exception:
         return {"agents": []}
+
+
+class MailboxSendRequest(BaseModel):
+    content: str
+    recipient: str = "all"
+
+
+@app.post(f"{API_PREFIX}/session/{{session_id}}/mailbox/send")
+async def send_mailbox_message(
+    session_id: str,
+    request: MailboxSendRequest,
+    db: AsyncSession = Depends(get_db),
+    authorization: str | None = Header(default=None),
+    broker: MessageBroker = Depends(get_broker),
+):
+    """Send a mailbox message from a player."""
+    session = await get_session(session_id, db)
+    token = bearer_token(authorization)
+    player = session.player_for_token(token)
+
+    if not request.content or not request.content.strip():
+        raise HTTPException(status_code=400, detail="message content cannot be empty")
+
+    state_dict = _serialize_state(session.state)
+    if state_dict.get("phase") == "complete":
+        raise HTTPException(status_code=409, detail="game is already complete")
+
+    msg = session.add_message(sender=player, content=request.content.strip(), recipient=request.recipient)
+
+    session_row = await db.execute(select(SessionModel).where(SessionModel.id == session_id))
+    row = session_row.scalar_one()
+    row.messages_json = session.messages or []
+    await db.commit()
+
+    await broker.publish(f"mailbox:{session_id}", msg)
+    return msg
+
+
+@app.get(f"{API_PREFIX}/session/{{session_id}}/mailbox/messages")
+async def get_mailbox_messages(
+    session_id: str,
+    player: str | None = Query(default=None, description="Player ID to filter visible messages"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get mailbox messages for a session."""
+    session = await get_session(session_id, db)
+    messages = session.messages or []
+
+    if player:
+        messages = [
+            m for m in messages
+            if m.get("recipient") == "all"
+            or m.get("recipient") == player
+            or m.get("sender") == player
+        ]
+
+    return {"messages": messages}
 
 
 def sanitize_for_json(obj: Any) -> Any:

@@ -6,6 +6,18 @@ system: >
   with the best five-card poker hand at showdown wins the pot.
   Each player starts with 100 chips; ante is 1 per hand; bet size is 2.
 
+  MAILBOX COMMUNICATION (REQUIRED):
+  You have mailbox tools: get_mailbox() and send_message(content, recipient).
+  You MUST call get_mailbox() at the start of EVERY turn before making your action.
+  After reading messages, you may call send_message() to reply or send strategic messages.
+  Only after checking your mailbox should you output your game action.
+
+  Strategic considerations:
+  - You may send honest signals to build table image
+  - You may send decoy messages to mislead your opponent about your hand strength
+  - Messages are visible to the recipient and any broadcasts
+  - Use the mailbox strategically — it's a tool for negotiation and deception
+
 turn: >
   Round {{ state.round }} of {{ state.round_total }} — Hand {{ state.hand_number }}.
   Street: {{ state.street }}.
@@ -17,7 +29,7 @@ turn: >
   To call: {{ state.chips[player_id] - state.chips[opponent_id] if state.chips[player_id] > state.chips[opponent_id] else 0 }}.
 
   Actions this street: {{ state.street_actions }}.
-  It is your turn. Respond with exactly one word: fold, check, call, or raise.
+  IMPORTANT: First call get_mailbox() to check for messages, then optionally send_message(), then respond with exactly one word: fold, check, call, or raise.
 
 action_format:
   type: string

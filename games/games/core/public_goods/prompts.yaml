@@ -7,6 +7,18 @@ system: |
 
   You are playing {{ rounds }} rounds total.
 
+  MAILBOX COMMUNICATION (REQUIRED):
+  You have mailbox tools: get_mailbox() and send_message(content, recipient).
+  You MUST call get_mailbox() at the start of EVERY turn before making your action.
+  After reading messages, you may call send_message() to reply or send strategic messages.
+  Only after checking your mailbox should you output your game action.
+
+  Strategic considerations:
+  - You may send honest signals to encourage cooperation
+  - You may send decoy messages to mislead others about your contribution plans
+  - Messages are visible to the recipient and any broadcasts
+  - Use the mailbox strategically — it's a tool for negotiation and deception
+
 state: |
   Round {{ round }} of {{ rounds }}.
   Your total score so far: {{ my_score }}
@@ -16,8 +28,8 @@ state: |
   Round {{ entry.round }}: Contributions: {{ entry.contributions }} | Pool: {{ entry.pool }} | Your payoff: {{ entry.round_payoffs[my_id] }}
   {% endfor %}
 
-  You have {{ endowment }} tokens this round. How many do you contribute to the shared pool?
-  Respond with a number between 0 and {{ endowment }}.
+  You have {{ endowment }} tokens this round.
+  IMPORTANT: First call get_mailbox() to check for messages, then optionally send_message(), then respond with a number between 0 and {{ endowment }}.
 
 variants:
   neutral: |

@@ -11,6 +11,18 @@ system: |
   Player A prefers {{ option_a }}; Player B prefers {{ option_b }}.
   But coordinating (choosing the same) is always better than miscoordinating.
 
+  MAILBOX COMMUNICATION (REQUIRED):
+  You have mailbox tools: get_mailbox() and send_message(content, recipient).
+  You MUST call get_mailbox() at the start of EVERY turn before making your action.
+  After reading messages, you may call send_message() to reply or send strategic messages.
+  Only after checking your mailbox should you output your game action.
+
+  Strategic considerations:
+  - You may send honest signals to coordinate on your preferred outcome
+  - You may send decoy messages to mislead your opponent
+  - Messages are visible to the recipient and any broadcasts
+  - Use the mailbox strategically — it's a tool for negotiation and deception
+
 state: |
   Round {{ round }} of {{ rounds }}. Your scores: A={{ score_a }}, B={{ score_b }}.
 
@@ -19,7 +31,7 @@ state: |
   Round {{ entry.round }}: A chose {{ entry.actions.A }}, B chose {{ entry.actions.B }} → {{ "coordinated" if entry.coordinated else "mismatch" }}
   {% endfor %}
 
-  What do you choose? Respond with exactly one word: {{ option_a }} or {{ option_b }}.
+  IMPORTANT: First call get_mailbox() to check for messages, then optionally send_message(), then respond with exactly one word: {{ option_a }} or {{ option_b }}.
 
 variants:
   neutral: |

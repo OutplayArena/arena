@@ -249,4 +249,12 @@ export interface ScenarioInfo {
   system_prompt: string;
 }
 
+export interface MailboxMessage {
+  id: string;
+  sender: string;
+  recipient: string;
+  content: string;
+  round: number;
+}
+
 

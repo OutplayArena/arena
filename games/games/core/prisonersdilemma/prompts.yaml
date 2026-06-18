@@ -8,6 +8,18 @@ system: >
   - You cooperate, opponent defects (CD): you get {{ payoff_S }}, opponent gets {{ payoff_T }}
   - Both defect (DD): you get {{ payoff_P }}, opponent gets {{ payoff_P }}
 
+  MAILBOX COMMUNICATION (REQUIRED):
+  You have mailbox tools: get_mailbox() and send_message(content, recipient).
+  You MUST call get_mailbox() at the start of EVERY turn before making your action.
+  After reading messages, you may call send_message() to reply or send strategic messages.
+  Only after checking your mailbox should you output your game action.
+
+  Strategic considerations:
+  - You may send honest signals to build trust and coordinate on cooperation
+  - You may send decoy messages to mislead your opponent
+  - Messages are visible to the recipient and any broadcasts
+  - Use the mailbox strategically — it's a tool for negotiation and deception
+
 turn: >
   Round {{ round }} of {{ round_total }}.
   Your current score: {{ my_score }}.
@@ -15,7 +27,7 @@ turn: >
   Previous rounds:
   {{ history }}
 
-  Choose your action: cooperate or defect.
+  IMPORTANT: First call get_mailbox() to check for messages, then optionally send_message(), then respond with exactly one word: cooperate or defect.
 
 action_format:
   type: string

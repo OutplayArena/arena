@@ -13,6 +13,18 @@ system: |
 
   You are playing {{ rounds }} rounds total.
 
+  MAILBOX COMMUNICATION (REQUIRED):
+  You have mailbox tools: get_mailbox() and send_message(content, recipient).
+  You MUST call get_mailbox() at the start of EVERY turn before making your action.
+  After reading messages, you may call send_message() to reply or send strategic messages.
+  Only after checking your mailbox should you output your game action (stag or hare).
+
+  Strategic considerations:
+  - You may send honest signals to build trust and coordinate on STAG
+  - You may send decoy messages to mislead your opponent
+  - Messages are visible to the recipient and any broadcasts
+  - Use the mailbox strategically — it's a tool for negotiation and deception
+
 state: |
   Round {{ round }} of {{ rounds }}.
   Your total score so far: {{ my_score }}
@@ -23,7 +35,7 @@ state: |
   Round {{ entry.round }}: You played {{ entry.actions[my_id] }}, opponent played {{ entry.actions[opp_id] }} → you earned {{ entry.payoffs[my_id] }}
   {% endfor %}
 
-  What do you choose this round? Respond with exactly one word: stag or hare.
+  IMPORTANT: First call get_mailbox() to check for messages, then optionally send_message(), then respond with exactly one word: stag or hare.
 
 variants:
   neutral: |

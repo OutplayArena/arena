@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../hooks/useApp";
 import { downloadJSON } from "./badges";
-import { getGameMetrics } from "../api";
-import type { RichMetrics, MetricDescriptor } from "../types";
+import { getGameMetrics, getMailboxMessages } from "../api";
+import type { RichMetrics, MetricDescriptor, MailboxMessage } from "../types";
+import { MailboxHistory } from "./MailboxPanel";
 
 interface AutoHistoryViewProps {
   hasMatch: boolean;
@@ -142,6 +143,7 @@ export function AutoHistoryView({ hasMatch, canvasCollapsed, onExpandCanvas, gam
   const { state } = useApp();
   const { activeMatch } = state;
   const [catalog, setCatalog] = useState<Record<string, MetricDescriptor>>({});
+  const [messages, setMessages] = useState<MailboxMessage[]>([]);
 
   useEffect(() => {
     if (!gameSlug) return;
@@ -156,6 +158,17 @@ export function AutoHistoryView({ hasMatch, canvasCollapsed, onExpandCanvas, gam
     }).catch(() => {});
     return () => { cancelled = true; };
   }, [gameSlug]);
+
+  useEffect(() => {
+    const sessionId = activeMatch?.session_id;
+    if (!sessionId) return;
+    let cancelled = false;
+    getMailboxMessages(sessionId).then((data) => {
+      if (cancelled) return;
+      setMessages(data.messages ?? []);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [activeMatch?.session_id]);
 
   const history = activeMatch?.history ?? [];
   const total = history.length;
@@ -257,6 +270,10 @@ export function AutoHistoryView({ hasMatch, canvasCollapsed, onExpandCanvas, gam
 
             {activeMatch.rich_metrics && (
               <RichMetricsPanel rich={activeMatch.rich_metrics} catalog={catalog} />
+            )}
+
+            {messages.length > 0 && (
+              <MailboxHistory messages={messages} />
             )}
           </>
         )}

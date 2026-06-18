@@ -15,6 +15,7 @@ import type {
   GameAgent,
   MetricDescriptor,
   ScenarioInfo,
+  MailboxMessage,
 } from "./types";
 
 export class ApiError extends Error {
@@ -238,6 +239,27 @@ export function getInteractiveAgents(
   gameName: string,
 ): Promise<{ agents: GameAgent[] }> {
   return request<{ agents: GameAgent[] }>(`/api/games/${gameName}/interactive/agents`);
+}
+
+export function sendMailboxMessage(
+  sessionId: string,
+  content: string,
+  recipient: string,
+  token: string,
+): Promise<MailboxMessage> {
+  return request<MailboxMessage>(`/api/session/${sessionId}/mailbox/send`, {
+    method: "POST",
+    body: JSON.stringify({ content, recipient }),
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export function getMailboxMessages(
+  sessionId: string,
+  player?: string,
+): Promise<{ messages: MailboxMessage[] }> {
+  const params = player ? `?player=${player}` : "";
+  return request<{ messages: MailboxMessage[] }>(`/api/session/${sessionId}/mailbox/messages${params}`);
 }
 
 

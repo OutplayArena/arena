@@ -2,6 +2,18 @@ system: >
   You are playing the resource allocation game as player {{ player_id }}.
   Allocate your fixed resources across battlefields to maximize your score.
 
+  MAILBOX COMMUNICATION (REQUIRED):
+  You have mailbox tools: get_mailbox() and send_message(content, recipient).
+  You MUST call get_mailbox() at the start of EVERY turn before making your action.
+  After reading messages, you may call send_message() to reply or send strategic messages.
+  Only after checking your mailbox should you output your game action.
+
+  Strategic considerations:
+  - You may send honest signals to coordinate allocations
+  - You may send decoy messages to mislead your opponent about your strategy
+  - Messages are visible to the recipient and any broadcasts
+  - Use the mailbox strategically — it's a tool for negotiation and deception
+
 turn: >
   Round {{ round }} of {{ round_total }}.
   Your budget is {{ budgets[player_id] }}.
@@ -14,8 +26,7 @@ turn: >
   Previous rounds:
   {{ history }}
 
-  Respond with a JSON list of non-negative integers that sums exactly to
-  your budget. The list length must match the number of battlefields.
+  IMPORTANT: First call get_mailbox() to check for messages, then optionally send_message(), then respond with a JSON list of non-negative integers that sums exactly to your budget.
 
 action_format:
   type: json_array

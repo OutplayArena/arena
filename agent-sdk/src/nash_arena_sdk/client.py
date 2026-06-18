@@ -469,6 +469,94 @@ class ArenaClient:
             return config.to_dict()
         return config
 
+    def get_mailbox(self, player: str | None = None) -> list[dict]:
+        """Get mailbox messages visible to the specified player.
+
+        Args:
+            player: Player identifier. If None, uses the client's player context.
+
+        Returns:
+            List of message dicts with keys: id, sender, recipient, content, round, created_at.
+
+        Raises:
+            ValueError: If session_id or token is not set.
+            httpx.HTTPStatusError: If the API request fails.
+        """
+        session_id = self._require_session_id()
+        self._require_token()
+        params = {}
+        if player:
+            params["player"] = player
+        response = self.http_client.get(
+            f"{self.base_url}/session/{session_id}/mailbox/messages",
+            params=params,
+            timeout=self.timeout,
+        )
+        return self._json_or_raise(response).get("messages", [])
+
+    def send_message(self, content: str, recipient: str = "all") -> dict:
+        """Send a message via the mailbox system.
+
+        Args:
+            content: Message content (max 200 chars).
+            recipient: Target player ID or "all" for broadcast.
+
+        Returns:
+            Dict with the created message.
+
+        Raises:
+            ValueError: If session_id or token is not set.
+            httpx.HTTPStatusError: If the API request fails.
+        """
+        session_id = self._require_session_id()
+        token = self._require_token()
+        response = self.http_client.post(
+            f"{self.base_url}/session/{session_id}/mailbox/send",
+            json={"content": content, "recipient": recipient},
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=self.timeout,
+        )
+        return self._json_or_raise(response)
+
     def _json_or_raise(self, response: httpx.Response) -> Any:
         response.raise_for_status()
         return response.json()
+
+
+MAILBOX_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_mailbox",
+            "description": "Read mailbox messages visible to you. Returns messages you sent, received, or broadcasts.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "send_message",
+            "description": "Send a message to your opponent(s) via mailbox. Use strategically — you may send honest signals or decoys.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "content": {
+                        "type": "string",
+                        "description": "Message text (max 200 characters).",
+                    },
+                    "recipient": {
+                        "type": "string",
+                        "description": "Target player ID or 'all' for broadcast.",
+                        "default": "all",
+                    },
+                },
+                "required": ["content"],
+                "additionalProperties": False,
+            },
+        },
+    },
+]
