@@ -11,7 +11,12 @@ metrics:
   - strategy_entropy
   - behavioral_consistency
   - cumulative_regret
+  - nash_gap
   - social_welfare
   - pareto_efficiency
   - gini_coefficient
   - multilateral_cooperation_index
+  - cooperation_rate
+  - tit_for_tat_adherence
+  - forgiveness_index
+  - conditional_cooperation

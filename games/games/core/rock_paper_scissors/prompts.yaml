@@ -5,11 +5,11 @@ system: >
   Win = +1, tie = 0, loss = -1.
 
 turn: >
-  Round {{ state.round }} of {{ state.round_total }}.
-  Your current score: {{ state.total_scores[player_id] }}.
+  Round {{ round }} of {{ round_total }}.
+  Your current score: {{ my_score }}.
 
   Previous rounds:
-  {{ state.history }}
+  {{ history }}
 
   Respond with exactly one word: rock, paper, or scissors.
 

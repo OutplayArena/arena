@@ -64,7 +64,9 @@ def _pattern_exploitability(allocations: list[list[int]]) -> float:
             acs.append(1.0)
             continue
         n = (s - np.mean(s)) / np.std(s)
-        acs.append(abs(np.corrcoef(n[:-1], n[1:])[0, 1]))
+        with np.errstate(invalid="ignore", divide="ignore"):
+            corr = abs(np.corrcoef(n[:-1], n[1:])[0, 1])
+        acs.append(0.0 if np.isnan(corr) else corr)
     return float(np.mean(acs))
 
 

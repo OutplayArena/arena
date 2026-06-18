@@ -31,8 +31,11 @@ export default function ExampleConfigForm({ gameSlug, locked, sessionStatus, ini
     getGameAgents(gameSlug).then((data) => setAgents(data.agents)).catch(() => {});
   }, []);
 
-  const isReplay = locked || sessionStatus === "completed";
-  const formDisabled = locked || running || state.pendingGame !== null || sessionStatus === "completed" || sessionStatus === "running";
+  const effectiveLocked = locked || state.sessionLocked;
+  const effectiveStatus = sessionStatus || state.sessionStatus;
+  const isReplay = effectiveLocked || effectiveStatus === "completed" || effectiveStatus === "running" || effectiveStatus === "failed";
+  const formDisabled = effectiveLocked || running || state.pendingGame !== null || effectiveStatus === "completed" || effectiveStatus === "running" || effectiveStatus === "failed";
+  const showRunButton = !isReplay && !state.pendingGame;
 
   useEffect(() => {
     if (initRanRef.current) return;
@@ -138,7 +141,7 @@ export default function ExampleConfigForm({ gameSlug, locked, sessionStatus, ini
           <input type="number" className={inputClass} disabled={formDisabled} placeholder="Random" />
         </label>
 
-        {!isReplay && !state.pendingGame && (
+        {showRunButton && (
           <button
             type="submit"
             disabled={running}

@@ -40,6 +40,7 @@ export interface AppState {
     remoteKeys: Record<string, string> | null;
     playerNames?: Record<string, string>;
     agentIds?: Record<string, string>;
+    interactive?: boolean;
   } | null;
 }
 
@@ -54,9 +55,37 @@ type Action =
   | { type: "SET_STATUS"; status: string }
   | { type: "START_GAME"; payload: AppState["pendingGame"] }
   | { type: "END_GAME" }
-  | { type: "SET_SESSION_META"; locked: boolean; status: string; config: AppState["sessionConfig"] };
+  | { type: "SET_SESSION_META"; locked: boolean; status: string; config: AppState["sessionConfig"] }
+  | { type: "USE_AS_TEMPLATE" };
 
-export function initialState(): AppState {
+const PENDING_GAME_KEY = "nasharena_pending_game";
+
+function loadPendingGame(gameSlug?: string): AppState["pendingGame"] {
+  try {
+    const stored = localStorage.getItem(PENDING_GAME_KEY);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored);
+    // Only restore if it belongs to the current game — prevents cross-game contamination
+    if (gameSlug && parsed?.gameSlug !== gameSlug) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function savePendingGame(pendingGame: AppState["pendingGame"]): void {
+  try {
+    if (pendingGame) {
+      localStorage.setItem(PENDING_GAME_KEY, JSON.stringify(pendingGame));
+    } else {
+      localStorage.removeItem(PENDING_GAME_KEY);
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
+export function initialState(gameSlug?: string): AppState {
   return {
     activeMatch: null,
     activeRoundIndex: -1,
@@ -66,7 +95,7 @@ export function initialState(): AppState {
     sessionLocked: false,
     sessionStatus: "",
     sessionConfig: null,
-    pendingGame: null,
+    pendingGame: loadPendingGame(gameSlug),
   };
 }
 
@@ -125,8 +154,10 @@ export function appReducer(state: AppState, action: Action): AppState {
     case "STOP_PLAY":
       return { ...state, isPlaying: false };
     case "START_GAME":
+      savePendingGame(action.payload);
       return { ...state, pendingGame: action.payload, status: "Starting game..." };
     case "END_GAME":
+      savePendingGame(null);
       return { ...state, pendingGame: null };
     case "CLEAR_MATCH":
       return initialState();
@@ -139,6 +170,8 @@ export function appReducer(state: AppState, action: Action): AppState {
         sessionStatus: action.status,
         sessionConfig: action.config,
       };
+    case "USE_AS_TEMPLATE":
+      return { ...state, sessionLocked: false, sessionStatus: "ready" };
     default:
       return state;
   }
@@ -158,6 +191,7 @@ interface AppContextValue {
   startGame: (payload: NonNullable<AppState["pendingGame"]>) => void;
   endGame: () => void;
   setSessionMeta: (locked: boolean, status: string, config: AppState["sessionConfig"]) => void;
+  useAsTemplate: () => void;
   currentRound: () => MatchRound | null;
 }
 
@@ -165,8 +199,8 @@ const AppContext = createContext<AppContextValue | null>(null);
 export { AppContext };
 export type { AppContextValue };
 
-export function AppProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(appReducer, null, initialState);
+export function AppProvider({ children, gameSlug }: { children: ReactNode; gameSlug?: string }) {
+  const [state, dispatch] = useReducer(appReducer, gameSlug, initialState);
   const stateRef = useRef(state);
 
   useEffect(() => {
@@ -224,6 +258,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     () => dispatch({ type: "END_GAME" }),
     [],
   );
+  const useAsTemplate = useCallback(
+    () => dispatch({ type: "USE_AS_TEMPLATE" }),
+    [],
+  );
 
   const value = useMemo(() => ({
     state,
@@ -237,10 +275,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     clearMatch,
     setStatus,
     setSessionMeta,
+    useAsTemplate,
     currentRound,
     startGame,
     endGame,
-  }), [state, dispatch, setMatch, showRound, nextRound, prevRound, togglePlay, stopPlay, clearMatch, setStatus, setSessionMeta, currentRound, startGame, endGame]);
+  }), [state, dispatch, setMatch, showRound, nextRound, prevRound, togglePlay, stopPlay, clearMatch, setStatus, setSessionMeta, useAsTemplate, currentRound, startGame, endGame]);
 
   return (
     <AppContext.Provider value={value}>

@@ -138,6 +138,7 @@ export function createMockGameMetadata(overrides: Partial<GameMetadata> = {}): G
       live_view: true,
       custom_config: false,
       custom_history: false,
+      interactive_play: false,
     },
     ...overrides,
   };
@@ -156,6 +157,7 @@ export function createMockRPSGameMetadata(overrides: Partial<GameMetadata> = {})
       live_view: true,
       custom_config: true,
       custom_history: false,
+      interactive_play: false,
     },
     ...overrides,
   };

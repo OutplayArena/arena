@@ -45,6 +45,7 @@ class GameSession:
     status: str = "ready"
     error_message: str | None = None
     locked: bool = False
+    agents: dict[str, str] | None = None
     runtime_config: ExperimentRuntimeConfig | None = None
     wandb_logger: WandbGameLogger | None = None
     wandb_finished: bool = False
@@ -102,6 +103,7 @@ class GameSession:
             status=row.status,
             error_message=row.error_message,
             locked=row.locked,
+            agents=row.agents_json,
         )
 
     async def save_new(self, db: AsyncSession, user_id: str | None = None, agents: dict[str, str] | None = None) -> None:
@@ -257,18 +259,21 @@ class GameSession:
 
         payload = {
             "round": latest["round"],
-            "scores/A": latest["scores"]["A"],
-            "scores/B": latest["scores"]["B"],
-            "total_scores/A": latest["total_scores"]["A"],
-            "total_scores/B": latest["total_scores"]["B"],
             "winner": latest["winner"],
         }
 
+        scores = latest.get("scores", {})
+        total_scores = latest.get("total_scores", {})
+        for player in scores:
+            payload[f"scores/{player}"] = scores[player]
+            payload[f"total_scores/{player}"] = total_scores.get(player, 0)
+
         allocations = latest.get("allocations", {})
         for player, allocation in allocations.items():
-            total = sum(allocation)
-            concentration = 0 if total == 0 else max(allocation) / total
-            payload[f"allocation_concentration/{player}"] = concentration
+            if isinstance(allocation, list):
+                total = sum(allocation)
+                concentration = 0 if total == 0 else max(allocation) / total
+                payload[f"allocation_concentration/{player}"] = concentration
 
         self.wandb_logger.log_round(payload, step=step)
 

@@ -105,7 +105,7 @@ export default function CentipedeLiveView() {
             {matchComplete && (
               <span style={{ fontSize: "12px", color: "var(--color-muted)", lineHeight: 1.2 }}>
                 Outcome: <span style={{ fontWeight: 700 }}>
-                  {match!.match_winner === "Tie" ? "Draw" : `${match!.match_winner === "A" ? match!.agent_a : match!.agent_b} wins`}
+                  {match!.match_winner === "Tie" ? "Draw" : `Player ${match!.match_winner} wins`}
                 </span>
               </span>
             )}

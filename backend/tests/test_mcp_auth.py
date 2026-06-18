@@ -10,11 +10,29 @@ from fastapi.testclient import TestClient
 
 import nash_arena.main
 importlib.reload(nash_arena.main)
-from nash_arena.main import app  # noqa: E402
+from nash_arena.main import app, get_broker  # noqa: E402
 from nash_arena.db import get_db  # noqa: E402
 from nash_arena.auth.dependencies import require_user, _ensure_local_user  # noqa: E402
 from nash_arena.models.mcp_auth_key import McpAuthKey  # noqa: E402
 from nash_arena.auth.apikey import generate_mcp_key  # noqa: E402
+
+
+class FakeBroker:
+    async def publish(self, channel, message):
+        pass
+
+    async def cache_get(self, key):
+        return None
+
+    async def cache_set(self, key, value, ttl=None):
+        pass
+
+    async def enqueue(self, queue, message):
+        pass
+
+    async def subscribe(self, channel):
+        return
+        yield
 
 
 class FakeResult:
@@ -83,6 +101,7 @@ class FakeDb:
 def fake_db_fixture():
     db = FakeDb()
     app.dependency_overrides[get_db] = lambda: db
+    app.dependency_overrides[get_broker] = lambda: FakeBroker()
 
     async def _bypass_auth():
         return await _ensure_local_user(db)
@@ -90,6 +109,7 @@ def fake_db_fixture():
 
     yield db
     app.dependency_overrides.pop(get_db, None)
+    app.dependency_overrides.pop(get_broker, None)
     app.dependency_overrides.pop(require_user, None)
 
 

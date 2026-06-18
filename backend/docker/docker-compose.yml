@@ -41,6 +41,19 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   migrations:
     build:
       context: ../..
@@ -63,6 +76,7 @@ services:
       - ../../.env
     environment:
       DATABASE_URL: postgresql+asyncpg://nasharena:nasharena@db:5432/nasharena
+      REDIS_URL: redis://redis:6379/0
       API_PREFIX: /api
       OAUTH_CALLBACK_BASE_URL: http://localhost:8000
       ENABLE_AGENT_REST_API: "true"
@@ -78,6 +92,8 @@ services:
       - nasharena_mcp
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       migrations:
         condition: service_completed_successfully
@@ -101,6 +117,7 @@ services:
 
 volumes:
   pgdata:
+  redisdata:
 
 networks:
   nasharena_mcp:

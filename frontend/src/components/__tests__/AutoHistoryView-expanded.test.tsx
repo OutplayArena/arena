@@ -110,7 +110,7 @@ describe("AutoHistoryView — with match data", () => {
       state: { activeMatch: match },
     });
     renderHistory(match);
-    expect(screen.getByText(/bold-bear wins/)).toBeInTheDocument();
+    expect(screen.getByText(/Player A wins/)).toBeInTheDocument();
   });
 
   it("shows B wins in final score", () => {
@@ -119,7 +119,7 @@ describe("AutoHistoryView — with match data", () => {
       state: { activeMatch: match },
     });
     renderHistory(match);
-    expect(screen.getByText(/swift-fox wins/)).toBeInTheDocument();
+    expect(screen.getByText(/Player B wins/)).toBeInTheDocument();
   });
 
   it("calls onExpandCanvas when Show Live View clicked", async () => {

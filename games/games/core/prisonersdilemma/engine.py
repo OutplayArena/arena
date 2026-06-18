@@ -4,7 +4,7 @@ import random
 from copy import deepcopy
 from dataclasses import dataclass
 
-from nash_arena.game_engine import GameEngine
+from nash_arena.interactive_game_engine import InteractiveGameEngine
 from games.core.prisonersdilemma.metrics import PDMetrics
 from games.core.prisonersdilemma.scenarios import get_scenario, ScenarioId
 
@@ -27,7 +27,7 @@ class PDState:
     total_scores: dict[str, float]
 
 
-class PDGame(GameEngine):
+class PDGame(InteractiveGameEngine):
     def __init__(
         self,
         num_rounds: int = 10,
@@ -64,6 +64,41 @@ class PDGame(GameEngine):
             scenario=config.scenario,
             system_prompt=config.system_prompt,
         )
+
+    def human_action_schema(self, config):
+        return {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["cooperate", "defect"],
+                    "description": "Cooperate or defect",
+                }
+            },
+            "required": ["action"],
+        }
+
+    def format_human_action(self, raw_action, config):
+        if isinstance(raw_action, str):
+            return raw_action.lower()
+        if isinstance(raw_action, dict):
+            return raw_action.get("action", "").lower()
+        return str(raw_action).lower()
+
+    def ui_metadata(self, config):
+        return {
+            "input_type": "choice",
+            "choices": ["cooperate", "defect"],
+            "layout": "pd",
+        }
+
+    def get_available_agents(self, config):
+        return [
+            {"id": "always_cooperate", "label": "Always Cooperate", "description": "Always cooperates"},
+            {"id": "always_defect", "label": "Always Defect", "description": "Always defects"},
+            {"id": "tit_for_tat", "label": "Tit for Tat", "description": "Copies opponent's last move"},
+            {"id": "grim_trigger", "label": "Grim Trigger", "description": "Cooperates until opponent defects, then always defects"},
+        ]
 
     def initial_state(self) -> PDState:
         return PDState(
@@ -122,8 +157,8 @@ class PDGame(GameEngine):
         else:
             payoff_a, payoff_b = self.P, self.P
 
-        state.total_scores["A"] += payoff_a
-        state.total_scores["B"] += payoff_b
+        state.total_scores["A"] = round(state.total_scores["A"] + payoff_a, 2)
+        state.total_scores["B"] = round(state.total_scores["B"] + payoff_b, 2)
 
         entry: dict = {
             "round":        state.round_number,
@@ -204,8 +239,8 @@ class PDGame(GameEngine):
         # Forfeit treated as player defecting, opponent cooperating
         payoff_player   = self.S
         payoff_opponent = self.T
-        state.total_scores[player]   += payoff_player
-        state.total_scores[opponent] += payoff_opponent
+        state.total_scores[player] = round(state.total_scores[player] + payoff_player, 2)
+        state.total_scores[opponent] = round(state.total_scores[opponent] + payoff_opponent, 2)
         outcome = "DC" if player == "B" else "CD"
         state.history.append({
             "round":        state.round_number,

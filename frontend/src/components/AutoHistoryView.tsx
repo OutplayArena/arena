@@ -228,7 +228,7 @@ export function AutoHistoryView({ hasMatch, canvasCollapsed, onExpandCanvas, gam
                 Final: <span className="text-agent-a font-bold">{activeMatch.total_score_a}</span> — <span className="text-agent-b font-bold">{activeMatch.total_score_b}</span>
                 {activeMatch.match_winner !== "Tie" && (
                   <span className={`ml-1 font-bold ${activeMatch.match_winner === "A" ? "text-agent-a" : "text-agent-b"}`}>
-                    ({activeMatch.match_winner === "A" ? activeMatch.agent_a : activeMatch.agent_b} wins)
+                    (Player {activeMatch.match_winner} wins)
                   </span>
                 )}
               </div>

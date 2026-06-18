@@ -8,6 +8,10 @@ const PLAYER_COLORS: Record<string, string> = {
   D: "bg-amber-500 text-white",
   E: "bg-rose-500 text-white",
   F: "bg-sky-500 text-white",
+  G: "bg-teal-500 text-white",
+  H: "bg-orange-500 text-white",
+  I: "bg-pink-500 text-white",
+  J: "bg-lime-500 text-white",
 };
 const PLAYER_BAR_COLORS: Record<string, string> = {
   A: "bg-agent-a",
@@ -16,6 +20,10 @@ const PLAYER_BAR_COLORS: Record<string, string> = {
   D: "bg-amber-500",
   E: "bg-rose-500",
   F: "bg-sky-500",
+  G: "bg-teal-500",
+  H: "bg-orange-500",
+  I: "bg-pink-500",
+  J: "bg-lime-500",
 };
 
 function getRoundData(r: MatchRound) {
@@ -42,7 +50,7 @@ export default function PGGLiveView() {
     return (
       <div className="flex flex-col h-full bg-surface-soft">
         <div className="shrink-0 flex items-center justify-between gap-4 px-5 py-3 border-b border-line/40 bg-surface/80 backdrop-blur-sm">
-          {["A", "B", "C", "D"].map((id) => (
+          {["A", "B", "C", "D", "E", "F"].map((id) => (
             <div key={id} className="flex items-center gap-1.5">
               <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black ${PLAYER_COLORS[id]}`}>{id}</span>
             </div>
@@ -75,7 +83,7 @@ export default function PGGLiveView() {
   const matchComplete = match!.match_winner !== undefined;
 
   const firstRoundData = history.length > 0 ? getRoundData(history[0]) : null;
-  const playerIds = firstRoundData?.contributions ? Object.keys(firstRoundData.contributions) : ["A", "B"];
+  const playerIds = firstRoundData?.contributions ? Object.keys(firstRoundData.contributions) : [];
 
   const endowmentHint = firstRoundData?.contributions && firstRoundData?.pool != null
     ? Math.max(...Object.values(firstRoundData.contributions), (firstRoundData.pool ?? 0) / playerIds.length)
@@ -105,9 +113,7 @@ export default function PGGLiveView() {
                 <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 ${PLAYER_COLORS[pid] ?? "bg-line text-ink"}`}>{pid}</span>
                 <div>
                   <div className="text-[10px] font-semibold text-ink truncate max-w-[60px]">
-                    {match!.history.length > 0
-                      ? (state.activeMatch?.agent_a && pid === "A" ? match!.agent_a : pid === "B" ? match!.agent_b : pid)
-                      : pid}
+                    {match!.agents?.[pid] ?? pid}
                   </div>
                   <div className="text-[9px] text-quiet font-mono">{cum != null ? cum.toFixed(1) : totalScore.toFixed(1)}</div>
                 </div>

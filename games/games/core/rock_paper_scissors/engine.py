@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass
+from typing import Any
 
-from nash_arena.game_engine import GameEngine
+from nash_arena.interactive_game_engine import InteractiveGameEngine
 from games.core.rock_paper_scissors.metrics import RPSMetrics
 
 BEATS = {"rock": "scissors", "paper": "rock", "scissors": "paper"}
@@ -20,7 +21,7 @@ class RPSState:
     total_scores: dict[str, float]
 
 
-class RPSGame(GameEngine):
+class RPSGame(InteractiveGameEngine):
     def __init__(self, num_rounds: int = 10):
         self.num_rounds = num_rounds
         self.metrics_engine = RPSMetrics()
@@ -28,6 +29,40 @@ class RPSGame(GameEngine):
     @classmethod
     def from_config(cls, config) -> "RPSGame":
         return cls(num_rounds=config.rounds)
+
+    def human_action_schema(self, config: Any) -> dict:
+        return {
+            "type": "object",
+            "properties": {
+                "move": {
+                    "type": "string",
+                    "enum": ["rock", "paper", "scissors"],
+                    "description": "Your move choice",
+                }
+            },
+            "required": ["move"],
+        }
+
+    def format_human_action(self, raw_action: Any, config: Any) -> str:
+        if isinstance(raw_action, str):
+            return raw_action.lower()
+        if isinstance(raw_action, dict):
+            return raw_action.get("move", "").lower()
+        return str(raw_action).lower()
+
+    def ui_metadata(self, config: Any) -> dict:
+        return {
+            "input_type": "choice",
+            "choices": ["rock", "paper", "scissors"],
+            "layout": "rps",
+        }
+
+    def get_available_agents(self, config: Any) -> list[dict]:
+        return [
+            {"id": "uniform", "label": "Uniform Random", "description": "Chooses randomly with equal probability"},
+            {"id": "rock_heavy", "label": "Rock Heavy", "description": "Prefers rock over other moves"},
+            {"id": "pattern_exploit", "label": "Pattern Exploit", "description": "Exploits predictable patterns"},
+        ]
 
     def initial_state(self) -> RPSState:
         return RPSState(
@@ -76,8 +111,8 @@ class RPSGame(GameEngine):
         else:
             score_a, score_b, winner = -1.0, 1.0, "B"
 
-        state.total_scores["A"] += score_a
-        state.total_scores["B"] += score_b
+        state.total_scores["A"] = round(state.total_scores["A"] + score_a, 2)
+        state.total_scores["B"] = round(state.total_scores["B"] + score_b, 2)
 
         state.history.append({
             "round":        state.round_number,
@@ -143,8 +178,8 @@ class RPSGame(GameEngine):
     def forfeit_round(self, state: RPSState, player: str) -> RPSState:
         opponent = "B" if player == "A" else "A"
         state = deepcopy(state)
-        state.total_scores[opponent] += 1.0
-        state.total_scores[player] -= 1.0
+        state.total_scores[opponent] = round(state.total_scores[opponent] + 1.0, 2)
+        state.total_scores[player] = round(state.total_scores[player] - 1.0, 2)
         state.history.append({
             "round":        state.round_number,
             "actions":      {},

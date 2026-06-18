@@ -3,7 +3,7 @@ version: "1.0.0"
 status: stable
 author: "NashArena maintainers"
 description: >
-  N players (3–6) simultaneously choose how much to contribute to a shared pool.
+  N players (3–10) simultaneously choose how much to contribute to a shared pool.
   The pool is multiplied by a factor r and split equally among all players.
   When r < N, free-riding dominates at Nash equilibrium, but full contribution
   maximizes social welfare. Supports an optional punishment variant where players
@@ -22,7 +22,7 @@ ontology:
   timing: multi_round
 players:
   min: 3
-  max: 6
+  max: 10
 config_schema:
   game:
     type: string
@@ -38,7 +38,7 @@ config_schema:
   players:
     type: integer
     minimum: 3
-    maximum: 6
+    maximum: 10
     default: 4
   rounds:
     type: integer

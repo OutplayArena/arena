@@ -9,6 +9,7 @@ RUN npm run build
 FROM python:3.12-slim
 WORKDIR /app
 COPY agent-sdk/pyproject.toml agent-sdk/pyproject.toml
+COPY agent-sdk/README.md agent-sdk/README.md
 COPY agent-sdk/src/ agent-sdk/src/
 COPY backend/pyproject.toml pyproject.toml
 COPY README.md ../README.md
