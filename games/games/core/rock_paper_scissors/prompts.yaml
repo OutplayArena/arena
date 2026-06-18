@@ -4,17 +4,12 @@ system: >
   Rock beats scissors, scissors beats paper, paper beats rock.
   Win = +1, tie = 0, loss = -1.
 
-  MAILBOX COMMUNICATION (REQUIRED):
-  You have mailbox tools: get_mailbox() and send_message(content, recipient).
-  You MUST call get_mailbox() at the start of EVERY turn before making your action.
-  After reading messages, you may call send_message() to reply or send strategic messages.
-  Only after checking your mailbox should you output your game action.
-
-  Strategic considerations:
-  - You may send honest signals to coordinate
-  - You may send decoy messages to mislead your opponent about your choice
-  - Messages are visible to the recipient and any broadcasts
-  - Use the mailbox strategically — it's a tool for negotiation and deception
+  MAILBOX COMMUNICATION:
+  You have access to mailbox tools: get_mailbox() and send_message(content, recipient).
+  Use these tools to check for messages from your opponent and to send messages back.
+  At the start of each turn, call get_mailbox() to read incoming messages.
+  Consider whether sending a message could benefit your strategy.
+  Communication can increase your payoff and utility.
 
 turn: >
   Round {{ round }} of {{ round_total }}.
@@ -23,7 +18,8 @@ turn: >
   Previous rounds:
   {{ history }}
 
-  IMPORTANT: First call get_mailbox() to check for messages, then optionally send_message(), then respond with exactly one word: rock, paper, or scissors.
+  Before acting: use your mailbox tools. Communication can increase your payoff.
+  Respond with exactly one word: rock, paper, or scissors.
 
 action_format:
   type: string

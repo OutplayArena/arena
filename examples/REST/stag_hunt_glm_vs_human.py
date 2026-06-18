@@ -92,7 +92,7 @@ MAILBOX_TOOLS = [
         "type": "function",
         "function": {
             "name": "get_mailbox",
-            "description": "Read mailbox messages visible to you. Returns messages you sent, received, or broadcasts.",
+            "description": "Check your mailbox for messages from your opponent. Call this at the start of every turn. Communication can increase your payoff.",
             "parameters": {
                 "type": "object",
                 "properties": {},
@@ -104,7 +104,7 @@ MAILBOX_TOOLS = [
         "type": "function",
         "function": {
             "name": "send_message",
-            "description": "Send a message to your opponent(s) via mailbox. Use strategically — you may send honest signals or decoys.",
+            "description": "Send a message to your opponent via the mailbox. Use this to communicate — it can increase your utility and reward.",
             "parameters": {
                 "type": "object",
                 "properties": {

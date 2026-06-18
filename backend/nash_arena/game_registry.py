@@ -123,6 +123,7 @@ class GameRegistry:
         total_scores = state.get("total_scores", {})
 
         ctx.update({
+            "player_id": player_id,
             "my_id": player_id,
             "opp_id": opp_id,
             "opp_ids": opp_ids,

@@ -5,17 +5,12 @@ system: |
   If rejected: both players receive 0 for that round.
   Roles alternate each round.
 
-  MAILBOX COMMUNICATION (REQUIRED):
-  You have mailbox tools: get_mailbox() and send_message(content, recipient).
-  You MUST call get_mailbox() at the start of EVERY turn before making your action.
-  After reading messages, you may call send_message() to reply or send strategic messages.
-  Only after checking your mailbox should you output your game action.
-
-  Strategic considerations:
-  - You may send honest signals to negotiate fair splits
-  - You may send decoy messages to mislead your opponent about your intentions
-  - Messages are visible to the recipient and any broadcasts
-  - Use the mailbox strategically — it's a tool for negotiation and deception
+  MAILBOX COMMUNICATION:
+  You have access to mailbox tools: get_mailbox() and send_message(content, recipient).
+  Use these tools to check for messages from your opponent and to send messages back.
+  At the start of each turn, call get_mailbox() to read incoming messages.
+  Consider whether sending a message could benefit your strategy.
+  Communication can increase your payoff and utility.
 
 proposer_state: |
   Round {{ round }} of {{ rounds }}. You are the PROPOSER.
@@ -26,7 +21,9 @@ proposer_state: |
   Round {{ entry.round }}: {{ "You" if entry.proposer == my_id else "Opponent" }} proposed {{ entry.offer }} ({{ "%.0f"|format(entry.offer_fraction * 100) }}%) → {{ entry.response }}
   {% endfor %}
 
-  IMPORTANT: First call get_mailbox() to check for messages, then optionally send_message(), then respond with a number (0 to {{ total }}).
+  Before acting: use your mailbox tools. Communication can increase your payoff.
+  How many points do you offer the responder? (0 to {{ total }})
+  Respond with a number.
 
 responder_state: |
   Round {{ round }} of {{ rounds }}. You are the RESPONDER.
@@ -38,7 +35,9 @@ responder_state: |
   Round {{ entry.round }}: {{ "You" if entry.proposer == my_id else "Opponent" }} proposed {{ entry.offer }} → {{ entry.response }}
   {% endfor %}
 
-  IMPORTANT: First call get_mailbox() to check for messages, then optionally send_message(), then respond with exactly one word: accept or reject.
+  Before acting: use your mailbox tools. Communication can increase your payoff.
+  Do you accept or reject this offer?
+  Respond with exactly one word: accept or reject.
 
 variants:
   neutral: |
