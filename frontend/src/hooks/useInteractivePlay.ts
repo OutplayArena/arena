@@ -79,41 +79,44 @@ export function useInteractivePlay(): InteractivePlayState {
   const [hasSubmittedThisRound, setHasSubmittedThisRound] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [lastRoundResult, setLastRoundResult] = useState<RoundResult | null>(null);
-  const prevHistoryLen = useRef(0);
-  const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [prevHistoryLen, setPrevHistoryLen] = useState(0);
   const submittedThisRoundRef = useRef(false);
   const prevIsMyTurnRef = useRef(false);
 
-  useEffect(() => {
-    const history = match?.history ?? [];
-    if (history.length > prevHistoryLen.current) {
-      submittedThisRoundRef.current = false;
-      setHasSubmittedThisRound(false);
-      setSubmitError(null);
+  const history = match?.history ?? [];
+  if (history.length > prevHistoryLen) {
+    setPrevHistoryLen(history.length);
+    setHasSubmittedThisRound(false);
+    setSubmitError(null);
 
-      if (humanPlayer && opponentPlayers.length > 0) {
-        const latest = history[history.length - 1];
-        if (latest) {
-          const raw = latest.raw as Record<string, unknown> | undefined;
-          const moves = (raw?.actions || raw?.allocations || {}) as Record<string, unknown>;
-          const scores = (raw?.payoffs || raw?.round_payoffs || raw?.scores || {}) as Record<string, number>;
+    if (humanPlayer && opponentPlayers.length > 0) {
+      const latest = history[history.length - 1];
+      if (latest) {
+        const raw = latest.raw as Record<string, unknown> | undefined;
+        const moves = (raw?.actions || raw?.allocations || {}) as Record<string, unknown>;
+        const scores = (raw?.payoffs || raw?.round_payoffs || raw?.scores || {}) as Record<string, number>;
 
-          setLastRoundResult({
-            round: latest.round,
-            winner: latest.winner,
-            scoreYou: scores[humanPlayer] ?? latest.score_a ?? 0,
-            scoreOpp: scores[opponentPlayers[0]] ?? latest.score_b ?? 0,
-            yourMove: moves[humanPlayer] ?? latest.action_a,
-            oppMove: moves[opponentPlayers[0]] ?? latest.action_b,
-          });
-
-          if (resultTimer.current) clearTimeout(resultTimer.current);
-          resultTimer.current = setTimeout(() => setLastRoundResult(null), 3500);
-        }
+        setLastRoundResult({
+          round: latest.round,
+          winner: latest.winner,
+          scoreYou: scores[humanPlayer] ?? latest.score_a ?? 0,
+          scoreOpp: scores[opponentPlayers[0]] ?? latest.score_b ?? 0,
+          yourMove: moves[humanPlayer] ?? latest.action_a,
+          oppMove: moves[opponentPlayers[0]] ?? latest.action_b,
+        });
       }
     }
-    prevHistoryLen.current = history.length;
-  }, [match?.history, humanPlayer, opponentPlayers]);
+  }
+
+  useEffect(() => {
+    submittedThisRoundRef.current = false;
+  }, [history.length]);
+
+  useEffect(() => {
+    if (!lastRoundResult) return;
+    const timer = setTimeout(() => setLastRoundResult(null), 3500);
+    return () => clearTimeout(timer);
+  }, [lastRoundResult]);
 
   // Reset submission flag when turn comes back to human (e.g., new street in poker)
   useEffect(() => {
@@ -123,10 +126,6 @@ export function useInteractivePlay(): InteractivePlayState {
     }
     prevIsMyTurnRef.current = isMyTurn;
   }, [isMyTurn]);
-
-  useEffect(() => () => {
-    if (resultTimer.current) clearTimeout(resultTimer.current);
-  }, []);
 
   const submitMove = useCallback(async (action: unknown) => {
     if (!sessionId || !humanPlayer || !token || isSubmitting || submittedThisRoundRef.current) return;

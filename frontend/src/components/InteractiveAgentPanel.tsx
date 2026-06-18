@@ -30,7 +30,6 @@ export function InteractiveAgentPanel() {
   const [inputValue, setInputValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [liveMessages, setLiveMessages] = useState<ChatMessage[]>([]);
-  const prevHistoryLenRef = useRef(0);
 
   const interactivePlayers: PlayerSide[] = [];
   if (pg?.agentAId === "interactive") interactivePlayers.push("A");
@@ -49,17 +48,16 @@ export function InteractiveAgentPanel() {
     return msgs;
   });
 
-  const messages = historyMessages.length > 0 ? historyMessages : liveMessages;
+  const lastAction = currentState?._last_action as
+    | { player: PlayerSide; action: unknown; agent_id?: string; round_number: number }
+    | undefined;
 
-  const awaitingInteractive = awaiting.filter((p) => interactivePlayers.includes(p));
-
-  useEffect(() => {
-    const lastAction = currentState?._last_action as
-      | { player: PlayerSide; action: unknown; agent_id?: string; round_number: number }
-      | undefined;
-    if (lastAction?.action !== undefined) {
+  const [prevLastActionKey, setPrevLastActionKey] = useState<string | null>(null);
+  if (lastAction?.action !== undefined) {
+    const key = `${lastAction.player}-${lastAction.round_number}-${JSON.stringify(lastAction.action)}`;
+    if (key !== prevLastActionKey) {
+      setPrevLastActionKey(key);
       setLiveMessages((prev) => {
-        const key = `${lastAction.player}-${lastAction.round_number}-${JSON.stringify(lastAction.action)}`;
         if (prev.length > 0 && prev[prev.length - 1].id === key) return prev;
         return [
           ...prev,
@@ -72,15 +70,18 @@ export function InteractiveAgentPanel() {
         ];
       });
     }
-  }, [currentState]);
+  }
 
-  useEffect(() => {
-    const hLen = historyMessages.length;
-    if (hLen > prevHistoryLenRef.current) {
-      prevHistoryLenRef.current = hLen;
-      setLiveMessages([]);
-    }
-  }, [historyMessages]);
+  const messages = historyMessages.length > 0 ? historyMessages : liveMessages;
+
+  const [prevHistoryLen, setPrevHistoryLen] = useState(0);
+  const hLen = historyMessages.length;
+  if (hLen > prevHistoryLen) {
+    setPrevHistoryLen(hLen);
+    setLiveMessages([]);
+  }
+
+  const awaitingInteractive = awaiting.filter((p) => interactivePlayers.includes(p));
 
   useEffect(() => {
     if (listRef.current) {
