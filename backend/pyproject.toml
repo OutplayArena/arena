@@ -49,6 +49,12 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["nash_arena"]
 
+[tool.pytest.ini_options]
+addopts = "-m 'not e2e'"
+markers = [
+    "e2e: end-to-end tests that require a live kubernetes cluster",
+]
+
 [tool.uv.sources]
 games = { path = "../games", editable = true }
 nash-arena-sdk = { workspace = true }
