@@ -151,6 +151,17 @@ class MCPClient:
         """Get default prompt templates for a game."""
         return self._call_tool("get_game_prompts", {"game": game})
 
+    def send_message(self, content: str, to_player: str | None = None) -> dict:
+        """Send a message to another player (or broadcast if to_player is None)."""
+        args: dict[str, object] = {"content": content}
+        if to_player is not None:
+            args["to_player"] = to_player
+        return self._call_tool("send_message", args)
+
+    def get_messages(self) -> dict:
+        """Get all messages in the current session visible to you."""
+        return self._call_tool("get_messages")
+
     def __enter__(self):
         self.connect()
         return self

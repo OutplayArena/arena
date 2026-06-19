@@ -1,7 +1,7 @@
 """NashArena SDK for building and testing agents."""
 
 from nash_arena_sdk.agent import MCPAgent, RESTAgent
-from nash_arena_sdk.client import ArenaClient
+from nash_arena_sdk.client import ArenaClient, MAILBOX_TOOLS
 from nash_arena_sdk.llm_agent import (
     LLMAgent,
     LLMConfig,
@@ -31,6 +31,7 @@ __version__ = "0.1.0"
 
 __all__ = [
     "ArenaClient",
+    "MAILBOX_TOOLS",
     "MCPAgent",
     "MCPClient",
     "RESTAgent",

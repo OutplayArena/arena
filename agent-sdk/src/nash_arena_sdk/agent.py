@@ -84,6 +84,20 @@ class MCPAgent:
             return self._mcp_client.get_results()
         return self._rest_client.get_results()
 
+    def send_message(self, content: str, to_player: str | None = None) -> dict:
+        """Send a message to another player (or broadcast if to_player is None)."""
+        if self._mcp_client:
+            return self._mcp_client.send_message(content=content, to_player=to_player)
+        return self._rest_client.send_message(content=content, to_player=to_player)
+
+    def get_messages(self) -> list[dict]:
+        """Get all messages visible to this player."""
+        if self._mcp_client:
+            result = self._mcp_client.get_messages()
+        else:
+            result = self._rest_client.get_messages()
+        return result.get("messages", [])
+
     def is_terminal(self) -> bool:
         """Return True if the game is complete."""
         if self._mcp_client:
@@ -226,6 +240,15 @@ class RESTAgent:
             and ``"metrics"`` keys with the final game results.
         """
         return self._client.get_results()
+
+    def send_message(self, content: str, to_player: str | None = None) -> dict:
+        """Send a message to another player (or broadcast if to_player is None)."""
+        return self._client.send_message(content=content, to_player=to_player)
+
+    def get_messages(self) -> list[dict]:
+        """Get all messages visible to this player."""
+        result = self._client.get_messages()
+        return result.get("messages", [])
 
     def is_terminal(self) -> bool:
         """Check whether the game has reached a terminal state.

@@ -87,6 +87,19 @@ def get_game_prompts(game: str) -> dict:
     """Get default prompt templates and action format for a game."""
     return arena_client().get_game_prompts(game)
 
+
+@mcp.tool()
+def send_message(content: str, to_player: str | None = None) -> dict:
+    """Send a message to another player (or broadcast if to_player is None)."""
+    return arena_client().send_message(content=content, to_player=to_player)
+
+
+@mcp.tool()
+def get_messages() -> dict:
+    """Get all messages in the current session visible to you."""
+    return arena_client().get_messages()
+
+
 if __name__ == "__main__":
     transport = os.environ.get("MCP_TRANSPORT", "stdio")
     mount_path = os.environ.get("MCP_MOUNT_PATH")

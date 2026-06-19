@@ -363,6 +363,25 @@ class LLMAgent:
             return _extract_tool_text(result)
         return self._client.submit_action(allocation)
 
+    async def send_message(self, content: str, to_player: str | None = None) -> dict:
+        """Send a message to another player via MCP or REST."""
+        if self.use_mcp and self._mcp_session:
+            args: dict[str, object] = {"content": content}
+            if to_player is not None:
+                args["to_player"] = to_player
+            result = await self._mcp_session.call_tool("send_message", args)
+            return _extract_tool_text(result)
+        return self._client.send_message(content=content, to_player=to_player)
+
+    async def get_messages(self) -> list[dict]:
+        """Get messages visible to this player via MCP or REST."""
+        if self.use_mcp and self._mcp_session:
+            result = await self._mcp_session.call_tool("get_messages")
+            data = _extract_tool_text(result)
+            return data.get("messages", [])
+        data = self._client.get_messages()
+        return data.get("messages", [])
+
     async def get_results(self) -> dict:
         """Get the game results from the arena.
 

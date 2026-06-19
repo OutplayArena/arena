@@ -434,6 +434,41 @@ class ArenaClient:
             http_client=http_client,
         )
 
+    def send_message(self, content: str, to_player: str | None = None) -> dict:
+        """Send a message to another player in the current session.
+
+        Args:
+            content: The message content.
+            to_player: Target player ID (None for broadcast).
+
+        Returns:
+            Dictionary with send status.
+        """
+        session_id = self._require_session_id()
+        token = self._require_token()
+        response = self.http_client.post(
+            f"{self.base_url}/session/{session_id}/communicate",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"to_player": to_player, "content": content},
+            timeout=self.timeout,
+        )
+        return self._json_or_raise(response)
+
+    def get_messages(self) -> dict:
+        """Get messages visible to the current player.
+
+        Returns:
+            Dictionary with a "messages" list.
+        """
+        session_id = self._require_session_id()
+        token = self._require_token()
+        response = self.http_client.get(
+            f"{self.base_url}/session/{session_id}/messages",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=self.timeout,
+        )
+        return self._json_or_raise(response)
+
     def is_terminal(self) -> bool:
         """Check if the game session is complete.
         
@@ -468,3 +503,42 @@ class ArenaClient:
     def _json_or_raise(self, response: httpx.Response) -> Any:
         response.raise_for_status()
         return response.json()
+
+
+MAILBOX_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_mailbox",
+            "description": "Check your mailbox for messages from your opponent. Call this at the start of every turn. Communication can increase your payoff.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "send_message",
+            "description": "Send a message to your opponent via the mailbox. Use this to communicate — it can increase your utility and reward.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "content": {
+                        "type": "string",
+                        "description": "Message text (max 200 characters).",
+                    },
+                    "recipient": {
+                        "type": "string",
+                        "description": "Target player ID or 'all' for broadcast.",
+                        "default": "all",
+                    },
+                },
+                "required": ["content"],
+                "additionalProperties": False,
+            },
+        },
+    },
+]
