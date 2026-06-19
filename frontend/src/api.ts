@@ -15,6 +15,7 @@ import type {
   GameAgent,
   MetricDescriptor,
   ScenarioInfo,
+  MailMessage,
 } from "./types";
 
 export class ApiError extends Error {
@@ -180,6 +181,27 @@ export function getGameMetrics(name: string): Promise<{ metrics: MetricDescripto
 
 export function getGameScenarios(name: string): Promise<{ scenarios: ScenarioInfo[] }> {
   return request<{ scenarios: ScenarioInfo[] }>(`/api/games/${name}/scenarios`);
+}
+
+export function sendMessage(
+  sessionId: string,
+  content: string,
+  toPlayer?: string,
+  token?: string,
+): Promise<{ message: MailMessage }> {
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return request<{ message: MailMessage }>(`/api/session/${sessionId}/communicate`, {
+    method: "POST",
+    body: JSON.stringify({ content, to_player: toPlayer || null }),
+    headers,
+  });
+}
+
+export function getMessages(sessionId: string, token?: string): Promise<{ messages: MailMessage[] }> {
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return request<{ messages: MailMessage[] }>(`/api/session/${sessionId}/messages`, { headers });
 }
 
 

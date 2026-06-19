@@ -244,4 +244,12 @@ export interface ScenarioInfo {
   system_prompt: string;
 }
 
+export interface MailMessage {
+  from_player: string;
+  to_player?: string | null;
+  content: string;
+  round?: number;
+  timestamp?: string;
+}
+
 

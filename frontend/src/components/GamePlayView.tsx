@@ -13,6 +13,7 @@ import { chooseAction } from "../agents";
 import { resultToMatch, copyToClipboard } from "./utils";
 import { LoadingSpinner } from "./LoadingSpinner";
 import type { RunConfig, PlayerSide } from "../types";
+import { MailboxPanel } from "./MailboxPanel";
 
 interface GamePlayViewProps {
   game: GameMetadata;
@@ -315,6 +316,9 @@ function GamePlayViewInner({ game, locked, sessionStatus, replayMatch, sessionCo
           </div>
         )}
       </div>
+      {state.pendingGame?.sessionId && (
+        <MailboxPanel sessionId={state.pendingGame.sessionId} />
+      )}
     </div>
   );
 }

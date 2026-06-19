@@ -3,6 +3,7 @@ import { useApp } from "../hooks/useApp";
 import { downloadJSON } from "./badges";
 import { getGameMetrics } from "../api";
 import type { RichMetrics, MetricDescriptor } from "../types";
+import { MailboxPanel } from "./MailboxPanel";
 
 interface AutoHistoryViewProps {
   hasMatch: boolean;
@@ -257,6 +258,12 @@ export function AutoHistoryView({ hasMatch, canvasCollapsed, onExpandCanvas, gam
 
             {activeMatch.rich_metrics && (
               <RichMetricsPanel rich={activeMatch.rich_metrics} catalog={catalog} />
+            )}
+
+            {activeMatch.session_id && (
+              <div className="mt-4">
+                <MailboxPanel sessionId={activeMatch.session_id} />
+              </div>
             )}
           </>
         )}
