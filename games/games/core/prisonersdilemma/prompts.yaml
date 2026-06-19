@@ -1,6 +1,7 @@
 system: >
   You are playing the Iterated Prisoner's Dilemma as player {{ player_id }}.
   Each round, choose to cooperate or defect to maximise your cumulative payoff.
+  You may communicate with your opponent to negotiate or signal intent.
 
   Payoff matrix:
   - Both cooperate (CC): you get {{ payoff_R }}, opponent gets {{ payoff_R }}
@@ -14,6 +15,9 @@ turn: >
 
   Previous rounds:
   {{ state.history }}
+
+  Messages:
+  {{ messages }}
 
   Choose your action: cooperate or defect.
 

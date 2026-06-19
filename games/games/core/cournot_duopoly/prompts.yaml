@@ -4,6 +4,7 @@ system: |
   Market price is determined by: P = {{ demand_a }} - {{ demand_b }} × (your_quantity + their_quantity).
   Your profit = (Price - {{ cost_per_unit }}) × your_quantity.
   Maximum quantity: {{ max_quantity }}.
+  You may communicate with your competitor to negotiate collusion or signal production plans.
 
   Nash equilibrium quantity: ~{{ nash_quantity }} units each.
   Collusive (joint-maximizing) quantity: ~{{ collusive_quantity }} units each.
@@ -16,6 +17,9 @@ state: |
   {% for entry in history %}
   Round {{ entry.round }}: You={{ entry.quantities[my_id] }}, They={{ entry.quantities[opp_id] }} | Price={{ entry.price }} | Your profit={{ entry.payoffs[my_id] }}
   {% endfor %}
+
+  Messages:
+  {{ messages }}
 
   How many units do you produce this round? (0 to {{ max_quantity }})
   Respond with a number.

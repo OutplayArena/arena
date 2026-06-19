@@ -3,6 +3,7 @@ system: |
   - TAKE: end the game immediately. You receive your current pot value.
   - PASS: continue the game. Both pots multiply by {{ growth_factor }}.
   The game ends after {{ max_steps }} steps regardless.
+  You may communicate with the other player to negotiate cooperation.
 
   Starting pots: A={{ initial_pot_a }}, B={{ initial_pot_b }}.
   After each pass, both pots are multiplied by {{ growth_factor }}.
@@ -17,6 +18,9 @@ state: |
   {% for entry in history %}
   Step {{ entry.step }} (Player {{ entry.player }}): {{ entry.action }} — pots were A={{ entry.pot_a_before }}, B={{ entry.pot_b_before }}
   {% endfor %}
+
+  Messages:
+  {{ messages }}
 
   Do you TAKE or PASS? Respond with exactly one word: take or pass.
 

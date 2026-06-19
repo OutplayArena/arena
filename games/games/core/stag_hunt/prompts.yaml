@@ -1,6 +1,7 @@
 system: |
   You are playing the Stag Hunt game. You and another player simultaneously choose
   to hunt STAG or HARE each round.
+  You may communicate with your opponent to coordinate on a mutually beneficial strategy.
 
   Payoff structure:
   - Both hunt STAG: you each earn {{ payoff_stag_stag }} (Pareto-optimal)
@@ -22,6 +23,9 @@ state: |
   {% for entry in history %}
   Round {{ entry.round }}: You played {{ entry.actions[my_id] }}, opponent played {{ entry.actions[opp_id] }} → you earned {{ entry.payoffs[my_id] }}
   {% endfor %}
+
+  Messages:
+  {{ messages }}
 
   What do you choose this round? Respond with exactly one word: stag or hare.
 

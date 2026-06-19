@@ -3,6 +3,7 @@ system: >
   Choose rock, paper, or scissors each round to maximise your cumulative score.
   Rock beats scissors, scissors beats paper, paper beats rock.
   Win = +1, tie = 0, loss = -1.
+  You may communicate with your opponent to bluff, signal, or negotiate.
 
 turn: >
   Round {{ state.round }} of {{ state.round_total }}.
@@ -10,6 +11,9 @@ turn: >
 
   Previous rounds:
   {{ state.history }}
+
+  Messages:
+  {{ messages }}
 
   Respond with exactly one word: rock, paper, or scissors.
 

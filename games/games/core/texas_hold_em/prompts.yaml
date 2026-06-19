@@ -5,6 +5,7 @@ system: >
   opponent take turns choosing fold, check, call, or raise.  The player
   with the best five-card poker hand at showdown wins the pot.
   Each player starts with 100 chips; ante is 1 per hand; bet size is 2.
+  You may communicate with your opponent to bluff, signal, or negotiate.
 
 turn: >
   Round {{ state.round }} of {{ state.round_total }} — Hand {{ state.hand_number }}.
@@ -17,6 +18,10 @@ turn: >
   To call: {{ state.chips[player_id] - state.chips[opponent_id] if state.chips[player_id] > state.chips[opponent_id] else 0 }}.
 
   Actions this street: {{ state.street_actions }}.
+
+  Messages:
+  {{ messages }}
+
   It is your turn. Respond with exactly one word: fold, check, call, or raise.
 
 action_format:

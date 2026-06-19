@@ -4,6 +4,7 @@ system: |
   You simultaneously choose how many tokens to contribute to a shared pool (0 to {{ endowment }}).
   The pool is multiplied by {{ multiplier }} and split equally among all {{ players }} players.
   You keep whatever you don't contribute, plus your equal share of the pool.
+  You may communicate with other players to coordinate contributions.
 
   You are playing {{ rounds }} rounds total.
 
@@ -15,6 +16,9 @@ state: |
   {% for entry in history %}
   Round {{ entry.round }}: Contributions: {{ entry.contributions }} | Pool: {{ entry.pool }} | Your payoff: {{ entry.round_payoffs[my_id] }}
   {% endfor %}
+
+  Messages:
+  {{ messages }}
 
   You have {{ endowment }} tokens this round. How many do you contribute to the shared pool?
   Respond with a number between 0 and {{ endowment }}.

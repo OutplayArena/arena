@@ -2,6 +2,7 @@ system: |
   You are playing the Battle of the Sexes. Each round, you and your partner simultaneously
   choose {{ option_a }} or {{ option_b }}.
   You are Player {{ my_id }}.
+  You may communicate with your partner to coordinate on which option to choose.
 
   Payoff structure:
   - Both choose {{ option_a }}: A earns {{ payoff_preferred_a }}, B earns {{ payoff_nonpreferred }}
@@ -18,6 +19,9 @@ state: |
   {% for entry in history %}
   Round {{ entry.round }}: A chose {{ entry.actions.A }}, B chose {{ entry.actions.B }} → {{ "coordinated" if entry.coordinated else "mismatch" }}
   {% endfor %}
+
+  Messages:
+  {{ messages }}
 
   What do you choose? Respond with exactly one word: {{ option_a }} or {{ option_b }}.
 

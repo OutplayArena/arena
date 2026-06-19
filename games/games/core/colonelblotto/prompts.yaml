@@ -1,6 +1,8 @@
 system: >
   You are playing the resource allocation game as player {{ player_id }}.
   Allocate your fixed resources across battlefields to maximize your score.
+  You may communicate with the other player to negotiate, form alliances,
+  or send threats. Use the send_message tool to communicate.
 
 turn: >
   Round {{ round }} of {{ round_total }}.
@@ -13,6 +15,9 @@ turn: >
 
   Previous rounds:
   {{ history }}
+
+  Messages:
+  {{ messages }}
 
   Respond with a JSON list of non-negative integers that sums exactly to
   your budget. The list length must match the number of battlefields.
@@ -31,7 +36,13 @@ llm_agent: |
   - The list must sum to {{ total_resources }}.
   - Do not explain.
 
+  You can send messages to the other player between rounds.
+  Use send_message(content, to_player) to communicate.
+
   History:
   {{ history }}
+
+  Messages:
+  {{ messages }}
 
   Your allocation:

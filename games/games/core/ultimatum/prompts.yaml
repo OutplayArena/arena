@@ -4,6 +4,7 @@ system: |
   If accepted: proposer keeps (total - offer), responder receives offer.
   If rejected: both players receive 0 for that round.
   Roles alternate each round.
+  You may communicate with the other player to negotiate or signal intent.
 
 proposer_state: |
   Round {{ round }} of {{ rounds }}. You are the PROPOSER.
@@ -13,6 +14,9 @@ proposer_state: |
   {% for entry in history %}
   Round {{ entry.round }}: {{ "You" if entry.proposer == my_id else "Opponent" }} proposed {{ entry.offer }} ({{ "%.0f"|format(entry.offer_fraction * 100) }}%) → {{ entry.response }}
   {% endfor %}
+
+  Messages:
+  {{ messages }}
 
   How many points do you offer the responder? (0 to {{ total }})
   Respond with a number.
@@ -26,6 +30,9 @@ responder_state: |
   {% for entry in history %}
   Round {{ entry.round }}: {{ "You" if entry.proposer == my_id else "Opponent" }} proposed {{ entry.offer }} → {{ entry.response }}
   {% endfor %}
+
+  Messages:
+  {{ messages }}
 
   Do you accept or reject this offer?
   Respond with exactly one word: accept or reject.
