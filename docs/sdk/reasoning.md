@@ -16,7 +16,7 @@ Different LLM models have different reasoning capabilities and control mechanism
 ## Reasoning Effort Levels
 
 ```python
-from nash_arena_sdk import ReasoningEffort
+from outplaylabs_arena_sdk import ReasoningEffort
 
 ReasoningEffort.NONE    # No reasoning control
 ReasoningEffort.LOW     # Minimal reasoning budget
@@ -27,7 +27,7 @@ ReasoningEffort.HIGH    # Maximum reasoning budget
 ## Basic Usage
 
 ```python
-from nash_arena_sdk import ReasoningModerator, ReasoningEffort
+from outplaylabs_arena_sdk import ReasoningModerator, ReasoningEffort
 
 # Create a moderator for a specific model
 moderator = ReasoningModerator(
@@ -53,7 +53,7 @@ text, reasoning = moderator.extract_response_text(response_data)
 The SDK includes profiles for 30+ models:
 
 ```python
-from nash_arena_sdk import MODEL_PROFILES, get_model_profile
+from outplaylabs_arena_sdk import MODEL_PROFILES, get_model_profile
 
 # Get profile for a specific model
 profile = get_model_profile("deepseek-v3")
@@ -81,7 +81,7 @@ Models use different strategies for reasoning control:
 Reasoning control is built into `LLMAgent`:
 
 ```python
-from nash_arena_sdk import LLMAgent, LLMConfig, ReasoningEffort
+from outplaylabs_arena_sdk import LLMAgent, LLMConfig, ReasoningEffort
 
 config = LLMConfig(
     model="deepseek-v3",
@@ -127,7 +127,7 @@ augmented = moderator.build_system_prompt(base_prompt)
 
 ## API Reference
 
-::: nash_arena_sdk.reasoning.ReasoningModerator
+::: outplaylabs_arena_sdk.reasoning.ReasoningModerator
     options:
       members:
         - __init__
@@ -140,10 +140,10 @@ augmented = moderator.build_system_prompt(base_prompt)
         - prepare_request_body
         - extract_response_text
 
-::: nash_arena_sdk.reasoning.ReasoningEffort
+::: outplaylabs_arena_sdk.reasoning.ReasoningEffort
     options:
       show_root_heading: true
 
-::: nash_arena_sdk.reasoning.ReasoningStrategy
+::: outplaylabs_arena_sdk.reasoning.ReasoningStrategy
     options:
       show_root_heading: true

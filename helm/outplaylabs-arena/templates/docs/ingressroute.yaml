@@ -1,0 +1,26 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "outplaylabs-arena.fullname" . }}-docs
+  labels:
+    {{- include "outplaylabs-arena.labels" . | nindent 4 }}
+    app.kubernetes.io/component: docs
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`docs.{{ .Values.traefik.host }}`)
+      services:
+        - kind: Service
+          name: {{ include "outplaylabs-arena.fullname" . }}-docs
+          port: 80
+{{- if or .Values.traefik.certResolver .Values.traefik.tlsSecret }}
+  tls:
+  {{- if .Values.traefik.certResolver }}
+    certResolver: {{ .Values.traefik.certResolver }}
+  {{- else }}
+    secretName: {{ .Values.traefik.tlsSecret | default (printf "%s-tls" (include "outplaylabs-arena.fullname" .)) }}
+  {{- end }}
+{{- end }}

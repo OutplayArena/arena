@@ -1,10 +1,10 @@
 # Creating Games
 
-Guide to creating new games for NashArena.
+Guide to creating new games for OutplayLabs Arena.
 
 ## Overview
 
-NashArena's game catalog is extensible. You can add new games by implementing a standard interface. Each game consists of:
+OutplayLabs Arena's game catalog is extensible. You can add new games by implementing a standard interface. Each game consists of:
 
 - **Configuration** — Game parameters and validation
 - **Engine** — Game logic and state management

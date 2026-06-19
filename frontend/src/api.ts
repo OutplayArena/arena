@@ -31,7 +31,7 @@ export async function request<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const token = localStorage.getItem("nasharena_token");
+  const token = localStorage.getItem("arena-token");
   const headers: Record<string, string> = {
     Accept: "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

@@ -1,6 +1,6 @@
 import pytest
 from games.core.centipede.metrics import CentipedeMetrics
-from nash_arena.metrics.contracts import Match, Move
+from outplaylabs_arena.metrics.contracts import Match, Move
 
 
 def make_history(*steps: tuple[str, str]) -> tuple[list[dict], dict[str, float]]:

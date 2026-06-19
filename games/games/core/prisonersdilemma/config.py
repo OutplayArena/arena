@@ -4,7 +4,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-from nash_arena.game_components.game_config import GameConfig
+from outplaylabs_arena.game_components.game_config import GameConfig
 
 from games.core.prisonersdilemma.scenarios import ALL_SCENARIOS, get_scenario
 

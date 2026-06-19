@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from nash_arena.game_components.game_metrics import GameMetrics
-from nash_arena.metrics.extension import GameMetricsExtension
+from outplaylabs_arena.game_components.game_metrics import GameMetrics
+from outplaylabs_arena.metrics.extension import GameMetricsExtension
 
 
 class PublicGoodsMetrics(GameMetrics, GameMetricsExtension):

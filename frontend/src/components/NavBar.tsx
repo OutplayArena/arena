@@ -54,8 +54,8 @@ export const NavBar = memo(function NavBar() {
     <nav className="sticky top-0 z-50 h-12 flex items-center justify-between px-5 border-b border-line bg-surface/80 backdrop-blur-md">
       {/* Logo */}
       <NavLink to="/" className="flex items-center gap-2 no-underline shrink-0">
-        <img src="/img/logo_only_nash_arena.png" alt="NashArena" className="h-7 w-auto" />
-        <span className="text-sm font-bold text-ink tracking-tight">NashArena</span>
+        <img src="/img/logo_only_outplaylabs_arena.png" alt="OutplayLabs Arena" className="h-7 w-auto" />
+        <span className="text-sm font-bold text-ink tracking-tight">OutplayLabs</span>
       </NavLink>
 
       {/* Center nav */}

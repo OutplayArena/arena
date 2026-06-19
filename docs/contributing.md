@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for your interest in contributing to NashArena! This guide will help you get started.
+Thank you for your interest in contributing to OutplayLabs Arena! This guide will help you get started.
 
 ## Ways to Contribute
 
@@ -50,8 +50,8 @@ Have an idea? Open an issue describing:
 ### Clone and Install
 
 ```bash
-git clone https://github.com/NashArena/nash-arena.git
-cd nash-arena
+git clone https://github.com/OutplayLabs/arena.git
+cd outplaylabs-arena
 
 # Install Python packages
 uv sync
@@ -87,7 +87,7 @@ cd frontend && npm test
 
 ```bash
 # Backend
-uv run uvicorn nash_arena.main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn outplaylabs_arena.main:app --reload --host 0.0.0.0 --port 8000
 
 # Frontend (separate terminal)
 cd frontend && npm run dev
@@ -283,4 +283,4 @@ Documentation is automatically deployed to Cloudflare Pages when changes are pus
 
 By contributing, you agree that your contributions will be licensed under the project's license.
 
-Thank you for contributing to NashArena!
+Thank you for contributing to OutplayLabs Arena!

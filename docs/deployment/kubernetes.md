@@ -1,6 +1,6 @@
 # Kubernetes Deployment
 
-Deploy NashArena on Kubernetes using the Helm chart for production deployments.
+Deploy OutplayLabs Arena on Kubernetes using the Helm chart for production deployments.
 
 ## Prerequisites
 
@@ -14,22 +14,22 @@ Deploy NashArena on Kubernetes using the Helm chart for production deployments.
 
 ```bash
 # Add Helm repo (or use local chart)
-# helm repo add nasharena https://...
+# helm repo add outplaylabs-arena https://...
 
 # Configure values
-cp helm/nash_arena/values.yaml my-values.yaml
+cp helm/outplaylabs_arena/values.yaml my-values.yaml
 # Edit my-values.yaml
 
 # Deploy
-helm upgrade --install nasharena helm/nash_arena \
-  --namespace nasharena --create-namespace \
+helm upgrade --install outplaylabs-arena helm/outplaylabs_arena \
+  --namespace outplaylabs-arena --create-namespace \
   -f my-values.yaml
 
 # Wait for deployment
-kubectl -n nasharena rollout status deployment/nasharena-backend
+kubectl -n outplaylabs-arena rollout status deployment/outplaylabs-arena-backend
 
 # Port-forward for local access
-kubectl -n nasharena port-forward svc/nasharena-backend 8000:8000
+kubectl -n outplaylabs-arena port-forward svc/outplaylabs-arena-backend 8000:8000
 ```
 
 ## Architecture
@@ -62,7 +62,7 @@ kubectl -n nasharena port-forward svc/nasharena-backend 8000:8000
 # Backend configuration
 backend:
   image:
-    repository: your-registry/nasharena-backend
+    repository: your-registry/outplaylabs-arena-backend
     tag: latest
     pullPolicy: Always
   replicas: 2
@@ -83,7 +83,7 @@ database:
 # MCP server configuration
 mcpServer:
   image:
-    repository: your-registry/nasharena-mcp
+    repository: your-registry/outplaylabs-arena-mcp
     tag: latest
   maxConcurrentJobs: 50
   jobTTL: 300
@@ -116,7 +116,7 @@ Secrets are managed via Helm values or external secret manager:
 openssl rand -hex 32
 
 # Create secret manually
-kubectl -n nasharena create secret generic nasharena-secrets \
+kubectl -n outplaylabs-arena create secret generic outplaylabs-arena-secrets \
   --from-literal=jwt-secret=your-jwt-secret \
   --from-literal=github-client-id=... \
   --from-literal=github-client-secret=...
@@ -128,16 +128,16 @@ kubectl -n nasharena create secret generic nasharena-secrets \
 
 ```bash
 cd backend/docker
-docker build -t your-registry/nasharena-backend:latest .
-docker push your-registry/nasharena-backend:latest
+docker build -t your-registry/outplaylabs-arena-backend:latest .
+docker push your-registry/outplaylabs-arena-backend:latest
 ```
 
 ### MCP
 
 ```bash
 cd backend/docker
-docker build -f Dockerfile.mcp -t your-registry/nasharena-mcp:latest .
-docker push your-registry/nasharena-mcp:latest
+docker build -f Dockerfile.mcp -t your-registry/outplaylabs-arena-mcp:latest .
+docker push your-registry/outplaylabs-arena-mcp:latest
 ```
 
 ## Database
@@ -157,7 +157,7 @@ database:
 backend:
   env:
     - name: DATABASE_URL
-      value: "postgresql+asyncpg://user:pass@external-db:5432/nasharena"
+      value: "postgresql+asyncpg://user:pass@external-db:5432/outplaylabs-arena"
 ```
 
 ### Migrations
@@ -166,11 +166,11 @@ Migrations run as a Kubernetes Job on deployment:
 
 ```bash
 # Check migration status
-kubectl -n nasharena get jobs
-kubectl -n nasharena logs job/nasharena-migrations
+kubectl -n outplaylabs-arena get jobs
+kubectl -n outplaylabs-arena logs job/outplaylabs-arena-migrations
 
 # Run migrations manually
-kubectl -n nasharena exec -it deployment/nasharena-backend -- \
+kubectl -n outplaylabs-arena exec -it deployment/outplaylabs-arena-backend -- \
   alembic -c /app/alembic.ini upgrade head
 ```
 
@@ -178,12 +178,12 @@ kubectl -n nasharena exec -it deployment/nasharena-backend -- \
 
 ```bash
 # Backup database
-kubectl -n nasharena exec -it statefulset/nasharena-db -- \
-  pg_dump -U nasharena nasharena > backup.sql
+kubectl -n outplaylabs-arena exec -it statefulset/outplaylabs-arena-db -- \
+  pg_dump -U outplaylabs-arena outplaylabs-arena > backup.sql
 
 # Restore database
-cat backup.sql | kubectl -n nasharena exec -i statefulset/nasharena-db -- \
-  psql -U nasharena nasharena
+cat backup.sql | kubectl -n outplaylabs-arena exec -i statefulset/outplaylabs-arena-db -- \
+  psql -U outplaylabs-arena outplaylabs-arena
 ```
 
 ## Scaling
@@ -216,11 +216,11 @@ Database is a StatefulSet (single instance). For production:
 The backend needs permissions to create MCP resources:
 
 ```yaml
-# helm/nash_arena/templates/mcp-server/rbac.yaml
+# helm/outplaylabs_arena/templates/mcp-server/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: nasharena-mcp-manager
+  name: outplaylabs-arena-mcp-manager
 rules:
   - apiGroups: ["batch"]
     resources: ["jobs"]
@@ -243,7 +243,7 @@ kind: Ingress
 metadata:
   name: mcp-abc123
   annotations:
-    traefik.ingress.kubernetes.io/router.middlewares: nasharena-strip-mcp-prefix@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: outplaylabs-arena-strip-mcp-prefix@kubernetescrd
 spec:
   rules:
     - host: api.agent-arena.local
@@ -264,25 +264,25 @@ spec:
 
 ```bash
 # Check backend health
-kubectl -n nasharena exec -it deployment/nasharena-backend -- \
+kubectl -n outplaylabs-arena exec -it deployment/outplaylabs-arena-backend -- \
   curl http://localhost:8000/api/health
 
 # Check database
-kubectl -n nasharena exec -it statefulset/nasharena-db -- \
-  pg_isready -U nasharena
+kubectl -n outplaylabs-arena exec -it statefulset/outplaylabs-arena-db -- \
+  pg_isready -U outplaylabs-arena
 ```
 
 ### Logs
 
 ```bash
 # Backend logs
-kubectl -n nasharena logs deployment/nasharena-backend -f
+kubectl -n outplaylabs-arena logs deployment/outplaylabs-arena-backend -f
 
 # Database logs
-kubectl -n nasharena logs statefulset/nasharena-db -f
+kubectl -n outplaylabs-arena logs statefulset/outplaylabs-arena-db -f
 
 # MCP pod logs
-kubectl -n nasharena logs pod/mcp-abc123
+kubectl -n outplaylabs-arena logs pod/mcp-abc123
 ```
 
 ### Metrics
@@ -299,15 +299,15 @@ backend:
 
 ```bash
 # Update Helm chart
-helm upgrade nasharena helm/nash_arena \
-  --namespace nasharena \
+helm upgrade outplaylabs-arena helm/outplaylabs_arena \
+  --namespace outplaylabs-arena \
   -f my-values.yaml
 
 # Rollback if needed
-helm rollback nasharena 1
+helm rollback outplaylabs-arena 1
 
 # Check rollout status
-kubectl -n nasharena rollout status deployment/nasharena-backend
+kubectl -n outplaylabs-arena rollout status deployment/outplaylabs-arena-backend
 ```
 
 ## Production Checklist
@@ -330,37 +330,37 @@ kubectl -n nasharena rollout status deployment/nasharena-backend
 
 ```bash
 # Check events
-kubectl -n nasharena describe pod <pod-name>
+kubectl -n outplaylabs-arena describe pod <pod-name>
 
 # Check logs
-kubectl -n nasharena logs <pod-name>
+kubectl -n outplaylabs-arena logs <pod-name>
 
 # Check PVC
-kubectl -n nasharena get pvc
+kubectl -n outplaylabs-arena get pvc
 ```
 
 ### Database Connection Issues
 
 ```bash
 # Test connectivity
-kubectl -n nasharena exec -it deployment/nasharena-backend -- \
+kubectl -n outplaylabs-arena exec -it deployment/outplaylabs-arena-backend -- \
   python -c "import asyncpg; asyncpg.connect('...')"
 
 # Check database service
-kubectl -n nasharena get svc nasharena-db
+kubectl -n outplaylabs-arena get svc outplaylabs-arena-db
 ```
 
 ### MCP Pods Stuck
 
 ```bash
 # List MCP pods
-kubectl -n nasharena get pods -l app=mcp-server
+kubectl -n outplaylabs-arena get pods -l app=mcp-server
 
 # Delete stuck pods
-kubectl -n nasharena delete pod mcp-abc123
+kubectl -n outplaylabs-arena delete pod mcp-abc123
 
 # Check backend logs
-kubectl -n nasharena logs deployment/nasharena-backend | grep mcp
+kubectl -n outplaylabs-arena logs deployment/outplaylabs-arena-backend | grep mcp
 ```
 
 ## Next Steps

@@ -1,31 +1,31 @@
-# NashArena: Benchmarking Cooperative & Competitive Behavior of LLM Agents
+# OutplayLabs Arena: Benchmarking Cooperative & Competitive Behavior of LLM Agents
 
-![NashArena AI Agent Benchmarking & Game Theory Platform](backend/static/img/logo_banner_nash_arena_resized.png)
+![OutplayLabs Arena AI Agent Benchmarking & Game Theory Platform](backend/static/img/logo_banner_outplaylabs_arena_resized.png)
 
-NashArena is a platform for game theoretic analyses of LLM-based agents — studying how they behave under strategic pressure, from zero-sum games to cooperative dilemmas.
+OutplayLabs Arena is a platform for game theoretic analyses of LLM-based agents — studying how they behave under strategic pressure, from zero-sum games to cooperative dilemmas.
 
 ## Documentation
 
-**Full documentation: https://nash-arena-docs.pages.dev**
+**Full documentation: https://outplaylabs-arena-docs.pages.dev**
 
-- [SDK Guide](https://nash-arena-docs.pages.dev/sdk/overview/) — Build agents with the Python SDK
-- [Game Catalog](https://nash-arena-docs.pages.dev/games/overview/) — 10 game theory scenarios
-- [API Reference](https://nash-arena-docs.pages.dev/api/overview/) — REST and MCP APIs
-- [Deployment](https://nash-arena-docs.pages.dev/deployment/docker/) — Docker and Kubernetes
-- [Contributing](https://nash-arena-docs.pages.dev/contributing/) — How to contribute
+- [SDK Guide](https://outplaylabs-arena-docs.pages.dev/sdk/overview/) — Build agents with the Python SDK
+- [Game Catalog](https://outplaylabs-arena-docs.pages.dev/games/overview/) — 10 game theory scenarios
+- [API Reference](https://outplaylabs-arena-docs.pages.dev/api/overview/) — REST and MCP APIs
+- [Deployment](https://outplaylabs-arena-docs.pages.dev/deployment/docker/) — Docker and Kubernetes
+- [Contributing](https://outplaylabs-arena-docs.pages.dev/contributing/) — How to contribute
 
 ## SDK Quickstart
 
 Install the SDK:
 
 ```bash
-pip install nash-arena-sdk
+pip install outplaylabs-arena-sdk
 ```
 
 Run your first game:
 
 ```python
-from nash_arena_sdk import quick_play
+from outplaylabs_arena_sdk import quick_play
 
 results = quick_play(
     game="ultimatum",
@@ -40,15 +40,15 @@ results = quick_play(
 print(results)
 ```
 
-For more examples and advanced usage, see the [SDK documentation](https://nash-arena-docs.pages.dev/sdk/overview/).
+For more examples and advanced usage, see the [SDK documentation](https://outplaylabs-arena-docs.pages.dev/sdk/overview/).
 
 ## Deployment
 
 ### Docker (Quick Start)
 
 ```bash
-git clone https://github.com/NashArena/nash-arena.git
-cd nash-arena
+git clone https://github.com/OutplayLabs/arena.git
+cd outplaylabs-arena
 
 cp .env.example .env
 # Edit .env with your settings
@@ -59,11 +59,11 @@ docker compose up -d
 
 Access the platform at http://localhost:8000
 
-For full Docker deployment details, see [Docker Deployment](https://nash-arena-docs.pages.dev/deployment/docker/).
+For full Docker deployment details, see [Docker Deployment](https://outplaylabs-arena-docs.pages.dev/deployment/docker/).
 
 ### Kubernetes
 
-For production deployments with Kubernetes and Helm, see [Kubernetes Deployment](https://nash-arena-docs.pages.dev/deployment/kubernetes/).
+For production deployments with Kubernetes and Helm, see [Kubernetes Deployment](https://outplaylabs-arena-docs.pages.dev/deployment/kubernetes/).
 
 ## Development
 
@@ -97,12 +97,12 @@ uv run alembic -c backend/alembic.ini upgrade head
 
 **Option B: Kubernetes**
 
-See [Kubernetes Deployment](https://nash-arena-docs.pages.dev/deployment/kubernetes/) for Helm chart instructions.
+See [Kubernetes Deployment](https://outplaylabs-arena-docs.pages.dev/deployment/kubernetes/) for Helm chart instructions.
 
 ### Run Backend
 
 ```bash
-uv run uvicorn nash_arena.main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn outplaylabs_arena.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Backend serves:
@@ -137,12 +137,12 @@ uv run pytest games/
 cd frontend && npm test
 ```
 
-For more development details, see [Contributing](https://nash-arena-docs.pages.dev/contributing/).
+For more development details, see [Contributing](https://outplaylabs-arena-docs.pages.dev/contributing/).
 
 ## Project Structure
 
 ```
-nash-arena/
+outplaylabs-arena/
 ├── backend/          # FastAPI platform (API, sessions, MCP)
 ├── agent-sdk/        # Python SDK for building agents
 ├── games/            # Game implementations (10 games)

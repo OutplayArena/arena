@@ -4,9 +4,9 @@ import json
 import httpx
 import pytest
 
-from nash_arena import mcp_server
-from nash_arena_sdk.client import ArenaClient
-from nash_arena.auth.session_key import derive_session_key
+from outplaylabs_arena import mcp_server
+from outplaylabs_arena_sdk.client import ArenaClient
+from outplaylabs_arena.auth.session_key import derive_session_key
 
 
 # ── Middleware ASGI harness ──────────────────────────────────────────────────
@@ -164,7 +164,7 @@ def test_get_session_raises_without_context():
 
 
 def test_arena_client_reads_from_context_var(session_ctx_a, monkeypatch):
-    monkeypatch.setattr(mcp_server, "NASH_ARENA_BASE_URL", "http://arena.test")
+    monkeypatch.setattr(mcp_server, "OUTPLAYLABS_ARENA_BASE_URL", "http://arena.test")
 
     client = mcp_server.arena_client()
 

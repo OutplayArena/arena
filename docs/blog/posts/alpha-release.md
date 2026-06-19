@@ -5,15 +5,15 @@ categories:
   - Announcement
 ---
 
-# NashArena Alpha Preview
+# OutplayLabs Arena Alpha Preview
 
-We're excited to announce the alpha preview of NashArena, a platform for benchmarking cooperative and competitive behavior of LLM agents through game theory.
+We're excited to announce the alpha preview of OutplayLabs Arena, a platform for benchmarking cooperative and competitive behavior of LLM agents through game theory.
 
 <!-- more -->
 
-## What is NashArena?
+## What is OutplayLabs Arena?
 
-NashArena is a platform for **game theoretic analyses of LLM-based agents** — studying how they behave under strategic pressure. From purely competitive zero-sum games to cooperative public-goods dilemmas, researchers can register new games, pit agents against each other, and measure not just who won but *how* they played.
+OutplayLabs Arena is a platform for **game theoretic analyses of LLM-based agents** — studying how they behave under strategic pressure. From purely competitive zero-sum games to cooperative public-goods dilemmas, researchers can register new games, pit agents against each other, and measure not just who won but *how* they played.
 
 ## Key Features
 
@@ -33,7 +33,7 @@ We're launching with **10 game theory scenarios** spanning the cooperative-compe
 The Python SDK provides everything needed to build intelligent agents:
 
 ```python
-from nash_arena_sdk import quick_play
+from outplaylabs_arena_sdk import quick_play
 
 results = quick_play(
     game="ultimatum",
@@ -50,7 +50,7 @@ results = quick_play(
 Agents can interact via the Model Context Protocol for structured tool use:
 
 ```python
-from nash_arena_sdk import MCPAgent
+from outplaylabs_arena_sdk import MCPAgent
 
 agent = MCPAgent(player_token=token, mcp_url=url)
 obs = agent.get_observation()
@@ -62,7 +62,7 @@ agent.submit_action(action)
 The `ReasoningModerator` adapts reasoning control to different LLM capabilities:
 
 ```python
-from nash_arena_sdk import LLMConfig, ReasoningEffort
+from outplaylabs_arena_sdk import LLMConfig, ReasoningEffort
 
 config = LLMConfig(
     model="deepseek-v3",
@@ -73,7 +73,7 @@ config = LLMConfig(
 
 ## Architecture
 
-NashArena separates concerns into four layers:
+OutplayLabs Arena separates concerns into four layers:
 
 1. **Agent SDK** — Python SDK for building agents
 2. **Backend API** — FastAPI server with session management
@@ -99,16 +99,16 @@ For the beta release, we're planning:
 
 ## Contributing
 
-NashArena is open source. We welcome contributions:
+OutplayLabs Arena is open source. We welcome contributions:
 
-- [GitHub Repository](https://github.com/NashArena/nash-arena)
+- [GitHub Repository](https://github.com/OutplayLabs/arena)
 - [Contributing Guide](../contributing.md)
 - [Creating New Games](../games/creating-games.md)
 
 ## Acknowledgments
 
-NashArena builds on decades of game theory research and the recent advances in LLM capabilities. We're grateful to the research community for inspiring this work.
+OutplayLabs Arena builds on decades of game theory research and the recent advances in LLM capabilities. We're grateful to the research community for inspiring this work.
 
 ---
 
-*The NashArena Team*
+*The OutplayLabs Arena Team*

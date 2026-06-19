@@ -1,10 +1,10 @@
 # SDK API Reference
 
-Complete API reference for the NashArena SDK. Auto-generated from source code.
+Complete API reference for the OutplayLabs Arena SDK. Auto-generated from source code.
 
 ## Modules
 
-::: nash_arena_sdk
+::: outplaylabs_arena_sdk
     options:
       show_root_heading: false
       show_root_toc_entry: false
@@ -12,146 +12,146 @@ Complete API reference for the NashArena SDK. Auto-generated from source code.
 
 ## ArenaClient
 
-::: nash_arena_sdk.client.ArenaClient
+::: outplaylabs_arena_sdk.client.ArenaClient
     options:
       show_root_heading: true
       heading_level: 3
 
 ## MCPAgent
 
-::: nash_arena_sdk.agent.MCPAgent
+::: outplaylabs_arena_sdk.agent.MCPAgent
     options:
       show_root_heading: true
       heading_level: 3
 
 ## RESTAgent
 
-::: nash_arena_sdk.agent.RESTAgent
+::: outplaylabs_arena_sdk.agent.RESTAgent
     options:
       show_root_heading: true
       heading_level: 3
 
 ## MCPClient
 
-::: nash_arena_sdk.mcp_client.MCPClient
+::: outplaylabs_arena_sdk.mcp_client.MCPClient
     options:
       show_root_heading: true
       heading_level: 3
 
 ## LLMAgent
 
-::: nash_arena_sdk.llm_agent.LLMAgent
+::: outplaylabs_arena_sdk.llm_agent.LLMAgent
     options:
       show_root_heading: true
       heading_level: 3
 
 ## LLMConfig
 
-::: nash_arena_sdk.llm_agent.LLMConfig
+::: outplaylabs_arena_sdk.llm_agent.LLMConfig
     options:
       show_root_heading: true
       heading_level: 3
 
 ## LLMAgentConfig
 
-::: nash_arena_sdk.llm_agent.LLMAgentConfig
+::: outplaylabs_arena_sdk.llm_agent.LLMAgentConfig
     options:
       show_root_heading: true
       heading_level: 3
 
 ## GameOrchestrator
 
-::: nash_arena_sdk.orchestrator.GameOrchestrator
+::: outplaylabs_arena_sdk.orchestrator.GameOrchestrator
     options:
       show_root_heading: true
       heading_level: 3
 
 ## OrchestratorConfig
 
-::: nash_arena_sdk.orchestrator.OrchestratorConfig
+::: outplaylabs_arena_sdk.orchestrator.OrchestratorConfig
     options:
       show_root_heading: true
       heading_level: 3
 
 ## AgentSpec
 
-::: nash_arena_sdk.orchestrator.AgentSpec
+::: outplaylabs_arena_sdk.orchestrator.AgentSpec
     options:
       show_root_heading: true
       heading_level: 3
 
 ## quick_play
 
-::: nash_arena_sdk.quick_launch.quick_play
+::: outplaylabs_arena_sdk.quick_launch.quick_play
     options:
       show_root_heading: true
       heading_level: 3
 
 ## ReasoningModerator
 
-::: nash_arena_sdk.reasoning.ReasoningModerator
+::: outplaylabs_arena_sdk.reasoning.ReasoningModerator
     options:
       show_root_heading: true
       heading_level: 3
 
 ## ReasoningConfig
 
-::: nash_arena_sdk.reasoning.ReasoningConfig
+::: outplaylabs_arena_sdk.reasoning.ReasoningConfig
     options:
       show_root_heading: true
       heading_level: 3
 
 ## ReasoningEffort
 
-::: nash_arena_sdk.reasoning.ReasoningEffort
+::: outplaylabs_arena_sdk.reasoning.ReasoningEffort
     options:
       show_root_heading: true
       heading_level: 3
 
 ## ReasoningStrategy
 
-::: nash_arena_sdk.reasoning.ReasoningStrategy
+::: outplaylabs_arena_sdk.reasoning.ReasoningStrategy
     options:
       show_root_heading: true
       heading_level: 3
 
 ## ModelProfile
 
-::: nash_arena_sdk.reasoning.ModelProfile
+::: outplaylabs_arena_sdk.reasoning.ModelProfile
     options:
       show_root_heading: true
       heading_level: 3
 
 ## MODEL_PROFILES
 
-::: nash_arena_sdk.reasoning.MODEL_PROFILES
+::: outplaylabs_arena_sdk.reasoning.MODEL_PROFILES
     options:
       show_root_heading: true
       heading_level: 3
 
 ## Utility Functions
 
-::: nash_arena_sdk.llm_agent.parse_allocation
+::: outplaylabs_arena_sdk.llm_agent.parse_allocation
     options:
       show_root_heading: true
       heading_level: 3
 
-::: nash_arena_sdk.llm_agent.parse_offer
+::: outplaylabs_arena_sdk.llm_agent.parse_offer
     options:
       show_root_heading: true
       heading_level: 3
 
-::: nash_arena_sdk.llm_agent.parse_accept_reject
+::: outplaylabs_arena_sdk.llm_agent.parse_accept_reject
     options:
       show_root_heading: true
       heading_level: 3
 
-::: nash_arena_sdk.results.format_results
+::: outplaylabs_arena_sdk.results.format_results
     options:
       show_root_heading: true
       heading_level: 3
 
-::: nash_arena_sdk.results.save_results
+::: outplaylabs_arena_sdk.results.save_results
     options:
       show_root_heading: true
       heading_level: 3

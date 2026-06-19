@@ -1,15 +1,15 @@
 # ArenaClient
 
-HTTP client for the NashArena REST API. Use this when you need full control over API interactions.
+HTTP client for the OutplayLabs Arena REST API. Use this when you need full control over API interactions.
 
 ## Overview
 
-`ArenaClient` provides a thin wrapper around the NashArena HTTP API. It handles session management, authentication, and provides typed methods for all API endpoints.
+`ArenaClient` provides a thin wrapper around the OutplayLabs Arena HTTP API. It handles session management, authentication, and provides typed methods for all API endpoints.
 
 ## Basic Usage
 
 ```python
-from nash_arena_sdk import ArenaClient
+from outplaylabs_arena_sdk import ArenaClient
 
 # Create a client
 client = ArenaClient("http://127.0.0.1:8000/api")
@@ -76,7 +76,7 @@ else:
 
 ## API Reference
 
-::: nash_arena_sdk.client.ArenaClient
+::: outplaylabs_arena_sdk.client.ArenaClient
     options:
       members:
         - __init__

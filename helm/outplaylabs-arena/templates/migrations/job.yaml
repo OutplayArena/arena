@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "outplaylabs-arena.fullname" . }}-migrations
+  labels:
+    {{- include "outplaylabs-arena.labels" . | nindent 4 }}
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z {{ include "outplaylabs-arena.fullname" . }}-db 5432; do
+                echo "waiting for database..."
+                sleep 2
+              done
+      containers:
+        - name: alembic
+          image: "{{ .Values.migrations.image.repository }}:{{ .Values.migrations.image.tag }}"
+          imagePullPolicy: {{ .Values.migrations.image.pullPolicy }}
+          command: ["alembic", "upgrade", "head"]
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "outplaylabs-arena.fullname" . }}-db
+                  key: password
+            - name: DATABASE_URL
+              value: "postgresql://{{ .Values.database.user }}:$(DB_PASSWORD)@{{ include "outplaylabs-arena.fullname" . }}-db:5432/{{ .Values.database.database }}"

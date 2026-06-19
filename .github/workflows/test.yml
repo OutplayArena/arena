@@ -33,9 +33,9 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: nasharena
-          POSTGRES_PASSWORD: nasharena
-          POSTGRES_DB: nasharena_test
+          POSTGRES_USER: outplaylabs-arena
+          POSTGRES_PASSWORD: outplaylabs-arena
+          POSTGRES_DB: outplaylabs-arena_test
         ports:
           - 5432:5432
         options: >-
@@ -66,7 +66,7 @@ jobs:
       - name: Run backend tests
         run: uv run pytest backend/tests/
         env:
-          DATABASE_URL: postgresql+asyncpg://nasharena:nasharena@localhost:5432/nasharena_test
+          DATABASE_URL: postgresql+asyncpg://outplaylabs-arena:outplaylabs-arena@localhost:5432/outplaylabs-arena_test
           SECRET_KEY: test-secret-key-for-ci
           PYTHONUNBUFFERED: 1
 

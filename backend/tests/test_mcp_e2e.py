@@ -21,8 +21,8 @@ import uuid
 import httpx
 import pytest
 
-from nash_arena_sdk.mcp_client import MCPClient
-from nash_arena.auth.session_key import derive_session_key
+from outplaylabs_arena_sdk.mcp_client import MCPClient
+from outplaylabs_arena.auth.session_key import derive_session_key
 
 # ── Configuration ────────────────────────────────────────────────────────────
 
@@ -54,9 +54,9 @@ def _create_test_user() -> tuple[str, str]:
     uid = str(uuid.uuid4())
     email = f"e2e-{uid[:8]}@test.local"
     script = f"""import asyncio
-from nash_arena.db import async_session
-from nash_arena.models.user import User
-from nash_arena.auth.jwt import create_access_token
+from outplaylabs_arena.db import async_session
+from outplaylabs_arena.models.user import User
+from outplaylabs_arena.auth.jwt import create_access_token
 
 async def main():
     user_id = "{uid}"
@@ -75,8 +75,8 @@ asyncio.run(main())
 def _delete_test_user(user_id: str) -> None:
     _kubectl_exec(f"""
 import asyncio
-from nash_arena.db import async_session
-from nash_arena.models.user import User
+from outplaylabs_arena.db import async_session
+from outplaylabs_arena.models.user import User
 from sqlalchemy import delete
 
 async def main():

@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 
 from abc import abstractmethod
-from nash_arena.game_components.game_agent import GameAgent
+from outplaylabs_arena.game_components.game_agent import GameAgent
 
 MOVES = ("rock", "paper", "scissors")
 BEATS = {"rock": "scissors", "paper": "rock", "scissors": "paper"}

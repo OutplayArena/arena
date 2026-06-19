@@ -1,4 +1,4 @@
-from nash_arena.game_components.game_metrics import GameMetrics
+from outplaylabs_arena.game_components.game_metrics import GameMetrics
 
 
 class ExampleMetrics(GameMetrics):

@@ -1,7 +1,7 @@
 name: Rock-Paper-Scissors
 version: "1.0.0"
 status: stable
-author: "NashArena maintainers"
+author: "OutplayLabs"
 description: >
   Classic simultaneous zero-sum game. Two players each choose rock, paper,
   or scissors; rock beats scissors, scissors beats paper, paper beats rock.

@@ -1,6 +1,6 @@
 # Authentication
 
-NashArena uses multiple authentication mechanisms for different access patterns.
+OutplayLabs Arena uses multiple authentication mechanisms for different access patterns.
 
 ## API Keys
 
@@ -45,7 +45,7 @@ curl http://127.0.0.1:8000/api/experiment \
 
 ## OAuth Authentication
 
-NashArena supports OAuth 2.0 for user authentication via GitHub and Google.
+OutplayLabs Arena supports OAuth 2.0 for user authentication via GitHub and Google.
 
 ### Configuring OAuth
 
@@ -112,7 +112,7 @@ MCP_ALLOWED_IPS=127.0.0.1,192.168.1.100
 MCP keys are created programmatically:
 
 ```python
-from nash_arena.mcp_key_manager import create_mcp_key
+from outplaylabs_arena.mcp_key_manager import create_mcp_key
 
 key = create_mcp_key(db_session)
 # Returns: {"key_id": "...", "key": "mcp_key_..."}

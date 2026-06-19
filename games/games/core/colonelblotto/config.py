@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import hashlib
 import json
 
-from nash_arena.game_components.game_config import GameConfig
+from outplaylabs_arena.game_components.game_config import GameConfig
 
 
 # Allow for named Battlefield objects

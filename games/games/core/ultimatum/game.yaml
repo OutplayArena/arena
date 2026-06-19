@@ -1,7 +1,7 @@
 name: Ultimatum Game
 version: "1.0.0"
 status: stable
-author: "NashArena maintainers"
+author: "OutplayLabs"
 description: >
   Player A proposes a split of a fixed sum; Player B accepts or rejects.
   Both get zero on rejection. Nash prediction: A proposes minimum positive amount,

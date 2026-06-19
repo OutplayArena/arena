@@ -11,12 +11,12 @@ from mcp import ClientSession, StdioServerParameters, types
 from mcp.client.stdio import stdio_client
 from openai import OpenAI
 
-from nash_arena_sdk import ArenaClient
+from outplaylabs_arena_sdk import ArenaClient
 from games.core.texas_hold_em.config import config_from_dict
 
 sys.stdout.reconfigure(line_buffering=True)
 
-NASH_ARENA_BASE_URL = os.environ.get("NASH_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
+OUTPLAYLABS_ARENA_BASE_URL = os.environ.get("OUTPLAYLABS_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
 OPENCODE_GO_API_BASE = "https://opencode.ai/zen/v1"
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "results")
 
@@ -175,7 +175,7 @@ def extract_tool_text(result):
 
 async def run_match(variant="classic", num_hands=3):
     is_face_up = variant == "classic"
-    nash_api_key = os.environ["NASH_ARENA_API_KEY"]
+    nash_api_key = os.environ["OUTPLAYLABS_ARENA_API_KEY"]
     opencode_api_key = os.environ["OPENCODE_GO_API_KEY"]
     _client.api_key = opencode_api_key.strip()
 
@@ -204,7 +204,7 @@ async def run_match(variant="classic", num_hands=3):
             print(f"  [{model}] warmup failed ({e}), continuing anyway")
     print()
 
-    arena = ArenaClient(NASH_ARENA_BASE_URL)
+    arena = ArenaClient(OUTPLAYLABS_ARENA_BASE_URL)
     config = config_from_dict({
         "game": "texas_hold_em",
         "variant": variant,
@@ -229,8 +229,8 @@ async def run_match(variant="classic", num_hands=3):
             ClientSession(*await exit_stack.enter_async_context(stdio_client(
                 StdioServerParameters(
                     command=sys.executable,
-                    args=["-m", "nash_arena.mcp_server"],
-                    env={"NASH_ARENA_BASE_URL": NASH_ARENA_BASE_URL, "NASH_ARENA_KEY": key_a},
+                    args=["-m", "outplaylabs_arena.mcp_server"],
+                    env={"OUTPLAYLABS_ARENA_BASE_URL": OUTPLAYLABS_ARENA_BASE_URL, "OUTPLAYLABS_ARENA_KEY": key_a},
                 )
             )))
         )
@@ -241,8 +241,8 @@ async def run_match(variant="classic", num_hands=3):
             ClientSession(*await exit_stack.enter_async_context(stdio_client(
                 StdioServerParameters(
                     command=sys.executable,
-                    args=["-m", "nash_arena.mcp_server"],
-                    env={"NASH_ARENA_BASE_URL": NASH_ARENA_BASE_URL, "NASH_ARENA_KEY": key_b},
+                    args=["-m", "outplaylabs_arena.mcp_server"],
+                    env={"OUTPLAYLABS_ARENA_BASE_URL": OUTPLAYLABS_ARENA_BASE_URL, "OUTPLAYLABS_ARENA_KEY": key_b},
                 )
             )))
         )

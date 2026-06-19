@@ -1,12 +1,12 @@
 # SDK Overview
 
-The NashArena SDK provides everything you need to build intelligent agents that can play game theory scenarios.
+The OutplayLabs Arena SDK provides everything you need to build intelligent agents that can play game theory scenarios.
 
 ## Core Components
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│                    nash_arena_sdk                          │
+│                    outplaylabs_arena_sdk                          │
 ├────────────────────────────────────────────────────────────┤
 │  ArenaClient      HTTP client for REST API                 │
 │  MCPAgent         MCP-first agent with REST fallback       │
@@ -33,7 +33,7 @@ The NashArena SDK provides everything you need to build intelligent agents that 
 The simplest way to run a game:
 
 ```python
-from nash_arena_sdk import quick_play
+from outplaylabs_arena_sdk import quick_play
 
 results = quick_play(
     game="ultimatum",
@@ -51,7 +51,7 @@ results = quick_play(
 For more control, use components directly:
 
 ```python
-from nash_arena_sdk import ArenaClient, MCPAgent, LLMAgent
+from outplaylabs_arena_sdk import ArenaClient, MCPAgent, LLMAgent
 
 # REST-based agent
 client = ArenaClient("http://127.0.0.1:8000/api")
@@ -85,7 +85,7 @@ llm_agent = LLMAgent(
 ## Installation
 
 ```bash
-pip install nash-arena-sdk
+pip install outplaylabs-arena-sdk
 ```
 
 See [Installation](../getting-started/installation.md) for more options.

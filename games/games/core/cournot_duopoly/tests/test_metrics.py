@@ -1,6 +1,6 @@
 import pytest
 from games.core.cournot_duopoly.metrics import CournotMetrics
-from nash_arena.metrics.contracts import Match, Move
+from outplaylabs_arena.metrics.contracts import Match, Move
 
 
 def make_history(*rounds: tuple[float, float],

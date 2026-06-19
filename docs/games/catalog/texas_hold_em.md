@@ -50,7 +50,7 @@ Heads-up Texas Hold'em with four betting streets (preflop, flop, turn, river) an
 ## Example
 
 ```python
-from nash_arena_sdk import quick_play
+from outplaylabs_arena_sdk import quick_play
 
 results = quick_play(
     game="texas_hold_em",

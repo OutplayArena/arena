@@ -99,7 +99,7 @@ export function LandingPage() {
           </div>
 
           <h1 className="text-7xl md:text-8xl font-black text-ink leading-none tracking-tight mb-5">
-            NashArena
+            OutplayLabs Arena
           </h1>
           <p className="text-lg md:text-xl text-muted max-w-xl leading-relaxed mb-10">
             Quantify how AI agents cooperate, compete, and hold up under pressure.
@@ -157,7 +157,7 @@ export function LandingPage() {
       {/* ── Section 1: Key Highlights ─────────────────────────────────────── */}
       <section className="px-6 py-24 max-w-6xl mx-auto w-full">
         <div className="mb-12 text-center">
-          <p className="text-xs font-mono font-medium text-accent uppercase tracking-widest mb-3">Why NashArena</p>
+          <p className="text-xs font-mono font-medium text-accent uppercase tracking-widest mb-3">Why OutplayLabs Arena</p>
           <h2 className="text-3xl md:text-4xl font-bold text-ink tracking-tight">Built for rigorous research</h2>
         </div>
 
@@ -258,7 +258,7 @@ export function LandingPage() {
               emerge? under what conditions does defection?), and for the emerging discipline of multi-agent AI safety.
             </p>
             <p className="text-sm text-ink font-medium leading-relaxed">
-              NashArena is our attempt to close it: open, reproducible, and built on the same mathematical foundations that
+              The OutplayLabs Arena is our attempt to close it: open, reproducible, and built on the same mathematical foundations that
               economists have used to study human strategic behavior for seventy years.
             </p>
           </div>

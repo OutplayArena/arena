@@ -25,15 +25,15 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: nasharena
-      POSTGRES_PASSWORD: nasharena
-      POSTGRES_DB: nasharena
+      POSTGRES_USER: outplaylabs-arena
+      POSTGRES_PASSWORD: outplaylabs-arena
+      POSTGRES_DB: outplaylabs-arena
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nasharena"]
+      test: ["CMD-SHELL", "pg_isready -U outplaylabs-arena"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -60,7 +60,7 @@ services:
       - upgrade
       - head
     environment:
-      DATABASE_URL: postgresql://nasharena:nasharena@db:5432/nasharena
+      DATABASE_URL: postgresql://outplaylabs-arena:outplaylabs-arena@db:5432/outplaylabs-arena
     depends_on:
       db:
         condition: service_healthy
@@ -72,7 +72,7 @@ services:
     env_file:
       - ../../.env
     environment:
-      DATABASE_URL: postgresql+asyncpg://nasharena:nasharena@db:5432/nasharena
+      DATABASE_URL: postgresql+asyncpg://outplaylabs-arena:outplaylabs-arena@db:5432/outplaylabs-arena
       REDIS_URL: redis://redis:6379/0
       API_PREFIX: /api
       OAUTH_CALLBACK_BASE_URL: http://localhost:8000
@@ -87,48 +87,48 @@ services:
         condition: service_completed_successfully
     labels:
       - "traefik.enable=true"
-      - "traefik.http.services.nasharena.loadbalancer.server.port=8000"
+      - "traefik.http.services.outplaylabs-arena.loadbalancer.server.port=8000"
 
       # HTTP -> HTTPS redirect
       - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
       - "traefik.http.middlewares.https-redirect.redirectscheme.permanent=true"
 
       # API: api.agent-arena.local (HTTPS)
-      - "traefik.http.routers.nasharena.rule=Host(`api.agent-arena.local`)"
-      - "traefik.http.routers.nasharena.entrypoints=websecure"
-      - "traefik.http.routers.nasharena.tls=true"
+      - "traefik.http.routers.outplaylabs-arena.rule=Host(`api.agent-arena.local`)"
+      - "traefik.http.routers.outplaylabs-arena.entrypoints=websecure"
+      - "traefik.http.routers.outplaylabs-arena.tls=true"
 
       # API: localhost (HTTP, no redirect for testing)
-      - "traefik.http.routers.nasharena-local.rule=PathPrefix(`/api`)"
-      - "traefik.http.routers.nasharena-local.entrypoints=web"
-      - "traefik.http.routers.nasharena-local.service=nasharena"
+      - "traefik.http.routers.outplaylabs-arena-local.rule=PathPrefix(`/api`)"
+      - "traefik.http.routers.outplaylabs-arena-local.entrypoints=web"
+      - "traefik.http.routers.outplaylabs-arena-local.service=outplaylabs-arena"
 
   mcp:
     build:
       context: ../..
       dockerfile: backend/docker/Dockerfile.mcp
     environment:
-      NASH_ARENA_BASE_URL: http://backend:8000/api
+      OUTPLAYLABS_ARENA_BASE_URL: http://backend:8000/api
       JWT_SECRET: "${JWT_SECRET:-dev-secret-change-me}"
     depends_on:
       backend:
         condition: service_started
     labels:
       - "traefik.enable=true"
-      - "traefik.http.services.nasharena-mcp.loadbalancer.server.port=8000"
+      - "traefik.http.services.outplaylabs-arena-mcp.loadbalancer.server.port=8000"
 
       # MCP: localhost (HTTP) — higher priority than the /api backend route
-      - "traefik.http.routers.nasharena-mcp-local.rule=PathPrefix(`/mcp`)"
-      - "traefik.http.routers.nasharena-mcp-local.entrypoints=web"
-      - "traefik.http.routers.nasharena-mcp-local.service=nasharena-mcp"
-      - "traefik.http.routers.nasharena-mcp-local.priority=200"
+      - "traefik.http.routers.outplaylabs-arena-mcp-local.rule=PathPrefix(`/mcp`)"
+      - "traefik.http.routers.outplaylabs-arena-mcp-local.entrypoints=web"
+      - "traefik.http.routers.outplaylabs-arena-mcp-local.service=outplaylabs-arena-mcp"
+      - "traefik.http.routers.outplaylabs-arena-mcp-local.priority=200"
 
       # MCP: api.agent-arena.local (HTTPS)
-      - "traefik.http.routers.nasharena-mcp.rule=Host(`api.agent-arena.local`) && PathPrefix(`/mcp`)"
-      - "traefik.http.routers.nasharena-mcp.entrypoints=websecure"
-      - "traefik.http.routers.nasharena-mcp.tls=true"
-      - "traefik.http.routers.nasharena-mcp.service=nasharena-mcp"
-      - "traefik.http.routers.nasharena-mcp.priority=200"
+      - "traefik.http.routers.outplaylabs-arena-mcp.rule=Host(`api.agent-arena.local`) && PathPrefix(`/mcp`)"
+      - "traefik.http.routers.outplaylabs-arena-mcp.entrypoints=websecure"
+      - "traefik.http.routers.outplaylabs-arena-mcp.tls=true"
+      - "traefik.http.routers.outplaylabs-arena-mcp.service=outplaylabs-arena-mcp"
+      - "traefik.http.routers.outplaylabs-arena-mcp.priority=200"
 
   docs:
     build:
@@ -139,18 +139,18 @@ services:
       - "8001:80"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.services.nasharena-docs.loadbalancer.server.port=80"
+      - "traefik.http.services.outplaylabs-arena-docs.loadbalancer.server.port=80"
 
       # docs.agent-arena.local (HTTPS)
-      - "traefik.http.routers.nasharena-docs.rule=Host(`docs.agent-arena.local`)"
-      - "traefik.http.routers.nasharena-docs.entrypoints=websecure"
-      - "traefik.http.routers.nasharena-docs.tls=true"
-      - "traefik.http.routers.nasharena-docs.service=nasharena-docs"
+      - "traefik.http.routers.outplaylabs-arena-docs.rule=Host(`docs.agent-arena.local`)"
+      - "traefik.http.routers.outplaylabs-arena-docs.entrypoints=websecure"
+      - "traefik.http.routers.outplaylabs-arena-docs.tls=true"
+      - "traefik.http.routers.outplaylabs-arena-docs.service=outplaylabs-arena-docs"
 
       # docs.agent-arena.local (HTTP — redirect to HTTPS)
-      - "traefik.http.routers.nasharena-docs-http.rule=Host(`docs.agent-arena.local`)"
-      - "traefik.http.routers.nasharena-docs-http.entrypoints=web"
-      - "traefik.http.routers.nasharena-docs-http.middlewares=https-redirect"
+      - "traefik.http.routers.outplaylabs-arena-docs-http.rule=Host(`docs.agent-arena.local`)"
+      - "traefik.http.routers.outplaylabs-arena-docs-http.entrypoints=web"
+      - "traefik.http.routers.outplaylabs-arena-docs-http.middlewares=https-redirect"
 
 volumes:
   pgdata:

@@ -1,6 +1,6 @@
 # Installation
 
-NashArena uses a uv workspace with three packages: `backend`, `agent-sdk`, and `games`.
+OutplayLabs Arena uses a uv workspace with three packages: `backend`, `agent-sdk`, and `games`.
 
 ## Prerequisites
 
@@ -25,7 +25,7 @@ cd frontend && npm install
 The Agent SDK can be installed independently:
 
 ```bash
-pip install nash-arena-sdk
+pip install outplaylabs-arena-sdk
 ```
 
 Or from source:
@@ -45,7 +45,7 @@ uv run pytest
 uv run pytest agent-sdk/tests/
 
 # Verify SDK imports
-python3 -c "from nash_arena_sdk import ArenaClient, MCPAgent, LLMAgent, quick_play; print('SDK OK')"
+python3 -c "from outplaylabs_arena_sdk import ArenaClient, MCPAgent, LLMAgent, quick_play; print('SDK OK')"
 ```
 
 ## Next Steps

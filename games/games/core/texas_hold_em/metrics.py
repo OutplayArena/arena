@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from nash_arena.game_components.game_metrics import GameMetrics
-from nash_arena.metrics.extension import GameMetricsExtension
+from outplaylabs_arena.game_components.game_metrics import GameMetrics
+from outplaylabs_arena.metrics.extension import GameMetricsExtension
 
 
 def _rate(actions: list[str], target: str) -> float:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 
-from nash_arena.game_components.game_agent import GameAgent
+from outplaylabs_arena.game_components.game_agent import GameAgent
 
 MOVES = ("fold", "check", "call", "raise")
 

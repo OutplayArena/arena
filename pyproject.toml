@@ -2,6 +2,7 @@
 members = ["backend", "agent-sdk"]
 
 [tool.pytest.ini_options]
+addopts = "-m 'not e2e'"
 testpaths = ["backend/tests", "agent-sdk/tests", "games"]
 markers = [
     "e2e: end-to-end tests that require a live minikube cluster (deselect with -m 'not e2e')",

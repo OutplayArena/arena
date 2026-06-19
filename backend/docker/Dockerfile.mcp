@@ -7,7 +7,7 @@ COPY agent-sdk/src/ agent-sdk/src/
 COPY backend/pyproject.toml pyproject.toml
 COPY README.md agent-sdk/README.md
 COPY README.md ../README.md
-COPY backend/nash_arena/ nash_arena/
+COPY backend/outplaylabs_arena/ outplaylabs_arena/
 COPY games/ games/
 
 RUN pip install --no-cache-dir ./agent-sdk && pip install --no-cache-dir ./games && pip install --no-cache-dir .
@@ -17,4 +17,4 @@ ENV FASTMCP_PORT=8000
 
 EXPOSE 8000
 
-CMD ["python3", "-m", "nash_arena.mcp_server"]
+CMD ["python3", "-m", "outplaylabs_arena.mcp_server"]

@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "outplaylabs-arena.fullname" . }}-docs
+  labels:
+    {{- include "outplaylabs-arena.labels" . | nindent 4 }}
+    app.kubernetes.io/component: docs
+spec:
+  replicas: {{ .Values.docs.replicas }}
+  selector:
+    matchLabels:
+      {{- include "outplaylabs-arena.docs.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "outplaylabs-arena.docs.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: docs
+          image: "{{ .Values.docs.image.repository }}:{{ .Values.docs.image.tag }}"
+          imagePullPolicy: {{ .Values.docs.image.pullPolicy }}
+          ports:
+            - containerPort: 80
+              name: http
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.docs.resources | nindent 12 }}

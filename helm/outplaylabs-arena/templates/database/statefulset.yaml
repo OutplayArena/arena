@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "outplaylabs-arena.fullname" . }}-db
+  labels:
+    {{- include "outplaylabs-arena.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  serviceName: {{ include "outplaylabs-arena.fullname" . }}-db
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "outplaylabs-arena.database.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "outplaylabs-arena.database.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: postgresql
+          image: {{ .Values.database.image }}
+          ports:
+            - containerPort: 5432
+              name: postgresql
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.database.user }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "outplaylabs-arena.fullname" . }}-db
+                  key: password
+            - name: POSTGRES_DB
+              value: {{ .Values.database.database }}
+            - name: POSTGRES_HOST_AUTH_METHOD
+              value: md5
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.database.user }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.database.user }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.database.resources | nindent 12 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .Values.database.storage }}
+        {{- if .Values.database.storageClassName }}
+        storageClassName: {{ .Values.database.storageClassName }}
+        {{- end }}
+        {{- if .Values.database.volumeName }}
+        volumeName: {{ .Values.database.volumeName }}
+        {{- end }}
