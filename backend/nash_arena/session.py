@@ -45,6 +45,7 @@ class GameSession:
     status: str = "ready"
     error_message: str | None = None
     locked: bool = False
+    messages: list[dict] | None = None
     runtime_config: ExperimentRuntimeConfig | None = None
     wandb_logger: WandbGameLogger | None = None
     wandb_finished: bool = False
@@ -102,6 +103,7 @@ class GameSession:
             status=row.status,
             error_message=row.error_message,
             locked=row.locked,
+            messages=row.messages_json or [],
         )
 
     async def save_new(self, db: AsyncSession, user_id: str | None = None, agents: dict[str, str] | None = None) -> None:
@@ -113,6 +115,7 @@ class GameSession:
             player_tokens_json=self.player_tokens,
             user_id=user_id,
             agents_json=agents,
+            messages_json=self._get_serialized_messages(),
             status=self.status,
             error_message=self.error_message,
             locked=self.locked,
@@ -127,10 +130,16 @@ class GameSession:
         if row:
             row.state_json = _serialize_state(self.state)
             row.player_tokens_json = self.player_tokens
+            row.messages_json = self._get_serialized_messages()
             row.status = self.status
             row.error_message = self.error_message
             row.locked = self.locked
             await db.commit()
+
+    def _get_serialized_messages(self) -> list[dict]:
+        state_msgs = self.game.communication_log(self.state)
+        self.messages = state_msgs
+        return state_msgs
 
     def public_state(self):
         return self.game.public_state(
@@ -245,6 +254,43 @@ class GameSession:
             self._update_status_from_state()
         else:
             self.submit_action(player, allocation)
+
+    def send_communication(self, token: str, to_player: str | None, content: str) -> dict:
+        state_dict = _serialize_state(self.state)
+        if state_dict.get("phase") == "complete":
+            raise ValueError("game already complete")
+        player = self.player_for_token(token)
+
+        self.state = self.game.apply_communication(
+            self.state, from_player=player, to_player=to_player, content=content,
+        )
+        return {
+            "status": "sent",
+            "from_player": player,
+            "to_player": to_player,
+        }
+
+    def get_communication_log(self, token: str | None = None) -> list[dict]:
+        if token is not None:
+            player = self.player_for_token(token)
+            return self.game.communication_log(self.state, player=player)
+        return self.game.communication_log(self.state)
+
+    def get_mailbox(self, player: str | None = None) -> list[dict]:
+        msgs = self.messages or self.game.communication_log(self.state)
+        if player:
+            msgs = [
+                m for m in msgs
+                if m.get("to_player") is None
+                or m.get("to_player") == player
+                or m.get("from_player") == player
+                or m.get("recipient") == "all"
+                or m.get("recipient") == player
+            ]
+        return msgs
+
+    def get_communication_config(self) -> dict:
+        return self.game.communication_config().to_dict()
 
     def _log_latest_round_to_wandb(self):
         if self.wandb_logger is None:

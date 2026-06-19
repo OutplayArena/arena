@@ -115,6 +115,19 @@ class GameRegistry:
     ) -> dict:
         ctx = {**config, **state}
 
+        messages = state.get("messages", [])
+        if isinstance(messages, list):
+            if messages and isinstance(messages[0], dict):
+                rendered = "\n".join(
+                    f"  [{m.get('from_player', m.get('sender', '?'))} → {m.get('to_player', m.get('recipient', 'all'))}]: {m.get('content', '')}"
+                    for m in messages[-10:]
+                )
+            else:
+                rendered = str(messages)
+            ctx["messages"] = rendered
+        else:
+            ctx["messages"] = ""
+
         all_players = list(state.get("total_scores", {}).keys())
         opp_id = next((p for p in all_players if p != player_id), None)
         total_scores = state.get("total_scores", {})
@@ -280,6 +293,15 @@ class GameRegistry:
         if not isinstance(data, dict):
             raise GameRegistryError(f"invalid game file: {path}")
         return data
+
+    def get_game_communication(self, name: str) -> dict:
+        """Get communication configuration for a game."""
+        game_data = self.get_game(name)
+        comm_data = game_data.get("communication", {})
+        from nash_arena.game_components.communication import CommunicationConfig
+        config = CommunicationConfig.from_dict(comm_data if isinstance(comm_data, dict) else {})
+        result = config.to_dict()
+        return result
 
     def _summary(self, metadata: dict, slug: str) -> dict:
         return {

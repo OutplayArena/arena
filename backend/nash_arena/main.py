@@ -68,6 +68,11 @@ class ActionRequest(BaseModel):
     forfeit: bool = False
 
 
+class CommunicateRequest(BaseModel):
+    to_player: str | None = None
+    content: str
+
+
 class UserResponse(BaseModel):
     id: str
     email: str
@@ -325,6 +330,93 @@ async def submit_action(
 
     await session.save_state(db)
     return session.public_state()
+
+
+@app.get(f"{API_PREFIX}/games/{{name}}/communication")
+def get_game_communication(name: str):
+    """Get communication configuration for a specific game."""
+    try:
+        return GAME_REGISTRY.get_game_communication(name)
+    except GameRegistryError as exc:
+        raise game_registry_error(exc) from exc
+
+
+@app.post(f"{API_PREFIX}/session/{{session_id}}/communicate")
+async def send_communication(
+    session_id: str,
+    request: CommunicateRequest,
+    db: AsyncSession = Depends(get_db),
+    authorization: str | None = Header(default=None),
+    _: None = require_agent_api(),
+):
+    """Send a message to another player in the game session."""
+    session = await get_session(session_id, db)
+    token = bearer_token(authorization)
+
+    try:
+        result = session.send_communication(token, request.to_player, request.content)
+    except ValueError as exc:
+        raise action_error(exc) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    await session.save_state(db)
+    return result
+
+
+@app.get(f"{API_PREFIX}/session/{{session_id}}/messages")
+async def get_messages(
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    authorization: str | None = Header(default=None),
+    _: None = require_agent_api(),
+):
+    """Get the communication log for the current player in a session."""
+    session = await get_session(session_id, db)
+
+    if authorization:
+        token = bearer_token(authorization)
+        try:
+            return {"messages": session.get_communication_log(token=token)}
+        except ValueError:
+            pass
+
+    return {"messages": session.get_communication_log()}
+
+
+@app.get(f"{API_PREFIX}/session/{{session_id}}/mailbox/messages")
+async def get_mailbox_messages(
+    session_id: str,
+    player: str | None = Query(default=None, description="Player ID to filter visible messages"),
+    db: AsyncSession = Depends(get_db),
+    _: None = require_agent_api(),
+):
+    """Get mailbox messages for a session (alias for /messages, compatible API)."""
+    session = await get_session(session_id, db)
+    return {"messages": session.get_mailbox(player=player)}
+
+
+@app.post(f"{API_PREFIX}/session/{{session_id}}/mailbox/send")
+async def send_mailbox_message(
+    session_id: str,
+    request: CommunicateRequest,
+    db: AsyncSession = Depends(get_db),
+    authorization: str | None = Header(default=None),
+    _: None = require_agent_api(),
+):
+    """Send a mailbox message (alias for /communicate, compatible API)."""
+    session = await get_session(session_id, db)
+    token = bearer_token(authorization)
+
+    try:
+        result = session.send_communication(token, request.to_player, request.content)
+    except ValueError as exc:
+        raise action_error(exc) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    await session.save_state(db)
+    return result
 
 
 @app.get(f"{API_PREFIX}/session/{{session_id}}/results")
