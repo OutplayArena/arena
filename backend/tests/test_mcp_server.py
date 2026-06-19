@@ -34,6 +34,15 @@ class FakeClient:
     def get_game_prompts(self, game):
         return {"game": game, "action_format": {"type": "json_array"}}
 
+    def get_mailbox(self, player):
+        return [
+            {"id": "1", "sender": "A", "recipient": "all", "content": "Let's cooperate", "round": 1},
+            {"id": "2", "sender": "B", "recipient": "A", "content": "I'll think about it", "round": 1},
+        ]
+
+    def send_message(self, content, recipient="all"):
+        return {"status": "sent", "content": content, "recipient": recipient}
+
 
 def test_required_env_returns_value(monkeypatch):
     monkeypatch.setenv("NASH_ARENA_KEY", "nks_testkey")
@@ -130,3 +139,34 @@ def test_game_directory_tools_call_client(monkeypatch):
         "game": "colonelblotto",
         "action_format": {"type": "json_array"},
     }
+
+
+def test_get_mailbox_calls_client_with_player(monkeypatch):
+    session_key = derive_session_key("session-1", "A")
+    monkeypatch.setenv("NASH_ARENA_KEY", session_key)
+    fake = FakeClient()
+    monkeypatch.setattr(mcp_server, "arena_client", lambda: fake)
+
+    result = mcp_server.get_mailbox()
+
+    assert len(result) == 2
+    assert result[0]["sender"] == "A"
+    assert result[1]["recipient"] == "A"
+
+
+def test_send_message_calls_client(monkeypatch):
+    fake = FakeClient()
+    monkeypatch.setattr(mcp_server, "arena_client", lambda: fake)
+
+    result = mcp_server.send_message("Let's cooperate", "all")
+
+    assert result == {"status": "sent", "content": "Let's cooperate", "recipient": "all"}
+
+
+def test_send_message_with_specific_recipient(monkeypatch):
+    fake = FakeClient()
+    monkeypatch.setattr(mcp_server, "arena_client", lambda: fake)
+
+    result = mcp_server.send_message("Private message", "B")
+
+    assert result["recipient"] == "B"

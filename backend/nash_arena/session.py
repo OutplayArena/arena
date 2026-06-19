@@ -46,6 +46,7 @@ class GameSession:
     error_message: str | None = None
     locked: bool = False
     agents: dict[str, str] | None = None
+    messages: list[dict] | None = None
     runtime_config: ExperimentRuntimeConfig | None = None
     wandb_logger: WandbGameLogger | None = None
     wandb_finished: bool = False
@@ -104,6 +105,7 @@ class GameSession:
             error_message=row.error_message,
             locked=row.locked,
             agents=row.agents_json,
+            messages=row.messages_json,
         )
 
     async def save_new(self, db: AsyncSession, user_id: str | None = None, agents: dict[str, str] | None = None) -> None:
@@ -118,6 +120,7 @@ class GameSession:
             status=self.status,
             error_message=self.error_message,
             locked=self.locked,
+            messages_json=self.messages or [],
         )
         db.add(row)
         await db.commit()
@@ -135,12 +138,32 @@ class GameSession:
             await db.commit()
 
     def public_state(self):
-        return self.game.public_state(
+        result = self.game.public_state(
             state=self.state,
             config=self.config,
             session_id=self.session_id,
             config_hash=self.config_hash,
         )
+        result["messages"] = self.messages or []
+        return result
+
+    def add_message(self, sender: str, content: str, recipient: str = "all") -> dict:
+        """Add a mailbox message to the session."""
+        if self.messages is None:
+            self.messages = []
+        
+        state_dict = _serialize_state(self.state)
+        round_number = state_dict.get("round_number", 0)
+        
+        msg = {
+            "id": str(uuid.uuid4()),
+            "sender": sender,
+            "recipient": recipient,
+            "content": content,
+            "round": round_number,
+        }
+        self.messages.append(msg)
+        return msg
 
     def submit_action(self, player, allocation):
         before_history_len = len(self.state.history)

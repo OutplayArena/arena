@@ -87,6 +87,35 @@ def get_game_prompts(game: str) -> dict:
     """Get default prompt templates and action format for a game."""
     return arena_client().get_game_prompts(game)
 
+
+@mcp.tool()
+def get_mailbox() -> list[dict]:
+    """
+    Read mailbox messages visible to you.
+
+    Returns messages you sent, received, or broadcasts. Each message has:
+    id, sender, recipient, content, round, created_at.
+
+    Use strategically — you may read to understand opponent intent or detect deception.
+    """
+    return arena_client().get_mailbox(player_id())
+
+
+@mcp.tool()
+def send_message(content: str, recipient: str = "all") -> dict:
+    """
+    Send a message to opponent(s) via mailbox.
+
+    Use strategically — you may send honest signals or decoys.
+    Like sending an email: the recipient sees your message, but your true
+    intentions remain private.
+
+    content: Message text (max 200 characters).
+    recipient: Target player ID or "all" for broadcast (default).
+    """
+    return arena_client().send_message(content=content, recipient=recipient)
+
+
 if __name__ == "__main__":
     transport = os.environ.get("MCP_TRANSPORT", "stdio")
     mount_path = os.environ.get("MCP_MOUNT_PATH")

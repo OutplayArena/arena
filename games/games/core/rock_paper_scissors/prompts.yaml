@@ -4,6 +4,13 @@ system: >
   Rock beats scissors, scissors beats paper, paper beats rock.
   Win = +1, tie = 0, loss = -1.
 
+  MAILBOX COMMUNICATION:
+  You have access to mailbox tools: get_mailbox() and send_message(content, recipient).
+  Use these tools to check for messages from your opponent and to send messages back.
+  At the start of each turn, call get_mailbox() to read incoming messages.
+  Consider whether sending a message could benefit your strategy.
+  Communication can increase your payoff and utility.
+
 turn: >
   Round {{ round }} of {{ round_total }}.
   Your current score: {{ my_score }}.
@@ -11,6 +18,7 @@ turn: >
   Previous rounds:
   {{ history }}
 
+  Before acting: use your mailbox tools. Communication can increase your payoff.
   Respond with exactly one word: rock, paper, or scissors.
 
 action_format:

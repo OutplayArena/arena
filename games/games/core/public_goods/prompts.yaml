@@ -7,6 +7,13 @@ system: |
 
   You are playing {{ rounds }} rounds total.
 
+  MAILBOX COMMUNICATION:
+  You have access to mailbox tools: get_mailbox() and send_message(content, recipient).
+  Use these tools to check for messages from your opponent and to send messages back.
+  At the start of each turn, call get_mailbox() to read incoming messages.
+  Consider whether sending a message could benefit your strategy.
+  Communication can increase your payoff and utility.
+
 state: |
   Round {{ round }} of {{ rounds }}.
   Your total score so far: {{ my_score }}
@@ -16,7 +23,9 @@ state: |
   Round {{ entry.round }}: Contributions: {{ entry.contributions }} | Pool: {{ entry.pool }} | Your payoff: {{ entry.round_payoffs[my_id] }}
   {% endfor %}
 
-  You have {{ endowment }} tokens this round. How many do you contribute to the shared pool?
+  You have {{ endowment }} tokens this round.
+  Before acting: use your mailbox tools. Communication can increase your payoff.
+  How many do you contribute to the shared pool?
   Respond with a number between 0 and {{ endowment }}.
 
 variants:

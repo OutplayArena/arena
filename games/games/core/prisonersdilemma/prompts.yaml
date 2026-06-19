@@ -8,6 +8,13 @@ system: >
   - You cooperate, opponent defects (CD): you get {{ payoff_S }}, opponent gets {{ payoff_T }}
   - Both defect (DD): you get {{ payoff_P }}, opponent gets {{ payoff_P }}
 
+  MAILBOX COMMUNICATION:
+  You have access to mailbox tools: get_mailbox() and send_message(content, recipient).
+  Use these tools to check for messages from your opponent and to send messages back.
+  At the start of each turn, call get_mailbox() to read incoming messages.
+  Consider whether sending a message could benefit your strategy.
+  Communication can increase your payoff and utility.
+
 turn: >
   Round {{ round }} of {{ round_total }}.
   Your current score: {{ my_score }}.
@@ -15,6 +22,7 @@ turn: >
   Previous rounds:
   {{ history }}
 
+  Before acting: use your mailbox tools. Communication can increase your payoff.
   Choose your action: cooperate or defect.
 
 action_format:

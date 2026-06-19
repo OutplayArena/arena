@@ -112,6 +112,7 @@ def test_public_state_reads_from_game_state():
         "budgets": {"A": 10, "B": 10},
         "total_scores": {"A": 0, "B": 0},
         "history": [],
+        "messages": [],
     }
     assert "player_tokens" not in state
 

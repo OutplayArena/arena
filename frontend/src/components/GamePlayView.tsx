@@ -4,7 +4,7 @@ import { TabBar } from "./TabBar";
 import { AutoConfigForm } from "./AutoConfigForm";
 import { AutoHistoryView } from "./AutoHistoryView";
 import { loadLiveView, loadConfigForm, loadHistoryView, loadPlayView } from "../games/registry";
-import type { GameMetadata, Match } from "../types";
+import type { GameMetadata, Match, MailboxMessage } from "../types";
 import { useApp } from "../hooks/useApp";
 import { AppProvider } from "../state";
 import type { AnimatedScores } from "../hooks/useCanvasRenderer";
@@ -13,6 +13,7 @@ import { chooseAction } from "../agents";
 import { copyToClipboard, resultToMatch } from "./utils";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { SchemaPlayPanel } from "./SchemaPlayPanel";
+import { MailboxPanel } from "./MailboxPanel";
 import type { RunConfig, PlayerSide } from "../types";
 
 interface GamePlayViewProps {
@@ -65,6 +66,7 @@ function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch
   }
   const [customUIMod, setCustomUIMod] = useState<{ live?: ComponentType<Record<string, unknown>>; config?: ComponentType<Record<string, unknown>>; history?: ComponentType<Record<string, unknown>>; play?: ComponentType<Record<string, unknown>> }>({});
   const [canvasCollapsed, setCanvasCollapsed] = useState(false);
+  const [mailboxCollapsed, setMailboxCollapsed] = useState(false);
   const loadedRef = useRef(false);
   const gameLoopRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -517,6 +519,27 @@ function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch
             ) : (
               <SchemaPlayPanel onGameEnd={() => setActiveTab("history")} />
             )}
+            {isInteractiveGame && state.pendingGame && (() => {
+              const pg = state.pendingGame;
+              const humanPlayer = Object.entries(pg.agentIds ?? {}).find(([, id]) => id === "interactive")?.[0]
+                ?? (pg.agentAId === "interactive" ? "A" : pg.agentBId === "interactive" ? "B" : null);
+              const allPlayers = pg.agentIds ? Object.keys(pg.agentIds) : ["A", "B"];
+              const messages = (state.activeMatch?.currentState?.messages as MailboxMessage[]) ?? [];
+              const token = humanPlayer && pg.tokens ? pg.tokens[humanPlayer] : null;
+              if (!humanPlayer || !token) return null;
+              return (
+                <MailboxPanel
+                  sessionId={pg.sessionId}
+                  playerToken={token}
+                  humanPlayer={humanPlayer}
+                  allPlayers={allPlayers}
+                  messages={messages}
+                  disabled={isGameComplete}
+                  collapsed={mailboxCollapsed}
+                  onToggleCollapse={() => setMailboxCollapsed((c) => !c)}
+                />
+              );
+            })()}
           </div>
         )}
         {activeTab === "live" && showLiveViewTab && (

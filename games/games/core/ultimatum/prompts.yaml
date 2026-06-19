@@ -5,6 +5,13 @@ system: |
   If rejected: both players receive 0 for that round.
   Roles alternate each round.
 
+  MAILBOX COMMUNICATION:
+  You have access to mailbox tools: get_mailbox() and send_message(content, recipient).
+  Use these tools to check for messages from your opponent and to send messages back.
+  At the start of each turn, call get_mailbox() to read incoming messages.
+  Consider whether sending a message could benefit your strategy.
+  Communication can increase your payoff and utility.
+
 proposer_state: |
   Round {{ round }} of {{ rounds }}. You are the PROPOSER.
   Your total score: {{ my_score }} | Opponent's score: {{ opp_score }}
@@ -14,6 +21,7 @@ proposer_state: |
   Round {{ entry.round }}: {{ "You" if entry.proposer == my_id else "Opponent" }} proposed {{ entry.offer }} ({{ "%.0f"|format(entry.offer_fraction * 100) }}%) → {{ entry.response }}
   {% endfor %}
 
+  Before acting: use your mailbox tools. Communication can increase your payoff.
   How many points do you offer the responder? (0 to {{ total }})
   Respond with a number.
 
@@ -27,6 +35,7 @@ responder_state: |
   Round {{ entry.round }}: {{ "You" if entry.proposer == my_id else "Opponent" }} proposed {{ entry.offer }} → {{ entry.response }}
   {% endfor %}
 
+  Before acting: use your mailbox tools. Communication can increase your payoff.
   Do you accept or reject this offer?
   Respond with exactly one word: accept or reject.
 

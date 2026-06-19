@@ -13,6 +13,13 @@ system: |
 
   You are playing {{ rounds }} rounds total.
 
+  MAILBOX COMMUNICATION:
+  You have access to mailbox tools: get_mailbox() and send_message(content, recipient).
+  Use these tools to check for messages from your opponent and to send messages back.
+  At the start of each turn, call get_mailbox() to read incoming messages.
+  Consider whether sending a message could benefit your strategy.
+  Communication can increase your payoff and utility.
+
 state: |
   Round {{ round }} of {{ rounds }}.
   Your total score so far: {{ my_score }}
@@ -23,6 +30,7 @@ state: |
   Round {{ entry.round }}: You played {{ entry.actions[my_id] }}, opponent played {{ entry.actions[opp_id] }} → you earned {{ entry.payoffs[my_id] }}
   {% endfor %}
 
+  Before acting: use your mailbox tools. Communication can increase your payoff.
   What do you choose this round? Respond with exactly one word: stag or hare.
 
 variants:
