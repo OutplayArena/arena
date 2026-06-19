@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from nash_arena.db import get_db, async_session as _async_session_factory
 from nash_arena.experiment_config import split_runtime_config
 from nash_arena.game_registry import GameRegistry, GameRegistryError
+from nash_arena.manifest import build_agent_manifest
 from nash_arena.messaging import RedisBroker, StatePersister, MessageLogger
 from nash_arena.messaging.broker import MessageBroker
 from nash_arena.metrics import AgentRegistry, get_global_registry, set_global_registry, MatchEvaluator, load_registry, save_registry
@@ -223,6 +224,32 @@ def get_game_agents(name: str):
     """Get registered agents for a specific game."""
     try:
         return GAME_REGISTRY.get_game_agents(name)
+    except GameRegistryError as exc:
+        raise game_registry_error(exc) from exc
+
+
+@app.get(f"{API_PREFIX}/games/{{name}}/skill")
+def get_game_skill(name: str):
+    """Get the strategy skill/guide for a game (parsed sections)."""
+    try:
+        return GAME_REGISTRY.get_game_skill(name, structured=True)
+    except GameRegistryError as exc:
+        raise game_registry_error(exc) from exc
+
+
+@app.get(f"{API_PREFIX}/games/{{name}}/manifest")
+def get_game_manifest(name: str, request: Request):
+    """Get a downloadable agent manifest for a game.
+
+    Returns tool definitions (MCP + OpenAI function-calling), game lifecycle,
+    action format, strategy guide, and examples. Public — no auth required.
+    """
+    try:
+        return build_agent_manifest(
+            game_name=name,
+            registry=GAME_REGISTRY,
+            mcp_url=MCP_ENDPOINT,
+        )
     except GameRegistryError as exc:
         raise game_registry_error(exc) from exc
 

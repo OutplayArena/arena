@@ -33,6 +33,36 @@ class GameRegistryError(ValueError):
     pass
 
 
+def _parse_skill_markdown(game_slug: str, content: str) -> dict:
+    sections: dict[str, str] = {}
+    current_key = "introduction"
+    current_lines: list[str] = []
+    title = ""
+
+    for raw in content.strip().split("\n"):
+        line = raw.rstrip()
+        if line.startswith("## "):
+            if current_lines:
+                sections[current_key] = "\n".join(current_lines).strip()
+                current_lines = []
+            current_key = line[3:].strip().lower().replace(" ", "_")
+        elif line.startswith("# ") and not title:
+            title = line[2:].strip()
+        else:
+            current_lines.append(raw)
+
+    if current_lines:
+        sections[current_key] = "\n".join(current_lines).strip()
+
+    sections.setdefault("introduction", "")
+
+    return {
+        "game": game_slug,
+        "title": title,
+        "sections": sections,
+    }
+
+
 def _has_ui_component(game_dir: Path, name: str) -> bool:
     return (game_dir / "ui" / f"{name}.tsx").exists()
 
@@ -192,12 +222,15 @@ class GameRegistry:
             return self._load_yaml(agents_yaml)
         return {"agents": []}
 
-    def get_game_skill(self, name: str) -> str:
+    def get_game_skill(self, name: str, structured: bool = False) -> str | dict:
         game_dir = self._game_dir(name)
         skill_path = game_dir / "skill.md"
         if not skill_path.exists():
             raise GameRegistryError(f"skill not found for game: {name}")
-        return skill_path.read_text(encoding="utf-8")
+        raw = skill_path.read_text(encoding="utf-8")
+        if not structured:
+            return raw
+        return _parse_skill_markdown(name, raw)
 
     def config_from_request(self, payload: dict):
         game = payload.get("game")

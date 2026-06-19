@@ -365,6 +365,48 @@ class ArenaClient:
         )
         return self._json_or_raise(response)
 
+    def get_game_skill(self, game: str) -> dict:
+        """Get the strategy skill/guide for a specific game (parsed sections).
+
+        Args:
+            game: Game slug (e.g., "colonelblotto", "prisonersdilemma").
+
+        Returns:
+            Dictionary containing:
+            - game: Game slug
+            - title: Skill title
+            - sections: Dict of parsed markdown sections
+
+        Raises:
+            httpx.HTTPStatusError: If the game is not found or request fails.
+        """
+        response = self.http_client.get(
+            f"{self.base_url}/games/{game}/skill",
+            timeout=self.timeout,
+        )
+        return self._json_or_raise(response)
+
+    def get_agent_manifest(self, game: str) -> dict:
+        """Get a downloadable agent manifest for a game.
+
+        Returns tool definitions (MCP + OpenAI function-calling), game lifecycle,
+        action format, strategy guide, and examples.
+
+        Args:
+            game: Game slug (e.g., "colonelblotto", "prisonersdilemma").
+
+        Returns:
+            Dictionary containing the full agent manifest.
+
+        Raises:
+            httpx.HTTPStatusError: If the game is not found or request fails.
+        """
+        response = self.http_client.get(
+            f"{self.base_url}/games/{game}/manifest",
+            timeout=self.timeout,
+        )
+        return self._json_or_raise(response)
+
     def get_observation(self, player: str, variant: str = "neutral") -> dict:
         """Get the observation (prompts) for a specific player.
         

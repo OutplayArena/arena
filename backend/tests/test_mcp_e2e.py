@@ -63,7 +63,7 @@ async def main():
     async with async_session() as db:
         db.add(User(id=user_id, email="{email}", name="E2E Test", provider="e2e", provider_user_id=user_id))
         await db.commit()
-    print(user_id + "|" + create_access_token({{"sub": user_id}}))
+    print(user_id + "|" + create_access_token(user_id))
 
 asyncio.run(main())
 """
