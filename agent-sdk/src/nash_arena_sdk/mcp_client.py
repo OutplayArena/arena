@@ -188,6 +188,14 @@ class MCPClient:
         """Send a message via the mailbox."""
         return self._call_tool("send_message", {"content": content, "recipient": recipient})
 
+    def get_game_skill(self, game: str) -> dict:
+        """Get the strategy skill/guide for a specific game (parsed sections)."""
+        return self._call_tool("get_game_skill", {"game": game})
+
+    def get_agent_manifest(self, game: str) -> dict:
+        """Get a downloadable agent manifest with tool definitions, prompts, and strategy."""
+        return self._call_tool("get_agent_manifest", {"game": game})
+
     def __enter__(self):
         self.connect()
         return self
