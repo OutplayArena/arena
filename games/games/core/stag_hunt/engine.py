@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from nash_arena.game_engine import GameEngine
 from games.core.stag_hunt.metrics import StagHuntMetrics
@@ -25,6 +25,7 @@ class StagHuntState:
     pending_actions: dict[str, str]
     history: list[dict]
     total_scores: dict[str, float]
+    messages: list = field(default_factory=list)
 
 
 class StagHuntGame(GameEngine):
@@ -186,5 +187,7 @@ class StagHuntGame(GameEngine):
                 "hare_hare": self.payoff_hare_hare,
                 "stag_hare": self.payoff_stag_hare,
             },
+            "messages": self.communication_log(state),
+            "communication_config": self.communication_config().to_dict(),
             "system_prompt": self._system_prompt,
         }

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from nash_arena.game_engine import GameEngine
 from games.core.centipede.metrics import CentipedeMetrics
@@ -19,6 +19,7 @@ class CentipedeState:
     history: list[dict]
     total_scores: dict[str, float]
     game_ended_by: str | None  # player who took, or "forced" at max_steps
+    messages: list = field(default_factory=list)
 
 
 class CentipedeGame(GameEngine):
@@ -189,5 +190,7 @@ class CentipedeGame(GameEngine):
             "total_scores":    dict(state.total_scores),
             "history":         list(state.history),
             "game_ended_by":   state.game_ended_by,
+            "messages": self.communication_log(state),
+            "communication_config": self.communication_config().to_dict(),
             "system_prompt":   self._system_prompt,
         }

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from nash_arena.game_engine import GameEngine
 from games.core.ultimatum.metrics import UltimatumMetrics
@@ -17,6 +17,7 @@ class UltimatumState:
     pending_offer: float | None  # offer amount for proposer
     history: list[dict]
     total_scores: dict[str, float]
+    messages: list = field(default_factory=list)
 
 
 class UltimatumGame(GameEngine):
@@ -210,5 +211,7 @@ class UltimatumGame(GameEngine):
             "total_scores": dict(state.total_scores),
             "history":      list(state.history),
             "total":        self.total,
+            "messages": self.communication_log(state),
+            "communication_config": self.communication_config().to_dict(),
             "system_prompt": self._system_prompt,
         }

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from nash_arena.game_engine import GameEngine
 from games.core.rock_paper_scissors.metrics import RPSMetrics
@@ -18,6 +18,7 @@ class RPSState:
     pending_actions: dict[str, str]
     history: list[dict]
     total_scores: dict[str, float]
+    messages: list = field(default_factory=list)
 
 
 class RPSGame(GameEngine):
@@ -138,6 +139,8 @@ class RPSGame(GameEngine):
             "awaiting":     list(state.awaiting),
             "total_scores": dict(state.total_scores),
             "history":      list(state.history),
+            "messages": self.communication_log(state),
+            "communication_config": self.communication_config().to_dict(),
         }
 
     def forfeit_round(self, state: RPSState, player: str) -> RPSState:

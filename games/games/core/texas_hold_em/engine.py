@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import random
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from itertools import combinations
-from typing import Any
 
 from nash_arena.game_engine import GameEngine
 from games.core.texas_hold_em.metrics import TexasHoldEmMetrics
@@ -144,6 +143,7 @@ class TexasHoldEmState:
     hand_over: bool
     hand_result: dict | None = None
     final_hand_pot: float = 0.0
+    messages: list = field(default_factory=list)
 
 
 class TexasHoldEmGame(GameEngine):
@@ -401,6 +401,8 @@ class TexasHoldEmGame(GameEngine):
             "street": state.street, "current_player": state.current_player,
             "street_actions": list(state.street_actions),
             "hand_number": state.hand_number,
+            "messages": self.communication_log(state),
+            "communication_config": self.communication_config().to_dict(),
         }
 
     def forfeit_round(self, state: TexasHoldEmState, player: str) -> TexasHoldEmState:

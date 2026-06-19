@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from nash_arena.game_engine import GameEngine
 from games.core.battle_of_the_sexes.metrics import BoSMetrics
@@ -16,6 +16,7 @@ class BoSState:
     pending_actions: dict[str, str]
     history: list[dict]
     total_scores: dict[str, float]
+    messages: list = field(default_factory=list)
 
 
 class BoSGame(GameEngine):
@@ -179,5 +180,7 @@ class BoSGame(GameEngine):
             "history":      list(state.history),
             "option_a":     self.option_a,
             "option_b":     self.option_b,
+            "messages": self.communication_log(state),
+            "communication_config": self.communication_config().to_dict(),
             "system_prompt": self._system_prompt,
         }
