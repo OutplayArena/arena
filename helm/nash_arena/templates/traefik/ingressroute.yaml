@@ -29,9 +29,11 @@ spec:
         - kind: Service
           name: {{ include "nasharena.fullname" . }}-backend
           port: 8000
+{{- if or .Values.traefik.certResolver .Values.traefik.tlsSecret }}
   tls:
-{{- if .Values.traefik.certResolver }}
+  {{- if .Values.traefik.certResolver }}
     certResolver: {{ .Values.traefik.certResolver }}
-{{- else }}
-    secretName: {{ include "nasharena.fullname" . }}-tls
+  {{- else }}
+    secretName: {{ .Values.traefik.tlsSecret | default (printf "%s-tls" (include "nasharena.fullname" .)) }}
+  {{- end }}
 {{- end }}

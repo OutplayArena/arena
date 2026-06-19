@@ -3,7 +3,6 @@ import secrets
 
 
 PLATFORM_KEY_PREFIX = "nka_"
-MCP_KEY_PREFIX = "nmk_"
 
 
 def generate_platform_key() -> tuple[str, str, str]:
@@ -15,16 +14,4 @@ def generate_platform_key() -> tuple[str, str, str]:
 
 
 def hash_platform_key(key: str) -> str:
-    return hashlib.sha256(key.encode("utf-8")).hexdigest()
-
-
-def generate_mcp_key() -> tuple[str, str, str]:
-    suffix = secrets.token_urlsafe(32)
-    full_key = f"{MCP_KEY_PREFIX}{suffix}"
-    key_hash = hashlib.sha256(full_key.encode("utf-8")).hexdigest()
-    key_prefix = full_key[: len(MCP_KEY_PREFIX) + 8]
-    return full_key, key_hash, key_prefix
-
-
-def hash_mcp_key(key: str) -> str:
     return hashlib.sha256(key.encode("utf-8")).hexdigest()

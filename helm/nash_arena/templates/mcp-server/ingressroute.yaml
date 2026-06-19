@@ -1,0 +1,19 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "nasharena.fullname" . }}-mcp
+  labels:
+    {{- include "nasharena.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp-server
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    - kind: Rule
+      match: PathPrefix(`/mcp`)
+      priority: 200
+      services:
+        - kind: Service
+          name: {{ include "nasharena.fullname" . }}-mcp
+          port: {{ .Values.mcpServer.port }}
