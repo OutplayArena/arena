@@ -52,7 +52,7 @@ class MCPAgent:
         )
 
         if self.use_mcp:
-            self._mcp_client = MCPClient(mcp_url)
+            self._mcp_client = MCPClient(mcp_url, player_token)
             self._mcp_client.connect()
 
     @property
@@ -90,6 +90,18 @@ class MCPAgent:
             state = self._mcp_client.get_game_state()
             return state.get("phase") == "complete"
         return self._rest_client.is_terminal()
+
+    def get_mailbox(self) -> list[dict]:
+        """Get mailbox messages visible to this player."""
+        if self._mcp_client:
+            return self._mcp_client.get_mailbox()
+        return self._rest_client.get_mailbox(self.player)
+
+    def send_message(self, content: str, recipient: str = "all") -> dict:
+        """Send a message via the mailbox."""
+        if self._mcp_client:
+            return self._mcp_client.send_message(content, recipient)
+        return self._rest_client.send_message(content, recipient)
 
     def close(self) -> None:
         """Close the MCP connection if open."""

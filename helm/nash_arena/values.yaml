@@ -40,7 +40,7 @@ oauth:
   githubClientSecret: ""
   googleClientId: ""
   googleClientSecret: ""
-  jwtSecret: "change-me-in-production-use-a-long-random-string"
+  jwtSecret: "098991b0b02fbd9e54a89aa7eac3bbad864487a4234cb5eadf6bb3a207b8eb15"
 
 backend:
   image:
@@ -73,9 +73,15 @@ mcpServer:
     tag: latest
     pullPolicy: IfNotPresent
   port: 8000
-  maxConcurrentJobs: 50
-  jobTTL: 300
-  publicBaseUrl: "http://192.168.49.2:30173"  # Minikube IP + Traefik NodePort
+  replicas: 2
+  publicBaseUrl: "http://192.168.49.2:30391"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
 
 migrations:
   image:

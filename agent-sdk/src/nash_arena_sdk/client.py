@@ -560,3 +560,25 @@ MAILBOX_TOOLS = [
         },
     },
 ]
+
+SUBMIT_ACTION_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "submit_action",
+        "description": "Submit your allocation for this round. Once called, your turn ends. Must be a list of exactly as many non-negative integers as there are battlefields, summing to your budget.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "allocation": {
+                    "type": "array",
+                    "items": {"type": "integer", "minimum": 0},
+                    "description": "List of troop allocations per battlefield. Length must match the number of battlefields and sum to your budget.",
+                },
+            },
+            "required": ["allocation"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+GAME_TOOLS = MAILBOX_TOOLS + [SUBMIT_ACTION_TOOL]
