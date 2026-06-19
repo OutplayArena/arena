@@ -130,3 +130,84 @@ def test_game_directory_tools_call_client(monkeypatch):
         "game": "colonelblotto",
         "action_format": {"type": "json_array"},
     }
+
+
+def test_send_message_calls_client(monkeypatch):
+    sent = []
+
+    class FakeClientWithComm:
+        def send_message(self, content, to_player=None):
+            sent.append((content, to_player))
+            return {"message": {"from_player": "A", "content": content, "to_player": to_player}}
+
+        def get_messages(self):
+            return {"messages": [{"from_player": "A", "content": "test"}]}
+
+        def get_state(self):
+            return {"phase": "awaiting_action"}
+
+        def submit_action(self, allocation):
+            return {"submitted": allocation}
+
+        def get_results(self):
+            return {"winner": "A"}
+
+        def get_observation(self, player, variant="neutral"):
+            return {"system": "", "turn": "", "player_id": player, "variant": variant}
+
+        def list_games(self):
+            return []
+
+        def get_game_details(self, game):
+            return {"name": game}
+
+        def get_game_metrics(self, game):
+            return {"game": game, "metrics": []}
+
+        def get_game_prompts(self, game):
+            return {"game": game, "action_format": {"type": "json_array"}}
+
+    monkeypatch.setattr(mcp_server, "arena_client", lambda: FakeClientWithComm())
+
+    result = mcp_server.send_message("Hello", to_player=None)
+    assert result == {"message": {"from_player": "A", "content": "Hello", "to_player": None}}
+    assert sent == [("Hello", None)]
+
+    result = mcp_server.send_message("Hi B", to_player="B")
+    assert result == {"message": {"from_player": "A", "content": "Hi B", "to_player": "B"}}
+    assert sent == [("Hello", None), ("Hi B", "B")]
+
+
+def test_get_messages_calls_client(monkeypatch):
+    class FakeClientWithMessages:
+        def get_messages(self):
+            return {"messages": [{"from_player": "A", "content": "Hello"}]}
+
+        def get_state(self):
+            return {"phase": "awaiting_action"}
+
+        def submit_action(self, allocation):
+            return {"submitted": allocation}
+
+        def get_results(self):
+            return {"winner": "A"}
+
+        def get_observation(self, player, variant="neutral"):
+            return {"system": "", "turn": "", "player_id": player, "variant": variant}
+
+        def list_games(self):
+            return []
+
+        def get_game_details(self, game):
+            return {"name": game}
+
+        def get_game_metrics(self, game):
+            return {"game": game, "metrics": []}
+
+        def get_game_prompts(self, game):
+            return {"game": game, "action_format": {"type": "json_array"}}
+
+    monkeypatch.setattr(mcp_server, "arena_client", lambda: FakeClientWithMessages())
+
+    result = mcp_server.get_messages()
+    assert result == {"messages": [{"from_player": "A", "content": "Hello"}]}
