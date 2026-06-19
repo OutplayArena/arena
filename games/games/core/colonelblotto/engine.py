@@ -1,7 +1,11 @@
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from nash_arena.game_engine import GameEngine
+from nash_arena.game_components.communication import (
+    CommunicationConfig,
+    PlayerMessage,
+)
 from .metrics import ColonelBlottoMetrics
 
 from .agent import Agent
@@ -15,6 +19,7 @@ class ColonelBlottoState:
     pending_actions: dict[str, list[int]]
     history: list[dict]
     total_scores: dict[str, float]
+    messages: list[PlayerMessage] = field(default_factory=list)
 
 
 # ** GAME DEFINITION **
@@ -41,6 +46,14 @@ class ColonelBlottoGame(GameEngine):
         self.num_rounds = num_rounds
         
         self.metrics_engine = ColonelBlottoMetrics()
+
+    def communication_config(self) -> CommunicationConfig:
+        return CommunicationConfig(
+            enabled=True,
+            mode="both",
+            max_messages_per_round=3,
+            max_message_length=500,
+        )
 
     @classmethod
     def from_config(cls, config):
@@ -77,10 +90,18 @@ class ColonelBlottoGame(GameEngine):
             pending_actions={},
             history=[],
             total_scores={"A": 0, "B": 0},
+            messages=[],
         )
 
     def state_from_dict(self, d: dict) -> ColonelBlottoState:
-        return ColonelBlottoState(**d)
+        msg_data = d.pop("messages", None) or []
+        messages = []
+        for m in msg_data:
+            if isinstance(m, PlayerMessage):
+                messages.append(m)
+            elif isinstance(m, dict):
+                messages.append(PlayerMessage(**m))
+        return ColonelBlottoState(**d, messages=messages)
 
     # Asks: Is this a valid Blotto allocation?      
     def validate_action(self, action):
@@ -204,6 +225,8 @@ class ColonelBlottoGame(GameEngine):
             "budgets": {"A": config.budget[0], "B": config.budget[1]},
             "total_scores": dict(state.total_scores),
             "history": list(state.history),
+            "messages": self.communication_log(state),
+            "communication_config": self.communication_config().to_dict(),
         }
         
     def forfeit_round(self, state, player):

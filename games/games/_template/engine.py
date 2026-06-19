@@ -1,6 +1,10 @@
 from dataclasses import dataclass, field
 
 from nash_arena.game_engine import GameEngine
+from nash_arena.game_components.communication import (
+    CommunicationConfig,
+    PlayerMessage,
+)
 
 
 @dataclass
@@ -9,11 +13,21 @@ class ExampleState:
     phase: str = "awaiting_action"
     awaiting: list[str] = field(default_factory=lambda: ["A", "B"])
     history: list[dict] = field(default_factory=list)
+    total_scores: dict[str, float] = field(default_factory=lambda: {"A": 0, "B": 0})
+    messages: list[PlayerMessage] = field(default_factory=list)
 
 
 class ExampleGame(GameEngine):
     def initial_state(self):
         return ExampleState()
+
+    def communication_config(self) -> CommunicationConfig:
+        return CommunicationConfig(
+            enabled=True,
+            mode="both",
+            max_messages_per_round=3,
+            max_message_length=500,
+        )
 
     def validate_action(self, action):
         return action is not None
