@@ -57,7 +57,7 @@ export default function BattleOfSexesPlayView({ onGameEnd, sessionConfig }: Prop
             type="button"
             onClick={() => submitMove(optionA.toLowerCase())}
             disabled={!isMyTurn || isSubmitting || hasSubmittedThisRound}
-            className="flex flex-col items-center gap-2 w-36 py-6 rounded-2xl border-2 border-agent-a/40 bg-agent-a/5 hover:bg-agent-a/10 text-agent-a font-bold text-sm transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg active:not-disabled:translate-y-0"
+            className="flex flex-col items-center gap-2 w-36 py-6 rounded-[var(--radius-card)] border-2 border-agent-a/40 bg-agent-a/5 hover:bg-agent-a/10 text-agent-a font-bold text-sm transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg active:not-disabled:translate-y-0"
           >
             <span className="text-3xl">🎭</span>
             <span className="capitalize">{optionA}</span>
@@ -68,7 +68,7 @@ export default function BattleOfSexesPlayView({ onGameEnd, sessionConfig }: Prop
             type="button"
             onClick={() => submitMove(optionB.toLowerCase())}
             disabled={!isMyTurn || isSubmitting || hasSubmittedThisRound}
-            className="flex flex-col items-center gap-2 w-36 py-6 rounded-2xl border-2 border-agent-b/40 bg-agent-b/5 hover:bg-agent-b/10 text-agent-b font-bold text-sm transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg active:not-disabled:translate-y-0"
+            className="flex flex-col items-center gap-2 w-36 py-6 rounded-[var(--radius-card)] border-2 border-agent-b/40 bg-agent-b/5 hover:bg-agent-b/10 text-agent-b font-bold text-sm transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg active:not-disabled:translate-y-0"
           >
             <span className="text-3xl">🏈</span>
             <span className="capitalize">{optionB}</span>

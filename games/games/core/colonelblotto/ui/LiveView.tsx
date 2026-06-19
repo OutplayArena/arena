@@ -84,7 +84,7 @@ export default function LiveView(_props: LiveViewProps) {
     return (
       <div className="flex flex-col h-full bg-surface-soft">
         {/* Minimal bar */}
-        <div className="shrink-0 flex items-center justify-between gap-4 px-5 py-3 border-b border-line/40 bg-surface/80 backdrop-blur-sm">
+        <div className="shrink-0 flex items-center justify-between gap-4 px-5 py-3 border-b border-line bg-surface/80 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <span className="w-8 h-8 rounded-full bg-agent-a/15 border border-agent-a/40 flex items-center justify-center text-[11px] font-black text-agent-a">A</span>
             <span className="text-xs font-extrabold text-muted uppercase tracking-wider">Agent A</span>
@@ -96,7 +96,7 @@ export default function LiveView(_props: LiveViewProps) {
         </div>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center px-6">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-surface-container flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-[var(--radius-card)] bg-surface-container flex items-center justify-center">
               {isGameRunning ? (
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent/70 animate-spin">
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
@@ -130,7 +130,7 @@ export default function LiveView(_props: LiveViewProps) {
   return (
     <div className="flex flex-col h-full bg-surface-soft">
       {/* Score bar — modern dashboard */}
-      <div className="shrink-0 sticky top-0 z-10 flex items-center gap-3 px-4 py-2.5 border-b border-line/40 bg-surface/80 backdrop-blur-sm">
+      <div className="shrink-0 sticky top-0 z-10 flex items-center gap-3 px-4 py-2.5 border-b border-line bg-surface/80 backdrop-blur-sm">
         {/* Agent A */}
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-9 h-9 rounded-full bg-agent-a/12 border border-agent-a/40 flex items-center justify-center shrink-0">
@@ -204,7 +204,7 @@ export default function LiveView(_props: LiveViewProps) {
             return (
               <div
                 key={i}
-                className="rounded-xl border bg-surface p-4 shadow-sm transition-shadow hover:shadow-md"
+                className="rounded-[var(--radius-card)] border bg-surface p-4 shadow-sm transition-shadow hover:shadow-md"
                 style={{ borderColor: winner === "A" ? "var(--color-agent-a)" : winner === "B" ? "var(--color-agent-b)" : winner === "Tie" ? "var(--color-gold)" : "var(--color-line)" }}
               >
                 <div className="flex items-center justify-between mb-3">

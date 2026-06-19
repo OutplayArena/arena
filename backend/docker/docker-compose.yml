@@ -130,6 +130,28 @@ services:
       - "traefik.http.routers.nasharena-mcp.service=nasharena-mcp"
       - "traefik.http.routers.nasharena-mcp.priority=200"
 
+  docs:
+    build:
+      context: ../..
+      dockerfile: docs/Dockerfile
+    # Port exposed for direct access without Traefik (e.g. `docker compose up docs`)
+    ports:
+      - "8001:80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.nasharena-docs.loadbalancer.server.port=80"
+
+      # docs.agent-arena.local (HTTPS)
+      - "traefik.http.routers.nasharena-docs.rule=Host(`docs.agent-arena.local`)"
+      - "traefik.http.routers.nasharena-docs.entrypoints=websecure"
+      - "traefik.http.routers.nasharena-docs.tls=true"
+      - "traefik.http.routers.nasharena-docs.service=nasharena-docs"
+
+      # docs.agent-arena.local (HTTP — redirect to HTTPS)
+      - "traefik.http.routers.nasharena-docs-http.rule=Host(`docs.agent-arena.local`)"
+      - "traefik.http.routers.nasharena-docs-http.entrypoints=web"
+      - "traefik.http.routers.nasharena-docs-http.middlewares=https-redirect"
+
 volumes:
   pgdata:
   redisdata:

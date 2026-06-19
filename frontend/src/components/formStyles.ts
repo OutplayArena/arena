@@ -1,2 +1,5 @@
 export const inputClass =
-  "w-full min-h-[36px] text-sm text-ink bg-surface-container border rounded-lg px-3 shadow-none transition-[border-color,background,box-shadow] duration-150 outline-none hover:border-accent/40 focus:border-accent focus:bg-surface focus:shadow-[0_0_0_3px_var(--color-accent-soft)] border-line/40 disabled:opacity-50 disabled:cursor-not-allowed";
+  "w-full h-9 text-sm text-ink bg-surface border border-line rounded-[var(--radius-input)] px-3 outline-none " +
+  "transition-colors duration-150 hover:border-line-strong " +
+  "focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-soft)] " +
+  "disabled:opacity-50 disabled:cursor-not-allowed";

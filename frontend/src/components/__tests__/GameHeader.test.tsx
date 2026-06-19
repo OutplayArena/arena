@@ -53,9 +53,9 @@ describe("GameHeader", () => {
   it("shows createdAt date when provided", () => {
     const game = createMockGameMetadata();
     renderWithProviders(
-      <GameHeader game={game} locked={false} status="completed" createdAt="2025-01-15T12:00:00Z" />,
+      <GameHeader game={game} locked={false} status="completed" createdAt="2026-01-15T12:00:00Z" />,
       { auth: createMockAuth() },
     );
-    expect(screen.getByText(/2025/)).toBeInTheDocument();
+    expect(screen.getByText(/2026/)).toBeInTheDocument();
   });
 });

@@ -17,7 +17,7 @@ function CardDisplay({ card }: { card: string }) {
   const rank = card.slice(0, -1).toUpperCase();
   const suit = card.slice(-1).toLowerCase();
   return (
-    <div className={`w-10 h-14 rounded-lg border-2 border-line/40 bg-surface flex flex-col items-center justify-center shadow-sm ${SUIT_COLOR[suit] ?? "text-ink"}`}>
+    <div className={`w-10 h-14 rounded-lg border-2 border-line bg-surface flex flex-col items-center justify-center shadow-sm ${SUIT_COLOR[suit] ?? "text-ink"}`}>
       <span className="text-xs font-black leading-none">{rank}</span>
       <span className="text-sm leading-none">{SUIT_SYMBOL[suit] ?? suit}</span>
     </div>
@@ -26,7 +26,7 @@ function CardDisplay({ card }: { card: string }) {
 
 function CardBack() {
   return (
-    <div className="w-10 h-14 rounded-lg border-2 border-line/40 bg-surface-container flex items-center justify-center shadow-sm">
+    <div className="w-10 h-14 rounded-lg border-2 border-line bg-surface-container flex items-center justify-center shadow-sm">
       <span className="text-muted text-lg">🂠</span>
     </div>
   );
@@ -79,7 +79,7 @@ export default function TexasHoldEmPlayView({ onGameEnd }: Props) {
 
       <div className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto">
         {/* Street + pot info */}
-        <div className="flex items-center justify-between px-4 py-2 rounded-lg border border-line/40 bg-surface text-xs">
+        <div className="flex items-center justify-between px-4 py-2 rounded-lg border border-line bg-surface text-xs">
           <span className="font-extrabold uppercase tracking-wider text-muted">{STREET_LABEL[street] ?? street}</span>
           <span className="font-black text-ink">Pot: <span className="text-accent">{pot}</span></span>
           <span className="text-muted">Your chips: <span className="font-bold text-ink">{myChips}</span></span>
@@ -155,12 +155,12 @@ export default function TexasHoldEmPlayView({ onGameEnd }: Props) {
                     min={2}
                     max={myChips}
                     onChange={(e) => setRaiseAmount(Number(e.target.value))}
-                    className="flex-1 px-3 py-2 rounded-lg border border-line/40 bg-surface text-ink text-center font-bold focus:outline-none focus:border-accent/60"
+                    className="flex-1 px-3 py-2 rounded-lg border border-line bg-surface text-ink text-center font-bold focus:outline-none focus:border-accent/60"
                   />
                   <button
                     type="button"
                     onClick={() => handleAction("raise", raiseAmount)}
-                    className="px-4 py-2 rounded-lg bg-accent text-white font-bold text-sm hover:bg-accent/90"
+                    className="px-4 py-2 rounded-[var(--radius-button)] bg-accent text-white font-bold text-sm hover:bg-accent/90"
                   >
                     Raise {raiseAmount}
                   </button>

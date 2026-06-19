@@ -12,7 +12,7 @@ export const StatusBanner = memo(function StatusBanner() {
   const progress = total > 0 ? `Round ${Math.min(round + 1, total)} / ${total}` : "";
 
   return (
-    <div className="flex items-center gap-2 absolute top-[18px] left-1/2 w-[min(760px,calc(100%-36px))] -translate-x-1/2 px-[14px] py-[10px] text-ink bg-surface/93 border rounded-chip border-line/40 shadow-elevation-4 backdrop-blur-xl z-40" role="status" aria-live="polite">
+    <div className="flex items-center gap-2 absolute top-4 left-1/2 w-[min(720px,calc(100%-32px))] -translate-x-1/2 px-3.5 py-2.5 text-ink bg-surface/90 border rounded-[var(--radius-card)] border-line shadow-elevation-4 backdrop-blur-md z-40" role="status" aria-live="polite">
       <span className="flex-1 text-center font-mono text-xs font-extrabold truncate">
         {state.status}
       </span>

@@ -100,7 +100,7 @@ export function PlaybackPanel() {
             stopPlay();
             prevRound();
           }}
-          className="w-9 h-9 flex items-center justify-center rounded-full border border-line/40 bg-surface text-ink text-sm font-extrabold shadow-elevation-1 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-30 hover:not-disabled:bg-surface-container hover:not-disabled:shadow-elevation-2 active:not-disabled:scale-95"
+          className="w-9 h-9 flex items-center justify-center rounded-[var(--radius-button)] border border-line bg-surface text-ink text-sm font-medium shadow-elevation-1 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-30 hover:not-disabled:bg-surface-soft hover:not-disabled:shadow-elevation-2 active:not-disabled:scale-95"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
@@ -111,7 +111,7 @@ export function PlaybackPanel() {
           type="button"
           disabled={!hasMatch}
           onClick={togglePlay}
-          className="min-w-[80px] h-9 px-4 flex items-center justify-center gap-1.5 rounded-full bg-accent border-accent text-white text-sm font-extrabold shadow-elevation-2 transition-all duration-150 disabled:cursor-not-allowed disabled:bg-line/40 disabled:text-quiet disabled:border-line/40 disabled:shadow-none hover:not-disabled:bg-accent/90 hover:not-disabled:shadow-elevation-3 active:not-disabled:scale-95"
+          className="min-w-[72px] h-9 px-4 flex items-center justify-center gap-1.5 rounded-[var(--radius-button)] bg-accent text-white text-sm font-medium shadow-elevation-2 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-40 hover:not-disabled:opacity-90 active:not-disabled:scale-95"
         >
           {isPlaying ? (
             <>
@@ -139,7 +139,7 @@ export function PlaybackPanel() {
             stopPlay();
             nextRound();
           }}
-          className="w-9 h-9 flex items-center justify-center rounded-full border border-line/40 bg-surface text-ink text-sm font-extrabold shadow-elevation-1 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-30 hover:not-disabled:bg-surface-container hover:not-disabled:shadow-elevation-2 active:not-disabled:scale-95"
+          className="w-9 h-9 flex items-center justify-center rounded-[var(--radius-button)] border border-line bg-surface text-ink text-sm font-medium shadow-elevation-1 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-30 hover:not-disabled:bg-surface-soft hover:not-disabled:shadow-elevation-2 active:not-disabled:scale-95"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="9 18 15 12 9 6" />

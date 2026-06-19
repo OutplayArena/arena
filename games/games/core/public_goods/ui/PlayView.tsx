@@ -50,7 +50,7 @@ export default function PublicGoodsPlayView({ onGameEnd, sessionConfig }: Props)
   return (
     <div className="flex flex-col h-full bg-surface-soft">
       {/* Score display - two columns */}
-      <div className="shrink-0 border-b border-line/40 bg-surface/90 backdrop-blur-sm">
+      <div className="shrink-0 border-b border-line bg-surface/90 backdrop-blur-sm">
         <div className="grid grid-cols-2 gap-2 px-4 py-2.5">
           {/* You column */}
           <div className="flex items-center gap-2">
@@ -79,7 +79,7 @@ export default function PublicGoodsPlayView({ onGameEnd, sessionConfig }: Props)
             <span className="font-bold">{roundTotal || match?.num_rounds}</span>
           </div>
         </div>
-        <div className={`px-4 py-1.5 text-center text-[11px] font-bold border-t border-line/20 transition-colors ${
+        <div className={`px-4 py-1.5 text-center text-[11px] font-bold border-t border-line/50 transition-colors ${
           isMyTurn ? "bg-accent/8 text-accent" : "bg-surface-soft/60 text-muted"
         }`}>
           {isMyTurn ? (
@@ -101,7 +101,7 @@ export default function PublicGoodsPlayView({ onGameEnd, sessionConfig }: Props)
       )}
 
       <div className="flex-1 flex flex-col items-center justify-center gap-5 p-6">
-        <div className="w-full max-w-sm rounded-xl border border-line/40 bg-surface p-4">
+        <div className="w-full max-w-sm rounded-[var(--radius-card)] border border-line bg-surface p-4">
           <div className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-3">Your endowment: {endowment} pts</div>
 
           <div className="flex justify-between text-xs mb-2">
@@ -125,7 +125,7 @@ export default function PublicGoodsPlayView({ onGameEnd, sessionConfig }: Props)
           </div>
         </div>
 
-        <div className="rounded-xl border border-line/40 bg-surface p-4 w-full max-w-sm">
+        <div className="rounded-[var(--radius-card)] border border-line bg-surface p-4 w-full max-w-sm">
           <div className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-2">
             Payoff estimate (if all contribute equally)
           </div>
@@ -154,7 +154,7 @@ export default function PublicGoodsPlayView({ onGameEnd, sessionConfig }: Props)
           type="button"
           onClick={() => submitMove(contribution)}
           disabled={!isMyTurn || isSubmitting || hasSubmittedThisRound}
-          className="w-full max-w-sm py-3 rounded-xl bg-accent text-white font-extrabold text-sm hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg"
+          className="w-full max-w-sm py-3 rounded-[var(--radius-button)] bg-accent text-white font-extrabold text-sm hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg"
         >
           {isSubmitting ? "Contributing..." : hasSubmittedThisRound ? "Contribution submitted..." : `Contribute ${contribution.toFixed(1)} pts`}
         </button>
