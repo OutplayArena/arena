@@ -53,7 +53,7 @@ export default function PDPlayView({ onGameEnd, sessionConfig }: Props) {
             type="button"
             onClick={() => submitMove("cooperate")}
             disabled={!isMyTurn || isSubmitting || hasSubmittedThisRound}
-            className="flex flex-col items-center gap-2 w-36 py-6 rounded-2xl border-2 border-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-bold text-sm transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg active:not-disabled:translate-y-0"
+            className="flex flex-col items-center gap-2 w-36 py-6 rounded-[var(--radius-card)] border-2 border-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-bold text-sm transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg active:not-disabled:translate-y-0"
           >
             <span className="text-3xl">🤝</span>
             <span>Cooperate</span>
@@ -63,7 +63,7 @@ export default function PDPlayView({ onGameEnd, sessionConfig }: Props) {
             type="button"
             onClick={() => submitMove("defect")}
             disabled={!isMyTurn || isSubmitting || hasSubmittedThisRound}
-            className="flex flex-col items-center gap-2 w-36 py-6 rounded-2xl border-2 border-red-300 bg-red-50 hover:bg-red-100 dark:border-red-700 dark:bg-red-950/30 dark:hover:bg-red-900/40 text-red-700 dark:text-red-300 font-bold text-sm transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg active:not-disabled:translate-y-0"
+            className="flex flex-col items-center gap-2 w-36 py-6 rounded-[var(--radius-card)] border-2 border-red-300 bg-red-50 hover:bg-red-100 dark:border-red-700 dark:bg-red-950/30 dark:hover:bg-red-900/40 text-red-700 dark:text-red-300 font-bold text-sm transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg active:not-disabled:translate-y-0"
           >
             <span className="text-3xl">🗡️</span>
             <span>Defect</span>
@@ -71,7 +71,7 @@ export default function PDPlayView({ onGameEnd, sessionConfig }: Props) {
         </div>
 
         {/* Payoff matrix reference */}
-        <div className="mt-2 rounded-lg border border-line/30 bg-surface p-3 text-xs text-muted max-w-xs w-full">
+        <div className="mt-2 rounded-lg border border-line bg-surface p-3 text-xs text-muted max-w-xs w-full">
           <div className="font-extrabold uppercase text-[10px] tracking-wider mb-2">Payoff reference</div>
           <div className="grid grid-cols-2 gap-1 text-[11px]">
             <span className="text-emerald-600 dark:text-emerald-400">Both cooperate: +{R}</span>

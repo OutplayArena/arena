@@ -16,7 +16,7 @@ export function GameHeader({ game, locked, status, createdAt }: GameHeaderProps)
   const effectiveStatus = status || state.sessionStatus;
 
   return (
-    <header className="flex items-center justify-between px-4 py-3 border-b border-line/40 bg-surface-container/30 shrink-0">
+    <header className="flex items-center justify-between px-4 py-3 border-b border-line bg-surface-soft shrink-0">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <span className="w-7 h-7 rounded-md bg-accent/15 flex items-center justify-center">

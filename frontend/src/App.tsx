@@ -9,6 +9,8 @@ import { GamePlayPage } from "./pages/GamePlayPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { KeysPage } from "./pages/KeysPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { GamesPage } from "./pages/GamesPage";
+import { PapersPage } from "./pages/PapersPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export default function App() {
@@ -68,6 +70,8 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/games" element={<GamesPage />} />
+            <Route path="/papers" element={<PapersPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </ErrorBoundary>

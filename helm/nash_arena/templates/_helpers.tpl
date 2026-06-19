@@ -64,3 +64,11 @@ Redis selector labels
 {{ include "nasharena.selectorLabels" . }}
 app.kubernetes.io/component: redis
 {{- end }}
+
+{{/*
+Docs selector labels
+*/}}
+{{- define "nasharena.docs.selectorLabels" -}}
+{{ include "nasharena.selectorLabels" . }}
+app.kubernetes.io/component: docs
+{{- end }}

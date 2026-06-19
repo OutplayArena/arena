@@ -46,7 +46,7 @@ export default function RPSLiveView() {
   if (!hasMatch) {
     return (
       <div className="flex flex-col h-full bg-surface-soft">
-        <div className="shrink-0 flex items-center justify-between gap-4 px-5 py-3 border-b border-line/40 bg-surface/80 backdrop-blur-sm">
+        <div className="shrink-0 flex items-center justify-between gap-4 px-5 py-3 border-b border-line bg-surface/80 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <span className="w-8 h-8 rounded-full bg-agent-a/15 border border-agent-a/40 flex items-center justify-center text-[11px] font-black text-agent-a">A</span>
             <span className="text-xs font-extrabold text-muted uppercase tracking-wider">Agent A</span>
@@ -58,7 +58,7 @@ export default function RPSLiveView() {
         </div>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center px-6">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-surface-container flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-[var(--radius-card)] bg-surface-container flex items-center justify-center">
               {isGameRunning ? (
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-accent/70 animate-spin">
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
@@ -91,7 +91,7 @@ export default function RPSLiveView() {
   return (
     <div className="flex flex-col h-full bg-surface-soft">
       {/* Header bar */}
-      <div className="shrink-0 sticky top-0 z-10 border-b border-line/40 bg-surface/80 backdrop-blur-sm">
+      <div className="shrink-0 sticky top-0 z-10 border-b border-line bg-surface/80 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 py-2.5">
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-7 h-7 rounded-full bg-agent-a/12 border border-agent-a/40 flex items-center justify-center shrink-0">
@@ -144,7 +144,7 @@ export default function RPSLiveView() {
             return (
               <div
                 key={r.round}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 border transition-colors ${isActive ? "border-accent/50 bg-accent/5" : "border-line/30 bg-surface"}`}
+                className={`flex items-center gap-3 rounded-[var(--radius-card)] px-4 py-3 border transition-colors ${isActive ? "border-accent/50 bg-accent/5" : "border-line bg-surface"}`}
               >
                 <span className="text-[11px] font-extrabold text-muted w-10 shrink-0">R{r.round}</span>
 

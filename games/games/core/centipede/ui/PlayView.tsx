@@ -42,7 +42,7 @@ export default function CentipedePlayView({ onGameEnd, sessionConfig }: Props) {
 
       <div className="flex-1 flex flex-col items-center justify-center gap-6 p-6">
         {/* Pot visualization */}
-        <div className="rounded-xl border border-line/40 bg-surface p-4 w-full max-w-xs">
+        <div className="rounded-[var(--radius-card)] border border-line bg-surface p-4 w-full max-w-xs">
           <div className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-3 text-center">
             Step {step} / {maxSteps}
           </div>
@@ -68,7 +68,7 @@ export default function CentipedePlayView({ onGameEnd, sessionConfig }: Props) {
               type="button"
               onClick={() => submitMove("take")}
               disabled={isSubmitting}
-              className="flex flex-col items-center gap-2 w-32 py-5 rounded-2xl border-2 border-amber-300 bg-amber-50 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 font-bold text-sm transition-all disabled:opacity-40 hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg"
+              className="flex flex-col items-center gap-2 w-32 py-5 rounded-[var(--radius-card)] border-2 border-amber-300 bg-amber-50 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 font-bold text-sm transition-all disabled:opacity-40 hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg"
             >
               <span className="text-3xl">💰</span>
               <span>Take</span>
@@ -79,7 +79,7 @@ export default function CentipedePlayView({ onGameEnd, sessionConfig }: Props) {
               type="button"
               onClick={() => submitMove("pass")}
               disabled={isSubmitting}
-              className="flex flex-col items-center gap-2 w-32 py-5 rounded-2xl border-2 border-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 font-bold text-sm transition-all disabled:opacity-40 hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg"
+              className="flex flex-col items-center gap-2 w-32 py-5 rounded-[var(--radius-card)] border-2 border-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 font-bold text-sm transition-all disabled:opacity-40 hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg"
             >
               <span className="text-3xl">🤝</span>
               <span>Pass</span>

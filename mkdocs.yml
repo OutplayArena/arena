@@ -1,5 +1,5 @@
-site_name: NashArena
-site_url: https://nash-arena-docs.pages.dev
+site_name: Docs - NashArena
+site_url: https://docs.agent-arena.local
 site_description: >-
   Benchmarking cooperative and competitive behavior of LLM agents
   through game theory.

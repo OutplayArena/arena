@@ -1,5 +1,87 @@
 {% extends "base.html" %}
 
-{% block extrahead %}
-  <meta name="robots" content="noindex, nofollow">
+{# ── Footer — same 4-column layout as the main app ──────────────────────── #}
+{% block footer %}
+  {# Preserve Material's prev / next page navigation #}
+  {% if "navigation.footer" in features %}
+    {% if page.previous_page or page.next_page %}
+      <nav class="na-prevnext" aria-label="Footer navigation">
+        {% if page.previous_page %}
+          <a href="{{ page.previous_page.url | url }}" class="na-prevnext__link na-prevnext__link--prev" aria-label="Previous: {{ page.previous_page.title | e }}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            <div>
+              <span class="na-prevnext__dir">Previous</span>
+              <span class="na-prevnext__title">{{ page.previous_page.title }}</span>
+            </div>
+          </a>
+        {% endif %}
+        {% if page.next_page %}
+          <a href="{{ page.next_page.url | url }}" class="na-prevnext__link na-prevnext__link--next" aria-label="Next: {{ page.next_page.title | e }}">
+            <div>
+              <span class="na-prevnext__dir">Next</span>
+              <span class="na-prevnext__title">{{ page.next_page.title }}</span>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </a>
+        {% endif %}
+      </nav>
+    {% endif %}
+  {% endif %}
+
+  {# ── Main footer ─────────────────────────────────────────────────────── #}
+  <footer class="na-footer">
+    <div class="na-footer__grid">
+
+      {# Brand #}
+      <div class="na-footer__brand">
+        <a href="/" class="na-footer__logo-link">
+          <img src="{{ 'img/logo_only_nash_arena.png' | url }}" alt="NashArena" class="na-footer__logo">
+          <span class="na-footer__wordmark">NashArena</span>
+        </a>
+        <p class="na-footer__tagline">Rigorous, reproducible benchmarks for strategic AI behavior.</p>
+      </div>
+
+      {# Platform #}
+      <div>
+        <p class="na-footer__heading">Platform</p>
+        <ul class="na-footer__list">
+          <li><a href="/dashboard" class="na-footer__link">Dashboard</a></li>
+          <li><a href="/keys" class="na-footer__link">API Keys</a></li>
+          <li><a href="/games" class="na-footer__link">Games</a></li>
+        </ul>
+      </div>
+
+      {# Community #}
+      <div>
+        <p class="na-footer__heading">Community</p>
+        <ul class="na-footer__list">
+          {% if config.repo_url %}
+            <li><a href="{{ config.repo_url }}" target="_blank" rel="noopener noreferrer" class="na-footer__link">GitHub</a></li>
+            <li><a href="{{ config.repo_url }}/issues" target="_blank" rel="noopener noreferrer" class="na-footer__link">Issues</a></li>
+          {% endif %}
+        </ul>
+      </div>
+
+      {# Resources #}
+      <div>
+        <p class="na-footer__heading">Resources</p>
+        <ul class="na-footer__list">
+          <li><a href="{{ config.site_url }}" class="na-footer__link">Docs</a></li>
+          {% if config.repo_url %}
+            <li><a href="{{ config.repo_url }}/tree/main/examples" target="_blank" rel="noopener noreferrer" class="na-footer__link">Examples</a></li>
+          {% endif %}
+          <li><a href="/papers" class="na-footer__link">Papers</a></li>
+        </ul>
+      </div>
+    </div>
+
+    {# Bottom bar #}
+    <div class="na-footer__bottom">
+      <p class="na-footer__copy">© NashArena Contributors</p>
+      <div class="na-footer__badges">
+        <span class="na-footer__badge">MIT License</span>
+        <span class="na-footer__badge">Open science, made with ❤️</span>
+      </div>
+    </div>
+  </footer>
 {% endblock %}

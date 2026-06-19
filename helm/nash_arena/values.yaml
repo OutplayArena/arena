@@ -89,6 +89,20 @@ migrations:
     tag: latest
     pullPolicy: IfNotPresent
 
+docs:
+  image:
+    repository: nasharena-docs
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
 traefik:
   host: agent-arena.local
   certResolver: ""

@@ -40,7 +40,7 @@ export default function UltimatumPlayView({ onGameEnd, sessionConfig }: Props) {
     <div className="flex flex-col items-center gap-5 p-6 w-full max-w-sm mx-auto">
       <p className="text-xs font-semibold text-muted">You are the Proposer — split {total} pts</p>
 
-      <div className="w-full rounded-xl border border-line/40 bg-surface p-4">
+      <div className="w-full rounded-[var(--radius-card)] border border-line bg-surface p-4">
         <div className="flex justify-between text-sm font-bold mb-3">
           <span className="text-agent-a">You keep: <span className="text-lg tabular-nums">{keepAmount}</span></span>
           <span className="text-agent-b">Offer: <span className="text-lg tabular-nums">{offerAmount}</span></span>
@@ -74,7 +74,7 @@ export default function UltimatumPlayView({ onGameEnd, sessionConfig }: Props) {
         type="button"
         onClick={() => submitMove({ offer: offerAmount })}
         disabled={isSubmitting || !isMyTurn || hasSubmittedThisRound}
-        className="w-full py-3 rounded-xl bg-accent text-white font-extrabold text-sm hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg"
+        className="w-full py-3 rounded-[var(--radius-button)] bg-accent text-white font-extrabold text-sm hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg"
       >
         {isSubmitting ? "Proposing..." : hasSubmittedThisRound ? "Proposal submitted..." : `Offer ${offerAmount} pts`}
       </button>
@@ -87,7 +87,7 @@ export default function UltimatumPlayView({ onGameEnd, sessionConfig }: Props) {
 
       {pendingOffer !== undefined ? (
         <>
-          <div className="w-full rounded-xl border border-accent/30 bg-accent/5 p-5 text-center">
+          <div className="w-full rounded-[var(--radius-card)] border border-accent/30 bg-accent/5 p-5 text-center">
             <div className="text-xs text-muted mb-1">You were offered</div>
             <div className="text-4xl font-black text-accent tabular-nums">{pendingOffer}</div>
             <div className="text-xs text-muted mt-1">out of {total} pts</div>
@@ -101,7 +101,7 @@ export default function UltimatumPlayView({ onGameEnd, sessionConfig }: Props) {
               type="button"
               onClick={() => submitMove({ accept: true })}
               disabled={isSubmitting || !isMyTurn || hasSubmittedThisRound}
-              className="flex-1 py-3 rounded-xl border-2 border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-300 font-extrabold text-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/40 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg"
+              className="flex-1 py-3 rounded-[var(--radius-card)] border-2 border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-300 font-extrabold text-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/40 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg"
             >
               ✅ Accept
             </button>
@@ -109,7 +109,7 @@ export default function UltimatumPlayView({ onGameEnd, sessionConfig }: Props) {
               type="button"
               onClick={() => submitMove({ accept: false })}
               disabled={isSubmitting || !isMyTurn || hasSubmittedThisRound}
-              className="flex-1 py-3 rounded-xl border-2 border-red-400 bg-red-50 text-red-700 dark:border-red-600 dark:bg-red-950/30 dark:text-red-300 font-extrabold text-sm hover:bg-red-100 dark:hover:bg-red-900/40 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg"
+              className="flex-1 py-3 rounded-[var(--radius-card)] border-2 border-red-400 bg-red-50 text-red-700 dark:border-red-600 dark:bg-red-950/30 dark:text-red-300 font-extrabold text-sm hover:bg-red-100 dark:hover:bg-red-900/40 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg"
             >
               ❌ Reject
             </button>

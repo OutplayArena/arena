@@ -47,9 +47,9 @@ describe("GameHeader — with activeMatch", () => {
 
     const game = createMockGameMetadata({ name: "Test" });
     renderWithProviders(
-      <GameHeader game={game} locked={false} status="ready" createdAt="2025-06-15T14:30:00Z" />,
+      <GameHeader game={game} locked={false} status="ready" createdAt="2026-06-15T14:30:00Z" />,
       { auth: createMockAuth() },
     );
-    expect(screen.getByText(/2025/)).toBeInTheDocument();
+    expect(screen.getByText(/2026/)).toBeInTheDocument();
   });
 });
