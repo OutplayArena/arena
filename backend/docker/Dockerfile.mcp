@@ -5,17 +5,15 @@ WORKDIR /app
 COPY agent-sdk/pyproject.toml agent-sdk/pyproject.toml
 COPY agent-sdk/src/ agent-sdk/src/
 COPY backend/pyproject.toml pyproject.toml
+COPY README.md agent-sdk/README.md
 COPY README.md ../README.md
 COPY backend/nash_arena/ nash_arena/
 COPY games/ games/
 
 RUN pip install --no-cache-dir ./agent-sdk && pip install --no-cache-dir ./games && pip install --no-cache-dir .
 
-ENV MCP_TRANSPORT=sse
-ENV MCP_MOUNT_PATH=/
 ENV FASTMCP_HOST=0.0.0.0
 ENV FASTMCP_PORT=8000
-ENV FASTMCP_LOG_LEVEL=INFO
 
 EXPOSE 8000
 

@@ -4,6 +4,7 @@ import importlib.util
 import pytest
 
 from nash_arena.game_registry import CATALOG_ROOT, GameRegistry, GameRegistryError
+from nash_arena.manifest import build_agent_manifest
 from games.core.colonelblotto.engine import ColonelBlottoGame
 
 
@@ -53,6 +54,68 @@ def test_registry_loads_blotto_skill():
     assert "MCP tools" in skill
     assert "submit_action" in skill
     assert "Do not call REST endpoints directly." in skill
+
+
+def test_registry_loads_blotto_skill_structured():
+    skill = GameRegistry().get_game_skill("colonelblotto", structured=True)
+
+    assert skill["game"] == "colonelblotto"
+    assert skill["title"] == "Colonel Blotto Skill"
+    assert "sections" in skill
+    sections = skill["sections"]
+    assert "objective" in sections
+    assert "action_format" in sections
+    assert "rules" in sections
+    assert "strategy_hints" in sections
+    assert "awaiting" in sections["required_tool_flow"]
+
+
+def test_registry_loads_pd_skill_structured():
+    skill = GameRegistry().get_game_skill("prisonersdilemma", structured=True)
+
+    assert skill["game"] == "prisonersdilemma"
+    sections = skill["sections"]
+    assert "objective" in sections
+    assert "action_format" in sections
+    assert "strategy_notes" in sections
+    assert "cooperate" in sections["action_format"].lower()
+
+
+def test_registry_skill_missing_game():
+    with pytest.raises(GameRegistryError, match="game not found"):
+        GameRegistry().get_game_skill("nonexistent", structured=True)
+
+
+def test_build_agent_manifest_colonelblotto():
+    manifest = build_agent_manifest("colonelblotto")
+
+    assert manifest["platform"] == "nasharena"
+    assert manifest["manifest_version"] == "1.0"
+    assert manifest["game"] == "colonelblotto"
+    assert manifest["game_metadata"]["name"] == "Colonel Blotto"
+    assert "auth" in manifest
+    assert manifest["auth"]["type"] == "bearer"
+    assert manifest["auth"]["key_prefix"] == "nks_"
+    assert len(manifest["tools"]) == 12
+    tool_names = [t["name"] for t in manifest["tools"]]
+    assert "get_game_state" in tool_names
+    assert "submit_action" in tool_names
+    assert "get_game_skill" in tool_names
+    assert "get_agent_manifest" in tool_names
+    assert len(manifest["openai_tools"]) == 3
+    assert "action_format" in manifest
+    assert "game_lifecycle" in manifest
+    assert "skill" in manifest
+    assert manifest["skill"]["title"] == "Colonel Blotto Skill"
+
+
+def test_build_agent_manifest_pd():
+    manifest = build_agent_manifest("prisonersdilemma")
+
+    assert manifest["game"] == "prisonersdilemma"
+    assert manifest["game_metadata"]["name"] == "Prisoner's Dilemma"
+    assert manifest["skill"]["sections"]["strategy_notes"] != ""
+    assert len(manifest["openai_tools"]) == 3
 
 
 def test_registry_builds_blotto_config_and_game_from_catalog():

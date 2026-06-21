@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from nash_arena.db import get_db, async_session as _async_session_factory
 from nash_arena.experiment_config import split_runtime_config
 from nash_arena.game_registry import GameRegistry, GameRegistryError
+from nash_arena.manifest import build_agent_manifest
 from nash_arena.messaging import RedisBroker, StatePersister, MessageLogger
 from nash_arena.messaging.broker import MessageBroker
 from nash_arena.metrics import AgentRegistry, get_global_registry, set_global_registry, MatchEvaluator, load_registry, save_registry
@@ -30,24 +31,21 @@ from nash_arena.session import GameSession, _serialize_state
 from nash_arena.models.session import SessionModel
 from nash_arena.models.api_key import ApiKey
 from nash_arena.models.message_log import MessageLog
-from nash_arena.models.mcp_auth_key import McpAuthKey
 from nash_arena.auth.oauth import github_login, github_callback, google_login, google_callback, CALLBACK_BASE
 from nash_arena.auth.jwt import create_access_token
 from nash_arena.auth.dependencies import get_current_user, get_local_or_optional_user, require_user
-from nash_arena.auth.apikey import generate_platform_key, hash_mcp_key
+from nash_arena.auth.apikey import generate_platform_key
 from nash_arena.models.user import User
-from nash_arena.mcp_pool import create_pool_manager, PoolManager
 
 
 API_PREFIX = os.environ.get("API_PREFIX", "/api")
-MCP_ALLOWED_IPS = [ip.strip() for ip in os.environ.get("MCP_ALLOWED_IPS", "127.0.0.1").split(",") if ip.strip()]
+MCP_ENDPOINT = os.environ.get("MCP_ENDPOINT")
 _SITE_YAML = Path(__file__).resolve().parent.parent.parent / "frontend" / "site.yaml"
 if not _SITE_YAML.is_file():
     _SITE_YAML = Path(__file__).resolve().parent.parent / "site.yaml"
 SITE_YAML = _SITE_YAML
 STATIC_ROOT = Path(__file__).resolve().parent.parent / "static"
 GAME_REGISTRY = GameRegistry()
-POOL_MANAGER: PoolManager | None = None
 
 _broker: RedisBroker | None = None
 _persister: StatePersister | None = None
@@ -86,13 +84,6 @@ async def _load_registry_from_db() -> None:
             set_global_registry(registry)
     except Exception:
         pass
-
-    global POOL_MANAGER
-    try:
-        POOL_MANAGER = create_pool_manager()
-    except Exception as e:
-        print(f"Warning: Failed to initialize MCP pool manager: {e}")
-        POOL_MANAGER = None
 
 
 class ActionRequest(BaseModel):
@@ -141,45 +132,15 @@ def action_error(exc: ValueError) -> HTTPException:
     return HTTPException(status_code=400, detail=message)
 
 
-def _check_client_ip(request: Request) -> bool:
-    client_ip = request.client.host if request.client else ""
-    return client_ip in MCP_ALLOWED_IPS
-
-
-async def require_mcp_auth(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-    x_mcp_auth_key: str | None = Header(default=None, alias="X-MCP-Auth-Key"),
-) -> None:
-    if not _check_client_ip(request):
-        raise HTTPException(status_code=403, detail="Agent REST API is disabled")
-    if not x_mcp_auth_key:
-        raise HTTPException(status_code=403, detail="Agent REST API is disabled")
-    key_hash = hash_mcp_key(x_mcp_auth_key)
-    result = await db.execute(
-        select(McpAuthKey).where(
-            McpAuthKey.key_hash == key_hash,
-            McpAuthKey.is_active,
-        )
-    )
-    row = result.scalar_one_or_none()
-    if row is None:
-        raise HTTPException(status_code=403, detail="Agent REST API is disabled")
-    row.last_used_at = func.now()
-    await db.commit()
-
-
 async def require_agent_api_dep(
     request: Request,
     authorization: str | None = Header(default=None),
     db: AsyncSession = Depends(get_db),
-    x_mcp_auth_key: str | None = Header(default=None, alias="X-MCP-Auth-Key"),
 ) -> None:
     if os.environ.get("ENABLE_AGENT_REST_API", "false").lower() == "true":
         return
     if authorization and authorization.startswith("Bearer "):
         token = authorization[len("Bearer "):]
-        # Allow requests with valid session player tokens (nks_...) — used by the frontend game loop
         from nash_arena.auth.session_key import SESSION_KEY_PREFIX, validate_session_key
         if token.startswith(SESSION_KEY_PREFIX):
             try:
@@ -187,14 +148,13 @@ async def require_agent_api_dep(
                 return
             except ValueError:
                 pass
-        # Allow requests with valid user authentication (from frontend UI)
         try:
             from nash_arena.auth.dependencies import get_current_user
             await get_current_user(authorization, db)
             return
         except HTTPException:
             pass
-    await require_mcp_auth(request=request, db=db, x_mcp_auth_key=x_mcp_auth_key)
+    raise HTTPException(status_code=403, detail="Agent REST API is disabled")
 
 
 def require_agent_api():
@@ -268,6 +228,32 @@ def get_game_agents(name: str):
         raise game_registry_error(exc) from exc
 
 
+@app.get(f"{API_PREFIX}/games/{{name}}/skill")
+def get_game_skill(name: str):
+    """Get the strategy skill/guide for a game (parsed sections)."""
+    try:
+        return GAME_REGISTRY.get_game_skill(name, structured=True)
+    except GameRegistryError as exc:
+        raise game_registry_error(exc) from exc
+
+
+@app.get(f"{API_PREFIX}/games/{{name}}/manifest")
+def get_game_manifest(name: str, request: Request):
+    """Get a downloadable agent manifest for a game.
+
+    Returns tool definitions (MCP + OpenAI function-calling), game lifecycle,
+    action format, strategy guide, and examples. Public — no auth required.
+    """
+    try:
+        return build_agent_manifest(
+            game_name=name,
+            registry=GAME_REGISTRY,
+            mcp_url=MCP_ENDPOINT,
+        )
+    except GameRegistryError as exc:
+        raise game_registry_error(exc) from exc
+
+
 @app.post(f"{API_PREFIX}/experiment")
 async def create_experiment(
     request: dict[str, Any],
@@ -308,27 +294,14 @@ async def create_experiment(
 
     response = session.creation_response()
 
+    if MCP_ENDPOINT:
+        response["mcp_url"] = MCP_ENDPOINT
+
     await broker.publish(f"session:{session.session_id}:events", {
         "event": "session_created",
         "session_id": session.session_id,
         "status": session.status,
     })
-
-    if POOL_MANAGER is not None:
-        try:
-            player_a_token = response["player_tokens"]["A"]
-            mcp_instance = await POOL_MANAGER.assign_container(
-                db=db,
-                session_id=session.session_id,
-                session_key=player_a_token,
-            )
-            # Use public_url if available (gateway/proxy), otherwise fall back to direct access
-            if mcp_instance.public_url:
-                response["mcp_url"] = mcp_instance.public_url
-            else:
-                response["mcp_url"] = f"http://{mcp_instance.dns_name}:{mcp_instance.port}"
-        except Exception as e:
-            print(f"Warning: Failed to assign MCP container: {e}")
 
     return response
 
@@ -646,12 +619,6 @@ async def get_results(session_id: str, db: AsyncSession = Depends(get_db)):
         except Exception:
             await db.rollback()
 
-        if POOL_MANAGER is not None:
-            try:
-                await POOL_MANAGER.release_container(db=db, session_id=session_id)
-            except Exception as e:
-                print(f"Warning: Failed to release MCP container: {e}")
-
         return result
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -677,12 +644,6 @@ async def fail_session(
         "locked": session.locked,
         "player_tokens": session.player_tokens,
     })
-
-    if POOL_MANAGER is not None:
-        try:
-            await POOL_MANAGER.release_container(db=db, session_id=session_id)
-        except Exception as e:
-            print(f"Warning: Failed to release MCP container: {e}")
 
     return {"session_id": session_id, "status": session.status, "error_message": session.error_message}
 

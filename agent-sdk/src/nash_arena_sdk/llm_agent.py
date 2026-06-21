@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 from mcp import ClientSession, StdioServerParameters, types
-from mcp.client.sse import sse_client
+from mcp.client.streamable_http import streamablehttp_client
 from mcp.client.stdio import stdio_client
 from openai import OpenAI
 
@@ -189,8 +189,9 @@ class LLMAgent:
 
     Supports two MCP modes:
 
-    * **Remote (SSE):** when *mcp_url* is provided, connects to a remote MCP
-      server running in a pool container over Server-Sent Events.
+    * **Remote (streamable-http):** when *mcp_url* is provided, connects to a
+      stateless MCP server via streamable-http, sending the session key in the
+      ``Authorization: Bearer`` header on every request.
     * **Local (stdio):** when *mcp_url* is not provided, spawns a local MCP
       server as a child process and communicates over standard I/O.
 
@@ -255,8 +256,9 @@ class LLMAgent:
         """Start the MCP server connection.
 
         If *mcp_url* was provided at construction time, connects to the
-        remote MCP server via SSE.  Otherwise, spawns a local MCP server
-        as a child process and communicates over stdio.
+        remote MCP server via streamable-http with the session key in the
+        Authorization header.  Otherwise, spawns a local MCP server as a
+        child process and communicates over stdio.
 
         After the connection is established the internal
         :class:`~mcp.ClientSession` is initialised and ready for tool calls.
@@ -278,9 +280,11 @@ class LLMAgent:
         self._exit_stack = AsyncExitStack()
 
         if self.mcp_url:
-            sse_url = self.mcp_url.rstrip("/") + "/sse"
-            read, write = await self._exit_stack.enter_async_context(
-                sse_client(sse_url)
+            read, write, _ = await self._exit_stack.enter_async_context(
+                streamablehttp_client(
+                    self.mcp_url.rstrip("/"),
+                    headers={"Authorization": f"Bearer {self.token}"},
+                )
             )
         else:
             env = {
