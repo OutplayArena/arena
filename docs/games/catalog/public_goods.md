@@ -57,7 +57,7 @@ N players (3–6) simultaneously choose how much to contribute to a shared pool.
 ## Example
 
 ```python
-from nash_arena_sdk import quick_play
+from outplaylabs_arena_sdk import quick_play
 
 results = quick_play(
     game="public_goods",

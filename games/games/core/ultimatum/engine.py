@@ -3,7 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from dataclasses import dataclass
 
-from nash_arena.interactive_game_engine import InteractiveGameEngine
+from arena.interactive_game_engine import InteractiveGameEngine
 from games.core.ultimatum.metrics import UltimatumMetrics
 
 

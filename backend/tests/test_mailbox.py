@@ -1,6 +1,6 @@
 """Tests for mailbox functionality."""
 from games.core.colonelblotto.config import BattlefieldConfig, ColonelBlottoExperimentConfig
-from nash_arena.session import GameSession
+from arena.session import GameSession
 
 
 def make_config(rounds=2):

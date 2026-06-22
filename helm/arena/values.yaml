@@ -1,0 +1,112 @@
+nameOverride: ""
+fullnameOverride: ""
+
+dev:
+  liveReload: false
+  staticSourcePath: /home/herbert/code/blotto/backend/static
+
+database:
+  image: postgres:16-alpine
+  database: outplaylabs-arena
+  user: outplaylabs-arena
+  password: outplaylabs-arena
+  storage: 10Gi
+  storageClassName: "manual"
+  volumeName: "arena-db-pv"
+  createPV: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+redis:
+  image: redis:7-alpine
+  port: 6379
+  storage: 2Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+oauth:
+  callbackBaseUrl: "http://localhost:8000"
+  githubClientId: ""
+  githubClientSecret: ""
+  googleClientId: ""
+  googleClientSecret: ""
+  jwtSecret: "098991b0b02fbd9e54a89aa7eac3bbad864487a4234cb5eadf6bb3a207b8eb15"
+
+backend:
+  image:
+    repository: arena-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  env:
+    apiPrefix: /api
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPU: 70
+    targetMemory: 80
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+mcpServer:
+  image:
+    repository: arena-mcp
+    tag: latest
+    pullPolicy: IfNotPresent
+  port: 8000
+  replicas: 2
+  publicBaseUrl: "http://192.168.49.2:30391"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+migrations:
+  image:
+    repository: arena-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+
+docs:
+  image:
+    repository: arena-docs
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
+traefik:
+  host: agent-arena.local
+  certResolver: ""
+  middleware:
+    rateLimit:
+      average: 5000
+      burst: 1000

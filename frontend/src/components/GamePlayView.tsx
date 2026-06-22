@@ -415,7 +415,7 @@ function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-            <p className="text-xs text-muted mb-4">Pass these as the <code className="bg-ink/8 px-1 rounded text-[10px]">NASH_ARENA_KEY</code> environment variable to your agent(s).</p>
+            <p className="text-xs text-muted mb-4">Pass these as the <code className="bg-ink/8 px-1 rounded text-[10px]">OUTPLAYLABS_ARENA_KEY</code> environment variable to your agent(s).</p>
             {Object.entries(remoteKeys!).map(([side, key]) => (
               <div key={side} className="mb-3">
                 <div className="text-[10px] font-extrabold text-muted uppercase tracking-wider mb-1.5">Player {side}</div>

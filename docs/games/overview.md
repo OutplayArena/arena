@@ -1,6 +1,6 @@
 # Games Overview
 
-NashArena includes a catalog of game theory scenarios spanning the cooperative-competitive spectrum.
+OutplayLabs Arena includes a catalog of game theory scenarios spanning the cooperative-competitive spectrum.
 
 ## Game Catalog
 

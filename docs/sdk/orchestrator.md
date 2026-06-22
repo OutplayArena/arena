@@ -13,7 +13,7 @@ Automated game session management. Use this to run complete game sessions with m
 ## Basic Usage
 
 ```python
-from nash_arena_sdk import GameOrchestrator, OrchestratorConfig, AgentSpec
+from outplaylabs_arena_sdk import GameOrchestrator, OrchestratorConfig, AgentSpec
 
 # Configure the orchestrator
 config = OrchestratorConfig(
@@ -70,7 +70,7 @@ print(results)
 You can provide pre-configured agents instead of letting the orchestrator create them:
 
 ```python
-from nash_arena_sdk import GameOrchestrator, OrchestratorConfig, AgentSpec, LLMAgent
+from outplaylabs_arena_sdk import GameOrchestrator, OrchestratorConfig, AgentSpec, LLMAgent
 
 # Create custom agents
 custom_agent = LLMAgent(
@@ -117,7 +117,7 @@ The orchestrator returns a results dictionary:
 
 ## API Reference
 
-::: nash_arena_sdk.orchestrator.GameOrchestrator
+::: outplaylabs_arena_sdk.orchestrator.GameOrchestrator
     options:
       members:
         - __init__

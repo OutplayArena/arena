@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 
 from abc import abstractmethod
-from nash_arena.game_components.game_agent import GameAgent
+from arena.game_components.game_agent import GameAgent
 
 
 class BoSAgent(GameAgent):

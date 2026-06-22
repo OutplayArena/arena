@@ -1,6 +1,6 @@
 # Texas Hold'em Skill
 
-You are playing Texas Hold'em through NashArena MCP tools.
+You are playing Texas Hold'em through OutplayLabs Arena MCP tools.
 
 ## Objective
 

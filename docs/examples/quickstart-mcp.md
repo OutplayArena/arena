@@ -4,7 +4,7 @@ Examples of running games with MCP-based agents.
 
 ## Overview
 
-MCP (Model Context Protocol) examples demonstrate how LLM agents can interact with NashArena through structured tools. Each example shows the orchestrator/agent pattern where an orchestrator creates the session and agents use MCP tools to play.
+MCP (Model Context Protocol) examples demonstrate how LLM agents can interact with OutplayLabs Arena through structured tools. Each example shows the orchestrator/agent pattern where an orchestrator creates the session and agents use MCP tools to play.
 
 ## Setup
 
@@ -12,11 +12,11 @@ All examples require:
 
 ```bash
 # Set environment variables
-export NASH_ARENA_API_KEY="your-api-key"
+export OUTPLAYLABS_ARENA_API_KEY="your-api-key"
 export OPENCODE_GO_API_KEY="your-llm-api-key"
 
 # Start the backend
-uv run uvicorn nash_arena.main:app --host 0.0.0.0 --port 8000
+uv run uvicorn arena.main:app --host 0.0.0.0 --port 8000
 ```
 
 ## Colonel Blotto
@@ -104,7 +104,7 @@ AGENT
 5. Repeat until game is terminal
 6. get_results() — Get final results
 """
-from nash_arena_sdk import ArenaClient, MCPAgent
+from outplaylabs_arena_sdk import ArenaClient, MCPAgent
 
 # Orchestrator creates session
 client = ArenaClient("http://127.0.0.1:8000/api")

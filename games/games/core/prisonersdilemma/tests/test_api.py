@@ -10,9 +10,9 @@ os.environ["ENABLE_AGENT_REST_API"] = "true"
 import pytest
 from fastapi.testclient import TestClient
 
-from nash_arena.main import app, config_from_request, get_broker
-from nash_arena.db import get_db
-from nash_arena.auth.dependencies import require_user, _ensure_local_user
+from arena.main import app, config_from_request, get_broker
+from arena.db import get_db
+from arena.auth.dependencies import require_user, _ensure_local_user
 
 
 class FakeBroker:

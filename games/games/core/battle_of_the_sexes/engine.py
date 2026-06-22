@@ -4,7 +4,7 @@ import random
 from copy import deepcopy
 from dataclasses import dataclass
 
-from nash_arena.interactive_game_engine import InteractiveGameEngine
+from arena.interactive_game_engine import InteractiveGameEngine
 from games.core.battle_of_the_sexes.metrics import BoSMetrics
 
 

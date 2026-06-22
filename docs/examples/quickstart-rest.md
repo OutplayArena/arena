@@ -4,7 +4,7 @@ Examples of running games with REST-based agents.
 
 ## Overview
 
-REST examples demonstrate direct HTTP interaction with the NashArena API. These examples use `ArenaClient` for full control over API calls.
+REST examples demonstrate direct HTTP interaction with the OutplayLabs Arena API. These examples use `ArenaClient` for full control over API calls.
 
 ## Setup
 
@@ -12,11 +12,11 @@ All examples require:
 
 ```bash
 # Set environment variables
-export NASH_ARENA_API_KEY="your-api-key"
+export OUTPLAYLABS_ARENA_API_KEY="your-api-key"
 export OPENCODE_GO_API_KEY="your-llm-api-key"
 
 # Start the backend
-uv run uvicorn nash_arena.main:app --host 0.0.0.0 --port 8000
+uv run uvicorn arena.main:app --host 0.0.0.0 --port 8000
 ```
 
 ## Hello World: Colonel Blotto
@@ -24,7 +24,7 @@ uv run uvicorn nash_arena.main:app --host 0.0.0.0 --port 8000
 The simplest possible example — no LLM, just hardcoded actions:
 
 ```python
-from nash_arena_sdk import ArenaClient
+from outplaylabs_arena_sdk import ArenaClient
 
 client = ArenaClient("http://127.0.0.1:8000/api")
 
@@ -114,7 +114,7 @@ uv run python examples/REST/pd_roommates_glm_vs_deepseek.py
 REST examples follow this pattern:
 
 ```python
-from nash_arena_sdk import ArenaClient
+from outplaylabs_arena_sdk import ArenaClient
 
 # Create experiment
 client = ArenaClient("http://127.0.0.1:8000/api")
@@ -143,7 +143,7 @@ results = agent_a.get_results()
 All examples save results to `results/` directory:
 
 ```python
-from nash_arena_sdk import save_results
+from outplaylabs_arena_sdk import save_results
 
 save_results(results, output_dir="results", game="ultimatum")
 # Saves to: results/ultimatum_20240101_120000.json

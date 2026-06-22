@@ -32,7 +32,7 @@ beforeEach(() => {
 
 describe("request base function", () => {
   it("adds Bearer token from localStorage", async () => {
-    localStorage.setItem("nasharena_token", "test-token");
+    localStorage.setItem("arena-token", "test-token");
     const mockFetch = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
       text: () => Promise.resolve('{"data": 1}'),

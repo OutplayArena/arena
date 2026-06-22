@@ -1,16 +1,16 @@
-site_name: Docs - NashArena
+site_name: Docs - OutplayLabs Arena
 site_url: https://docs.agent-arena.local
 site_description: >-
   Benchmarking cooperative and competitive behavior of LLM agents
   through game theory.
-repo_url: https://github.com/NashArena/nash-arena
-repo_name: NashArena/nash-arena
+repo_url: https://github.com/outplaylabs/arena
+repo_name: outplaylabs/arena
 edit_uri: edit/main/docs/
 
 theme:
   name: material
-  logo: img/logo_only_nash_arena.png
-  favicon: img/favicon_nash_arena.png
+  logo: img/logo_only_arena.png
+  favicon: img/favicon_arena.png
   font:
     text: Inter
     code: JetBrains Mono
@@ -125,7 +125,7 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/NashArena/nash-arena
+      link: https://github.com/outplaylabs/arena
   generator: false
 
 nav:

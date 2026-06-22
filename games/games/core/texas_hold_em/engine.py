@@ -5,7 +5,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from itertools import combinations
 
-from nash_arena.interactive_game_engine import InteractiveGameEngine
+from arena.interactive_game_engine import InteractiveGameEngine
 from games.core.texas_hold_em.metrics import TexasHoldEmMetrics
 
 RANKS = "23456789TJQKA"

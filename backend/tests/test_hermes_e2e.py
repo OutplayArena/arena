@@ -1,11 +1,11 @@
 """
-End-to-end test: Hermes agent harness vs NashArena SDK playing Colonel Blotto.
+End-to-end test: Hermes agent harness vs OutplayLabs Arena SDK playing Colonel Blotto.
 
 Run with:
     pytest tests/test_hermes_e2e.py -m e2e -v
 
 Requires:
-    - minikube cluster with nasharena deployed
+    - minikube cluster with arena deployed
     - hermes-agent installed at ~/.hermes/hermes-agent/
 """
 
@@ -23,11 +23,11 @@ pytestmark = pytest.mark.e2e
 
 
 def test_hermes_vs_sdk_colonel_blotto():
-    """Hermes agent plays Colonel Blotto against NashArena SDK agent.
+    """Hermes agent plays Colonel Blotto against OutplayLabs Arena SDK agent.
 
     Hermes uses an on-the-fly skill (fetched from /api/games/colonelblotto/manifest)
-    and connect to NashArena MCP with a session key. The SDK agent uses the
-    NashArena SDK's MCPClient. Both play a full 3-round game.
+    and connect to OutplayLabs Arena MCP with a session key. The SDK agent uses the
+    OutplayLabs Arena SDK's MCPClient. Both play a full 3-round game.
     """
     result = run_hermes_vs_sdk(rounds=3, n_fields=5, total=100)
 

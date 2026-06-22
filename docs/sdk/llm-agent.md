@@ -14,7 +14,7 @@ LLM-powered agent that can play via MCP or REST. Includes built-in reasoning con
 ## Basic Usage
 
 ```python
-from nash_arena_sdk import LLMAgent, LLMConfig
+from outplaylabs_arena_sdk import LLMAgent, LLMConfig
 
 # Configure the LLM
 llm_config = LLMConfig(
@@ -70,7 +70,7 @@ await agent.stop_mcp()
 For more advanced configuration:
 
 ```python
-from nash_arena_sdk import LLMAgent, LLMConfig, LLMAgentConfig
+from outplaylabs_arena_sdk import LLMAgent, LLMConfig, LLMAgentConfig
 
 config = LLMAgentConfig(
     player="A",
@@ -88,7 +88,7 @@ agent = LLMAgent.from_config(config, player_token="nks_...", arena_url="...")
 Built-in parsers for common action formats:
 
 ```python
-from nash_arena_sdk import parse_allocation, parse_offer, parse_accept_reject
+from outplaylabs_arena_sdk import parse_allocation, parse_offer, parse_accept_reject
 
 # Parse list allocation (e.g., Colonel Blotto)
 allocation = parse_allocation("[10, 0, 0]", n_fields=3, total=10)
@@ -105,7 +105,7 @@ decision = parse_accept_reject("I accept the offer")
 Control how much the LLM reasons before acting:
 
 ```python
-from nash_arena_sdk import LLMConfig, ReasoningEffort
+from outplaylabs_arena_sdk import LLMConfig, ReasoningEffort
 
 config = LLMConfig(
     model="gpt-4",
@@ -118,7 +118,7 @@ See [Reasoning Control](reasoning.md) for details on how this works across diffe
 
 ## API Reference
 
-::: nash_arena_sdk.llm_agent.LLMAgent
+::: outplaylabs_arena_sdk.llm_agent.LLMAgent
     options:
       members:
         - __init__

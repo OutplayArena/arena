@@ -4,7 +4,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-from nash_arena.game_components.game_config import GameConfig
+from arena.game_components.game_config import GameConfig
 
 VALID_VARIANTS = frozenset({"classic", "punishment"})
 

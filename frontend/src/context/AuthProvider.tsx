@@ -3,7 +3,7 @@ import type { ProvidersResponse, UserInfo } from "../types";
 import { AuthContext } from "./AuthContext";
 import { request } from "../api";
 
-const TOKEN_KEY = "nasharena_token";
+const TOKEN_KEY = "arena-token";
 
 function parseToken() {
   const params = new URLSearchParams(window.location.search);

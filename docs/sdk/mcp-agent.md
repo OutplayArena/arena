@@ -22,7 +22,7 @@ MCP-first agent with REST fallback. Use this for MCP-based interaction with stru
 ## Basic Usage
 
 ```python
-from nash_arena_sdk import MCPAgent
+from outplaylabs_arena_sdk import MCPAgent
 
 # With MCP URL (preferred)
 agent = MCPAgent(
@@ -87,7 +87,7 @@ with MCPAgent(player_token=token, mcp_url=url) as agent:
 
 ## API Reference
 
-::: nash_arena_sdk.agent.MCPAgent
+::: outplaylabs_arena_sdk.agent.MCPAgent
     options:
       members:
         - __init__

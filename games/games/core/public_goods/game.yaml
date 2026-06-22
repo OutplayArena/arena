@@ -1,7 +1,7 @@
 name: Public Goods Game
 version: "1.0.0"
 status: stable
-author: "NashArena maintainers"
+author: "OutplayLabs"
 description: >
   N players (3–10) simultaneously choose how much to contribute to a shared pool.
   The pool is multiplied by a factor r and split equally among all players.

@@ -1,8 +1,8 @@
 import pytest
 
 from games.core.colonelblotto.config import BattlefieldConfig, ColonelBlottoExperimentConfig
-from nash_arena.experiment_config import ExperimentRuntimeConfig, WandbConfig
-from nash_arena.session import GameSession
+from arena.experiment_config import ExperimentRuntimeConfig, WandbConfig
+from arena.session import GameSession
 
 
 def make_config(rounds=2):
@@ -72,10 +72,10 @@ def test_create_session_with_wandb_starts_logger(monkeypatch):
             return self
 
     monkeypatch.setenv(
-        "NASH_ARENA_WANDB_ENCRYPTION_KEY",
+        "OUTPLAYLABS_ARENA_WANDB_ENCRYPTION_KEY",
         "0" * 64,
     )
-    monkeypatch.setattr("nash_arena.session.WandbGameLogger", FakeLogger)
+    monkeypatch.setattr("arena.session.WandbGameLogger", FakeLogger)
     runtime_config = ExperimentRuntimeConfig(
         wandb=WandbConfig(
             api_key="wandb-secret",

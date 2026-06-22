@@ -4,7 +4,7 @@ import random
 from copy import deepcopy
 from dataclasses import dataclass
 
-from nash_arena.interactive_game_engine import InteractiveGameEngine
+from arena.interactive_game_engine import InteractiveGameEngine
 from games.core.stag_hunt.metrics import StagHuntMetrics
 
 VALID_ACTIONS = frozenset({"stag", "hare"})

@@ -83,7 +83,7 @@ Users receive a stable URL in the experiment response:
 They can connect to this URL using any MCP client:
 
 ```python
-from nash_arena_sdk import MCPClient
+from outplaylabs_arena_sdk import MCPClient
 
 client = MCPClient("https://api.agent-arena.local/mcp/mcp-abc123")
 client.connect()
@@ -95,7 +95,7 @@ games = client.list_games()
 The SDK automatically handles the connection:
 
 ```python
-from nash_arena_sdk import MCPAgent
+from outplaylabs_arena_sdk import MCPAgent
 
 # Agent automatically connects to the MCP URL
 agent = MCPAgent(
@@ -178,7 +178,7 @@ curl -X POST http://localhost/api/experiment \
 
 # Use the returned mcp_url
 python -c "
-from nash_arena_sdk import MCPClient
+from outplaylabs_arena_sdk import MCPClient
 client = MCPClient('http://localhost:32779/mcp/mcp-abc123')
 client.connect()
 print(client.list_games())
@@ -189,7 +189,7 @@ print(client.list_games())
 
 ```bash
 # Deploy with Helm
-helm upgrade --install nasharena helm/nash_arena \
+helm upgrade --install outplaylabs-arena helm/arena \
   --set mcpServer.publicBaseUrl=https://api.agent-arena.local
 
 # Create an experiment
@@ -200,7 +200,7 @@ curl -X POST https://api.agent-arena.local/api/experiment \
 
 # Use the returned mcp_url
 python -c "
-from nash_arena_sdk import MCPClient
+from outplaylabs_arena_sdk import MCPClient
 client = MCPClient('https://api.agent-arena.local/mcp/mcp-abc123')
 client.connect()
 print(client.list_games())
@@ -223,11 +223,11 @@ print(client.list_games())
 
 ## Related Files
 
-- `backend/nash_arena/mcp_pool/docker_runtime.py`
-- `backend/nash_arena/mcp_pool/kubernetes_runtime.py`
-- `backend/nash_arena/mcp_pool/manager.py`
-- `backend/nash_arena/main.py`
-- `helm/nash_arena/templates/mcp-server/ingress.yaml`
-- `helm/nash_arena/templates/backend/configmap.yaml`
-- `agent-sdk/src/nash_arena_sdk/mcp_client.py`
-- `agent-sdk/src/nash_arena_sdk/agent.py`
+- `backend/arena/mcp_pool/docker_runtime.py`
+- `backend/arena/mcp_pool/kubernetes_runtime.py`
+- `backend/arena/mcp_pool/manager.py`
+- `backend/arena/main.py`
+- `helm/arena/templates/mcp-server/ingress.yaml`
+- `helm/arena/templates/backend/configmap.yaml`
+- `agent-sdk/src/outplaylabs_arena_sdk/mcp_client.py`
+- `agent-sdk/src/outplaylabs_arena_sdk/agent.py`

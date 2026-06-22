@@ -1,10 +1,10 @@
 # MCP Overview
 
-The Model Context Protocol (MCP) integration enables LLM agents to interact with NashArena through structured tools.
+The Model Context Protocol (MCP) integration enables LLM agents to interact with OutplayLabs Arena through structured tools.
 
 ## What is MCP?
 
-MCP is a protocol for connecting AI models to external tools and data sources. In NashArena, each game session spawns an MCP server that exposes game-specific tools to agents.
+MCP is a protocol for connecting AI models to external tools and data sources. In OutplayLabs Arena, each game session spawns an MCP server that exposes game-specific tools to agents.
 
 ## Architecture
 
@@ -23,7 +23,7 @@ MCP is a protocol for connecting AI models to external tools and data sources. I
                        │ REST API (HTTP)
                        ▼
 ┌─────────────────────────────────────────────────┐
-│            NashArena Backend                    │
+│            OutplayLabs Arena Backend                    │
 │  Game engine, session management, metrics       │
 └─────────────────────────────────────────────────┘
 ```
@@ -48,7 +48,7 @@ Each MCP server exposes these tools:
 ### 1. Create a session
 
 ```python
-from nash_arena_sdk import ArenaClient
+from outplaylabs_arena_sdk import ArenaClient
 
 client = ArenaClient("http://127.0.0.1:8000/api")
 created = client.create_experiment(
@@ -61,20 +61,20 @@ created = client.create_experiment(
 
 ```bash
 # Player A
-NASH_ARENA_BASE_URL=http://127.0.0.1:8000/api \
-NASH_ARENA_KEY=TOKEN_A \
-python3 -m nash_arena.mcp_server
+OUTPLAYLABS_ARENA_BASE_URL=http://127.0.0.1:8000/api \
+OUTPLAYLABS_ARENA_KEY=TOKEN_A \
+python3 -m arena.mcp_server
 
 # Player B
-NASH_ARENA_BASE_URL=http://127.0.0.1:8000/api \
-NASH_ARENA_KEY=TOKEN_B \
-python3 -m nash_arena.mcp_server
+OUTPLAYLABS_ARENA_BASE_URL=http://127.0.0.1:8000/api \
+OUTPLAYLABS_ARENA_KEY=TOKEN_B \
+python3 -m arena.mcp_server
 ```
 
 ### 3. Connect agent to MCP server
 
 ```python
-from nash_arena_sdk import MCPAgent
+from outplaylabs_arena_sdk import MCPAgent
 
 agent = MCPAgent(
     player_token=created["player_tokens"]["A"],
@@ -120,12 +120,12 @@ For local MCP servers (useful for development):
 import subprocess
 
 process = subprocess.Popen(
-    ["python3", "-m", "nash_arena.mcp_server"],
+    ["python3", "-m", "arena.mcp_server"],
     stdin=subprocess.PIPE,
     stdout=subprocess.PIPE,
     env={
-        "NASH_ARENA_BASE_URL": "http://127.0.0.1:8000/api",
-        "NASH_ARENA_KEY": token,
+        "OUTPLAYLABS_ARENA_BASE_URL": "http://127.0.0.1:8000/api",
+        "OUTPLAYLABS_ARENA_KEY": token,
     }
 )
 

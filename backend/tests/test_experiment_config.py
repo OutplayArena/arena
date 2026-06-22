@@ -1,6 +1,6 @@
 import pytest
 
-from nash_arena.experiment_config import WandbConfig, split_runtime_config
+from arena.experiment_config import WandbConfig, split_runtime_config
 
 
 def test_wandb_config_serializes_without_plaintext_api_key():

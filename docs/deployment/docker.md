@@ -1,6 +1,6 @@
 # Docker Deployment
 
-Deploy NashArena using Docker Compose for local development or single-server deployments.
+Deploy OutplayLabs Arena using Docker Compose for local development or single-server deployments.
 
 ## Prerequisites
 
@@ -11,8 +11,8 @@ Deploy NashArena using Docker Compose for local development or single-server dep
 
 ```bash
 # Clone repository
-git clone https://github.com/NashArena/nash-arena.git
-cd nash-arena
+git clone https://github.com/outplaylabs/arena.git
+cd arena
 
 # Configure environment
 cp .env.example .env
@@ -42,7 +42,7 @@ The stack starts:
                               |
                          PostgreSQL (:5432)
 
-    Separate network: nasharena_mcp (for MCP containers)
+    Separate network: arena_default (for MCP containers)
 ```
 
 ## Services
@@ -77,7 +77,7 @@ Edit `.env` in the repository root:
 
 ```bash
 # Database
-DATABASE_URL=postgresql+asyncpg://nasharena:nasharena@db:5432/nasharena
+DATABASE_URL=postgresql+asyncpg://outplaylabs-arena:outplaylabs-arena@db:5432/outplaylabs-arena
 
 # API
 API_PREFIX=/api
@@ -86,8 +86,8 @@ ENABLE_AGENT_REST_API=false
 # MCP
 MCP_RUNTIME=docker
 MCP_BACKEND_URL=http://backend:8000/api
-MCP_DOCKER_NETWORK=nasharena_mcp
-MCP_IMAGE=nasharena-mcp:latest
+MCP_DOCKER_NETWORK=arena_default
+MCP_IMAGE=arena-mcp:latest
 
 # OAuth (optional)
 GITHUB_CLIENT_ID=
@@ -114,7 +114,7 @@ For local HTTPS, add to `/etc/hosts`:
 
 ```bash
 cd backend/docker
-docker build -t nasharena-backend:latest .
+docker build -t arena-backend:latest .
 ```
 
 The Dockerfile:
@@ -127,7 +127,7 @@ The Dockerfile:
 
 ```bash
 cd backend/docker
-docker build -f Dockerfile.mcp -t nasharena-mcp:latest .
+docker build -f Dockerfile.mcp -t arena-mcp:latest .
 ```
 
 ## MCP Integration
@@ -145,7 +145,7 @@ MCP_PUBLIC_BASE_URL=http://localhost
 MCP containers run on a separate network:
 
 ```bash
-docker network ls | grep nasharena_mcp
+docker network ls | grep arena_default
 ```
 
 ### MCP Container Lifecycle
@@ -169,10 +169,10 @@ docker volume ls | grep pgdata
 
 ```bash
 # Backup database
-docker compose exec db pg_dump -U nasharena nasharena > backup.sql
+docker compose exec db pg_dump -U outplaylabs-arena outplaylabs-arena > backup.sql
 
 # Restore database
-cat backup.sql | docker compose exec -T db psql -U nasharena nasharena
+cat backup.sql | docker compose exec -T db psql -U outplaylabs-arena outplaylabs-arena
 ```
 
 ## Development Mode
@@ -186,8 +186,8 @@ Mount source code for development:
 services:
   backend:
     volumes:
-      - ../nash_arena:/app/nash_arena
-    command: uvicorn nash_arena.main:app --reload --host 0.0.0.0 --port 8000
+      - ../arena:/app/arena
+    command: uvicorn arena.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### Frontend Development
@@ -253,7 +253,7 @@ Documentation is deployed to Cloudflare Pages automatically via GitHub Actions. 
 docker compose logs backend
 
 # Check database connectivity
-docker compose exec backend python -c "import asyncpg; asyncpg.connect('postgresql://nasharena:nasharena@db:5432/nasharena')"
+docker compose exec backend python -c "import asyncpg; asyncpg.connect('postgresql://outplaylabs-arena:outplaylabs-arena@db:5432/outplaylabs-arena')"
 ```
 
 ### Migrations Fail
@@ -274,7 +274,7 @@ docker compose up -d
 docker compose exec backend ls -l /var/run/docker.sock
 
 # Check MCP network exists
-docker network ls | grep nasharena_mcp
+docker network ls | grep arena_default
 
 # Check backend logs for MCP errors
 docker compose logs backend | grep mcp

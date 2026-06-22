@@ -1,12 +1,12 @@
 # Configuration Reference
 
-Complete reference for all NashArena environment variables.
+Complete reference for all OutplayLabs Arena environment variables.
 
 ## Database
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DATABASE_URL` | `postgresql+asyncpg://nasharena:nasharena@localhost:5432/nasharena` | PostgreSQL connection string |
+| `DATABASE_URL` | `postgresql+asyncpg://outplaylabs-arena:outplaylabs-arena@localhost:5432/outplaylabs-arena` | PostgreSQL connection string |
 
 ## API
 
@@ -21,9 +21,9 @@ Complete reference for all NashArena environment variables.
 |----------|---------|-------------|
 | `MCP_RUNTIME` | `auto` | Runtime environment: `auto`, `docker`, `k8s` |
 | `MCP_BACKEND_URL` | — | Backend URL for MCP servers to connect to |
-| `MCP_DOCKER_NETWORK` | `nasharena_mcp` | Docker network for MCP containers |
-| `MCP_NAMESPACE` | `nasharena` | Kubernetes namespace for MCP pods |
-| `MCP_IMAGE` | `nasharena-mcp:latest` | Docker image for MCP servers |
+| `MCP_DOCKER_NETWORK` | `arena_default` | Docker network for MCP containers |
+| `MCP_NAMESPACE` | `arena` | Kubernetes namespace for MCP pods |
+| `MCP_IMAGE` | `arena-mcp:latest` | Docker image for MCP servers |
 | `MCP_MAX_CONCURRENT` | `50` | Maximum concurrent MCP servers |
 | `MCP_JOB_TTL` | `300` | Seconds before completed jobs are cleaned up |
 | `MCP_PORT` | `8001` | Port MCP servers listen on |
@@ -46,13 +46,13 @@ Complete reference for all NashArena environment variables.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NASH_ARENA_WANDB_ENCRYPTION_KEY` | — | 32-byte hex encryption key for W&B API keys |
+| `OUTPLAYLABS_ARENA_WANDB_ENCRYPTION_KEY` | — | 32-byte hex encryption key for W&B API keys |
 
 ## Internal
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NASH_ARENA_INTERNAL_API_TOKEN` | — | Internal API token for admin operations |
+| `OUTPLAYLABS_ARENA_INTERNAL_API_TOKEN` | — | Internal API token for admin operations |
 
 ## Generating Secrets
 
@@ -79,7 +79,7 @@ openssl rand -hex 32
 ### Local Development
 
 ```bash
-DATABASE_URL=postgresql+asyncpg://nasharena:nasharena@localhost:5432/nasharena
+DATABASE_URL=postgresql+asyncpg://outplaylabs-arena:outplaylabs-arena@localhost:5432/outplaylabs-arena
 API_PREFIX=/api
 ENABLE_AGENT_REST_API=true  # For testing
 MCP_RUNTIME=docker
@@ -91,13 +91,13 @@ MCP_PUBLIC_BASE_URL=http://localhost
 ### Docker Compose
 
 ```bash
-DATABASE_URL=postgresql+asyncpg://nasharena:nasharena@db:5432/nasharena
+DATABASE_URL=postgresql+asyncpg://outplaylabs-arena:outplaylabs-arena@db:5432/outplaylabs-arena
 API_PREFIX=/api
 ENABLE_AGENT_REST_API=false
 MCP_RUNTIME=docker
 MCP_BACKEND_URL=http://backend:8000/api
-MCP_DOCKER_NETWORK=nasharena_mcp
-MCP_IMAGE=nasharena-mcp:latest
+MCP_DOCKER_NETWORK=arena_default
+MCP_IMAGE=arena-mcp:latest
 MCP_EXPOSE_PORTS=true
 MCP_PUBLIC_BASE_URL=http://localhost
 MCP_ALLOWED_IPS=127.0.0.1,172.0.0.0/8
@@ -106,13 +106,13 @@ MCP_ALLOWED_IPS=127.0.0.1,172.0.0.0/8
 ### Kubernetes
 
 ```bash
-DATABASE_URL=postgresql+asyncpg://nasharena:nasharena@nasharena-db:5432/nasharena
+DATABASE_URL=postgresql+asyncpg://outplaylabs-arena:outplaylabs-arena@arena-db:5432/outplaylabs-arena
 API_PREFIX=/api
 ENABLE_AGENT_REST_API=false
 MCP_RUNTIME=k8s
-MCP_BACKEND_URL=http://nasharena-backend:8000/api
-MCP_NAMESPACE=nasharena
-MCP_IMAGE=your-registry/nasharena-mcp:latest
+MCP_BACKEND_URL=http://arena-backend:8000/api
+MCP_NAMESPACE=arena
+MCP_IMAGE=your-registry/arena-mcp:latest
 MCP_PUBLIC_BASE_URL=https://api.agent-arena.local
 MCP_ALLOWED_IPS=10.0.0.0/8
 ```

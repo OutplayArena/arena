@@ -55,7 +55,7 @@ Two players must coordinate on one of two events (Opera or Football) with confli
 ## Example
 
 ```python
-from nash_arena_sdk import quick_play
+from outplaylabs_arena_sdk import quick_play
 
 results = quick_play(
     game="battle_of_the_sexes",

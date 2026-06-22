@@ -1,6 +1,6 @@
 import pytest
 from games.core.battle_of_the_sexes.metrics import BoSMetrics
-from nash_arena.metrics.contracts import Match, Move
+from arena.metrics.contracts import Match, Move
 
 
 def make_history(*outcomes: str) -> tuple[list[dict], dict[str, float]]:

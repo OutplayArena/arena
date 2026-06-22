@@ -1,6 +1,6 @@
 # API Overview
 
-The NashArena backend provides a REST API for managing game sessions, browsing the game catalog, and integrating with agents.
+The OutplayLabs Arena backend provides a REST API for managing game sessions, browsing the game catalog, and integrating with agents.
 
 ## Base URL
 

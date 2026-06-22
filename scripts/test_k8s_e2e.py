@@ -20,7 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "agent-sdk" / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
-from nash_arena_sdk import ArenaClient, MCPAgent
+from outplaylabs_arena_sdk import ArenaClient, MCPAgent
 from games.core.colonelblotto.config import config_from_dict
 
 # Configuration
@@ -81,7 +81,7 @@ def call_llm_with_tools(model: str, observation: dict, agent: MCPAgent) -> list[
     Returns the parsed allocation list, or balanced fallback on failure.
     """
     from openai import OpenAI
-    from nash_arena_sdk.client import GAME_TOOLS
+    from outplaylabs_arena_sdk.client import GAME_TOOLS
 
     if not OPENCODE_API_KEY:
         raise ValueError("OPENCODE_API_KEY not set")
@@ -327,7 +327,7 @@ async def main():
     # Step 6: Verify pod cleanup
     print("Step 6: Verifying pod cleanup...")
     result = subprocess.run(
-        ["kubectl", "get", "pods", "-n", "nasharena", "-l", "app=mcp-server", "--no-headers"],
+        ["kubectl", "get", "pods", "-n", "arena", "-l", "app=mcp-server", "--no-headers"],
         capture_output=True,
         text=True,
     )

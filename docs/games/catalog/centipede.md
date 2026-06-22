@@ -51,7 +51,7 @@ A sequential game where two players alternately choose to TAKE (end the game) or
 ## Example
 
 ```python
-from nash_arena_sdk import quick_play
+from outplaylabs_arena_sdk import quick_play
 
 results = quick_play(
     game="centipede",
