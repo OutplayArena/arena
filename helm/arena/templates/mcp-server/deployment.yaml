@@ -16,6 +16,8 @@ spec:
       labels:
         {{- include "arena.labels" . | nindent 8 }}
         app.kubernetes.io/component: mcp-server
+      annotations:
+        checksum/oauth-secret: {{ .Values.oauth | toJson | sha256sum }}
     spec:
       containers:
         - name: mcp-server

@@ -13,8 +13,8 @@ COPY games/ games/
 RUN pip install --no-cache-dir ./agent-sdk && pip install --no-cache-dir ./games && pip install --no-cache-dir .
 
 ENV FASTMCP_HOST=0.0.0.0
-ENV FASTMCP_PORT=8000
+ENV FASTMCP_PORT=9999
 
-EXPOSE 8000
+EXPOSE 9999
 
 CMD ["python3", "-m", "arena.mcp_server"]

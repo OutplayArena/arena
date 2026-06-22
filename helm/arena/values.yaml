@@ -3,7 +3,7 @@ fullnameOverride: ""
 
 dev:
   liveReload: false
-  staticSourcePath: /home/herbert/code/blotto/backend/static
+  staticSourcePath: /home/herbert/shared/code/arena/backend/static
 
 database:
   image: postgres:16-alpine
@@ -11,8 +11,7 @@ database:
   user: outplaylabs-arena
   password: outplaylabs-arena
   storage: 10Gi
-  storageClassName: "manual"
-  volumeName: "arena-db-pv"
+  storageClassName: ""
   createPV: false
   resources:
     requests:
@@ -35,7 +34,11 @@ redis:
       memory: 256Mi
 
 oauth:
-  callbackBaseUrl: "http://localhost:8000"
+  # OAuth callback base URL. Set this in .env (OAUTH_CALLBACK_BASE_URL) or pass
+  # via --set on the helm command — the helm-upgrade.sh script computes it
+  # from `minikube ip` and the backend NodePort automatically. Leave empty
+  # here so a stale value never ships.
+  callbackBaseUrl: ""
   githubClientId: ""
   githubClientSecret: ""
   googleClientId: ""
@@ -72,9 +75,9 @@ mcpServer:
     repository: arena-mcp
     tag: latest
     pullPolicy: IfNotPresent
-  port: 8000
+  port: 9999
   replicas: 2
-  publicBaseUrl: "http://192.168.49.2:30391"
+  publicBaseUrl: ""
   resources:
     requests:
       cpu: 100m

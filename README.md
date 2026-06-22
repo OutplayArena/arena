@@ -69,54 +69,101 @@ For production deployments with Kubernetes and Helm, see [Kubernetes Deployment]
 
 ### Prerequisites
 
-- Python 3.12+ with `uv`
+- Python 3.12+ with [`uv`](https://docs.astral.sh/uv/)
 - Node.js 20+ with `npm`
-- PostgreSQL 16 (Docker or Kubernetes)
+- [`minikube`](https://minikube.sigs.k8s.io/) running
+- [`helm`](https://helm.sh/) 3.9+
+- `sudo` access on the dev box (for `/etc/hosts` and `minikube tunnel`)
 
-### Setup
+### Quick Dev Setup (recommended)
+
+The full stack (Postgres, Redis, backend, MCP, docs) runs in minikube and is
+exposed to the host via `kubectl port-forward`. The frontend runs locally
+with Vite HMR, proxying API calls to the forwarded backend. Reachable by
+IP:port — no DNS, no `minikube tunnel`, no Traefik, no chart ingress magic.
 
 ```bash
-# Install all Python workspace packages (backend, agent-sdk, games)
-uv sync
-
-# Install frontend dependencies
+# 1. One-time host setup: .env file + Python + frontend deps
+cp .env.example .env             # then fill in your OAuth + JWT secrets
+uv sync                          # installs backend + agent-sdk + games
 cd frontend && npm install && cd ..
 
-# Copy environment file
-cp .env.example .env
+# 2. Build images and deploy the cluster (idempotent; --build only needed
+#    after a code change, .env change, or chart-template change)
+./scripts/helm-upgrade.sh --build
+
+# 3. Expose cluster services to the host (run after every login)
+./scripts/dev-tunnel.sh start
 ```
 
-### Database
+`scripts/dev-tunnel.sh` runs five `kubectl port-forward`s in the background,
+each on a fixed host port:
 
-**Option A: Docker** (recommended for local dev)
+| Service        | In-cluster port | Host port (dev-tunnel.sh) |
+| -------------- | --------------- | ------------------------- |
+| Backend (API+UI) | 8000          | **30090**                 |
+| MCP            | 9999            | **9998**                  |
+| Docs           | 80              | **8080**                  |
+| Postgres       | 5432            | 5432                      |
+| Redis          | 6379            | 6379                      |
 
-```bash
-cd backend/docker && docker compose up db -d --wait
-uv run alembic -c backend/alembic.ini upgrade head
+The MCP host port is **9998** rather than 9999 because the `hermes dashboard`
+listens on 9999 on the dev box. Edit `scripts/dev-tunnel.sh` to remap if
+needed.
+
+**Reach from this host (or any Tailscale node):**
+
+```
+http://<host-ip>:30090/    Backend API + SPA
+http://<host-ip>:9998/     MCP
+http://<host-ip>:8080/     Docs
+<host-ip>:5432             Postgres  (psql, pgAdmin, etc.)
+<host-ip>:6379             Redis
 ```
 
-**Option B: Kubernetes**
+`scripts/helm-upgrade.sh` prints the right `<host-ip>` for this machine
+when it finishes.
 
-See [Kubernetes Deployment](https://docs.outplaylabs.org/deployment/kubernetes/) for Helm chart instructions.
-
-### Run Backend
-
-```bash
-uv run uvicorn arena.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-Backend serves:
-- API: http://127.0.0.1:8000/api/
-- Swagger UI: http://127.0.0.1:8000/docs
-- Frontend: http://127.0.0.1:8000/
-
-### Run Frontend (Dev Mode)
+**Frontend with HMR (local):**
 
 ```bash
 cd frontend && npm run dev
+# open http://localhost:5173   (vite proxies /api to localhost:30090)
+# Override the API target with:  ARENA_API_TARGET=http://<host-ip>:30090 npm run dev
 ```
 
-Vite dev server runs on http://localhost:5173 with hot reload.
+**Day-to-day commands:**
+
+```bash
+./scripts/helm-upgrade.sh --build   # rebuild images + re-deploy (after code change)
+./scripts/helm-upgrade.sh           # re-apply chart only (after .env / values change)
+./scripts/dev-tunnel.sh start       # expose to host (run after every login)
+./scripts/dev-tunnel.sh status      # which forwards are alive
+./scripts/dev-tunnel.sh stop        # kill all forwards
+```
+
+To tear down: `./scripts/dev-tunnel.sh stop && helm -n arena uninstall arena`.
+
+### Local-only Setup (no cluster)
+
+If you'd rather run everything on the laptop without minikube:
+
+```bash
+uv sync
+cd frontend && npm install && cd ..
+
+# Start Postgres + Redis (Docker required)
+cd backend/docker && docker compose up db redis -d --wait
+uv run alembic -c backend/alembic.ini upgrade head
+
+# Run backend (terminal 1)
+uv run uvicorn arena.main:app --reload --host 0.0.0.0 --port 8000
+
+# Run frontend (terminal 2)
+cd frontend && npm run dev
+```
+
+Frontend: <http://localhost:5173> — API: <http://127.0.0.1:8000/api/>
 
 ### Run Tests
 
