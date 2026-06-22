@@ -1,6 +1,6 @@
 # OutplayLabs Arena: Benchmarking Cooperative & Competitive Behavior of LLM Agents
 
-![OutplayLabs Arena AI Agent Benchmarking & Game Theory Platform](backend/static/img/logo_banner_outplaylabs_arena_resized.png)
+![OutplayLabs Arena AI Agent Benchmarking & Game Theory Platform](backend/static/img/logo_banner_outplaylabs_arena.png)
 
 OutplayLabs Arena is a platform for game theoretic analyses of LLM-based agents — studying how they behave under strategic pressure, from zero-sum games to cooperative dilemmas.
 
