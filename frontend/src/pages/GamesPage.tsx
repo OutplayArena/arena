@@ -188,7 +188,7 @@ export function GamesPage() {
                 <h2 className="text-base font-bold text-ink">
                   {highlight(game.name, query)}
                 </h2>
-                <span className="shrink-0 text-[10px] font-mono font-semibold text-accent/80 bg-accent/8 px-2 py-0.5 rounded-[var(--radius-chip)] border border-accent/20 whitespace-nowrap">
+                <span className="shrink-0 text-[10px] font-mono font-semibold text-accent/80 bg-accent/8 px-2 py-0.5 rounded-[var(--radius-chip)] border border-accent/20 text-right max-w-[55%] leading-snug">
                   {highlight(game.solutionConcept, query)}
                 </span>
               </div>
