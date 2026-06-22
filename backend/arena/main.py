@@ -619,6 +619,9 @@ async def get_results(session_id: str, db: AsyncSession = Depends(get_db)):
         except Exception:
             await db.rollback()
 
+        result["config"] = (
+            session.config.to_dict() if hasattr(session.config, "to_dict") else {}
+        )
         return result
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc

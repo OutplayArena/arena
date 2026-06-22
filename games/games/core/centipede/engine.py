@@ -214,6 +214,7 @@ class CentipedeGame(InteractiveGameEngine):
         return {
             "session_id":      session_id,
             "config_hash":     config_hash,
+            "config":          config.to_dict() if hasattr(config, "to_dict") else {},
             "step":            state.step,
             "max_steps":       self.max_steps,
             "phase":           state.phase,
