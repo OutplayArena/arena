@@ -10,7 +10,7 @@ from uuid import uuid4
 import yaml
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv()
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware

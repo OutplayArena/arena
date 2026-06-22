@@ -1,15 +1,24 @@
 import os
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from authlib.integrations.starlette_client import OAuth, StarletteOAuth2App
+from dotenv import dotenv_values
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from arena.models.user import User
 
-CALLBACK_BASE = os.environ.get("OAUTH_CALLBACK_BASE_URL", "http://localhost:8000")
+# Read OAUTH_CALLBACK_BASE_URL from .env directly so a stale shell export
+# can't pollute the dev fallback. Falls back to os.environ, then default.
+_ENV = dotenv_values(Path(__file__).resolve().parents[3] / ".env")
+CALLBACK_BASE = (
+    _ENV.get("OAUTH_CALLBACK_BASE_URL")
+    or os.environ.get("OAUTH_CALLBACK_BASE_URL")
+    or "http://localhost:8000"
+)
 
 oauth = OAuth()
 oauth.register(
