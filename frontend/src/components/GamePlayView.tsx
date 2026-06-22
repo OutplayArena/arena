@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
+import { useNavigate } from "react-router-dom";
 import { GameHeader } from "./GameHeader";
 import { TabBar } from "./TabBar";
 import { AutoConfigForm } from "./AutoConfigForm";
@@ -35,6 +36,7 @@ interface GamePlayViewProps {
 
 function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch, sessionConfig, createdAt }: GamePlayViewProps) {
   const { state, setMatch, setSessionMeta, stopPlay, endGame } = useApp();
+  const navigate = useNavigate();
   const hasLiveView = game.ui?.live_view ?? false;
   const hasInteractivePlay = game.ui?.interactive_play ?? false;
   const isInteractiveGame = state.pendingGame?.interactive ?? false;
@@ -197,6 +199,10 @@ function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch
             gameLoopRef.current = false;
             setActiveTab("history");
             endGame();
+            // Navigate to the session URL so the page has a stable, reloadable URL
+            // for the completed session. This also ensures the dashboard/history page
+            // can link back to this session.
+            navigate(`/play/${pg.gameSlug}/${pg.sessionId}`, { replace: true });
             return;
           }
 
