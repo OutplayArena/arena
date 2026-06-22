@@ -9,8 +9,8 @@ edit_uri: edit/main/docs/
 
 theme:
   name: material
-  logo: img/logo_only_arena.png
-  favicon: img/favicon_arena.png
+  logo: img/logo_only_outplaylabs_arena.png
+  favicon: img/favicon_outplaylabs_arena.png
   font:
     text: Inter
     code: JetBrains Mono
