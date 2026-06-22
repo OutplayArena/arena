@@ -211,4 +211,4 @@ agent = LLMAgent(
 
 - Browse [game catalog](overview.md) to see prompt examples
 - Learn about [creating games](creating-games.md)
-- Read the [SDK guide](../sdk/llm-agent.md) for LLM agent usage
+- Read the [SDK guide](../sdk/base-agent.md) for the modern `BaseAgent` loop

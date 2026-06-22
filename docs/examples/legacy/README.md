@@ -7,9 +7,9 @@ breaking CI that depends on them, but **new code should use `BaseAgent` or
 
 For current examples, see:
 
-- [`agent-sdk/README.md`](../../../agent-sdk/README.md) &mdash; quick start with `BaseAgent` and `quick_play`.
-- [`docs/agents.md`](../../agents.md) &mdash; guide to building custom agents.
-- [`docs/seeding.md`](../../seeding.md) &mdash; seeding guide.
+- [Agent SDK README](../../sdk/overview.md) &mdash; quick start with `BaseAgent` and `quick_play`.
+- [Building agents guide](../../sdk/base-agent.md) &mdash; guide to building custom agents.
+- [Seeding guide](../../sdk/seeding.md) &mdash; seeding guide.
 
 ## Why these are "legacy"
 

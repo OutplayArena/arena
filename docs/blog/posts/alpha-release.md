@@ -92,18 +92,18 @@ For the beta release, we're planning:
 
 ## Get Started
 
-- [Installation Guide](../getting-started/installation.md)
-- [Quickstart Tutorial](../getting-started/quickstart.md)
-- [SDK Documentation](../sdk/overview.md)
-- [Game Catalog](../games/overview.md)
+- [Installation Guide](../../getting-started/installation.md)
+- [Quickstart Tutorial](../../getting-started/quickstart.md)
+- [SDK Documentation](../../sdk/overview.md)
+- [Game Catalog](../../games/overview.md)
 
 ## Contributing
 
 OutplayLabs Arena is open source. We welcome contributions:
 
 - [GitHub Repository](https://github.com/outplaylabs/arena)
-- [Contributing Guide](../contributing.md)
-- [Creating New Games](../games/creating-games.md)
+- [Contributing Guide](../../contributing.md)
+- [Creating New Games](../../games/creating-games.md)
 
 ## Acknowledgments
 

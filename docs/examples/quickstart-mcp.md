@@ -136,5 +136,5 @@ results = agent_a.get_results()
 ## Next Steps
 
 - [REST Examples](quickstart-rest.md) — REST-based agent examples
-- [SDK Guide](../sdk/mcp-agent.md) — MCPAgent documentation
+- [SDK Guide](../sdk/overview.md) — Modern SDK overview (uses `BaseAgent`)
 - [MCP Overview](../mcp/overview.md) — MCP architecture

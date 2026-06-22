@@ -140,29 +140,6 @@ augmented = moderator.build_system_prompt(base_prompt)
 # "You are playing a game... You have NO time to think. Respond immediately with ONLY the list."
 ```
 
-## API reference
-
-::: outplaylabs_arena_sdk.reasoning.ReasoningModerator
-    options:
-      members:
-        - __init__
-        - from_config
-        - strategy
-        - effort
-        - get_api_params
-        - get_limits
-        - build_system_prompt
-        - prepare_request_body
-        - extract_response_text
-
-::: outplaylabs_arena_sdk.reasoning.ReasoningEffort
-    options:
-      show_root_heading: true
-
-::: outplaylabs_arena_sdk.reasoning.ReasoningStrategy
-    options:
-      show_root_heading: true
-
 ## See also
 
 - [BaseAgent](base-agent.md) &mdash; how `LLMConfig.reasoning_effort` is wired in.

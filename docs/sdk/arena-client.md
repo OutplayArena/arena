@@ -125,28 +125,4 @@ from outplaylabs_arena_sdk.client import (
 session_id, player = validate_session_key("nks_...", secret="my-secret")
 ```
 
-## API Reference
-
-::: outplaylabs_arena_sdk.client.ArenaClient
-    options:
-      members:
-        - __init__
-        - create_experiment
-        - for_player
-        - get_state
-        - submit_action
-        - get_results
-        - list_games
-        - get_game_details
-        - get_game_metrics
-        - get_game_prompts
-        - get_observation
-        - get_agent_manifest
-        - get_game_skill
-        - get_mailbox
-        - send_message
-        - is_terminal
-        - base_url
-        - session_id
-        - token
-        - timeout
+See the [API reference](api-reference.md) for the full class signature.
