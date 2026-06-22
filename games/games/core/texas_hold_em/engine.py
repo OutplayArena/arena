@@ -443,6 +443,7 @@ class TexasHoldEmGame(InteractiveGameEngine):
                      session_id: str, config_hash: str) -> dict:
         return {
             "session_id": session_id, "config_hash": config_hash,
+            "config": config.to_dict() if hasattr(config, "to_dict") else {},
             "round": state.hand_number, "round_total": self.num_rounds,
             "phase": state.phase, "awaiting": list(state.awaiting),
             "total_scores": dict(state.total_scores),
