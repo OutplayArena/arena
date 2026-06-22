@@ -29,6 +29,7 @@ class AgentRegistry:
         self.marginal_payoffs: dict[str, dict[str, list[tuple[float, float]]]] = \
             defaultdict(lambda: defaultdict(list))
         self.match_history: list[str] = []
+        self.matches_played: dict[str, int] = defaultdict(int)
 
     def record_match(self, match: Match, avg_payoffs: dict[str, float]) -> None:
         """
@@ -37,6 +38,8 @@ class AgentRegistry:
         """
         self.match_history.append(match.match_id)
         agents = match.agent_ids
+        for a in agents:
+            self.matches_played[a] += 1
 
         for a, b in combinations(agents, 2):
             pa, pb = avg_payoffs.get(a, 0.0), avg_payoffs.get(b, 0.0)
@@ -128,6 +131,7 @@ class AgentRegistry:
                 for a, inner in self.marginal_payoffs.items()
             },
             "match_history": list(self.match_history),
+            "matches_played": dict(self.matches_played),
         }
 
     @classmethod
@@ -139,4 +143,6 @@ class AgentRegistry:
             for b, pairs in inner.items():
                 registry.marginal_payoffs[a][b] = [tuple(p) for p in pairs]
         registry.match_history = data.get("match_history", [])
+        for agent, count in data.get("matches_played", {}).items():
+            registry.matches_played[agent] = count
         return registry
