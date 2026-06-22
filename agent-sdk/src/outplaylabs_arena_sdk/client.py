@@ -10,12 +10,12 @@ import httpx
 
 SESSION_KEY_PREFIX = "nks_"
 
-# DUPLICATE: Also defined in backend/outplaylabs_arena/auth/session_key.py
+# DUPLICATE: Also defined in backend/arena/auth/session_key.py
 # Keep implementations in sync. The SDK version accepts secret as a parameter
 # since it cannot import the backend's module-level JWT_SECRET constant.
 
 
-# DUPLICATE: Also defined in backend/outplaylabs_arena/auth/session_key.py
+# DUPLICATE: Also defined in backend/arena/auth/session_key.py
 # Keep implementations in sync. The SDK version accepts secret as a parameter
 # since it cannot import the backend's module-level JWT_SECRET constant.
 def validate_session_key(key: str, secret: str) -> tuple[str, str]:
@@ -47,7 +47,7 @@ def validate_session_key(key: str, secret: str) -> tuple[str, str]:
     return session_id, player
 
 
-# DUPLICATE: Also defined in backend/outplaylabs_arena/client.py
+# DUPLICATE: Also defined in backend/arena/client.py
 # Keep implementations in sync. The SDK version adds type annotations.
 class ArenaClient:
     """HTTP client for the OutplayLabs Arena REST API.

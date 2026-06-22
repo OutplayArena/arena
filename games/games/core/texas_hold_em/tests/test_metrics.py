@@ -1,5 +1,5 @@
 import pytest
-from outplaylabs_arena.metrics.contracts import Match, Move
+from arena.metrics.contracts import Match, Move
 
 from games.core.texas_hold_em.metrics import TexasHoldEmMetrics, _rate
 from games.core.texas_hold_em.engine import TexasHoldEmGame

@@ -63,12 +63,12 @@ created = client.create_experiment(
 # Player A
 OUTPLAYLABS_ARENA_BASE_URL=http://127.0.0.1:8000/api \
 OUTPLAYLABS_ARENA_KEY=TOKEN_A \
-python3 -m outplaylabs_arena.mcp_server
+python3 -m arena.mcp_server
 
 # Player B
 OUTPLAYLABS_ARENA_BASE_URL=http://127.0.0.1:8000/api \
 OUTPLAYLABS_ARENA_KEY=TOKEN_B \
-python3 -m outplaylabs_arena.mcp_server
+python3 -m arena.mcp_server
 ```
 
 ### 3. Connect agent to MCP server
@@ -120,7 +120,7 @@ For local MCP servers (useful for development):
 import subprocess
 
 process = subprocess.Popen(
-    ["python3", "-m", "outplaylabs_arena.mcp_server"],
+    ["python3", "-m", "arena.mcp_server"],
     stdin=subprocess.PIPE,
     stdout=subprocess.PIPE,
     env={

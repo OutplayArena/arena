@@ -1,9 +1,9 @@
 import pytest
 
-from outplaylabs_arena.game_components.game_agent import GameAgent
-from outplaylabs_arena.game_components.game_config import GameConfig
-from outplaylabs_arena.game_engine import GameEngine
-from outplaylabs_arena.game_components.game_metrics import GameMetrics
+from arena.game_components.game_agent import GameAgent
+from arena.game_components.game_config import GameConfig
+from arena.game_engine import GameEngine
+from arena.game_components.game_metrics import GameMetrics
 from games.core.colonelblotto.agent import Agent, UniformAgent
 from games.core.colonelblotto.config import ColonelBlottoExperimentConfig
 from games.core.colonelblotto.engine import ColonelBlottoGame

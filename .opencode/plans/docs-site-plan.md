@@ -98,7 +98,7 @@ Priority order:
 6. **P2 - `agent.py`**: Add docstrings to `RESTAgent` methods
 
 #### A3: Backend API Docstrings
-Add `summary` and `description` to all 32 route handlers in `backend/outplaylabs_arena/main.py`:
+Add `summary` and `description` to all 32 route handlers in `backend/arena/main.py`:
 - Health & catalog (7 endpoints)
 - Experiment & session lifecycle (6 endpoints)
 - Session history & dashboard (4 endpoints)

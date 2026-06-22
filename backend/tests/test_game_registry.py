@@ -3,8 +3,8 @@ import importlib.util
 
 import pytest
 
-from outplaylabs_arena.game_registry import CATALOG_ROOT, GameRegistry, GameRegistryError
-from outplaylabs_arena.manifest import build_agent_manifest
+from arena.game_registry import CATALOG_ROOT, GameRegistry, GameRegistryError
+from arena.manifest import build_agent_manifest
 from games.core.colonelblotto.engine import ColonelBlottoGame
 
 
@@ -143,14 +143,14 @@ def test_registry_builds_blotto_config_and_game_from_catalog():
 
 
 def test_arena_package_does_not_own_blotto_specific_modules():
-    # Game-specific modules must live under games/, not in outplaylabs_arena directly
-    assert importlib.util.find_spec("outplaylabs_arena.config") is None
-    assert importlib.util.find_spec("outplaylabs_arena.engine") is None
-    assert importlib.util.find_spec("outplaylabs_arena.agent") is None
-    # outplaylabs_arena.metrics is intentionally present — it's the game-agnostic
+    # Game-specific modules must live under games/, not in arena directly
+    assert importlib.util.find_spec("arena.config") is None
+    assert importlib.util.find_spec("arena.engine") is None
+    assert importlib.util.find_spec("arena.agent") is None
+    # arena.metrics is intentionally present — it's the game-agnostic
     # metrics infrastructure. Blotto-specific logic lives in games/core/colonelblotto/metrics.py
-    assert importlib.util.find_spec("outplaylabs_arena.metrics") is not None
-    assert importlib.util.find_spec("outplaylabs_arena.metrics.blotto") is None
+    assert importlib.util.find_spec("arena.metrics") is not None
+    assert importlib.util.find_spec("arena.metrics.blotto") is None
 
 
 def test_registry_rejects_unknown_game():

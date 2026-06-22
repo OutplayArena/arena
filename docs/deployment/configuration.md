@@ -21,9 +21,9 @@ Complete reference for all OutplayLabs Arena environment variables.
 |----------|---------|-------------|
 | `MCP_RUNTIME` | `auto` | Runtime environment: `auto`, `docker`, `k8s` |
 | `MCP_BACKEND_URL` | — | Backend URL for MCP servers to connect to |
-| `MCP_DOCKER_NETWORK` | `outplaylabs-arena_mcp` | Docker network for MCP containers |
-| `MCP_NAMESPACE` | `outplaylabs-arena` | Kubernetes namespace for MCP pods |
-| `MCP_IMAGE` | `outplaylabs-arena-mcp:latest` | Docker image for MCP servers |
+| `MCP_DOCKER_NETWORK` | `arena_default` | Docker network for MCP containers |
+| `MCP_NAMESPACE` | `arena` | Kubernetes namespace for MCP pods |
+| `MCP_IMAGE` | `arena-mcp:latest` | Docker image for MCP servers |
 | `MCP_MAX_CONCURRENT` | `50` | Maximum concurrent MCP servers |
 | `MCP_JOB_TTL` | `300` | Seconds before completed jobs are cleaned up |
 | `MCP_PORT` | `8001` | Port MCP servers listen on |
@@ -96,8 +96,8 @@ API_PREFIX=/api
 ENABLE_AGENT_REST_API=false
 MCP_RUNTIME=docker
 MCP_BACKEND_URL=http://backend:8000/api
-MCP_DOCKER_NETWORK=outplaylabs-arena_mcp
-MCP_IMAGE=outplaylabs-arena-mcp:latest
+MCP_DOCKER_NETWORK=arena_default
+MCP_IMAGE=arena-mcp:latest
 MCP_EXPOSE_PORTS=true
 MCP_PUBLIC_BASE_URL=http://localhost
 MCP_ALLOWED_IPS=127.0.0.1,172.0.0.0/8
@@ -106,13 +106,13 @@ MCP_ALLOWED_IPS=127.0.0.1,172.0.0.0/8
 ### Kubernetes
 
 ```bash
-DATABASE_URL=postgresql+asyncpg://outplaylabs-arena:outplaylabs-arena@outplaylabs-arena-db:5432/outplaylabs-arena
+DATABASE_URL=postgresql+asyncpg://outplaylabs-arena:outplaylabs-arena@arena-db:5432/outplaylabs-arena
 API_PREFIX=/api
 ENABLE_AGENT_REST_API=false
 MCP_RUNTIME=k8s
-MCP_BACKEND_URL=http://outplaylabs-arena-backend:8000/api
-MCP_NAMESPACE=outplaylabs-arena
-MCP_IMAGE=your-registry/outplaylabs-arena-mcp:latest
+MCP_BACKEND_URL=http://arena-backend:8000/api
+MCP_NAMESPACE=arena
+MCP_IMAGE=your-registry/arena-mcp:latest
 MCP_PUBLIC_BASE_URL=https://api.agent-arena.local
 MCP_ALLOWED_IPS=10.0.0.0/8
 ```

@@ -1,4 +1,4 @@
-from outplaylabs_arena.game_components.game_agent import GameAgent
+from arena.game_components.game_agent import GameAgent
 
 
 class ExampleAgent(GameAgent):

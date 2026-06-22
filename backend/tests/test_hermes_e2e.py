@@ -5,7 +5,7 @@ Run with:
     pytest tests/test_hermes_e2e.py -m e2e -v
 
 Requires:
-    - minikube cluster with outplaylabs-arena deployed
+    - minikube cluster with arena deployed
     - hermes-agent installed at ~/.hermes/hermes-agent/
 """
 

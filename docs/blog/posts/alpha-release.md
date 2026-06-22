@@ -101,7 +101,7 @@ For the beta release, we're planning:
 
 OutplayLabs Arena is open source. We welcome contributions:
 
-- [GitHub Repository](https://github.com/OutplayLabs/arena)
+- [GitHub Repository](https://github.com/outplaylabs/arena)
 - [Contributing Guide](../contributing.md)
 - [Creating New Games](../games/creating-games.md)
 

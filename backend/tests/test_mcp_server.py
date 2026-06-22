@@ -4,9 +4,9 @@ import json
 import httpx
 import pytest
 
-from outplaylabs_arena import mcp_server
+from arena import mcp_server
 from outplaylabs_arena_sdk.client import ArenaClient
-from outplaylabs_arena.auth.session_key import derive_session_key
+from arena.auth.session_key import derive_session_key
 
 
 # ── Middleware ASGI harness ──────────────────────────────────────────────────

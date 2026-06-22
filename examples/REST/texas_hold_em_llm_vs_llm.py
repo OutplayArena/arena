@@ -229,7 +229,7 @@ async def run_match(variant="classic", num_hands=3):
             ClientSession(*await exit_stack.enter_async_context(stdio_client(
                 StdioServerParameters(
                     command=sys.executable,
-                    args=["-m", "outplaylabs_arena.mcp_server"],
+                    args=["-m", "arena.mcp_server"],
                     env={"OUTPLAYLABS_ARENA_BASE_URL": OUTPLAYLABS_ARENA_BASE_URL, "OUTPLAYLABS_ARENA_KEY": key_a},
                 )
             )))
@@ -241,7 +241,7 @@ async def run_match(variant="classic", num_hands=3):
             ClientSession(*await exit_stack.enter_async_context(stdio_client(
                 StdioServerParameters(
                     command=sys.executable,
-                    args=["-m", "outplaylabs_arena.mcp_server"],
+                    args=["-m", "arena.mcp_server"],
                     env={"OUTPLAYLABS_ARENA_BASE_URL": OUTPLAYLABS_ARENA_BASE_URL, "OUTPLAYLABS_ARENA_KEY": key_b},
                 )
             )))

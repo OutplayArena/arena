@@ -14,7 +14,7 @@ Environment:
     HERMES_BIN        - path to hermes binary (default ~/.hermes/hermes-agent/venv/bin/hermes)
 
 Requires:
-    - minikube cluster with outplaylabs-arena deployed
+    - minikube cluster with arena deployed
     - hermes-agent installed at ~/.hermes/hermes-agent/
 """
 
@@ -54,11 +54,11 @@ GAME_TOTAL = int(os.environ.get("HERMES_TOTAL_BUDGET", "100"))
 # ── Helpers (mirror test_mcp_e2e.py pattern) ─────────────────────────────────
 
 def _kubectl_exec(script: str) -> str:
-    namespace = os.environ.get("E2E_NAMESPACE", "nasharena")
+    namespace = os.environ.get("E2E_NAMESPACE", "arena")
     result = subprocess.run(
         [
             "kubectl", "exec", "-n", namespace,
-            "deployment/nasharena-backend", "--",
+            "deployment/arena-backend", "--",
             "python3", "-c", script,
         ],
         capture_output=True, text=True, timeout=30,
@@ -74,9 +74,9 @@ def _create_test_user() -> tuple[str, str]:
     output = _kubectl_exec(f"""
 import asyncio
 from uuid import UUID
-from outplaylabs_arena.db import async_session
-from outplaylabs_arena.models.user import User
-from outplaylabs_arena.auth.jwt import create_access_token
+from arena.db import async_session
+from arena.models.user import User
+from arena.auth.jwt import create_access_token
 
 async def main():
     user_id = UUID("{uid}")
@@ -94,8 +94,8 @@ asyncio.run(main())
 def _delete_test_user(user_id: str) -> None:
     _kubectl_exec(f"""
 import asyncio
-from outplaylabs_arena.db import async_session
-from outplaylabs_arena.models.user import User
+from arena.db import async_session
+from arena.models.user import User
 from sqlalchemy import delete
 
 async def main():
@@ -120,7 +120,7 @@ def _build_skill_content(manifest: dict) -> str:
             f"{p}: {info.get('type', 'any')}" for p, info in params.items()
         )
         tools_lines.append(
-            f"- `mcp_outplaylabs-arena_{name}({param_str})` — {desc}"
+            f"- `mcp_arena_{name}({param_str})` — {desc}"
         )
 
     skill = manifest.get("skill", {})
@@ -129,7 +129,7 @@ def _build_skill_content(manifest: dict) -> str:
     action_fmt = manifest.get("action_format", {})
 
     return f"""---
-name: outplaylabs-arena-colonel-blotto
+name: arena-colonel-blotto
 description: "Play Colonel Blotto on OutplayLabs Arena using MCP tools"
 version: 1.0.0
 author: outplaylabs-arena
@@ -139,7 +139,7 @@ tags: [outplaylabs-arena, game-theory, colonel-blotto, strategy]
 # Colonel Blotto on OutplayLabs Arena
 
 You are playing Colonel Blotto through OutplayLabs Arena's MCP server.
-All MCP tools are prefixed `mcp_outplaylabs-arena_`.
+All MCP tools are prefixed `mcp_arena_`.
 
 ## Objective
 {sections.get('objective', 'Win more battlefields than your opponent.')}
@@ -165,12 +165,12 @@ All MCP tools are prefixed `mcp_outplaylabs-arena_`.
 {sections.get('strategy_hints', sections.get('strategy_notes', 'Balance between concentrating and spreading forces.'))}
 
 ## Critical Instructions
-- ALL tools are called as `mcp_outplaylabs-arena_<tool_name>`
-- Start by calling `mcp_outplaylabs-arena_get_game_state` to see the current state
-- When it's your turn (you appear in `awaiting`), call `mcp_outplaylabs-arena_get_observation` then `mcp_outplaylabs-arena_submit_action`
-- If you're NOT in `awaiting`, call `mcp_outplaylabs-arena_get_game_state` again
-- Keep playing until `mcp_outplaylabs-arena_get_game_state` shows `phase: complete`
-- Then call `mcp_outplaylabs-arena_get_results` for final scores
+- ALL tools are called as `mcp_arena_<tool_name>`
+- Start by calling `mcp_arena_get_game_state` to see the current state
+- When it's your turn (you appear in `awaiting`), call `mcp_arena_get_observation` then `mcp_arena_submit_action`
+- If you're NOT in `awaiting`, call `mcp_arena_get_game_state` again
+- Keep playing until `mcp_arena_get_game_state` shows `phase: complete`
+- Then call `mcp_arena_get_results` for final scores
 """
 
 
@@ -187,7 +187,7 @@ def _setup_hermes_home(
     OutplayLabs Arena MCP config so the agent can connect to both its LLM and
     the game server.
     """
-    hermes_home = tempfile.mkdtemp(prefix="hermes_outplaylabs-arena_")
+    hermes_home = tempfile.mkdtemp(prefix="hermes_arena_")
 
     # Load the real hermes config for model/provider settings
     real_home = os.environ.get("HERMES_HOME", os.path.expanduser("~/.hermes"))
@@ -199,7 +199,7 @@ def _setup_hermes_home(
 
     # Merge: keep real config, add/override MCP servers
     base_config.setdefault("mcp_servers", {})
-    base_config["mcp_servers"]["outplaylabs-arena"] = {
+    base_config["mcp_servers"]["arena"] = {
         "url": mcp_url,
         "headers": {"Authorization": f"Bearer {session_key}"},
         "timeout": 120,
@@ -215,7 +215,7 @@ def _setup_hermes_home(
         shutil.copytree(real_skills, Path(hermes_home) / "skills", symlinks=True, dirs_exist_ok=True)
 
     # Write our OutplayLabs Arena skill
-    skill_dir = Path(hermes_home) / "skills" / "outplaylabs-arena-colonel-blotto"
+    skill_dir = Path(hermes_home) / "skills" / "arena-colonel-blotto"
     skill_dir.mkdir(parents=True, exist_ok=True)
     (skill_dir / "SKILL.md").write_text(skill_content, encoding="utf-8")
 
@@ -232,10 +232,10 @@ def _hermes_oneshot_prompt(player: str, rounds: int, n_fields: int, total: int) 
         f"Never describe what you see — just act on it. "
         f"The ONLY time you may write text is when the game is complete to report the final scores.\n\n"
         f"Loop these steps silently until the game ends:\n"
-        f"1. Call mcp_outplaylabs-arena_get_game_state\n"
-        f"2. If phase is complete → call mcp_outplaylabs-arena_get_results, then output the scores and stop.\n"
-        f"3. If your player ID ({player}) is in awaiting → call mcp_outplaylabs-arena_get_observation, "
-        f"then immediately call mcp_outplaylabs-arena_submit_action with your allocation.\n"
+        f"1. Call mcp_arena_get_game_state\n"
+        f"2. If phase is complete → call mcp_arena_get_results, then output the scores and stop.\n"
+        f"3. If your player ID ({player}) is in awaiting → call mcp_arena_get_observation, "
+        f"then immediately call mcp_arena_submit_action with your allocation.\n"
         f"4. If NOT in awaiting → go back to step 1.\n\n"
         f"Use strategic allocations. You have {total} troops across {n_fields} battlefields. "
         f"Play ALL {rounds} rounds without stopping."
@@ -353,7 +353,7 @@ def run_hermes_vs_sdk(
 
     try:
         hermes_proc = subprocess.run(
-            [HERMES_BIN, "-z", prompt, "--skills", "outplaylabs-arena-colonel-blotto", "--cli"],
+            [HERMES_BIN, "-z", prompt, "--skills", "arena-colonel-blotto", "--cli"],
             env=env,
             capture_output=True,
             text=True,

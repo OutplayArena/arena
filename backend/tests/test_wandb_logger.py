@@ -3,9 +3,9 @@ import secrets
 import pytest
 
 from games.core.colonelblotto.config import ColonelBlottoExperimentConfig
-from outplaylabs_arena.experiment_config import WandbConfig
-from outplaylabs_arena.integrations import wandb_logger
-from outplaylabs_arena.integrations.wandb_logger import (
+from arena.experiment_config import WandbConfig
+from arena.integrations import wandb_logger
+from arena.integrations.wandb_logger import (
     ENCRYPTION_KEY_ENV,
     WandbGameLogger,
     WandbConfigError,

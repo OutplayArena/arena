@@ -327,7 +327,7 @@ async def main():
     # Step 6: Verify pod cleanup
     print("Step 6: Verifying pod cleanup...")
     result = subprocess.run(
-        ["kubectl", "get", "pods", "-n", "nasharena", "-l", "app=mcp-server", "--no-headers"],
+        ["kubectl", "get", "pods", "-n", "arena", "-l", "app=mcp-server", "--no-headers"],
         capture_output=True,
         text=True,
     )

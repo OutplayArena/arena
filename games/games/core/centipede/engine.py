@@ -3,7 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from dataclasses import dataclass
 
-from outplaylabs_arena.interactive_game_engine import InteractiveGameEngine
+from arena.interactive_game_engine import InteractiveGameEngine
 from games.core.centipede.metrics import CentipedeMetrics
 
 VALID_ACTIONS = frozenset({"take", "pass"})

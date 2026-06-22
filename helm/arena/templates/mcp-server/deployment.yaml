@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "arena.fullname" . }}-mcp
+  labels:
+    {{- include "arena.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp-server
+spec:
+  replicas: {{ .Values.mcpServer.replicas }}
+  selector:
+    matchLabels:
+      {{- include "arena.labels" . | nindent 6 }}
+      app.kubernetes.io/component: mcp-server
+  template:
+    metadata:
+      labels:
+        {{- include "arena.labels" . | nindent 8 }}
+        app.kubernetes.io/component: mcp-server
+    spec:
+      containers:
+        - name: mcp-server
+          image: "{{ .Values.mcpServer.image.repository }}:{{ .Values.mcpServer.image.tag }}"
+          imagePullPolicy: {{ .Values.mcpServer.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.mcpServer.port }}
+              name: http
+          env:
+            - name: FASTMCP_HOST
+              value: "0.0.0.0"
+            - name: FASTMCP_PORT
+              value: {{ .Values.mcpServer.port | quote }}
+            - name: OUTPLAYLABS_ARENA_BASE_URL
+              value: "http://{{ include "arena.fullname" . }}-backend:8000{{ .Values.backend.env.apiPrefix }}"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "arena.fullname" . }}-oauth
+                  key: jwt-secret
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.mcpServer.resources | nindent 12 }}

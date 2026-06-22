@@ -1,7 +1,7 @@
 """Tests for session key derivation and validation."""
 import pytest
 
-from outplaylabs_arena.auth.session_key import (
+from arena.auth.session_key import (
     SESSION_KEY_PREFIX,
     derive_session_key,
     validate_session_key,
@@ -64,7 +64,7 @@ class TestSessionKey:
         import base64
         import hashlib
         import hmac
-        from outplaylabs_arena.auth import JWT_SECRET
+        from arena.auth import JWT_SECRET
 
         hashlib.sha256(JWT_SECRET.encode("utf-8")).digest()
         payload = "session:A"

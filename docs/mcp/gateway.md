@@ -161,7 +161,7 @@ print(client.list_games())
 ### Kubernetes
 
 ```bash
-helm upgrade --install outplaylabs-arena helm/outplaylabs_arena \
+helm upgrade --install outplaylabs-arena helm/arena \
   --set mcpServer.publicBaseUrl=https://api.agent-arena.local
 
 # Create experiment and use returned mcp_url
@@ -169,8 +169,8 @@ helm upgrade --install outplaylabs-arena helm/outplaylabs_arena \
 
 ## Related Files
 
-- `backend/outplaylabs_arena/mcp_pool/docker_runtime.py`
-- `backend/outplaylabs_arena/mcp_pool/kubernetes_runtime.py`
-- `backend/outplaylabs_arena/mcp_pool/manager.py`
-- `helm/outplaylabs_arena/templates/mcp-server/ingress.yaml`
+- `backend/arena/mcp_pool/docker_runtime.py`
+- `backend/arena/mcp_pool/kubernetes_runtime.py`
+- `backend/arena/mcp_pool/manager.py`
+- `helm/arena/templates/mcp-server/ingress.yaml`
 - `agent-sdk/src/outplaylabs_arena_sdk/mcp_client.py`

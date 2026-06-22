@@ -16,7 +16,7 @@ export OUTPLAYLABS_ARENA_API_KEY="your-api-key"
 export OPENCODE_GO_API_KEY="your-llm-api-key"
 
 # Start the backend
-uv run uvicorn outplaylabs_arena.main:app --host 0.0.0.0 --port 8000
+uv run uvicorn arena.main:app --host 0.0.0.0 --port 8000
 ```
 
 ## Colonel Blotto

@@ -1,9 +1,9 @@
 # OutplayLabs Arena site configuration
 # Edit this file to customize links and content on the landing page
 
-github_url: "https://github.com/OutplayLabs/arena"
-docs_url: "https://outplaylabs-arena-docs.pages.dev"
-privacy_notice_url: "https://github.com/OutplayLabs/arena/blob/main/PRIVACY.md"
+github_url: "https://github.com/outplaylabs/arena"
+docs_url: "https://docs.outplaylabs.org"
+privacy_notice_url: "https://github.com/outplaylabs/arena/blob/main/PRIVACY.md"
 
 about_text: >
   The OutplayLabs Arena is an open-source platform for game theory simulation and

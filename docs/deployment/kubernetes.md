@@ -14,22 +14,22 @@ Deploy OutplayLabs Arena on Kubernetes using the Helm chart for production deplo
 
 ```bash
 # Add Helm repo (or use local chart)
-# helm repo add outplaylabs-arena https://...
+# helm repo add arena https://...
 
 # Configure values
-cp helm/outplaylabs_arena/values.yaml my-values.yaml
+cp helm/arena/values.yaml my-values.yaml
 # Edit my-values.yaml
 
 # Deploy
-helm upgrade --install outplaylabs-arena helm/outplaylabs_arena \
-  --namespace outplaylabs-arena --create-namespace \
+helm upgrade --install arena helm/arena \
+  --namespace arena --create-namespace \
   -f my-values.yaml
 
 # Wait for deployment
-kubectl -n outplaylabs-arena rollout status deployment/outplaylabs-arena-backend
+kubectl -n arena rollout status deployment/arena-backend
 
 # Port-forward for local access
-kubectl -n outplaylabs-arena port-forward svc/outplaylabs-arena-backend 8000:8000
+kubectl -n arena port-forward svc/arena-backend 8000:8000
 ```
 
 ## Architecture
@@ -62,7 +62,7 @@ kubectl -n outplaylabs-arena port-forward svc/outplaylabs-arena-backend 8000:800
 # Backend configuration
 backend:
   image:
-    repository: your-registry/outplaylabs-arena-backend
+    repository: your-registry/arena-backend
     tag: latest
     pullPolicy: Always
   replicas: 2
@@ -83,7 +83,7 @@ database:
 # MCP server configuration
 mcpServer:
   image:
-    repository: your-registry/outplaylabs-arena-mcp
+    repository: your-registry/arena-mcp
     tag: latest
   maxConcurrentJobs: 50
   jobTTL: 300
@@ -116,7 +116,7 @@ Secrets are managed via Helm values or external secret manager:
 openssl rand -hex 32
 
 # Create secret manually
-kubectl -n outplaylabs-arena create secret generic outplaylabs-arena-secrets \
+kubectl -n arena create secret generic arena-secrets \
   --from-literal=jwt-secret=your-jwt-secret \
   --from-literal=github-client-id=... \
   --from-literal=github-client-secret=...
@@ -128,16 +128,16 @@ kubectl -n outplaylabs-arena create secret generic outplaylabs-arena-secrets \
 
 ```bash
 cd backend/docker
-docker build -t your-registry/outplaylabs-arena-backend:latest .
-docker push your-registry/outplaylabs-arena-backend:latest
+docker build -t your-registry/arena-backend:latest .
+docker push your-registry/arena-backend:latest
 ```
 
 ### MCP
 
 ```bash
 cd backend/docker
-docker build -f Dockerfile.mcp -t your-registry/outplaylabs-arena-mcp:latest .
-docker push your-registry/outplaylabs-arena-mcp:latest
+docker build -f Dockerfile.mcp -t your-registry/arena-mcp:latest .
+docker push your-registry/arena-mcp:latest
 ```
 
 ## Database
@@ -166,11 +166,11 @@ Migrations run as a Kubernetes Job on deployment:
 
 ```bash
 # Check migration status
-kubectl -n outplaylabs-arena get jobs
-kubectl -n outplaylabs-arena logs job/outplaylabs-arena-migrations
+kubectl -n arena get jobs
+kubectl -n arena logs job/arena-migrations
 
 # Run migrations manually
-kubectl -n outplaylabs-arena exec -it deployment/outplaylabs-arena-backend -- \
+kubectl -n arena exec -it deployment/arena-backend -- \
   alembic -c /app/alembic.ini upgrade head
 ```
 
@@ -178,11 +178,11 @@ kubectl -n outplaylabs-arena exec -it deployment/outplaylabs-arena-backend -- \
 
 ```bash
 # Backup database
-kubectl -n outplaylabs-arena exec -it statefulset/outplaylabs-arena-db -- \
+kubectl -n arena exec -it statefulset/arena-db -- \
   pg_dump -U outplaylabs-arena outplaylabs-arena > backup.sql
 
 # Restore database
-cat backup.sql | kubectl -n outplaylabs-arena exec -i statefulset/outplaylabs-arena-db -- \
+cat backup.sql | kubectl -n arena exec -i statefulset/arena-db -- \
   psql -U outplaylabs-arena outplaylabs-arena
 ```
 
@@ -216,11 +216,11 @@ Database is a StatefulSet (single instance). For production:
 The backend needs permissions to create MCP resources:
 
 ```yaml
-# helm/outplaylabs_arena/templates/mcp-server/rbac.yaml
+# helm/arena/templates/mcp-server/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: outplaylabs-arena-mcp-manager
+  name: arena-mcp-manager
 rules:
   - apiGroups: ["batch"]
     resources: ["jobs"]
@@ -243,7 +243,7 @@ kind: Ingress
 metadata:
   name: mcp-abc123
   annotations:
-    traefik.ingress.kubernetes.io/router.middlewares: outplaylabs-arena-strip-mcp-prefix@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: arena-strip-mcp-prefix@kubernetescrd
 spec:
   rules:
     - host: api.agent-arena.local
@@ -264,25 +264,25 @@ spec:
 
 ```bash
 # Check backend health
-kubectl -n outplaylabs-arena exec -it deployment/outplaylabs-arena-backend -- \
+kubectl -n arena exec -it deployment/arena-backend -- \
   curl http://localhost:8000/api/health
 
 # Check database
-kubectl -n outplaylabs-arena exec -it statefulset/outplaylabs-arena-db -- \
-  pg_isready -U outplaylabs-arena
+kubectl -n arena exec -it statefulset/arena-db -- \
+  pg_isready -U arena
 ```
 
 ### Logs
 
 ```bash
 # Backend logs
-kubectl -n outplaylabs-arena logs deployment/outplaylabs-arena-backend -f
+kubectl -n arena logs deployment/arena-backend -f
 
 # Database logs
-kubectl -n outplaylabs-arena logs statefulset/outplaylabs-arena-db -f
+kubectl -n arena logs statefulset/arena-db -f
 
 # MCP pod logs
-kubectl -n outplaylabs-arena logs pod/mcp-abc123
+kubectl -n arena logs pod/mcp-abc123
 ```
 
 ### Metrics
@@ -299,15 +299,15 @@ backend:
 
 ```bash
 # Update Helm chart
-helm upgrade outplaylabs-arena helm/outplaylabs_arena \
-  --namespace outplaylabs-arena \
+helm upgrade arena helm/arena \
+  --namespace arena \
   -f my-values.yaml
 
 # Rollback if needed
-helm rollback outplaylabs-arena 1
+helm rollback arena 1
 
 # Check rollout status
-kubectl -n outplaylabs-arena rollout status deployment/outplaylabs-arena-backend
+kubectl -n arena rollout status deployment/arena-backend
 ```
 
 ## Production Checklist
@@ -330,37 +330,37 @@ kubectl -n outplaylabs-arena rollout status deployment/outplaylabs-arena-backend
 
 ```bash
 # Check events
-kubectl -n outplaylabs-arena describe pod <pod-name>
+kubectl -n arena describe pod <pod-name>
 
 # Check logs
-kubectl -n outplaylabs-arena logs <pod-name>
+kubectl -n arena logs <pod-name>
 
 # Check PVC
-kubectl -n outplaylabs-arena get pvc
+kubectl -n arena get pvc
 ```
 
 ### Database Connection Issues
 
 ```bash
 # Test connectivity
-kubectl -n outplaylabs-arena exec -it deployment/outplaylabs-arena-backend -- \
+kubectl -n arena exec -it deployment/arena-backend -- \
   python -c "import asyncpg; asyncpg.connect('...')"
 
 # Check database service
-kubectl -n outplaylabs-arena get svc outplaylabs-arena-db
+kubectl -n arena get svc arena-db
 ```
 
 ### MCP Pods Stuck
 
 ```bash
 # List MCP pods
-kubectl -n outplaylabs-arena get pods -l app=mcp-server
+kubectl -n arena get pods -l app=mcp-server
 
 # Delete stuck pods
-kubectl -n outplaylabs-arena delete pod mcp-abc123
+kubectl -n arena delete pod mcp-abc123
 
 # Check backend logs
-kubectl -n outplaylabs-arena logs deployment/outplaylabs-arena-backend | grep mcp
+kubectl -n arena logs deployment/arena-backend | grep mcp
 ```
 
 ## Next Steps

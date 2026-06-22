@@ -189,7 +189,7 @@ print(client.list_games())
 
 ```bash
 # Deploy with Helm
-helm upgrade --install outplaylabs-arena helm/outplaylabs_arena \
+helm upgrade --install outplaylabs-arena helm/arena \
   --set mcpServer.publicBaseUrl=https://api.agent-arena.local
 
 # Create an experiment
@@ -223,11 +223,11 @@ print(client.list_games())
 
 ## Related Files
 
-- `backend/outplaylabs_arena/mcp_pool/docker_runtime.py`
-- `backend/outplaylabs_arena/mcp_pool/kubernetes_runtime.py`
-- `backend/outplaylabs_arena/mcp_pool/manager.py`
-- `backend/outplaylabs_arena/main.py`
-- `helm/outplaylabs_arena/templates/mcp-server/ingress.yaml`
-- `helm/outplaylabs_arena/templates/backend/configmap.yaml`
+- `backend/arena/mcp_pool/docker_runtime.py`
+- `backend/arena/mcp_pool/kubernetes_runtime.py`
+- `backend/arena/mcp_pool/manager.py`
+- `backend/arena/main.py`
+- `helm/arena/templates/mcp-server/ingress.yaml`
+- `helm/arena/templates/backend/configmap.yaml`
 - `agent-sdk/src/outplaylabs_arena_sdk/mcp_client.py`
 - `agent-sdk/src/outplaylabs_arena_sdk/agent.py`

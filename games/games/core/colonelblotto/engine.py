@@ -1,7 +1,7 @@
 from copy import deepcopy
 from dataclasses import dataclass
 
-from outplaylabs_arena.interactive_game_engine import InteractiveGameEngine
+from arena.interactive_game_engine import InteractiveGameEngine
 from .metrics import ColonelBlottoMetrics
 
 from .agent import Agent

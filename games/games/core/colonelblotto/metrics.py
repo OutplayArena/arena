@@ -6,9 +6,9 @@ from itertools import combinations
 
 import numpy as np
 
-from outplaylabs_arena.game_components.game_metrics import GameMetrics
-from outplaylabs_arena.metrics.behavioral import BehavioralMetrics
-from outplaylabs_arena.metrics.extension import GameMetricsExtension
+from arena.game_components.game_metrics import GameMetrics
+from arena.metrics.behavioral import BehavioralMetrics
+from arena.metrics.extension import GameMetricsExtension
 
 
 # ---------------------------------------------------------------------------

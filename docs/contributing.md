@@ -50,8 +50,8 @@ Have an idea? Open an issue describing:
 ### Clone and Install
 
 ```bash
-git clone https://github.com/OutplayLabs/arena.git
-cd outplaylabs-arena
+git clone https://github.com/outplaylabs/arena.git
+cd arena
 
 # Install Python packages
 uv sync
@@ -87,7 +87,7 @@ cd frontend && npm test
 
 ```bash
 # Backend
-uv run uvicorn outplaylabs_arena.main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn arena.main:app --reload --host 0.0.0.0 --port 8000
 
 # Frontend (separate terminal)
 cd frontend && npm run dev

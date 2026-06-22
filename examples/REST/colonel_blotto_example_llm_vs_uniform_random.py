@@ -175,7 +175,7 @@ async def run_match():
         }
         server_params = StdioServerParameters(
             command=sys.executable,
-            args=["-m", "outplaylabs_arena.mcp_server"],
+            args=["-m", "arena.mcp_server"],
             env=env,
         )
         read, write = await exit_stack.enter_async_context(stdio_client(server_params))

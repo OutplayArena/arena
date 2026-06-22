@@ -1,6 +1,0 @@
-apiVersion: v2
-name: outplaylabs-arena
-description: OutplayLabs Arena - Strategic game theory simulation platform
-type: application
-version: 0.1.0
-appVersion: "0.1.0"

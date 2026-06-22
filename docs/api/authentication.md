@@ -112,7 +112,7 @@ MCP_ALLOWED_IPS=127.0.0.1,192.168.1.100
 MCP keys are created programmatically:
 
 ```python
-from outplaylabs_arena.mcp_key_manager import create_mcp_key
+from arena.mcp_key_manager import create_mcp_key
 
 key = create_mcp_key(db_session)
 # Returns: {"key_id": "...", "key": "mcp_key_..."}

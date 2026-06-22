@@ -9,7 +9,7 @@ from transformers import pipeline
 
 import yaml
 
-from outplaylabs_arena.game_components.game_agent import GameAgent
+from arena.game_components.game_agent import GameAgent
 from outplaylabs_arena_sdk.reasoning import ReasoningModerator
 
 

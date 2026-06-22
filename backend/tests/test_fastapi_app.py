@@ -7,11 +7,11 @@ import importlib
 import pytest
 from fastapi.testclient import TestClient
 
-import outplaylabs_arena.main
-importlib.reload(outplaylabs_arena.main)
-from outplaylabs_arena.main import app, bearer_token, config_from_request, get_broker  # noqa: E402
-from outplaylabs_arena.db import get_db  # noqa: E402
-from outplaylabs_arena.auth.dependencies import require_user, _ensure_local_user  # noqa: E402
+import arena.main
+importlib.reload(arena.main)
+from arena.main import app, bearer_token, config_from_request, get_broker  # noqa: E402
+from arena.db import get_db  # noqa: E402
+from arena.auth.dependencies import require_user, _ensure_local_user  # noqa: E402
 
 
 class FakeBroker:

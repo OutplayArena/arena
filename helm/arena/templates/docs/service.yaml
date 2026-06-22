@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "arena.fullname" . }}-docs
+  labels:
+    {{- include "arena.labels" . | nindent 4 }}
+    app.kubernetes.io/component: docs
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "arena.docs.selectorLabels" . | nindent 4 }}

@@ -1,6 +1,6 @@
 import pytest
 from games.core.public_goods.metrics import PublicGoodsMetrics
-from outplaylabs_arena.metrics.contracts import Match, Move
+from arena.metrics.contracts import Match, Move
 
 
 def make_history(*rounds: dict[str, float],

@@ -5,13 +5,13 @@ Run with:
     pytest tests/test_mcp_e2e.py -m e2e -v
 
 Required environment:
-    kubectl must be configured pointing at the nasharena namespace.
+    kubectl must be configured pointing at the arena namespace.
     The MCP server Deployment must be running (after helm upgrade).
 
 Optional overrides:
     E2E_BACKEND_URL   – default http://192.168.49.2:30391/api
     E2E_MCP_URL       – default http://192.168.49.2:30391/mcp
-    E2E_NAMESPACE     – default nasharena
+    E2E_NAMESPACE     – default arena
 """
 
 import os
@@ -22,13 +22,13 @@ import httpx
 import pytest
 
 from outplaylabs_arena_sdk.mcp_client import MCPClient
-from outplaylabs_arena.auth.session_key import derive_session_key
+from arena.auth.session_key import derive_session_key
 
 # ── Configuration ────────────────────────────────────────────────────────────
 
 BACKEND_URL = os.environ.get("E2E_BACKEND_URL", "http://192.168.49.2:30391/api")
 MCP_URL = os.environ.get("E2E_MCP_URL", "http://192.168.49.2:30391/mcp")
-NAMESPACE = os.environ.get("E2E_NAMESPACE", "nasharena")
+NAMESPACE = os.environ.get("E2E_NAMESPACE", "arena")
 
 pytestmark = pytest.mark.e2e
 
@@ -39,7 +39,7 @@ def _kubectl_exec(script: str) -> str:
     result = subprocess.run(
         [
             "kubectl", "exec", "-n", NAMESPACE,
-            "deployment/nasharena-backend", "--",
+            "deployment/arena-backend", "--",
             "python3", "-c", script,
         ],
         capture_output=True, text=True, timeout=30,
@@ -54,9 +54,9 @@ def _create_test_user() -> tuple[str, str]:
     uid = str(uuid.uuid4())
     email = f"e2e-{uid[:8]}@test.local"
     script = f"""import asyncio
-from outplaylabs_arena.db import async_session
-from outplaylabs_arena.models.user import User
-from outplaylabs_arena.auth.jwt import create_access_token
+from arena.db import async_session
+from arena.models.user import User
+from arena.auth.jwt import create_access_token
 
 async def main():
     user_id = "{uid}"
@@ -75,8 +75,8 @@ asyncio.run(main())
 def _delete_test_user(user_id: str) -> None:
     _kubectl_exec(f"""
 import asyncio
-from outplaylabs_arena.db import async_session
-from outplaylabs_arena.models.user import User
+from arena.db import async_session
+from arena.models.user import User
 from sqlalchemy import delete
 
 async def main():
@@ -92,7 +92,7 @@ def _run_migration() -> None:
     result = subprocess.run(
         [
             "kubectl", "exec", "-n", NAMESPACE,
-            "deployment/nasharena-backend", "--",
+            "deployment/arena-backend", "--",
             "alembic", "upgrade", "head",
         ],
         capture_output=True, text=True, timeout=60,

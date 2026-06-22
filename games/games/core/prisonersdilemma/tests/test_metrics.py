@@ -1,5 +1,5 @@
 import pytest
-from outplaylabs_arena.metrics.contracts import Match, Move
+from arena.metrics.contracts import Match, Move
 
 from games.core.prisonersdilemma.metrics import PDMetrics, _outcome_counts
 

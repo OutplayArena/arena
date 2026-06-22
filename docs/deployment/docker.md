@@ -11,8 +11,8 @@ Deploy OutplayLabs Arena using Docker Compose for local development or single-se
 
 ```bash
 # Clone repository
-git clone https://github.com/OutplayLabs/arena.git
-cd outplaylabs-arena
+git clone https://github.com/outplaylabs/arena.git
+cd arena
 
 # Configure environment
 cp .env.example .env
@@ -42,7 +42,7 @@ The stack starts:
                               |
                          PostgreSQL (:5432)
 
-    Separate network: outplaylabs-arena_mcp (for MCP containers)
+    Separate network: arena_default (for MCP containers)
 ```
 
 ## Services
@@ -86,8 +86,8 @@ ENABLE_AGENT_REST_API=false
 # MCP
 MCP_RUNTIME=docker
 MCP_BACKEND_URL=http://backend:8000/api
-MCP_DOCKER_NETWORK=outplaylabs-arena_mcp
-MCP_IMAGE=outplaylabs-arena-mcp:latest
+MCP_DOCKER_NETWORK=arena_default
+MCP_IMAGE=arena-mcp:latest
 
 # OAuth (optional)
 GITHUB_CLIENT_ID=
@@ -114,7 +114,7 @@ For local HTTPS, add to `/etc/hosts`:
 
 ```bash
 cd backend/docker
-docker build -t outplaylabs-arena-backend:latest .
+docker build -t arena-backend:latest .
 ```
 
 The Dockerfile:
@@ -127,7 +127,7 @@ The Dockerfile:
 
 ```bash
 cd backend/docker
-docker build -f Dockerfile.mcp -t outplaylabs-arena-mcp:latest .
+docker build -f Dockerfile.mcp -t arena-mcp:latest .
 ```
 
 ## MCP Integration
@@ -145,7 +145,7 @@ MCP_PUBLIC_BASE_URL=http://localhost
 MCP containers run on a separate network:
 
 ```bash
-docker network ls | grep outplaylabs-arena_mcp
+docker network ls | grep arena_default
 ```
 
 ### MCP Container Lifecycle
@@ -186,8 +186,8 @@ Mount source code for development:
 services:
   backend:
     volumes:
-      - ../outplaylabs_arena:/app/outplaylabs_arena
-    command: uvicorn outplaylabs_arena.main:app --reload --host 0.0.0.0 --port 8000
+      - ../arena:/app/arena
+    command: uvicorn arena.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### Frontend Development
@@ -274,7 +274,7 @@ docker compose up -d
 docker compose exec backend ls -l /var/run/docker.sock
 
 # Check MCP network exists
-docker network ls | grep outplaylabs-arena_mcp
+docker network ls | grep arena_default
 
 # Check backend logs for MCP errors
 docker compose logs backend | grep mcp
