@@ -26,7 +26,7 @@ from arena.game_registry import GameRegistry, GameRegistryError
 from arena.manifest import build_agent_manifest
 from arena.messaging import RedisBroker, StatePersister, MessageLogger
 from arena.messaging.broker import MessageBroker
-from arena.metrics import AgentRegistry, get_global_registry, set_global_registry, MatchEvaluator, load_registry, save_registry
+from arena.metrics import AgentRegistry, get_global_registry, set_global_registry, set_registry, get_all_registries, get_game_registry, MatchEvaluator, save_registry
 from arena.session import GameSession, _serialize_state
 from arena.models.session import SessionModel
 from arena.models.api_key import ApiKey
@@ -80,8 +80,19 @@ app.add_middleware(SessionMiddleware, secret_key=os.environ.get("JWT_SECRET", "d
 async def _load_registry_from_db() -> None:
     try:
         async with _async_session_factory() as db:
-            registry = await load_registry(db)
-            set_global_registry(registry)
+            from arena.models.agent_registry import AgentRegistryState
+            from sqlalchemy import select
+            result = await db.execute(select(AgentRegistryState))
+            loaded_global = False
+            for row in result.scalars().all():
+                reg = AgentRegistry.from_dict(row.state_json)
+                if row.key == "global" or row.key == "overall":
+                    set_global_registry(reg)
+                    loaded_global = True
+                else:
+                    set_registry(reg, row.key)
+            if not loaded_global:
+                set_global_registry(AgentRegistry())
     except Exception:
         pass
 
@@ -613,9 +624,22 @@ async def get_results(session_id: str, db: AsyncSession = Depends(get_db)):
         evaluator = MatchEvaluator(registry)
         result = session.results(evaluator=evaluator)
         result = sanitize_for_json(result)
+
+        # Also record in per-game registry
+        match = session.to_match()
+        game_type = match.game_type
+        if game_type and game_type != "unknown":
+            import numpy as np
+            game_registry = get_game_registry(game_type)
+            avg_payoffs = {
+                a: float(np.mean(match.payoffs(a))) if match.payoffs(a) else 0.0
+                for a in match.agent_ids
+            }
+            game_registry.record_match(match, avg_payoffs)
+
         try:
-            await save_registry(registry, db)
-            await db.commit()
+            for key, reg in get_all_registries().items():
+                await save_registry(reg, db, key)
         except Exception:
             await db.rollback()
 
@@ -1080,13 +1104,19 @@ async def auth_user(
 @app.get(f"{API_PREFIX}/benchmark/report")
 async def benchmark_report(
     agent_ids: str | None = Query(default=None, description="Comma-separated agent IDs"),
+    game: str | None = Query(default=None, description="Game type to filter by (e.g. colonelblotto)"),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Return the current benchmark leaderboard — Elo, α-Rank, and per-dimension scores
-    for all tracked agents. Pass ?agent_ids=a,b,c to restrict to specific agents.
+    for all tracked agents. Pass ?agent_ids=a,b,c to restrict to specific agents,
+    or ?game=colonelblotto to view per-game rankings.
     """
-    registry = get_global_registry()
+    if game:
+        registry = get_game_registry(game)
+    else:
+        registry = get_global_registry()
+
     known_agents = list(registry.elo_ratings.keys())
     if agent_ids:
         requested = [a.strip() for a in agent_ids.split(",") if a.strip()]
@@ -1095,28 +1125,47 @@ async def benchmark_report(
         target = known_agents
 
     if len(target) < 2:
-        return {
+        return sanitize_for_json({
             "agents": {a: {"elo": registry.elo_ratings.get(a), "matches_played": 0} for a in target},
             "ranking": target,
             "population": {},
             "total_matches": len(registry.match_history),
             "note": "Need at least 2 agents for α-Rank computation.",
-        }
+        })
 
-    pop = registry.population_report(target)
+    evaluator = MatchEvaluator(registry)
+    pop = evaluator.population_report(target)
     agent_summaries = {}
     for agent_id in target:
         agent_summaries[agent_id] = {
             "elo": pop["elo_ratings"].get(agent_id),
             "alpha_rank": pop["alpha_rank_scores"].get(agent_id),
+            "matches_played": registry.matches_played.get(agent_id, 0),
         }
 
-    return {
+    return sanitize_for_json({
         "agents": agent_summaries,
         "ranking": pop["alpha_rank_ranking"],
         "population": pop,
         "total_matches": len(registry.match_history),
-    }
+    })
+
+
+@app.get(f"{API_PREFIX}/benchmark/games")
+async def benchmark_games(
+    db: AsyncSession = Depends(get_db),
+):
+    """List game types that have benchmark data."""
+    try:
+        from arena.models.agent_registry import AgentRegistryState
+        from sqlalchemy import select
+        result = await db.execute(
+            select(AgentRegistryState.key).where(AgentRegistryState.key.like("game:%"))
+        )
+        games = [row[0].replace("game:", "", 1) for row in result.all()]
+        return sanitize_for_json({"games": sorted(games)})
+    except Exception:
+        return sanitize_for_json({"games": []})
 
 
 @app.delete(f"{API_PREFIX}/benchmark/reset")
