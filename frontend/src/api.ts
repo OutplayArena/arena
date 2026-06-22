@@ -16,6 +16,8 @@ import type {
   MetricDescriptor,
   ScenarioInfo,
   MailboxMessage,
+  BenchmarkReport,
+  BenchmarkGamesResponse,
 } from "./types";
 
 export class ApiError extends Error {
@@ -260,6 +262,15 @@ export function getMailboxMessages(
 ): Promise<{ messages: MailboxMessage[] }> {
   const params = player ? `?player=${player}` : "";
   return request<{ messages: MailboxMessage[] }>(`/api/session/${sessionId}/mailbox/messages${params}`);
+}
+
+export function getBenchmarkReport(game?: string): Promise<BenchmarkReport> {
+  const query = game ? `?game=${game}` : "";
+  return request<BenchmarkReport>(`/api/benchmark/report${query}`);
+}
+
+export function getBenchmarkGames(): Promise<BenchmarkGamesResponse> {
+  return request<BenchmarkGamesResponse>("/api/benchmark/games");
 }
 
 

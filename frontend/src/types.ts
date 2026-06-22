@@ -257,4 +257,22 @@ export interface MailboxMessage {
   round: number;
 }
 
+export interface BenchmarkAgent {
+  elo: number;
+  alpha_rank?: number;
+  matches_played: number;
+}
+
+export interface BenchmarkReport {
+  agents: Record<string, BenchmarkAgent>;
+  ranking: string[];
+  population: Record<string, unknown>;
+  total_matches: number;
+  note?: string;
+}
+
+export interface BenchmarkGamesResponse {
+  games: string[];
+}
+
 
