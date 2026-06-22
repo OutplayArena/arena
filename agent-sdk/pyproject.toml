@@ -1,14 +1,39 @@
 [project]
 name = "outplaylabs-arena-sdk"
 version = "0.1.0"
-description = "SDK for building and testing agents on OutplayLabs Arena."
+description = "Python SDK for building and testing agents on OutplayLabs Arena."
 readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "MIT" }
 authors = [
     { name = "Ryan Zhang", email = "ryan.zhang@yale.edu" },
     { name = "Herbert Woisetschlaeger", email = "herbert@woisetschlaeger.fyi" },
 ]
-license = { text = "MIT" }
+keywords = [
+    "arena",
+    "outplaylabs",
+    "agent",
+    "llm",
+    "game-theory",
+    "mcp",
+    "openai",
+    "sdk",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
 dependencies = [
     "httpx>=0.27.0",
     "mcp>=1.0.0",
@@ -21,6 +46,12 @@ dev = [
     "pytest-asyncio>=0.24",
 ]
 
+[project.urls]
+Homepage = "https://github.com/outplaylabs/arena"
+Documentation = "https://docs.outplaylabs.org"
+Repository = "https://github.com/outplaylabs/arena"
+Issues = "https://github.com/outplaylabs/arena/issues"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -30,3 +61,11 @@ packages = ["src/outplaylabs_arena_sdk"]
 
 [tool.hatch.build.targets.wheel.sources]
 "src" = ""
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/outplaylabs_arena_sdk",
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+]

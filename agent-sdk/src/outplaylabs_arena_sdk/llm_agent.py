@@ -69,8 +69,6 @@ class LLMAgentConfig:
     use_mcp: bool = True
 
 
-# DUPLICATE: Also defined in games/core/colonelblotto/agent.py
-# Keep implementations in sync.
 def parse_allocation(text: str, n_fields: int, total: int) -> list[int]:
     """Parse a list allocation from LLM output.
 
@@ -110,8 +108,6 @@ def parse_allocation(text: str, n_fields: int, total: int) -> list[int]:
     return alloc
 
 
-# DUPLICATE: Also defined in examples/REST/ultimatum_glm_vs_deepseek.py and examples/MCP/ultimatum_glm_vs_deepseek.py
-# Keep implementations in sync.
 def parse_offer(text: str, total: float, min_offer: float = 0.0) -> float:
     """Parse a numeric offer from LLM output.
 
@@ -139,8 +135,6 @@ def parse_offer(text: str, total: float, min_offer: float = 0.0) -> float:
     return total * 0.4
 
 
-# DUPLICATE: Also defined in examples/REST/ultimatum_glm_vs_deepseek.py and examples/MCP/ultimatum_glm_vs_deepseek.py as parse_response
-# Keep implementations in sync.
 def parse_accept_reject(text: str) -> str:
     """Parse an accept/reject decision from LLM output.
 
@@ -162,8 +156,6 @@ def parse_accept_reject(text: str) -> str:
     return "accept" if "accept" in text.strip().lower() else "reject"
 
 
-# DUPLICATE: Also defined in games/core/colonelblotto/agent.py as balanced_allocation
-# Keep implementations in sync.
 def _balanced_allocation(n: int, total: int) -> list[int]:
     base = total // n
     alloc = [base] * n
@@ -172,8 +164,6 @@ def _balanced_allocation(n: int, total: int) -> list[int]:
     return alloc
 
 
-# DUPLICATE: Also defined in examples/REST/colonel_blotto_example_llm_vs_uniform_random.py and examples/REST/texas_hold_em_llm_vs_llm.py as extract_tool_text
-# Keep implementations in sync.
 def _extract_tool_text(result: Any) -> Any:
     for item in result.content:
         if isinstance(item, types.TextContent):
