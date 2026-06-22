@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import pytest
 
-from outplaylabs_arena_sdk import registry
 from outplaylabs_arena_sdk.base import BaseAgent
 from outplaylabs_arena_sdk.registry import (
     GAME_AGENTS,

@@ -6,7 +6,6 @@ import hashlib
 import hmac
 import os
 
-import pytest
 
 from outplaylabs_arena_sdk.agents.games import (
     BattleOfTheSexesAgent,

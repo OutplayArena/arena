@@ -19,7 +19,6 @@ import os
 os.environ.setdefault("API_PREFIX", "")
 os.environ.setdefault("ENABLE_AGENT_REST_API", "true")
 
-from pathlib import Path
 import importlib
 import pytest
 from fastapi.testclient import TestClient
@@ -82,7 +81,6 @@ class _FakeDb:
         self._store: dict = {}
 
     async def execute(self, stmt):
-        from sqlalchemy import select
         from arena.auth.dependencies import LOCAL_USER_ID
         from arena.models.user import User
         compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))

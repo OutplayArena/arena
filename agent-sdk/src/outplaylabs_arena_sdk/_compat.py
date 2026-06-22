@@ -27,8 +27,8 @@ class MCPAgent(_MCPClient):
     @property
     def player(self) -> str:
         """Player identifier extracted from the session key."""
-        from outplaylabs_arena_sdk.client import validate_session_key, SESSION_KEY_PREFIX
-        from outplaylabs_arena_sdk.seed import _default_jwt_secret  # noqa: F401
+        from outplaylabs_arena_sdk.base import _default_jwt_secret
+        from outplaylabs_arena_sdk.client import validate_session_key
 
         try:
             _, player = validate_session_key(self.session_key, _default_jwt_secret())

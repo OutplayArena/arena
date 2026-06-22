@@ -58,9 +58,9 @@ class TestSeedResolver:
         """Re-resolving should update the rng, not stack effects."""
         r = SeedResolver()
         r.resolve_from_config({"seed": 1})
-        a = r.rng.random()
+        r.rng.random()  # discard first draw
         r.resolve_from_config({"seed": 2})
-        b = r.rng.random()
+        actual = r.rng.random()
         # Re-reseeding makes draws deterministic from the new seed.
         rng = random.Random(2)
-        assert b == rng.random()
+        assert actual == rng.random()

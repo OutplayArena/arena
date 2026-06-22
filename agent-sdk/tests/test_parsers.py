@@ -1,7 +1,6 @@
 """Tests for :mod:`outplaylabs_arena_sdk.parsers`."""
 from __future__ import annotations
 
-import pytest
 
 from outplaylabs_arena_sdk.parsers import (
     _balanced_allocation,
