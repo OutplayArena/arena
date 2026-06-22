@@ -68,7 +68,7 @@ export default function BlottoPlayView({ onGameEnd, sessionConfig }: Props) {
         <div className={`shrink-0 mx-4 mt-3 rounded-lg border p-2.5 flex items-center justify-between ${
           remaining < 0 ? "border-red-400 bg-red-50 dark:border-red-700 dark:bg-red-950/20"
           : remaining === 0 ? "border-emerald-400 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/20"
-          : "border-line/40 bg-surface"
+          : "border-line bg-surface"
         }`}>
           <span className="text-xs font-bold text-muted">Resources allocated</span>
           <span className={`text-sm font-black tabular-nums ${remaining < 0 ? "text-red-500" : remaining === 0 ? "text-emerald-600 dark:text-emerald-400" : "text-ink"}`}>
@@ -100,7 +100,7 @@ export default function BlottoPlayView({ onGameEnd, sessionConfig }: Props) {
                 max={budget}
                 onChange={(e) => set(i, Number(e.target.value))}
                 disabled={!isMyTurn || isSubmitting || hasSubmittedThisRound}
-                className="w-16 text-center text-sm font-bold border border-line/40 rounded-lg px-2 py-1 bg-surface text-ink focus:outline-none focus:border-accent/60 disabled:opacity-50"
+                className="w-16 text-center text-sm font-bold border border-line rounded-lg px-2 py-1 bg-surface text-ink focus:outline-none focus:border-accent/60 disabled:opacity-50"
               />
             </div>
           ))}
@@ -113,7 +113,7 @@ export default function BlottoPlayView({ onGameEnd, sessionConfig }: Props) {
               type="button"
               onClick={distributeEvenly}
               disabled={isSubmitting}
-              className="px-3 py-2 rounded-lg border border-line/40 text-xs font-semibold text-muted hover:bg-surface-soft disabled:opacity-40 transition-colors"
+              className="px-3 py-2 rounded-lg border border-line text-xs font-semibold text-muted hover:bg-surface-soft disabled:opacity-40 transition-colors"
             >
               Distribute evenly
             </button>
@@ -121,7 +121,7 @@ export default function BlottoPlayView({ onGameEnd, sessionConfig }: Props) {
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting || !isValid || !isMyTurn}
-              className="flex-1 py-2 rounded-lg bg-accent text-white text-sm font-extrabold hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              className="flex-1 py-2 rounded-[var(--radius-button)] bg-accent text-white text-sm font-extrabold hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               {isSubmitting ? "Submitting..." : "Deploy Forces"}
             </button>

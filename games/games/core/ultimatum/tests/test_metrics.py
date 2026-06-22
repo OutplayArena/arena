@@ -1,6 +1,6 @@
 import pytest
 from games.core.ultimatum.metrics import UltimatumMetrics
-from nash_arena.metrics.contracts import Match, Move
+from arena.metrics.contracts import Match, Move
 
 
 def make_history(*rounds: tuple[float, str],

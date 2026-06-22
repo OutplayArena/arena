@@ -1,7 +1,7 @@
 name: Colonel Blotto
 version: "1.0.0"
 status: stable
-author: "NashArena maintainers"
+author: "OutplayLabs"
 description: >
   Resource allocation game. Two players allocate fixed resources across
   battlefields; each battlefield is won by the higher allocation, with

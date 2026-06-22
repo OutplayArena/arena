@@ -1,7 +1,7 @@
 name: Stag Hunt
 version: "1.0.0"
 status: stable
-author: "NashArena maintainers"
+author: "OutplayLabs"
 description: >
   A 2-player symmetric coordination game with two Nash equilibria. (Stag, Stag) is
   Pareto-optimal but risky — it requires mutual trust. (Hare, Hare) is risk-dominant

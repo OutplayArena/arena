@@ -6,9 +6,9 @@ from itertools import combinations
 
 import numpy as np
 
-from nash_arena.game_components.game_metrics import GameMetrics
-from nash_arena.metrics.behavioral import BehavioralMetrics
-from nash_arena.metrics.extension import GameMetricsExtension
+from arena.game_components.game_metrics import GameMetrics
+from arena.metrics.behavioral import BehavioralMetrics
+from arena.metrics.extension import GameMetricsExtension
 
 
 # ---------------------------------------------------------------------------

@@ -18,15 +18,15 @@ from datetime import datetime, timezone
 from openai import OpenAI
 
 
-from nash_arena_sdk import MCPAgent
+from outplaylabs_arena_sdk import MCPAgent
 
-from nash_arena_sdk import ArenaClient
+from outplaylabs_arena_sdk import ArenaClient
 from games.core.cournot_duopoly.config import config_from_dict
 
 sys.stdout.reconfigure(line_buffering=True)
 
-NASH_ARENA_BASE_URL = os.environ.get("NASH_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
-NASH_ARENA_API_KEY  = os.environ["NASH_ARENA_API_KEY"]
+OUTPLAYLABS_ARENA_BASE_URL = os.environ.get("OUTPLAYLABS_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
+OUTPLAYLABS_ARENA_API_KEY  = os.environ["OUTPLAYLABS_ARENA_API_KEY"]
 OPENCODE_API_BASE   = "https://opencode.ai/zen/v1"
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "results")
 
@@ -87,7 +87,7 @@ async def run():
     print()
 
     # ── ORCHESTRATOR ──────────────────────────────────────────────────────────
-    arena  = ArenaClient(NASH_ARENA_BASE_URL)
+    arena  = ArenaClient(OUTPLAYLABS_ARENA_BASE_URL)
     config = config_from_dict({
         "game": "cournot_duopoly", "players": 2, "rounds": NUM_ROUNDS,
         "demand_a": DEMAND_A, "demand_b": DEMAND_B,
@@ -95,7 +95,7 @@ async def run():
         "seed": 42,
     })
     created = arena.create_experiment(
-        config, agents={"A": PLAYER_A_MODEL, "B": PLAYER_B_MODEL}, api_key=NASH_ARENA_API_KEY,
+        config, agents={"A": PLAYER_A_MODEL, "B": PLAYER_B_MODEL}, api_key=OUTPLAYLABS_ARENA_API_KEY,
     )
     session_id    = created["session_id"]
     player_tokens = created["player_tokens"]
@@ -106,8 +106,8 @@ async def run():
     print()
 
     # ── AGENTS ────────────────────────────────────────────────────────────────
-    agent_a = MCPAgent(player_tokens["A"], NASH_ARENA_BASE_URL)
-    agent_b = MCPAgent(player_tokens["B"], NASH_ARENA_BASE_URL)
+    agent_a = MCPAgent(player_tokens["A"], OUTPLAYLABS_ARENA_BASE_URL)
+    agent_b = MCPAgent(player_tokens["B"], OUTPLAYLABS_ARENA_BASE_URL)
 
     no_thinking = {"thinking": {"type": "disabled"}}
 

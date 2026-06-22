@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "agent-sdk", "src"))
 
 from openai import OpenAI
-from nash_arena_sdk import ArenaClient, MCPAgent
+from outplaylabs_arena_sdk import ArenaClient, MCPAgent
 from games.core.colonelblotto.config import config_from_dict
 
 # Docker deployment settings
@@ -23,8 +23,8 @@ _backend_ips = subprocess.run(
     capture_output=True, text=True
 ).stdout.strip().split()
 _backend_ip = _backend_ips[0] if _backend_ips else "127.0.0.1"
-NASH_ARENA_BASE_URL = f"http://{_backend_ip}:8000/api"
-NASH_ARENA_API_KEY = "nka_jYhmJ_GINGK48vcoUHKid_jCb1NH4cNXGZZCTsiEbak"
+OUTPLAYLABS_ARENA_BASE_URL = f"http://{_backend_ip}:8000/api"
+OUTPLAYLABS_ARENA_API_KEY = "nka_jYhmJ_GINGK48vcoUHKid_jCb1NH4cNXGZZCTsiEbak"
 JWT_SECRET = "098991b0b02fbd9e54a89aa7eac3bbad864487a4234cb5eadf6bb3a207b8eb15"
 
 # LLM settings
@@ -95,12 +95,12 @@ async def main():
     print("Docker MCP Pool Test: Colonel Blotto (3 rounds)")
     print(f"Player A: {PLAYER_A_MODEL}")
     print(f"Player B: {PLAYER_B_MODEL}")
-    print(f"Arena: {NASH_ARENA_BASE_URL}")
+    print(f"Arena: {OUTPLAYLABS_ARENA_BASE_URL}")
     print("=" * 60)
     print()
 
     # Create experiment
-    arena = ArenaClient(NASH_ARENA_BASE_URL)
+    arena = ArenaClient(OUTPLAYLABS_ARENA_BASE_URL)
     config = config_from_dict({
         "game": "colonelblotto",
         "players": 2,
@@ -114,7 +114,7 @@ async def main():
     created = arena.create_experiment(
         config,
         agents={"A": PLAYER_A_MODEL, "B": PLAYER_B_MODEL},
-        api_key=NASH_ARENA_API_KEY,
+        api_key=OUTPLAYLABS_ARENA_API_KEY,
     )
     session_id = created["session_id"]
     player_tokens = created["player_tokens"]
@@ -146,8 +146,8 @@ async def main():
     # Player A uses MCP, Player B uses REST (fallback) since the MCP server is bound to player A.
     # In a production setup, each player would get their own MCP container.
     agents = {
-        "A": MCPAgent(player_tokens["A"], mcp_url=mcp_url, base_url=NASH_ARENA_BASE_URL),
-        "B": MCPAgent(player_tokens["B"], mcp_url=None, base_url=NASH_ARENA_BASE_URL),  # REST fallback
+        "A": MCPAgent(player_tokens["A"], mcp_url=mcp_url, base_url=OUTPLAYLABS_ARENA_BASE_URL),
+        "B": MCPAgent(player_tokens["B"], mcp_url=None, base_url=OUTPLAYLABS_ARENA_BASE_URL),  # REST fallback
     }
 
     print(f"Agent A transport: {agents['A'].transport}")

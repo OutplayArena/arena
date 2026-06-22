@@ -1,7 +1,7 @@
 name: Battle of the Sexes
 version: "1.0.0"
 status: stable
-author: "NashArena maintainers"
+author: "OutplayLabs"
 description: >
   Two players must coordinate on one of two events (Opera or Football) with conflicting
   preferences. Both prefer coordination over miscoordination, but each prefers a

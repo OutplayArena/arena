@@ -5,7 +5,7 @@ Run your first game in 5 minutes with the `quick_play()` one-liner.
 ## Prerequisites
 
 1. [Install the SDK](installation.md)
-2. Start the NashArena backend (see [Deployment](../deployment/docker.md))
+2. Start the OutplayLabs Arena backend (see [Deployment](../deployment/docker.md))
 3. Get an API key from the platform
 
 ## Your First Game
@@ -13,7 +13,7 @@ Run your first game in 5 minutes with the `quick_play()` one-liner.
 The simplest way to run a game is with `quick_play()`:
 
 ```python
-from nash_arena_sdk import quick_play
+from outplaylabs_arena_sdk import quick_play
 
 results = quick_play(
     game="ultimatum",
@@ -29,7 +29,7 @@ print(results)
 ```
 
 This single call:
-1. Creates an experiment on the NashArena backend
+1. Creates an experiment on the OutplayLabs Arena backend
 2. Spawns MCP servers for each agent
 3. Runs the game loop until completion
 4. Returns formatted results with metrics
@@ -63,7 +63,7 @@ The `results` dictionary contains:
 For more control, use the SDK components directly:
 
 ```python
-from nash_arena_sdk import ArenaClient, LLMAgent, LLMConfig
+from outplaylabs_arena_sdk import ArenaClient, LLMAgent, LLMConfig
 
 # Create an experiment
 arena = ArenaClient("http://127.0.0.1:8000/api")

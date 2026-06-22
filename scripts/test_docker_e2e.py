@@ -19,7 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "agent-sdk" / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
-from nash_arena_sdk import ArenaClient, MCPAgent
+from outplaylabs_arena_sdk import ArenaClient, MCPAgent
 from games.core.colonelblotto.config import config_from_dict
 
 # Configuration

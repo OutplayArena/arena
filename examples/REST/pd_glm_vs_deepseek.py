@@ -8,13 +8,13 @@ from datetime import datetime, timezone
 
 from openai import OpenAI
 
-from nash_arena_sdk import ArenaClient
+from outplaylabs_arena_sdk import ArenaClient
 from games.core.prisonersdilemma.config import config_from_dict
 from games.core.prisonersdilemma.scenarios import get_scenario, ALL_SCENARIOS
 
 sys.stdout.reconfigure(line_buffering=True)
 
-NASH_ARENA_BASE_URL = os.environ.get("NASH_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
+OUTPLAYLABS_ARENA_BASE_URL = os.environ.get("OUTPLAYLABS_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
 OPENCODE_GO_API_BASE = "https://opencode.ai/zen/v1"
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "results")
 
@@ -139,7 +139,7 @@ async def llm_move(model, system_msg, prompt, extra_body=None):
 
 async def run_match(scenario_id="prison", system_prompt_override=None):
     scenario = get_scenario(scenario_id)
-    nash_api_key = os.environ["NASH_ARENA_API_KEY"]
+    nash_api_key = os.environ["OUTPLAYLABS_ARENA_API_KEY"]
     opencode_api_key = os.environ["OPENCODE_GO_API_KEY"]
     _client.api_key = opencode_api_key.strip()
 
@@ -171,7 +171,7 @@ async def run_match(scenario_id="prison", system_prompt_override=None):
             print(f"  [{model}] warmup failed ({e}), continuing anyway")
     print()
 
-    arena = ArenaClient(NASH_ARENA_BASE_URL)
+    arena = ArenaClient(OUTPLAYLABS_ARENA_BASE_URL)
     config = config_from_dict({
         "game": "prisonersdilemma",
         "variant": "classic",
@@ -196,8 +196,8 @@ async def run_match(scenario_id="prison", system_prompt_override=None):
     print(f"Session: {session_id}")
     print()
 
-    player_a = ArenaClient.for_player(NASH_ARENA_BASE_URL, created, "A")
-    player_b = ArenaClient.for_player(NASH_ARENA_BASE_URL, created, "B")
+    player_a = ArenaClient.for_player(OUTPLAYLABS_ARENA_BASE_URL, created, "A")
+    player_b = ArenaClient.for_player(OUTPLAYLABS_ARENA_BASE_URL, created, "B")
 
     system_msg = make_system_msg(scenario, system_prompt_override)
     no_thinking = {"thinking": {"type": "disabled"}}

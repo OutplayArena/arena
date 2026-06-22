@@ -46,7 +46,7 @@ Resource allocation game. Two players allocate fixed resources across battlefiel
 ## Example
 
 ```python
-from nash_arena_sdk import quick_play
+from outplaylabs_arena_sdk import quick_play
 
 results = quick_play(
     game="colonelblotto",

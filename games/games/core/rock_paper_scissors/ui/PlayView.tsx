@@ -48,7 +48,7 @@ export default function RPSPlayView({ onGameEnd }: Props) {
               type="button"
               onClick={() => submitMove(move)}
               disabled={!isMyTurn || isSubmitting || hasSubmittedThisRound}
-              className={`flex flex-col items-center gap-2 w-28 py-5 rounded-2xl border-2 font-bold text-sm transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg active:not-disabled:translate-y-0 ${COLOR[move]}`}
+              className={`flex flex-col items-center gap-2 w-28 py-5 rounded-[var(--radius-card)] border-2 font-bold text-sm transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg active:not-disabled:translate-y-0 ${COLOR[move]}`}
             >
               <span className="text-4xl">{EMOJI[move]}</span>
               <span className="capitalize">{move}</span>

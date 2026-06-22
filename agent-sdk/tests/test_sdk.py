@@ -1,4 +1,4 @@
-"""Basic tests for the NashArena SDK."""
+"""Basic tests for the OutplayLabs Arena SDK."""
 import hashlib
 import hmac
 import base64
@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from nash_arena_sdk import (
+from outplaylabs_arena_sdk import (
     ArenaClient,
     MCPAgent,
     LLMAgent,
@@ -20,8 +20,8 @@ from nash_arena_sdk import (
     parse_offer,
     parse_accept_reject,
 )
-from nash_arena_sdk.client import validate_session_key, SESSION_KEY_PREFIX
-from nash_arena_sdk.llm_agent import _balanced_allocation, _extract_tool_text
+from outplaylabs_arena_sdk.client import validate_session_key, SESSION_KEY_PREFIX
+from outplaylabs_arena_sdk.llm_agent import _balanced_allocation, _extract_tool_text
 
 
 def _make_session_key(session_id: str, player: str, secret: str) -> str:

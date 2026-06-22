@@ -25,7 +25,7 @@ export const TabBar = memo(function TabBar({ tabs, activeTab, onTabChange }: Tab
   }, [tabs, onTabChange]);
 
   return (
-    <nav className="flex border-b border-line/40 shrink-0 bg-surface-container/10" role="tablist">
+    <nav className="flex border-b border-line shrink-0" role="tablist">
       {tabs.map((tab) => (
         <button
           key={tab.id}
@@ -36,10 +36,10 @@ export const TabBar = memo(function TabBar({ tabs, activeTab, onTabChange }: Tab
           tabIndex={activeTab === tab.id ? 0 : -1}
           onClick={() => onTabChange(tab.id)}
           onKeyDown={(e) => handleKeyDown(e, tab.id)}
-          className={`px-5 py-2.5 text-sm font-bold transition-colors border-b-2 -mb-[1px] ${
+          className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
             activeTab === tab.id
-              ? "border-accent text-accent"
-              : "border-transparent text-muted hover:text-ink hover:border-line/30"
+              ? "border-accent text-ink"
+              : "border-transparent text-muted hover:text-ink"
           }`}
         >
           {tab.label}

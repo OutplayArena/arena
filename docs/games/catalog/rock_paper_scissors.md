@@ -48,7 +48,7 @@ Classic simultaneous zero-sum game. Two players each choose rock, paper, or scis
 ## Example
 
 ```python
-from nash_arena_sdk import quick_play
+from outplaylabs_arena_sdk import quick_play
 
 results = quick_play(
     game="rock_paper_scissors",

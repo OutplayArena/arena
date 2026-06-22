@@ -408,18 +408,18 @@ function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch
       {/* Session key modal */}
       {showKeyModal && hasRemoteKeys && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setShowKeyModal(false)}>
-          <div className="bg-surface rounded-2xl shadow-2xl border border-line/40 w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-surface rounded-[var(--radius-card)] shadow-elevation-5 border border-line w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-extrabold text-ink text-sm">Remote Agent Keys</h2>
               <button type="button" onClick={() => setShowKeyModal(false)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-surface-container text-muted hover:text-ink transition-colors">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-            <p className="text-xs text-muted mb-4">Pass these as the <code className="bg-ink/8 px-1 rounded text-[10px]">NASH_ARENA_KEY</code> environment variable to your agent(s).</p>
+            <p className="text-xs text-muted mb-4">Pass these as the <code className="bg-ink/8 px-1 rounded text-[10px]">OUTPLAYLABS_ARENA_KEY</code> environment variable to your agent(s).</p>
             {Object.entries(remoteKeys!).map(([side, key]) => (
               <div key={side} className="mb-3">
                 <div className="text-[10px] font-extrabold text-muted uppercase tracking-wider mb-1.5">Player {side}</div>
-                <div className="flex items-center gap-2 bg-ink/5 border border-line/30 rounded-lg px-3 py-2">
+                <div className="flex items-center gap-2 bg-surface-soft border border-line rounded-[var(--radius-chip)] px-3 py-2">
                   <code className="flex-1 text-[11px] font-mono text-ink break-all leading-relaxed">{key}</code>
                   <button
                     type="button"
@@ -483,7 +483,7 @@ function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch
         {activeTab === "play" && showPlayTab && (
           <div className="flex-1 min-h-0 flex flex-col">
             {/* Play tab toolbar: abandon + key access */}
-            <div className="shrink-0 border-b border-line/20 bg-surface/60 flex items-center justify-end gap-1 px-2 py-1">
+            <div className="shrink-0 border-b border-line bg-surface-soft flex items-center justify-end gap-1 px-2 py-1">
               {hasRemoteKeys && (
                 <button
                   type="button"

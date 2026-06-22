@@ -1,54 +1,72 @@
 import { memo } from "react";
+import { Link } from "react-router-dom";
 import { useSiteConfig } from "../hooks/useSiteConfig";
 
+
 export const Footer = memo(function Footer() {
-  const { github_url, privacy_notice_url, footer } = useSiteConfig();
+  const { github_url, docs_url, privacy_notice_url, footer } = useSiteConfig();
 
   return (
-    <footer className="border-t border-line/50 bg-surface/60 backdrop-blur-sm px-5 py-4">
-      <div className="max-w-3xl mx-auto flex items-center gap-4 text-xs text-muted">
-        <span className="flex-1 whitespace-nowrap">
-          {footer.copyright.replace("NashArena Contributors", "")}
-          {github_url ? (
-            <a
-              href={`${github_url}/graphs/contributors`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-ink transition-colors duration-200"
-            >
-              NashArena Contributors
-            </a>
-          ) : (
-            "NashArena Contributors"
-          )}
-        </span>
+    <footer className="border-t border-line bg-surface-soft">
+      <div className="max-w-6xl mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-4 gap-8">
+        {/* Col 1: Brand */}
+        <div className="col-span-2 md:col-span-1">
+          <Link to="/" className="flex items-center gap-2 no-underline mb-3">
+            <img src="/img/logo_only_outplaylabs_arena.png" alt="OutplayLabs Arena" className="h-6 w-auto" />
+            <span className="text-sm font-bold text-ink">OutplayLabs</span>
+          </Link>
+          <p className="text-xs text-muted leading-relaxed max-w-[180px]">
+            Rigorous, reproducible benchmarks for strategic AI behavior.
+          </p>
+        </div>
 
-        {footer.tagline && (
-          <span className="text-center">{footer.tagline}</span>
-        )}
+        {/* Col 2: Platform */}
+        <div>
+          <p className="text-xs font-semibold text-ink mb-3 uppercase tracking-wider">Platform</p>
+          <ul className="space-y-2">
+            <li><Link to="/dashboard" className="text-xs text-muted hover:text-ink transition-colors no-underline">Dashboard</Link></li>
+            <li><Link to="/keys" className="text-xs text-muted hover:text-ink transition-colors no-underline">API Keys</Link></li>
+            <li><Link to="/games" className="text-xs text-muted hover:text-ink transition-colors no-underline">Games</Link></li>
+          </ul>
+        </div>
 
-        <div className="flex items-center gap-3 flex-1 justify-end">
-          {github_url && (
-            <a
-              href={github_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-ink transition-colors duration-200"
-            >
-              GitHub
-            </a>
-          )}
+        {/* Col 3: Community */}
+        <div>
+          <p className="text-xs font-semibold text-ink mb-3 uppercase tracking-wider">Community</p>
+          <ul className="space-y-2">
+            {github_url && (
+              <>
+                <li><a href={github_url} target="_blank" rel="noopener noreferrer" className="text-xs text-muted hover:text-ink transition-colors no-underline">GitHub</a></li>
+                <li><a href={`${github_url}/issues`} target="_blank" rel="noopener noreferrer" className="text-xs text-muted hover:text-ink transition-colors no-underline">Issues</a></li>
+              </>
+            )}
+            {privacy_notice_url && <li><a href={privacy_notice_url} target="_blank" rel="noopener noreferrer" className="text-xs text-muted hover:text-ink transition-colors no-underline">Privacy</a></li>}
+          </ul>
+        </div>
 
-          {privacy_notice_url && (
-            <a
-              href={privacy_notice_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-ink transition-colors duration-200"
-            >
-              Privacy Notice
-            </a>
-          )}
+        {/* Col 4: Resources */}
+        <div>
+          <p className="text-xs font-semibold text-ink mb-3 uppercase tracking-wider">Resources</p>
+          <ul className="space-y-2">
+            {docs_url && <li><a href={docs_url} target="_blank" rel="noopener noreferrer" className="text-xs text-muted hover:text-ink transition-colors no-underline">Docs</a></li>}
+            {github_url && <li><a href={`${github_url}/tree/main/examples`} target="_blank" rel="noopener noreferrer" className="text-xs text-muted hover:text-ink transition-colors no-underline">Examples</a></li>}
+            <li><Link to="/papers" className="text-xs text-muted hover:text-ink transition-colors no-underline">Papers</Link></li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Bottom bar */}
+      <div className="border-t border-line px-6 py-4 max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p className="text-xs text-muted">
+          {footer.copyright || "© OutplayLabs Arena Contributors"}
+        </p>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--radius-chip)] border border-line text-xs font-mono text-muted">
+            MIT License
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--radius-chip)] border border-line text-xs font-mono text-muted">
+            Open science, made with ❤️
+          </span>
         </div>
       </div>
     </footer>

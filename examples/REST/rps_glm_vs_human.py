@@ -21,11 +21,11 @@ from datetime import datetime, timezone
 import httpx
 from openai import OpenAI
 
-from nash_arena_sdk import ArenaClient
+from outplaylabs_arena_sdk import ArenaClient
 
 sys.stdout.reconfigure(line_buffering=True)
 
-NASH_ARENA_BASE_URL = os.environ.get("NASH_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
+OUTPLAYLABS_ARENA_BASE_URL = os.environ.get("OUTPLAYLABS_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
 SESSION_KEY = os.environ.get("SESSION_KEY", "nks_OGQ5ZDQ0MjgtZjlmOS00Y2MzLWI3NTItZTQ5ZWE4OGJiYTQyOkI6ZDFjYzExZDc0OTAwMGU2ODFmOTdmYWYxODQxYzczYzU0YzA3N2Y3NTM4ZWYzM2M1YmMzODhkMDgzNThkYTYyYw")
 OPENCODE_GO_API_BASE = "https://opencode.ai/zen/v1"
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "results")
@@ -58,7 +58,7 @@ def parse_action(text):
 
 def get_interactive_state(session_id, player, token):
     response = httpx.get(
-        f"{NASH_ARENA_BASE_URL}/session/{session_id}/interactive/state",
+        f"{OUTPLAYLABS_ARENA_BASE_URL}/session/{session_id}/interactive/state",
         params={"player": player},
         headers={"Authorization": f"Bearer {token}"},
         timeout=10.0,
@@ -114,7 +114,7 @@ async def play_game():
     print()
 
     agent = ArenaClient(
-        base_url=NASH_ARENA_BASE_URL,
+        base_url=OUTPLAYLABS_ARENA_BASE_URL,
         session_id=session_id,
         token=SESSION_KEY,
     )
@@ -162,7 +162,7 @@ async def play_game():
             print(f"  {MODEL} -> {action}")
 
         result = httpx.post(
-            f"{NASH_ARENA_BASE_URL}/session/{session_id}/interactive/action",
+            f"{OUTPLAYLABS_ARENA_BASE_URL}/session/{session_id}/interactive/action",
             params={"player": player},
             headers={"Authorization": f"Bearer {SESSION_KEY}"},
             json={"action": action},

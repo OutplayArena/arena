@@ -1,7 +1,7 @@
 name: Centipede Game
 version: "1.0.0"
 status: stable
-author: "NashArena maintainers"
+author: "OutplayLabs"
 description: >
   A sequential game where two players alternately choose to TAKE (end the game)
   or PASS (increase the pot). Backward induction predicts TAKE immediately,

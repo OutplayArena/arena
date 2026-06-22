@@ -1,6 +1,6 @@
 # Metrics Reference
 
-Comprehensive reference for all metrics tracked across NashArena games.
+Comprehensive reference for all metrics tracked across OutplayLabs Arena games.
 
 ## Universal Metrics
 

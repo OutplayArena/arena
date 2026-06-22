@@ -43,7 +43,7 @@ export default function StagHuntPlayView({ onGameEnd, sessionConfig }: Props) {
             type="button"
             onClick={() => submitMove("stag")}
             disabled={!isMyTurn || isSubmitting || hasSubmittedThisRound}
-            className="flex flex-col items-center gap-2 w-36 py-6 rounded-2xl border-2 border-amber-300 bg-amber-50 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/30 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-bold text-sm transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg active:not-disabled:translate-y-0"
+            className="flex flex-col items-center gap-2 w-36 py-6 rounded-[var(--radius-card)] border-2 border-amber-300 bg-amber-50 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/30 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-bold text-sm transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg active:not-disabled:translate-y-0"
           >
             <span className="text-3xl">🦌</span>
             <span>Hunt Stag</span>
@@ -54,7 +54,7 @@ export default function StagHuntPlayView({ onGameEnd, sessionConfig }: Props) {
             type="button"
             onClick={() => submitMove("hare")}
             disabled={!isMyTurn || isSubmitting || hasSubmittedThisRound}
-            className="flex flex-col items-center gap-2 w-36 py-6 rounded-2xl border-2 border-slate-300 bg-slate-50 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-900/30 dark:hover:bg-slate-800/40 text-slate-600 dark:text-slate-400 font-bold text-sm transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg active:not-disabled:translate-y-0"
+            className="flex flex-col items-center gap-2 w-36 py-6 rounded-[var(--radius-card)] border-2 border-slate-300 bg-slate-50 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-900/30 dark:hover:bg-slate-800/40 text-slate-600 dark:text-slate-400 font-bold text-sm transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg active:not-disabled:translate-y-0"
           >
             <span className="text-3xl">🐇</span>
             <span>Hunt Hare</span>
@@ -62,7 +62,7 @@ export default function StagHuntPlayView({ onGameEnd, sessionConfig }: Props) {
           </button>
         </div>
 
-        <div className="rounded-lg border border-line/30 bg-surface p-3 text-xs text-muted max-w-xs w-full">
+        <div className="rounded-lg border border-line bg-surface p-3 text-xs text-muted max-w-xs w-full">
           <div className="font-extrabold uppercase text-[10px] tracking-wider mb-2">Risk vs reward</div>
           <div className="space-y-1 text-[11px]">
             <div className="flex justify-between">

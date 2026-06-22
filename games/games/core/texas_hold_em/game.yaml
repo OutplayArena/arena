@@ -1,7 +1,7 @@
 name: Texas Hold'em
 version: "1.0.0"
 status: stable
-author: "NashArena maintainers"
+author: "OutplayLabs"
 description: >
   Heads-up Texas Hold'em with four betting streets (preflop, flop, turn,
   river) and standard poker hand rankings. Each player starts with 100

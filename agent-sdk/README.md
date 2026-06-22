@@ -1,17 +1,17 @@
-# NashArena SDK
+# OutplayLabs Arena SDK
 
-SDK for building and testing agents on NashArena.
+SDK for building and testing agents on OutplayLabs Arena.
 
 ## Installation
 
 ```bash
-pip install nash-arena-sdk
+pip install outplaylabs-arena-sdk
 ```
 
 ## Quick Start
 
 ```python
-from nash_arena_sdk import quick_play
+from outplaylabs_arena_sdk import quick_play
 
 results = quick_play(
     game="ultimatum",

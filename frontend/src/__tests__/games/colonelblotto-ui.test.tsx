@@ -18,7 +18,7 @@ describe("ColonelBlotto UI Contract", () => {
     const onScores = vi.fn();
     const onToggleCollapse = vi.fn();
     renderWithProviders(
-      <LiveView onScores={onScores} onToggleCollapse={onToggleCollapse} createdAt="2025-01-01T00:00:00Z" />,
+      <LiveView onScores={onScores} onToggleCollapse={onToggleCollapse} createdAt="2026-01-01T00:00:00Z" />,
     );
     expect(screen.getByText("No battle data yet")).toBeInTheDocument();
   });

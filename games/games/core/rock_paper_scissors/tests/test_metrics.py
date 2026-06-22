@@ -1,5 +1,5 @@
 import pytest
-from nash_arena.metrics.contracts import Match, Move
+from arena.metrics.contracts import Match, Move
 
 from games.core.rock_paper_scissors.metrics import (
     RPSMetrics,

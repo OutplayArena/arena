@@ -1,10 +1,10 @@
 # MCP Setup
 
-Configuration and deployment of MCP servers for NashArena.
+Configuration and deployment of MCP servers for OutplayLabs Arena.
 
 ## Prerequisites
 
-- NashArena backend running
+- OutplayLabs Arena backend running
 - Traefik (for Docker) or Traefik Ingress Controller (for Kubernetes)
 - Docker or Kubernetes cluster
 
@@ -14,9 +14,9 @@ Configuration and deployment of MCP servers for NashArena.
 |----------|---------|-------------|
 | `MCP_RUNTIME` | `auto` | Runtime environment: `auto`, `docker`, `k8s` |
 | `MCP_BACKEND_URL` | — | Backend URL for MCP servers to connect to |
-| `MCP_DOCKER_NETWORK` | `nasharena_mcp` | Docker network for MCP containers |
-| `MCP_NAMESPACE` | `nasharena` | Kubernetes namespace for MCP pods |
-| `MCP_IMAGE` | `nasharena-mcp:latest` | Docker image for MCP servers |
+| `MCP_DOCKER_NETWORK` | `arena_default` | Docker network for MCP containers |
+| `MCP_NAMESPACE` | `arena` | Kubernetes namespace for MCP pods |
+| `MCP_IMAGE` | `arena-mcp:latest` | Docker image for MCP servers |
 | `MCP_MAX_CONCURRENT` | `50` | Maximum concurrent MCP servers |
 | `MCP_JOB_TTL` | `300` | Seconds before completed jobs are cleaned up |
 | `MCP_PORT` | `8001` | Port MCP servers listen on |
@@ -30,7 +30,7 @@ Configuration and deployment of MCP servers for NashArena.
 
 ```bash
 cd backend/docker
-docker build -f Dockerfile.mcp -t nasharena-mcp:latest .
+docker build -f Dockerfile.mcp -t arena-mcp:latest .
 ```
 
 ### 2. Configure Backend
@@ -38,8 +38,8 @@ docker build -f Dockerfile.mcp -t nasharena-mcp:latest .
 ```bash
 MCP_RUNTIME=docker
 MCP_BACKEND_URL=http://backend:8000/api
-MCP_DOCKER_NETWORK=nasharena_mcp
-MCP_IMAGE=nasharena-mcp:latest
+MCP_DOCKER_NETWORK=arena_default
+MCP_IMAGE=arena-mcp:latest
 MCP_EXPOSE_PORTS=true
 MCP_PUBLIC_BASE_URL=http://localhost
 ```
@@ -55,7 +55,7 @@ docker compose up -d
 
 ```bash
 # Check MCP network exists
-docker network ls | grep nasharena_mcp
+docker network ls | grep arena_default
 
 # Create experiment
 curl -X POST http://localhost/api/experiment \
@@ -73,8 +73,8 @@ docker ps | grep mcp
 
 ```bash
 cd backend/docker
-docker build -f Dockerfile.mcp -t your-registry/nasharena-mcp:latest .
-docker push your-registry/nasharena-mcp:latest
+docker build -f Dockerfile.mcp -t your-registry/arena-mcp:latest .
+docker push your-registry/arena-mcp:latest
 ```
 
 ### 2. Configure Helm
@@ -83,7 +83,7 @@ docker push your-registry/nasharena-mcp:latest
 # values.yaml
 mcpServer:
   image:
-    repository: your-registry/nasharena-mcp
+    repository: your-registry/arena-mcp
     tag: latest
   port: 8000
   maxConcurrentJobs: 50
@@ -94,8 +94,8 @@ mcpServer:
 ### 3. Deploy
 
 ```bash
-helm upgrade --install nasharena helm/nash_arena \
-  --namespace nasharena --create-namespace \
+helm upgrade --install arena helm/arena \
+  --namespace arena --create-namespace \
   -f values.yaml
 ```
 
@@ -103,10 +103,10 @@ helm upgrade --install nasharena helm/nash_arena \
 
 ```bash
 # Check MCP pods
-kubectl -n nasharena get pods | grep mcp
+kubectl -n arena get pods | grep mcp
 
 # Check RBAC
-kubectl -n nasharena get rolebindings
+kubectl -n arena get rolebindings
 
 # Create experiment via API
 curl -X POST https://api.agent-arena.local/api/experiment \
@@ -115,7 +115,7 @@ curl -X POST https://api.agent-arena.local/api/experiment \
   -d '{"game": "ultimatum", "rounds": 10}'
 
 # Check MCP pod spawned
-kubectl -n nasharena get pods | grep mcp-
+kubectl -n arena get pods | grep mcp-
 ```
 
 ## MCP Server Authentication
@@ -125,7 +125,7 @@ kubectl -n nasharena get pods | grep mcp-
 MCP keys are created programmatically:
 
 ```python
-from nash_arena.mcp_key_manager import create_mcp_key
+from arena.mcp_key_manager import create_mcp_key
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -195,13 +195,13 @@ docker stats mcp-abc123
 
 ```bash
 # List MCP pods
-kubectl -n nasharena get pods -l app=mcp-server
+kubectl -n arena get pods -l app=mcp-server
 
 # View logs
-kubectl -n nasharena logs mcp-abc123
+kubectl -n arena logs mcp-abc123
 
 # Check resource usage
-kubectl -n nasharena top pods -l app=mcp-server
+kubectl -n arena top pods -l app=mcp-server
 ```
 
 ## Scaling

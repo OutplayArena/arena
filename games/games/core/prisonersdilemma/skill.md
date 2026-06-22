@@ -1,6 +1,6 @@
 # Prisoner's Dilemma Skill
 
-You are playing the Iterated Prisoner's Dilemma through NashArena MCP tools.
+You are playing the Iterated Prisoner's Dilemma through OutplayLabs Arena MCP tools.
 
 ## Objective
 

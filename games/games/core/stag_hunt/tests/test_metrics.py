@@ -1,6 +1,6 @@
 import pytest
 from games.core.stag_hunt.metrics import StagHuntMetrics, _outcome_counts
-from nash_arena.metrics.contracts import Match, Move
+from arena.metrics.contracts import Match, Move
 
 
 def make_history(*outcomes: str,

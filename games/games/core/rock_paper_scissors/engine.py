@@ -4,7 +4,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 
-from nash_arena.interactive_game_engine import InteractiveGameEngine
+from arena.interactive_game_engine import InteractiveGameEngine
 from games.core.rock_paper_scissors.metrics import RPSMetrics
 
 BEATS = {"rock": "scissors", "paper": "rock", "scissors": "paper"}

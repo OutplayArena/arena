@@ -1,7 +1,7 @@
 name: Cournot Duopoly
 version: "1.0.0"
 status: stable
-author: "NashArena maintainers"
+author: "OutplayLabs"
 description: >
   Two firms simultaneously choose quantities. Market price is determined by inverse
   demand: P = max(0, a - b*(q1+q2)). Nash equilibrium is the Cournot outcome

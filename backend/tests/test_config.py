@@ -2,7 +2,7 @@ import pytest
 
 from games.core.colonelblotto.engine import ColonelBlottoGame
 from games.core.colonelblotto.config import BattlefieldConfig, ColonelBlottoExperimentConfig
-from nash_arena.game_registry import GameRegistry
+from arena.game_registry import GameRegistry
 
 
 def test_classic_config_has_platform_shape():

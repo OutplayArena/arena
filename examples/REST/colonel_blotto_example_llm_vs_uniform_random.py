@@ -12,12 +12,12 @@ from mcp import ClientSession, StdioServerParameters, types
 from mcp.client.stdio import stdio_client
 from openai import OpenAI
 
-from nash_arena_sdk import ArenaClient
+from outplaylabs_arena_sdk import ArenaClient
 from games.core.colonelblotto.config import ColonelBlottoExperimentConfig
 
 sys.stdout.reconfigure(line_buffering=True)
 
-NASH_ARENA_BASE_URL = os.environ.get("NASH_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
+OUTPLAYLABS_ARENA_BASE_URL = os.environ.get("OUTPLAYLABS_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
 OPENCODE_GO_API_BASE = "https://opencode.ai/zen/v1"
 
 _client = OpenAI(
@@ -126,7 +126,7 @@ def extract_tool_text(result):
 
 
 async def run_match():
-    nash_api_key = os.environ["NASH_ARENA_API_KEY"]
+    nash_api_key = os.environ["OUTPLAYLABS_ARENA_API_KEY"]
     opencode_api_key = os.environ.get("OPENCODE_GO_API_KEY_2") or os.environ["OPENCODE_GO_API_KEY"]
     _client.api_key = opencode_api_key.strip()
 
@@ -151,7 +151,7 @@ async def run_match():
     except Exception as e:
         print(f"  warmup failed ({e}), continuing anyway")
 
-    arena = ArenaClient(NASH_ARENA_BASE_URL)
+    arena = ArenaClient(OUTPLAYLABS_ARENA_BASE_URL)
     config = ColonelBlottoExperimentConfig.classic(
         num_battlefields=NUM_BATTLEFIELDS,
         total_resources=TOTAL_RESOURCES,
@@ -170,12 +170,12 @@ async def run_match():
     async with AsyncExitStack() as exit_stack:
         print("Starting MCP server for LLM agent (Player A)...")
         env = {
-            "NASH_ARENA_BASE_URL": NASH_ARENA_BASE_URL,
-            "NASH_ARENA_KEY": key_a,
+            "OUTPLAYLABS_ARENA_BASE_URL": OUTPLAYLABS_ARENA_BASE_URL,
+            "OUTPLAYLABS_ARENA_KEY": key_a,
         }
         server_params = StdioServerParameters(
             command=sys.executable,
-            args=["-m", "nash_arena.mcp_server"],
+            args=["-m", "arena.mcp_server"],
             env=env,
         )
         read, write = await exit_stack.enter_async_context(stdio_client(server_params))
@@ -183,7 +183,7 @@ async def run_match():
         await exit_stack.enter_async_context(mcp_a)
         await mcp_a.initialize()
 
-        arena_b = ArenaClient.for_player(NASH_ARENA_BASE_URL, created, "B")
+        arena_b = ArenaClient.for_player(OUTPLAYLABS_ARENA_BASE_URL, created, "B")
         print("Both players ready.\n")
 
         for round_idx in range(NUM_ROUNDS):
@@ -202,7 +202,7 @@ async def run_match():
 
             if error_a:
                 httpx.post(
-                    f"{NASH_ARENA_BASE_URL}/session/{session_id}/action",
+                    f"{OUTPLAYLABS_ARENA_BASE_URL}/session/{session_id}/action",
                     headers={"Authorization": f"Bearer {key_a}"},
                     json={"allocation": [], "forfeit": True},
                 )

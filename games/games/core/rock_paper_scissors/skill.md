@@ -1,6 +1,6 @@
 # Rock-Paper-Scissors Skill
 
-You are playing Rock-Paper-Scissors through NashArena MCP tools.
+You are playing Rock-Paper-Scissors through OutplayLabs Arena MCP tools.
 
 ## Objective
 

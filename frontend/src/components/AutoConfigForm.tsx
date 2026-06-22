@@ -6,7 +6,9 @@ import { useApp } from "../hooks/useApp";
 import type { GameAgent, ScenarioInfo } from "../types";
 
 const inputClass =
-  "w-full min-h-[40px] text-ink bg-surface-container border rounded-input px-[14px] shadow-none transition-[border-color,background,box-shadow] duration-150 outline-none hover:border-accent/40 focus:border-accent focus:bg-surface focus:shadow-[0_0_0_3px_var(--color-accent-soft)] border-line/40";
+  "w-full h-9 text-ink bg-surface border border-line rounded-[var(--radius-input)] px-3 outline-none " +
+  "transition-colors duration-150 hover:border-line-strong " +
+  "focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-soft)]";
 
 interface AutoConfigFormProps {
   gameSlug: string;
@@ -566,7 +568,7 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
             ref={btnRef}
             type="submit"
             disabled={running}
-            className="min-h-[42px] bg-accent border-accent text-white rounded-input px-6 font-extrabold cursor-pointer shadow-elevation-3 transition-[transform,background,border-color,box-shadow] duration-150 hover:not-disabled:-translate-y-px hover:not-disabled:shadow-elevation-4 active:not-disabled:translate-y-0.5 disabled:cursor-not-allowed disabled:bg-line/50 disabled:border-line/50 disabled:text-quiet disabled:shadow-none mt-1"
+            className="h-9 px-6 bg-accent text-white rounded-[var(--radius-button)] font-medium text-sm cursor-pointer transition-opacity hover:not-disabled:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 mt-1"
           >
             {running ? "Running..." : state.activeMatch ? "Play Again" : "Run Experiment"}
           </button>
@@ -581,10 +583,10 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
       </form>
 
       {sessionKeys && Object.keys(sessionKeys).length > 0 && (
-        <div className="mx-4 mb-4 p-4 rounded-card border border-line/40 bg-surface-container/30">
+        <div className="mx-4 mb-4 p-4 rounded-[var(--radius-card)] border border-line bg-surface-soft">
           <h3 className="text-sm font-extrabold text-ink mb-2">Remote Agent Keys</h3>
           <p className="text-xs text-muted mb-3">
-            Pass these to your LLM agents as <code className="bg-ink/8 px-1 rounded text-[11px]">NASH_ARENA_KEY</code>.
+            Pass these to your LLM agents as <code className="bg-ink/8 px-1 rounded text-[11px]">OUTPLAYLABS_ARENA_KEY</code>.
           </p>
           {Object.entries(sessionKeys).map(([player, key]) => {
             const playerName = players.find((p) => p.id === player)?.name ?? player;

@@ -7,11 +7,11 @@ import importlib
 import pytest
 from fastapi.testclient import TestClient
 
-import nash_arena.main
-importlib.reload(nash_arena.main)
-from nash_arena.main import app, bearer_token, config_from_request, get_broker  # noqa: E402
-from nash_arena.db import get_db  # noqa: E402
-from nash_arena.auth.dependencies import require_user, _ensure_local_user  # noqa: E402
+import arena.main
+importlib.reload(arena.main)
+from arena.main import app, bearer_token, config_from_request, get_broker  # noqa: E402
+from arena.db import get_db  # noqa: E402
+from arena.auth.dependencies import require_user, _ensure_local_user  # noqa: E402
 
 
 class FakeBroker:
@@ -311,7 +311,7 @@ def test_fastapi_serves_visualizer_index():
     response = client.get("/")
 
     assert response.status_code == 200
-    assert "NashArena" in response.text
+    assert "OutplayLabs Arena" in response.text
     assert "/assets/index-" in response.text
 
 

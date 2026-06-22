@@ -85,7 +85,7 @@ export default function CournotPlayView({ onGameEnd, sessionConfig }: Props) {
         </div>
 
         {/* Profit estimate */}
-        <div className="rounded-xl border border-line/40 bg-surface p-4 w-full max-w-sm">
+        <div className="rounded-[var(--radius-card)] border border-line bg-surface p-4 w-full max-w-sm">
           <div className="text-[10px] font-extrabold uppercase tracking-widest text-muted mb-2">Profit estimate (if opp plays Nash)</div>
           <div className="grid grid-cols-3 gap-2 text-center text-xs">
             <div>
@@ -109,7 +109,7 @@ export default function CournotPlayView({ onGameEnd, sessionConfig }: Props) {
           type="button"
           onClick={() => submitMove(quantity)}
           disabled={!isMyTurn || isSubmitting || hasSubmittedThisRound}
-          className="w-full max-w-sm py-3 rounded-xl bg-accent text-white font-extrabold text-sm hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg"
+          className="w-full max-w-sm py-3 rounded-[var(--radius-button)] bg-accent text-white font-extrabold text-sm hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:not-disabled:-translate-y-0.5 hover:not-disabled:shadow-lg"
         >
           {isSubmitting ? "Producing..." : hasSubmittedThisRound ? "Production set..." : `Produce ${quantity} units`}
         </button>

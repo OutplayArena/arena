@@ -1,9 +1,9 @@
 """
-Hermes vs NashArena SDK — end-to-end Colonel Blotto game.
+Hermes vs OutplayLabs Arena SDK — end-to-end Colonel Blotto game.
 
 Launches the hermes-agent harness (with an on-the-fly skill + MCP config)
-as Player A and a NashArena SDK MCPAgent as Player B. Both play a multi-round
-Colonel Blotto game through NashArena's MCP server.
+as Player A and a OutplayLabs Arena SDK MCPAgent as Player B. Both play a multi-round
+Colonel Blotto game through OutplayLabs Arena's MCP server.
 
 Usage:
     python scripts/hermes_vs_sdk_e2e.py
@@ -14,7 +14,7 @@ Environment:
     HERMES_BIN        - path to hermes binary (default ~/.hermes/hermes-agent/venv/bin/hermes)
 
 Requires:
-    - minikube cluster with nasharena deployed
+    - minikube cluster with arena deployed
     - hermes-agent installed at ~/.hermes/hermes-agent/
 """
 
@@ -36,7 +36,7 @@ import yaml
 
 # Add SDK to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "agent-sdk" / "src"))
-from nash_arena_sdk.mcp_client import MCPClient  # noqa: E402
+from outplaylabs_arena_sdk.mcp_client import MCPClient  # noqa: E402
 
 # ── Configuration ────────────────────────────────────────────────────────────
 
@@ -54,11 +54,11 @@ GAME_TOTAL = int(os.environ.get("HERMES_TOTAL_BUDGET", "100"))
 # ── Helpers (mirror test_mcp_e2e.py pattern) ─────────────────────────────────
 
 def _kubectl_exec(script: str) -> str:
-    namespace = os.environ.get("E2E_NAMESPACE", "nasharena")
+    namespace = os.environ.get("E2E_NAMESPACE", "arena")
     result = subprocess.run(
         [
             "kubectl", "exec", "-n", namespace,
-            "deployment/nasharena-backend", "--",
+            "deployment/arena-backend", "--",
             "python3", "-c", script,
         ],
         capture_output=True, text=True, timeout=30,
@@ -74,9 +74,9 @@ def _create_test_user() -> tuple[str, str]:
     output = _kubectl_exec(f"""
 import asyncio
 from uuid import UUID
-from nash_arena.db import async_session
-from nash_arena.models.user import User
-from nash_arena.auth.jwt import create_access_token
+from arena.db import async_session
+from arena.models.user import User
+from arena.auth.jwt import create_access_token
 
 async def main():
     user_id = UUID("{uid}")
@@ -94,8 +94,8 @@ asyncio.run(main())
 def _delete_test_user(user_id: str) -> None:
     _kubectl_exec(f"""
 import asyncio
-from nash_arena.db import async_session
-from nash_arena.models.user import User
+from arena.db import async_session
+from arena.models.user import User
 from sqlalchemy import delete
 
 async def main():
@@ -110,7 +110,7 @@ asyncio.run(main())
 # ── Skill builder ────────────────────────────────────────────────────────────
 
 def _build_skill_content(manifest: dict) -> str:
-    """Build a hermes SKILL.md from the NashArena agent manifest."""
+    """Build a hermes SKILL.md from the OutplayLabs Arena agent manifest."""
     tools_lines: list[str] = []
     for t in manifest.get("tools", []):
         name = t["name"]
@@ -120,7 +120,7 @@ def _build_skill_content(manifest: dict) -> str:
             f"{p}: {info.get('type', 'any')}" for p, info in params.items()
         )
         tools_lines.append(
-            f"- `mcp_nasharena_{name}({param_str})` — {desc}"
+            f"- `mcp_arena_{name}({param_str})` — {desc}"
         )
 
     skill = manifest.get("skill", {})
@@ -129,17 +129,17 @@ def _build_skill_content(manifest: dict) -> str:
     action_fmt = manifest.get("action_format", {})
 
     return f"""---
-name: nasharena-colonel-blotto
-description: "Play Colonel Blotto on NashArena using MCP tools"
+name: arena-colonel-blotto
+description: "Play Colonel Blotto on OutplayLabs Arena using MCP tools"
 version: 1.0.0
-author: nasharena
-tags: [nasharena, game-theory, colonel-blotto, strategy]
+author: outplaylabs-arena
+tags: [outplaylabs-arena, game-theory, colonel-blotto, strategy]
 ---
 
-# Colonel Blotto on NashArena
+# Colonel Blotto on OutplayLabs Arena
 
-You are playing Colonel Blotto through NashArena's MCP server.
-All MCP tools are prefixed `mcp_nasharena_`.
+You are playing Colonel Blotto through OutplayLabs Arena's MCP server.
+All MCP tools are prefixed `mcp_arena_`.
 
 ## Objective
 {sections.get('objective', 'Win more battlefields than your opponent.')}
@@ -165,12 +165,12 @@ All MCP tools are prefixed `mcp_nasharena_`.
 {sections.get('strategy_hints', sections.get('strategy_notes', 'Balance between concentrating and spreading forces.'))}
 
 ## Critical Instructions
-- ALL tools are called as `mcp_nasharena_<tool_name>`
-- Start by calling `mcp_nasharena_get_game_state` to see the current state
-- When it's your turn (you appear in `awaiting`), call `mcp_nasharena_get_observation` then `mcp_nasharena_submit_action`
-- If you're NOT in `awaiting`, call `mcp_nasharena_get_game_state` again
-- Keep playing until `mcp_nasharena_get_game_state` shows `phase: complete`
-- Then call `mcp_nasharena_get_results` for final scores
+- ALL tools are called as `mcp_arena_<tool_name>`
+- Start by calling `mcp_arena_get_game_state` to see the current state
+- When it's your turn (you appear in `awaiting`), call `mcp_arena_get_observation` then `mcp_arena_submit_action`
+- If you're NOT in `awaiting`, call `mcp_arena_get_game_state` again
+- Keep playing until `mcp_arena_get_game_state` shows `phase: complete`
+- Then call `mcp_arena_get_results` for final scores
 """
 
 
@@ -181,13 +181,13 @@ def _setup_hermes_home(
     session_key: str,
     skill_content: str,
 ) -> str:
-    """Create a temporary hermes home with NashArena MCP config and skill.
+    """Create a temporary hermes home with OutplayLabs Arena MCP config and skill.
 
     Merges the real hermes config (model/provider settings) with our
-    NashArena MCP config so the agent can connect to both its LLM and
+    OutplayLabs Arena MCP config so the agent can connect to both its LLM and
     the game server.
     """
-    hermes_home = tempfile.mkdtemp(prefix="hermes_nasharena_")
+    hermes_home = tempfile.mkdtemp(prefix="hermes_arena_")
 
     # Load the real hermes config for model/provider settings
     real_home = os.environ.get("HERMES_HOME", os.path.expanduser("~/.hermes"))
@@ -199,7 +199,7 @@ def _setup_hermes_home(
 
     # Merge: keep real config, add/override MCP servers
     base_config.setdefault("mcp_servers", {})
-    base_config["mcp_servers"]["nasharena"] = {
+    base_config["mcp_servers"]["arena"] = {
         "url": mcp_url,
         "headers": {"Authorization": f"Bearer {session_key}"},
         "timeout": 120,
@@ -214,8 +214,8 @@ def _setup_hermes_home(
         import shutil
         shutil.copytree(real_skills, Path(hermes_home) / "skills", symlinks=True, dirs_exist_ok=True)
 
-    # Write our NashArena skill
-    skill_dir = Path(hermes_home) / "skills" / "nasharena-colonel-blotto"
+    # Write our OutplayLabs Arena skill
+    skill_dir = Path(hermes_home) / "skills" / "arena-colonel-blotto"
     skill_dir.mkdir(parents=True, exist_ok=True)
     (skill_dir / "SKILL.md").write_text(skill_content, encoding="utf-8")
 
@@ -225,17 +225,17 @@ def _setup_hermes_home(
 def _hermes_oneshot_prompt(player: str, rounds: int, n_fields: int, total: int) -> str:
     """Build the oneshot prompt that tells hermes to play autonomously."""
     return (
-        f"You are Player {player} in a Colonel Blotto game on NashArena. "
+        f"You are Player {player} in a Colonel Blotto game on OutplayLabs Arena. "
         f"The game has {rounds} rounds, {n_fields} battlefields, and you have {total} troops per round.\n\n"
         f"CRITICAL RULE: DO NOT write any text responses. ONLY make tool calls. "
         f"Never ask if you should continue — just do it. "
         f"Never describe what you see — just act on it. "
         f"The ONLY time you may write text is when the game is complete to report the final scores.\n\n"
         f"Loop these steps silently until the game ends:\n"
-        f"1. Call mcp_nasharena_get_game_state\n"
-        f"2. If phase is complete → call mcp_nasharena_get_results, then output the scores and stop.\n"
-        f"3. If your player ID ({player}) is in awaiting → call mcp_nasharena_get_observation, "
-        f"then immediately call mcp_nasharena_submit_action with your allocation.\n"
+        f"1. Call mcp_arena_get_game_state\n"
+        f"2. If phase is complete → call mcp_arena_get_results, then output the scores and stop.\n"
+        f"3. If your player ID ({player}) is in awaiting → call mcp_arena_get_observation, "
+        f"then immediately call mcp_arena_submit_action with your allocation.\n"
         f"4. If NOT in awaiting → go back to step 1.\n\n"
         f"Use strategic allocations. You have {total} troops across {n_fields} battlefields. "
         f"Play ALL {rounds} rounds without stopping."
@@ -353,7 +353,7 @@ def run_hermes_vs_sdk(
 
     try:
         hermes_proc = subprocess.run(
-            [HERMES_BIN, "-z", prompt, "--skills", "nasharena-colonel-blotto", "--cli"],
+            [HERMES_BIN, "-z", prompt, "--skills", "arena-colonel-blotto", "--cli"],
             env=env,
             capture_output=True,
             text=True,

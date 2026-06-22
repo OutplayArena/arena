@@ -31,9 +31,9 @@ describe("Scoreboard", () => {
       },
     });
     renderWithProviders(<Scoreboard scores={mockScores} />);
-    expect(screen.getByText("total_score_a")).toBeInTheDocument();
-    expect(screen.getByText("total_score_b")).toBeInTheDocument();
-    expect(screen.getByText("round")).toBeInTheDocument();
+    expect(screen.getByText("Agent A")).toBeInTheDocument();
+    expect(screen.getByText("Agent B")).toBeInTheDocument();
+    expect(screen.getByText("Round")).toBeInTheDocument();
   });
 
   it("shows round progress", () => {
@@ -64,6 +64,6 @@ describe("Scoreboard", () => {
       state: { activeMatch: null, activeRoundIndex: -1 },
     });
     renderWithProviders(<Scoreboard scores={mockScores} />);
-    expect(screen.getByText("0 / 0")).toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
   });
 });

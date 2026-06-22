@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from nash_arena.game_components.game_metrics import GameMetrics
-from nash_arena.metrics.extension import GameMetricsExtension
+from arena.game_components.game_metrics import GameMetrics
+from arena.metrics.extension import GameMetricsExtension
 
 MOVES = ("rock", "paper", "scissors")
 

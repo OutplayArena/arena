@@ -260,7 +260,7 @@ export default function TexasHoldEmLiveView(_props: LiveViewProps) {
   if (!hasMatch) {
     return (
       <div className="flex flex-col h-full bg-surface-soft">
-        <div className="shrink-0 flex items-center justify-between gap-4 px-5 py-3 border-b border-line/40 bg-surface/80 backdrop-blur-sm">
+        <div className="shrink-0 flex items-center justify-between gap-4 px-5 py-3 border-b border-line bg-surface/80 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <span className="w-8 h-8 rounded-full bg-agent-a/15 border border-agent-a/40 flex items-center justify-center text-[11px] font-black text-agent-a">A</span>
             <span className="text-xs font-extrabold text-muted uppercase tracking-wider">Player A</span>
@@ -272,7 +272,7 @@ export default function TexasHoldEmLiveView(_props: LiveViewProps) {
         </div>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center px-6">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-surface-container flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-[var(--radius-card)] bg-surface-container flex items-center justify-center">
               {isGameRunning ? (
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="text-accent/70 animate-spin">
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
@@ -340,9 +340,9 @@ export default function TexasHoldEmLiveView(_props: LiveViewProps) {
     <div className="flex flex-col h-full bg-surface-soft">
       {/* hand slider */}
       {totalHands > 0 && (
-        <div className="shrink-0 flex items-center gap-1.5 px-2 py-1 border-b border-line/40 bg-surface/80">
+        <div className="shrink-0 flex items-center gap-1.5 px-2 py-1 border-b border-line bg-surface/80">
           <button
-            className="w-4 h-4 rounded-full bg-surface-container border border-line/40 flex items-center justify-center text-[8px] font-bold text-muted hover:text-ink hover:border-line-strong transition-colors shrink-0"
+            className="w-4 h-4 rounded-full bg-surface-container border border-line flex items-center justify-center text-[8px] font-bold text-muted hover:text-ink hover:border-line-strong transition-colors shrink-0"
             onClick={() => {
               const next = (viewIdx ?? state.activeRoundIndex) - 1;
               if (next >= 0) { setViewIdx(next); showRound(next); }
@@ -363,7 +363,7 @@ export default function TexasHoldEmLiveView(_props: LiveViewProps) {
             }}
           />
           <button
-            className="w-4 h-4 rounded-full bg-surface-container border border-line/40 flex items-center justify-center text-[8px] font-bold text-muted hover:text-ink hover:border-line-strong transition-colors shrink-0"
+            className="w-4 h-4 rounded-full bg-surface-container border border-line flex items-center justify-center text-[8px] font-bold text-muted hover:text-ink hover:border-line-strong transition-colors shrink-0"
             onClick={() => {
               const next = (viewIdx ?? state.activeRoundIndex) + 1;
               if (next < totalHands) { setViewIdx(next); showRound(next); }
@@ -481,7 +481,7 @@ export default function TexasHoldEmLiveView(_props: LiveViewProps) {
       </div>
 
       {/* action log + hand result */}
-      <div className="shrink-0 border-t border-line/40 bg-surface/90 backdrop-blur-sm">
+      <div className="shrink-0 border-t border-line bg-surface/90 backdrop-blur-sm">
         <div className="max-h-20 overflow-y-auto px-3 py-1.5 space-y-0.5 text-[9px] font-mono">
           {/* street actions grouped by street */}
           {(() => {
@@ -568,7 +568,7 @@ export default function TexasHoldEmLiveView(_props: LiveViewProps) {
                   key={i}
                   onClick={() => { setViewIdx(i); showRound(i); }}
                   className={`shrink-0 flex items-center gap-0.5 px-1 py-0.5 rounded border transition-colors ${
-                    isActive ? "border-accent/50 bg-accent/8" : "border-transparent hover:border-line/40"
+                    isActive ? "border-accent/50 bg-accent/8" : "border-transparent hover:border-line"
                   }`}
                 >
                   <span className="text-quiet">#{i + 1}</span>

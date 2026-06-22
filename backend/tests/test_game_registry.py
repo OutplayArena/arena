@@ -3,8 +3,8 @@ import importlib.util
 
 import pytest
 
-from nash_arena.game_registry import CATALOG_ROOT, GameRegistry, GameRegistryError
-from nash_arena.manifest import build_agent_manifest
+from arena.game_registry import CATALOG_ROOT, GameRegistry, GameRegistryError
+from arena.manifest import build_agent_manifest
 from games.core.colonelblotto.engine import ColonelBlottoGame
 
 
@@ -89,7 +89,7 @@ def test_registry_skill_missing_game():
 def test_build_agent_manifest_colonelblotto():
     manifest = build_agent_manifest("colonelblotto")
 
-    assert manifest["platform"] == "nasharena"
+    assert manifest["platform"] == "outplaylabs-arena"
     assert manifest["manifest_version"] == "1.0"
     assert manifest["game"] == "colonelblotto"
     assert manifest["game_metadata"]["name"] == "Colonel Blotto"
@@ -143,14 +143,14 @@ def test_registry_builds_blotto_config_and_game_from_catalog():
 
 
 def test_arena_package_does_not_own_blotto_specific_modules():
-    # Game-specific modules must live under games/, not in nash_arena directly
-    assert importlib.util.find_spec("nash_arena.config") is None
-    assert importlib.util.find_spec("nash_arena.engine") is None
-    assert importlib.util.find_spec("nash_arena.agent") is None
-    # nash_arena.metrics is intentionally present — it's the game-agnostic
+    # Game-specific modules must live under games/, not in arena directly
+    assert importlib.util.find_spec("arena.config") is None
+    assert importlib.util.find_spec("arena.engine") is None
+    assert importlib.util.find_spec("arena.agent") is None
+    # arena.metrics is intentionally present — it's the game-agnostic
     # metrics infrastructure. Blotto-specific logic lives in games/core/colonelblotto/metrics.py
-    assert importlib.util.find_spec("nash_arena.metrics") is not None
-    assert importlib.util.find_spec("nash_arena.metrics.blotto") is None
+    assert importlib.util.find_spec("arena.metrics") is not None
+    assert importlib.util.find_spec("arena.metrics.blotto") is None
 
 
 def test_registry_rejects_unknown_game():

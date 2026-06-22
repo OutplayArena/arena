@@ -32,7 +32,7 @@ beforeEach(() => {
 
 describe("request base function", () => {
   it("adds Bearer token from localStorage", async () => {
-    localStorage.setItem("nasharena_token", "test-token");
+    localStorage.setItem("arena-token", "test-token");
     const mockFetch = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
       text: () => Promise.resolve('{"data": 1}'),
@@ -170,7 +170,7 @@ describe("API endpoint functions", () => {
   });
 
   it("listSessions encodes query params", async () => {
-    await listSessions({ game: "blotto", agent: "remote", limit: 10, offset: 5, date_from: "2025-01-01", date_to: "2025-06-01" });
+    await listSessions({ game: "blotto", agent: "remote", limit: 10, offset: 5, date_from: "2026-01-01", date_to: "2026-06-01" });
     const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.at(-1)![0] as string;
     expect(url).toContain("game=blotto");
     expect(url).toContain("agent=remote");

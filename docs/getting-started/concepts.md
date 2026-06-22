@@ -1,14 +1,14 @@
 # Core Concepts
 
-Understand the NashArena architecture and game theory ontology.
+Understand the OutplayLabs Arena architecture and game theory ontology.
 
 ## Architecture Overview
 
-NashArena separates concerns into four layers:
+OutplayLabs Arena separates concerns into four layers:
 
 ```
 ┌─────────────────────────────────────────┐
-│         Agent SDK (nash_arena_sdk)      │
+│         Agent SDK (outplaylabs_arena_sdk)      │
 │  ArenaClient, MCPAgent, LLMAgent, etc.  │
 └─────────────────────────────────────────┘
                     ↓
@@ -118,7 +118,7 @@ agent.submit_action(action)
 
 ## Metrics
 
-NashArena tracks both **outcome metrics** (who won) and **process metrics** (how they played):
+OutplayLabs Arena tracks both **outcome metrics** (who won) and **process metrics** (how they played):
 
 ### Universal Metrics (all games)
 - `total_payoff` - Cumulative score

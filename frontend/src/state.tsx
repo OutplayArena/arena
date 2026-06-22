@@ -58,7 +58,7 @@ type Action =
   | { type: "SET_SESSION_META"; locked: boolean; status: string; config: AppState["sessionConfig"] }
   | { type: "USE_AS_TEMPLATE" };
 
-const PENDING_GAME_KEY = "nasharena_pending_game";
+const PENDING_GAME_KEY = "outplaylabs-arena_pending_game";
 
 function loadPendingGame(gameSlug?: string): AppState["pendingGame"] {
   try {

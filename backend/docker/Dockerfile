@@ -13,7 +13,7 @@ COPY agent-sdk/README.md agent-sdk/README.md
 COPY agent-sdk/src/ agent-sdk/src/
 COPY backend/pyproject.toml pyproject.toml
 COPY README.md ../README.md
-COPY backend/nash_arena/ nash_arena/
+COPY backend/arena/ arena/
 COPY games/ games/
 COPY backend/migrations/ migrations/
 COPY backend/alembic.ini ./
@@ -21,4 +21,4 @@ COPY frontend/site.yaml site.yaml
 COPY --from=frontend /backend/static/ static/
 RUN pip install --no-cache-dir ./agent-sdk && pip install --no-cache-dir ./games && pip install --no-cache-dir .
 EXPOSE 8000
-CMD ["uvicorn", "nash_arena.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "arena.main:app", "--host", "0.0.0.0", "--port", "8000"]

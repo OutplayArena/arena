@@ -1,10 +1,10 @@
 [project]
 name = "games"
 version = "0.1.0"
-description = "Game implementations for NashArena"
+description = "Game implementations for OutplayLabs Arena"
 requires-python = ">=3.10"
 dependencies = [
-    "nash-arena-sdk",
+    "outplaylabs-arena-sdk",
 ]
 
 [build-system]
@@ -15,4 +15,4 @@ build-backend = "hatchling.build"
 packages = ["games"]
 
 [tool.uv.sources]
-nash-arena-sdk = { path = "../agent-sdk", editable = true }
+outplaylabs-arena-sdk = { path = "../agent-sdk", editable = true }

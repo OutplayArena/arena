@@ -1,7 +1,7 @@
 name: Prisoner's Dilemma
 version: "1.0.0"
 status: stable
-author: "NashArena maintainers"
+author: "OutplayLabs"
 description: >
   Classic social dilemma. Two players simultaneously choose to cooperate or
   defect. Mutual cooperation yields the best collective outcome (R,R), but
