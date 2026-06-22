@@ -1,9 +1,33 @@
 [tool.uv.workspace]
 members = ["backend", "agent-sdk"]
 
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=5.0",
+]
+
 [tool.pytest.ini_options]
 addopts = "-m 'not e2e'"
 testpaths = ["backend/tests", "agent-sdk/tests", "games"]
 markers = [
     "e2e: end-to-end tests that require a live minikube cluster (deselect with -m 'not e2e')",
+]
+
+[tool.coverage.run]
+source = ["backend", "agent-sdk", "games"]
+omit = [
+    "*/tests/*",
+    "*/__init__.py",
+    "*/migrations/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
 ]
