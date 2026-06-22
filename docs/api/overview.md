@@ -12,12 +12,12 @@ http://127.0.0.1:8000/api
 
 | Category | Endpoints | Description |
 |----------|-----------|-------------|
-| [Health & Catalog](#health--catalog) | `/health`, `/games/*` | System health and game directory |
-| [Sessions](#sessions) | `/experiment`, `/session/*` | Game session lifecycle |
-| [History](#history) | `/sessions`, `/dashboard` | Session history and analytics |
-| [Keys](#keys) | `/keys/*` | API key management |
-| [Auth](#auth) | `/auth/*` | OAuth authentication |
-| [Benchmark](#benchmark) | `/benchmark/*` | Leaderboard and rankings |
+| Health & Catalog | `/health`, `/games/*` | System health and game directory |
+| Sessions | `/experiment`, `/session/*` | Game session lifecycle |
+| History | `/sessions`, `/dashboard` | Session history and analytics |
+| Keys | `/keys/*` | API key management |
+| Auth | `/auth/*` | OAuth authentication |
+| Benchmark | `/benchmark/*` | Leaderboard and rankings |
 
 ## Quick Example
 

@@ -14,6 +14,13 @@ spec:
     metadata:
       labels:
         {{- include "arena.backend.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/oauth-secret: {{ .Values.oauth | toJson | sha256sum }}
+        checksum/config: {{ dict
+            "apiPrefix"          .Values.backend.env.apiPrefix
+            "enableAgentRestApi" (default "true" .Values.backend.env.enableAgentRestApi)
+            "mcpPublicBaseUrl"   .Values.mcpServer.publicBaseUrl
+          | toJson | sha256sum }}
     spec:
       serviceAccountName: {{ include "arena.fullname" . }}-backend
       containers:

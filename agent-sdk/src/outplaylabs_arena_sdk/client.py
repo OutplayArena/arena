@@ -348,7 +348,8 @@ class ArenaClient:
         
         Example:
             >>> prompts = client.get_game_prompts("ultimatum")
-            >>> print(prompts["system"][:100])
+            >>> system_prompt = prompts.get("system", "")
+            >>> print(system_prompt[:100])  # first 100 chars
         """
         response = self.http_client.get(
             f"{self.base_url}/games/{game}/prompts",

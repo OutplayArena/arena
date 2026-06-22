@@ -10,14 +10,14 @@ The SDK depends only on third-party libraries (`httpx`, `mcp`, `openai`) and con
 
 ## Features
 
-- **Zero project coupling** &mdash; no imports from the Arena backend; only third-party runtime dependencies.
+- **`BaseAgent`** &mdash; autonomous, tool-calling, reasoning-aware agent with a lifecycle of overridable hooks.
 - **MCP-first, REST-fallback** transport for talking to the arena server.
-- **`quick_play`** &mdash; one-call helper to spin up a game between two LLM agents.
-- **`LLMAgent`** &mdash; full async LLM agent with retries, fallback models, and reasoning control.
-- **`GameOrchestrator`** &mdash; end-to-end experiment lifecycle (create &rarr; play &rarr; collect &rarr; teardown).
+- **`GameOrchestrator`** (via `BaseAgent.run`) &mdash; end-to-end experiment lifecycle.
 - **`ArenaClient`** &mdash; typed REST client for every endpoint exposed by the arena server.
 - **`ReasoningModerator`** &mdash; per-model reasoning-effort, timeouts, and prompt-budget hints.
-- **Action parsers** &mdash; built-in helpers for allocation lists, numeric offers, and accept/reject decisions.
+- **Per-game agents** for all 10 games in `core/`: `ColonelBlottoAgent`, `UltimatumAgent`, `PrisonersDilemmaAgent`, `RockPaperScissorsAgent`, `BattleOfTheSexesAgent`, `StagHuntAgent`, `CentipedeAgent`, `CournotDuopolyAgent`, `PublicGoodsAgent`, `TexasHoldEmAgent`.
+- **Seeding** &mdash; the backend's effective `seed` is auto-consumed and exposed via `agent.rng` / `agent.seed`.
+- **Action parsers** &mdash; built-in helpers for allocation lists, numeric offers, accept/reject decisions, choice, quantity, and poker actions.
 
 ## Installation
 
@@ -55,125 +55,118 @@ results = quick_play(
 print(results)
 ```
 
-## Core concepts
+## Building a custom agent
 
-### `ArenaClient` &mdash; typed REST client
-
-`ArenaClient` is a thin wrapper around the Arena HTTP API. It supports session creation, action submission, state queries, result collection, game metadata, observations, mailbox access, and the agent manifest endpoint.
+Subclass `BaseAgent` and override `parse_action` (and optionally `action_format_hint` and `maybe_communicate`). The lifecycle hooks are no-ops by default &mdash; override what you need.
 
 ```python
-from outplaylabs_arena_sdk import ArenaClient
+from outplaylabs_arena_sdk import BaseAgent, LLMConfig
 
-client = ArenaClient("http://127.0.0.1:8000/api")
-created = client.create_experiment(
-    {"game": "ultimatum", "rounds": 10, "total": 100},
-    api_key="nk_...",
-)
-agent_a = ArenaClient.for_player("http://127.0.0.1:8000/api", created, "A")
-state = agent_a.get_state()
-agent_a.submit_action(40.0)
-```
 
-### `MCPAgent` and `RESTAgent` &mdash; transport-aware agents
+class MyColonelBlottoAgent(BaseAgent):
+    def action_format_hint(self) -> str:
+        return "a Python list of N non-negative integers summing to your budget."
 
-`MCPAgent` connects to the arena over MCP (streamable-http) when an MCP URL is available, and falls back to REST otherwise. `RESTAgent` always uses HTTP.
+    def parse_action(self, raw_text, state):
+        n = len(state.get("battlefields", []))
+        total = state.get("budgets", {}).get(self.player, 0)
+        from outplaylabs_arena_sdk.parsers import parse_allocation
+        return parse_allocation(raw_text, n, total)
 
-```python
-from outplaylabs_arena_sdk import MCPAgent
+    def on_action_decision(self, action, reasoning):
+        print(f"decided: {action} (reasoning: {reasoning[:80]}...)")
 
-with MCPAgent(
-    player_token=created["player_tokens"]["A"],
-    mcp_url=created.get("mcp_url"),
-    base_url="http://127.0.0.1:8000/api",
-) as agent:
-    obs = agent.get_observation()
-    agent.submit_action([5, 3, 2])
-    results = agent.get_results()
-```
 
-### `LLMAgent` &mdash; LLM-powered agent
-
-`LLMAgent` wraps an OpenAI-compatible chat backend, supports retries and a fallback model, and is reasoning-aware via the `ReasoningModerator`.
-
-```python
-from outplaylabs_arena_sdk import LLMAgent, LLMConfig
-
-agent = LLMAgent(
+agent = MyColonelBlottoAgent(
     player="A",
-    player_token=created["player_tokens"]["A"],
-    arena_url="http://127.0.0.1:8000/api",
+    player_token="nks_...",
+    arena_url="https://api.agent-arena.local",
     llm_config=LLMConfig(model="gpt-4o", api_key="sk-..."),
-    action_parser=lambda text, state: [int(x) for x in text.strip("[]").split(",")],
+    mcp_url="https://api.agent-arena.local/mcp",  # optional
 )
+results = agent.run_sync()
 ```
 
-### `GameOrchestrator` &mdash; end-to-end experiment runner
+## Lifecycle hooks
 
-`GameOrchestrator` runs the whole loop: create an experiment, build agents, drive turns until completion, fetch final results, and tear down MCP connections.
-
-```python
-from outplaylabs_arena_sdk import (
-    AgentSpec,
-    GameOrchestrator,
-    OrchestratorConfig,
-)
-
-config = OrchestratorConfig(
-    game="colonel_blotto",
-    config={"n_fields": 5, "total_troops": 100},
-    agents={
-        "player_0": AgentSpec(player="player_0", model="gpt-4o"),
-        "player_1": AgentSpec(player="player_1", model="gpt-4o-mini"),
-    },
-    arena_url="http://127.0.0.1:8000/api",
-    arena_api_key="nk_...",
-)
-
-results = await GameOrchestrator(config).run()
-```
-
-### Action parsers
-
-Built-in parsers turn raw LLM text into structured game actions:
-
-| Parser | Game | Output |
+| Hook | When | Default |
 | --- | --- | --- |
-| `parse_allocation(text, n_fields, total)` | Colonel Blotto | `list[int]` of length `n_fields` summing to `total` |
-| `parse_offer(text, total, min_offer=0.0)` | Ultimatum | `float` clamped to `[min_offer, total]` |
-| `parse_accept_reject(text)` | Ultimatum | `"accept"` or `"reject"` |
+| `on_episode_start(session_id, seed)` | once, before loop | no-op |
+| `on_round_start(round_num, state)` | each poll, before decision | no-op |
+| `on_observation(observation, state)` | after fetch, before LLM | no-op |
+| `on_tool_call(name, arguments, result)` | after each backend tool the LLM invokes | no-op |
+| `on_action_decision(action, reasoning)` | after LLM, before submit | no-op |
+| `on_action_result(result, state)` | after submit | no-op |
+| `on_message_received(message)` | on mailbox message | no-op |
+| `on_round_end(round_num, state)` | each poll, after decision | no-op |
+| `on_episode_end(results)` | once, after terminal | no-op |
+| `on_error(error, context)` | any exception in loop | re-raises |
 
-All parsers fall back to a safe default if the LLM response is unparseable.
+## Seeding
 
-### Reasoning control
-
-`ReasoningModerator` selects the right reasoning-control mechanism for a given model and lets you cap `max_tokens` and timeouts by effort level.
+The backend now echoes the effective experiment config (including `seed`) in the responses of `creation`, `public_state`, and `get_results` (see [PR #37](https://github.com/OutplayLabs/arena/pull/37)). The SDK consumes that field on first contact:
 
 ```python
-from outplaylabs_arena_sdk.reasoning import (
-    ReasoningEffort,
-    ReasoningModerator,
+agent = ColonelBlottoAgent(
+    ...,
+    seed=None,  # default: read from backend
 )
+await agent.run()
 
-mod = ReasoningModerator("gpt-5", effort=ReasoningEffort.LOW)
-api_params = mod.get_api_params()       # {"reasoning_effort": "low"}
-limits = mod.get_limits()               # {"max_tokens": ..., "timeout": ...}
-prompt = mod.build_system_prompt("...") # possibly augmented with budget hints
+# Use the seed for your own random generators
+agent.seed             # int | None
+agent.rng             # random.Random, ready to use
+agent.rng.random()    # deterministic across runs
+
+import torch
+import numpy as np
+torch.manual_seed(agent.seed)
+np.random.seed(agent.seed)
 ```
 
-The SDK ships with profiles for major models from OpenAI, Anthropic, Google, DeepSeek, Mistral, Meta, Cohere, Alibaba (Qwen), Zhipu (GLM), Moonshot (Kimi), Xiaomi (MiMo), and MiniMax. Unknown models fall back to a safe default profile using prompt-level budget hints.
+You can also pass an explicit `seed=...` to `BaseAgent.__init__` to override what the backend echoes.
+
+## Per-game agents
+
+Each game in `core/` has a pre-built subclass that knows the action format. Import them directly or use `quick_play` to auto-pick the right one:
+
+```python
+from outplaylabs_arena_sdk import ColonelBlottoAgent
+from outplaylabs_arena_sdk.agents.games import UltimatumAgent, PrisonersDilemmaAgent
+# or any of:
+#   BattleOfTheSexesAgent, CentipedeAgent, ColonelBlottoAgent,
+#   CournotDuopolyAgent, PrisonersDilemmaAgent, PublicGoodsAgent,
+#   RockPaperScissorsAgent, StagHuntAgent, TexasHoldEmAgent, UltimatumAgent
+```
+
+| Game | Action format |
+| --- | --- |
+| Colonel Blotto | list of `len(battlefields)` ints summing to `budgets[player]` |
+| Ultimatum | proposer: float offer; responder: `"accept"` / `"reject"` |
+| Prisoner's Dilemma | `"cooperate"` / `"defect"` (or scenario labels) |
+| Rock Paper Scissors | `"rock"` / `"paper"` / `"scissors"` |
+| Battle of the Sexes | `"opera"` / `"football"` (or `state["option_a"]` / `state["option_b"]`) |
+| Stag Hunt | `"stag"` / `"hare"` |
+| Centipede | `"take"` / `"pass"` |
+| Cournot Duopoly | float quantity, clamped to `state["max_quantity"]` |
+| Public Goods | float contribution, clamped to `state["endowment"]` |
+| Texas Hold 'Em | `(move, amount)` tuple &mdash; `check` / `call` / `bet N` / `raise N` / `fold` / `all_in` |
+
+All agents are N-player aware: the loop checks `state["awaiting"]` generically, so multiplayer variants (e.g. public goods with 3-10 players) work out of the box.
 
 ## Configuration
 
 | Variable | Purpose | Default |
 | --- | --- | --- |
 | `ARENA_BASE_URL` | Arena REST API base URL | `http://127.0.0.1:8000/api` |
-| `OUTPLAYLABS_ARENA_BASE_URL` | Same as `ARENA_BASE_URL` (used by the backend) | &mdash; |
+| `OUTPLAYLABS_ARENA_BASE_URL` | Same as `ARENA_BASE_URL` | &mdash; |
 | `JWT_SECRET` | Secret used to validate session keys | `dev-secret-change-me` |
-| `OUTPLAYLABS_ARENA_KEY` | Used when the SDK spawns a local MCP server via stdio | &mdash; |
 
 ## Versioning and API stability
 
-The SDK is currently at `0.1.0` (alpha). The public surface &mdash; `ArenaClient`, `MCPAgent`, `RESTAgent`, `LLMAgent`, `LLMConfig`, `AgentSpec`, `GameOrchestrator`, `OrchestratorConfig`, `quick_play`, the action parsers, and the reasoning module &mdash; is imported by the Arena backend, so breaking changes require coordinated updates.
+The SDK is at `0.2.0` (alpha). The public surface &mdash; `BaseAgent`, `LLMConfig`, `ArenaClient`, `MCPClient`, `ReasoningModerator`, the per-game agent classes, `quick_play`, the action parsers, and the reasoning module &mdash; is imported by the Arena backend (`backend/arena/mcp_server.py`), so breaking changes require coordinated updates.
+
+A backwards-compat alias `MCPAgent` (subclass of `MCPClient`) is kept for legacy code; new code should use `BaseAgent` or `MCPClient` directly.
 
 ## License
 

@@ -23,12 +23,6 @@ spec:
         - kind: Service
           name: {{ include "arena.fullname" . }}-backend
           port: 8000
-    - kind: Rule
-      match: HostRegexp(`^.+$`)
-      services:
-        - kind: Service
-          name: {{ include "arena.fullname" . }}-backend
-          port: 8000
 {{- if or .Values.traefik.certResolver .Values.traefik.tlsSecret }}
   tls:
   {{- if .Values.traefik.certResolver }}

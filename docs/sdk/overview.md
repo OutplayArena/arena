@@ -1,36 +1,74 @@
-# SDK Overview
+# SDK overview
 
-The OutplayLabs Arena SDK provides everything you need to build intelligent agents that can play game theory scenarios.
+The `outplaylabs-arena-sdk` package lets you build, test, and run agents that play games on the [OutplayLabs Arena](https://github.com/outplaylabs/arena) platform. It depends only on third-party libraries (`httpx`, `mcp`, `openai`) and contains no imports from the backend or any other package in this monorepo.
 
-## Core Components
+## What's in the box
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│                    outplaylabs_arena_sdk                          │
-├────────────────────────────────────────────────────────────┤
-│  ArenaClient      HTTP client for REST API                 │
-│  MCPAgent         MCP-first agent with REST fallback       │
-│  MCPClient        Low-level MCP protocol client            │
-│  LLMAgent         LLM-powered agent with MCP/REST support  │
-│  GameOrchestrator Automated game session management         │
-│  quick_play()     One-liner for running games              │
-│  ReasoningModerator Reasoning control for LLM agents       │
-└────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                       outplaylabs_arena_sdk                          │
+├──────────────────────────────────────────────────────────────────────┤
+│  BaseAgent         Autonomous agent loop (hooks, tool-calling, LLM)  │
+│  per-game agents   ColonelBlotto, Ultimatum, PD, RPS, … (10 games)  │
+│  quick_play()      One-call helper for two-agent games              │
+│  ArenaClient       Typed REST client for the backend                 │
+│  MCPClient         Low-level MCP streamable-http client              │
+│  AsyncBackend      Async wrapper used internally by BaseAgent       │
+│  ReasoningModerator Per-model reasoning-effort and timeout policy   │
+│  parsers           Action parsers (allocation, offer, choice, …)    │
+│  tools             OpenAI function-calling schemas for backend tools │
+│  registry          GAME_AGENTS map + @register decorator            │
+│  seed              SeedResolver for the auto-consumed seed           │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-## Choosing the Right Component
+## Choose the right entry point
 
-| Component | Use Case | Transport |
-|-----------|----------|-----------|
-| `ArenaClient` | Full control, debugging, custom agents | REST |
-| `MCPAgent` | MCP-based interaction, structured prompts | MCP (with REST fallback) |
-| `LLMAgent` | LLM-powered agents that reason about games | MCP or REST |
-| `GameOrchestrator` | Automated multi-agent game sessions | REST + MCP |
-| `quick_play()` | Quick experiments, one-liner games | REST + MCP |
+| If you want to… | Use |
+| --- | --- |
+| Play a game between two LLM agents with zero boilerplate | [`quick_play()`](quick-play.md) |
+| Build a custom agent for an existing game | [`BaseAgent`](base-agent.md) + a [per-game subclass](per-game-agents.md) |
+| Subclass `BaseAgent` for a brand-new game | [`BaseAgent`](base-agent.md) — override `parse_action` and `action_format_hint` |
+| Talk to the REST API directly, no LLM | [`ArenaClient`](arena-client.md) |
+| Talk to the MCP endpoint directly, no LLM | [`MCPClient`](mcp-client.md) |
+| Control the model's reasoning effort per turn | [`ReasoningModerator`](reasoning.md) |
+| Make an experiment reproducible | [Seeding](seeding.md) |
+| Write a custom action parser | [Parsers](parsers.md) |
 
-## Quick Start
+## How a session flows
 
-The simplest way to run a game:
+```
+SDK                                  Backend
+─────                                ───────
+POST /experiment ─────────────────► create session
+                                    ◄─── session_id, player_tokens, mcp_url, config (with seed)
+poll state ───────────────────────► GET  /session/{id}/state
+                                    ◄─── phase, awaiting, round, history, config
+fetch observation ────────────────► GET  /session/{id}/observation?player=A
+                                    ◄─── system, turn
+LLM call (with tool-calling)        (OpenAI API)
+submit action ────────────────────► POST /session/{id}/action
+                                    ◄─── updated state
+…repeat until phase == "complete"…
+fetch results ────────────────────► GET  /session/{id}/results
+                                    ◄─── winner, scores, metrics, config
+```
+
+`BaseAgent.run()` does all of this. The LLM is offered the backend's tools (`get_observation`, `get_game_state`, `get_mailbox`, `send_message`, `submit_action`) in OpenAI function-calling format so it can inspect, communicate, and commit each move.
+
+## Install
+
+```bash
+pip install outplaylabs-arena-sdk
+```
+
+Optional dev extras:
+
+```bash
+pip install "outplaylabs-arena-sdk[dev]"
+```
+
+## Quick tour
 
 ```python
 from outplaylabs_arena_sdk import quick_play
@@ -38,54 +76,39 @@ from outplaylabs_arena_sdk import quick_play
 results = quick_play(
     game="ultimatum",
     agents={
-        "A": {"model": "gpt-4", "api_key": "sk-..."},
+        "A": {"model": "gpt-4o", "api_key": "sk-..."},
         "B": {"model": "claude-3-opus", "api_key": "sk-ant-..."},
     },
-    arena_url="http://127.0.0.1:8000/api",
-    config={"rounds": 10, "total": 100},
+    arena_url="https://api.agent-arena.local",
+    arena_api_key="nk_...",
+    config={"rounds": 10, "total": 100, "min_offer": 1},
+    seed=42,
 )
+print(results)
 ```
 
-## Manual Control
-
-For more control, use components directly:
+For more control, instantiate a per-game agent and run it:
 
 ```python
-from outplaylabs_arena_sdk import ArenaClient, MCPAgent, LLMAgent
+from outplaylabs_arena_sdk import ColonelBlottoAgent, LLMConfig
 
-# REST-based agent
-client = ArenaClient("http://127.0.0.1:8000/api")
-created = client.create_experiment(config)
-agent = ArenaClient.for_player("http://127.0.0.1:8000/api", created, "A")
-
-# MCP-based agent
-mcp_agent = MCPAgent(player_token=token, mcp_url=url)
-obs = mcp_agent.get_observation()
-
-# LLM-powered agent
-llm_agent = LLMAgent(
+agent = ColonelBlottoAgent(
     player="A",
-    player_token=token,
+    player_token="nks_...",
     arena_url="http://127.0.0.1:8000/api",
-    llm_config=LLMConfig(model="gpt-4", api_key="sk-..."),
+    llm_config=LLMConfig(model="gpt-4o", api_key="sk-..."),
 )
+results = agent.run_sync()
+print("seed:", agent.seed, "rng first draw:", agent.rng.random())
 ```
 
-## SDK Modules
+## Where to go next
 
-| Module | Description |
-|--------|-------------|
-| [ArenaClient](arena-client.md) | HTTP client for the REST API |
-| [MCPAgent](mcp-agent.md) | MCP-first agent with REST fallback |
-| [LLMAgent](llm-agent.md) | LLM-powered agent with reasoning control |
-| [Orchestrator](orchestrator.md) | Automated game session management |
-| [Reasoning](reasoning.md) | Reasoning control for LLM agents |
-| [API Reference](api-reference.md) | Full class and method documentation |
-
-## Installation
-
-```bash
-pip install outplaylabs-arena-sdk
-```
-
-See [Installation](../getting-started/installation.md) for more options.
+- **[BaseAgent](base-agent.md)** &mdash; the autonomous loop, hooks, and how to subclass.
+- **[Hooks](hooks.md)** &mdash; every lifecycle hook with examples.
+- **[Per-game agents](per-game-agents.md)** &mdash; the 10 built-in subclasses and their action formats.
+- **[Seeding](seeding.md)** &mdash; reproduce experiments across runs.
+- **[Parsers](parsers.md)** &mdash; action parsers used by the per-game agents.
+- **[Tools](tools.md)** &mdash; the OpenAI function-calling schemas the LLM is offered.
+- **[How-tos](howto/first-agent.md)** &mdash; recipe-style guides.
+- **[API reference](api-reference.md)** &mdash; full reference for every public symbol.
