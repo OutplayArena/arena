@@ -64,6 +64,8 @@ class AgentRegistry:
         MatchEvaluator, used to build leaderboard columns (nash_gap, regret, etc.).
         timestamp is an ISO-8601 string; defaults to now if not provided.
         """
+        if match.match_id in self.match_history:
+            return
         self.match_history.append(match.match_id)
         ts = timestamp or datetime.now(timezone.utc).isoformat()
         self.match_timestamps[match.match_id] = ts
