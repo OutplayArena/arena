@@ -100,6 +100,7 @@ def test_public_state_reads_from_game_state():
     assert state == {
         "session_id": session.session_id,
         "config_hash": config.config_hash(),
+        "config": config.to_dict(),
         "round": 1,
         "round_total": 3,
         "phase": "awaiting_action",
@@ -294,6 +295,7 @@ def test_creation_response_includes_scoped_player_tokens():
     assert session.creation_response() == {
         "session_id": session.session_id,
         "config_hash": session.config_hash,
+        "config": session.config.to_dict(),
         "player_tokens": session.player_tokens,
     }
 

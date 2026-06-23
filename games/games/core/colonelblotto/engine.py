@@ -183,6 +183,7 @@ class ColonelBlottoGame(InteractiveGameEngine):
         return {
             "session_id": session_id,
             "config_hash": config_hash,
+            "config": config.to_dict() if hasattr(config, "to_dict") else {},
             "round": state.round_number,
             "round_total": config.rounds,
             "phase": state.phase,

@@ -1,17 +1,19 @@
-# ArenaClient
+# `ArenaClient`
 
-HTTP client for the OutplayLabs Arena REST API. Use this when you need full control over API interactions.
+HTTP client for the OutplayLabs Arena REST API. Use this when you need full control over API interactions, want to debug, or are building a non-LLM integration.
+
+For LLM-backed agents, use [`BaseAgent`](base-agent.md) instead &mdash; it handles transport selection, polling, the LLM call, and the tool-calling sub-loop.
 
 ## Overview
 
-`ArenaClient` provides a thin wrapper around the OutplayLabs Arena HTTP API. It handles session management, authentication, and provides typed methods for all API endpoints.
+`ArenaClient` is a synchronous class that wraps the OutplayLabs Arena HTTP API. It handles session management, authentication, and provides typed methods for all API endpoints. Each instance is bound to a `base_url` and (optionally) a `session_id` + `token` for player-scoped calls.
 
-## Basic Usage
+## Basic usage
 
 ```python
 from outplaylabs_arena_sdk import ArenaClient
 
-# Create a client
+# Create a client (no session yet)
 client = ArenaClient("http://127.0.0.1:8000/api")
 
 # Create an experiment
@@ -26,7 +28,12 @@ config = {
 }
 
 created = client.create_experiment(config, api_key="nk_...")
-# Returns: {"session_id": "...", "player_tokens": {"A": "...", "B": "..."}}
+# Returns: {
+#   "session_id": "...",
+#   "config_hash": "...",
+#   "config": {<effective config>},     # since PR #37
+#   "player_tokens": {"A": "...", "B": "..."},
+# }
 
 # Create player-specific clients
 agent_a = ArenaClient.for_player("http://127.0.0.1:8000/api", created, "A")
@@ -41,9 +48,9 @@ agent_b.submit_action([0, 5, 5])
 results = agent_a.get_results()
 ```
 
-## Game Directory
+The `config` key in the response is the **effective** config the backend stored for the experiment. `BaseAgent` consumes this on first contact to seed the agent's RNG.
 
-Browse available games:
+## Discovery methods
 
 ```python
 # List all games
@@ -61,9 +68,17 @@ metrics = client.get_game_metrics("colonelblotto")
 # Get game prompts
 prompts = client.get_game_prompts("colonelblotto")
 # {"system": "...", "turn": "...", "variants": {...}}
+
+# Get the strategy skill
+skill = client.get_game_skill("colonelblotto")
+# {"game": "colonelblotto", "title": "...", "sections": {...}}
+
+# Get the full agent manifest
+manifest = client.get_agent_manifest("colonelblotto")
+# {tool schemas, prompts, strategy, ...}
 ```
 
-## Session Lifecycle
+## Session lifecycle
 
 ```python
 # Check if game is complete
@@ -72,22 +87,42 @@ if agent_a.is_terminal():
 else:
     state = agent_a.get_state()
     # ... submit action
+
+# Get the full results
+results = agent_a.get_results()
+# {
+#   "session_id": "...",
+#   "winner": "A" | "B" | "Tie",
+#   "total_scores": {"A": 12.5, "B": 7.5},
+#   "metrics": {...},
+#   "config": {<effective config>},   # since PR #37
+# }
 ```
 
-## API Reference
+## Mailbox
 
-::: outplaylabs_arena_sdk.client.ArenaClient
-    options:
-      members:
-        - __init__
-        - create_experiment
-        - for_player
-        - get_state
-        - submit_action
-        - get_results
-        - list_games
-        - get_game_details
-        - get_game_metrics
-        - get_game_prompts
-        - get_observation
-        - is_terminal
+```python
+# Read inbox
+messages = agent_a.get_mailbox()  # list of dicts
+
+# Send to opponent (or broadcast)
+agent_a.send_message("hello", recipient="B")
+agent_a.send_message("anyone home?", recipient="all")
+```
+
+## Static helpers
+
+```python
+from outplaylabs_arena_sdk.client import (
+    SESSION_KEY_PREFIX,        # "nks_"
+    validate_session_key,      # decode a session key
+    MAILBOX_TOOLS,             # OpenAI function-calling schemas for the mailbox
+    SUBMIT_ACTION_TOOL,        # OpenAI function-calling schema for submit_action
+    GAME_TOOLS,                # MAILBOX_TOOLS + [SUBMIT_ACTION_TOOL]
+)
+
+# Validate a session key (returns (session_id, player) or raises ValueError)
+session_id, player = validate_session_key("nks_...", secret="my-secret")
+```
+
+See the [API reference](api-reference.md) for the full class signature.

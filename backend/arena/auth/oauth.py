@@ -1,15 +1,24 @@
 import os
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from authlib.integrations.starlette_client import OAuth, StarletteOAuth2App
+from dotenv import dotenv_values
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from arena.models.user import User
 
-CALLBACK_BASE = os.environ.get("OAUTH_CALLBACK_BASE_URL", "http://localhost:8000")
+# Read OAUTH_CALLBACK_BASE_URL from .env directly so a stale shell export
+# can't pollute the dev fallback. Falls back to os.environ, then default.
+_ENV = dotenv_values(Path(__file__).resolve().parents[3] / ".env")
+CALLBACK_BASE = (
+    _ENV.get("OAUTH_CALLBACK_BASE_URL")
+    or os.environ.get("OAUTH_CALLBACK_BASE_URL")
+    or "http://localhost:8000"
+)
 
 oauth = OAuth()
 oauth.register(
@@ -67,8 +76,28 @@ async def _upsert_user(db: AsyncSession, provider: str, provider_user_id: str, e
     return user
 
 
+def _callback_base_for(request: Any) -> str:
+    """Build the OAuth callback base URL.
+
+    Priority:
+      1. The request's ``Host`` header + scheme (so the redirect_uri matches
+         whatever hostname the user is accessing the SPA from — works for
+         any Tailscale MagicDNS name, LAN IP, or ``localhost``).
+      2. ``OAUTH_CALLBACK_BASE_URL`` env var — only used as a hard override
+         if the request has no ``Host`` header (shouldn't happen in
+         practice). Set this in production to lock the callback to a
+         specific origin. Leave unset (the default) for dev.
+    """
+    host = request.headers.get("host")
+    if host:
+        # Trust X-Forwarded-Proto if a proxy is in front of us
+        scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
+        return f"{scheme}://{host}"
+    return CALLBACK_BASE.rstrip("/") or f"{request.url.scheme}://{request.url.netloc}"
+
+
 async def github_login(request: Any) -> str:
-    redirect_uri = f"{CALLBACK_BASE}/api/auth/github/callback"
+    redirect_uri = f"{_callback_base_for(request)}/api/auth/github/callback"
     client = _github_client()
     return await client.authorize_redirect(request, redirect_uri)  # type: ignore[no-any-return]
 
@@ -100,7 +129,7 @@ async def github_callback(request: Any, db: AsyncSession) -> User:
 
 
 async def google_login(request: Any) -> str:
-    redirect_uri = f"{CALLBACK_BASE}/api/auth/google/callback"
+    redirect_uri = f"{_callback_base_for(request)}/api/auth/google/callback"
     client = _google_client()
     return await client.authorize_redirect(request, redirect_uri)  # type: ignore[no-any-return]
 

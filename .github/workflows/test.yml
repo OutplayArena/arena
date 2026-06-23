@@ -64,11 +64,22 @@ jobs:
         run: uv sync --all-extras
 
       - name: Run backend tests
-        run: uv run pytest backend/tests/
+        # -m "backend and not e2e": backend/tests/ + games/ (game engines used by
+        # backend), excluding e2e tests that need a live minikube cluster.
+        # Auto-tagged by conftest.py based on file path.
+        # --cov --cov-report=xml: produce coverage.xml for Codecov upload.
+        run: uv run pytest -m "backend and not e2e" --cov --cov-report=xml
         env:
           DATABASE_URL: postgresql+asyncpg://outplaylabs-arena:outplaylabs-arena@localhost:5432/outplaylabs-arena_test
           SECRET_KEY: test-secret-key-for-ci
           PYTHONUNBUFFERED: 1
+
+      - name: Upload coverage reports to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
 
   sdk:
     name: SDK (Python)
@@ -85,6 +96,19 @@ jobs:
         run: uv sync --all-extras
 
       - name: Run SDK tests
-        run: uv run pytest agent-sdk/tests/
+        # -m sdk: agent-sdk/tests/ only. e2e is implicitly excluded by the
+        # default addopts ("-m 'not e2e'") since we don't override the marker.
+        # --cov --cov-report=xml: produce coverage.xml so the SDK job's coverage
+        # is merged with the backend job's by Codecov. The backend job covers
+        # backend/ + games/; the SDK job covers agent-sdk/. Without this upload
+        # the SDK code reads as 0% in the merged report.
+        run: uv run pytest -m sdk --cov --cov-report=xml
         env:
           PYTHONUNBUFFERED: 1
+
+      - name: Upload coverage reports to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false

@@ -3,7 +3,7 @@ name = "arena"
 version = "0.1.0"
 description = "OutplayLabs Arena: An open benchmarking platform for game theoretic analysis of LLM-powered agents."
 readme = "../README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 authors = [
     { name = "Ryan Zhang", email = "ryan.zhang@yale.edu" },
     { name = "Herbert Woisetschlaeger", email = "herbert@woisetschlaeger.fyi" },
@@ -52,6 +52,9 @@ packages = ["arena"]
 [tool.pytest.ini_options]
 addopts = "-m 'not e2e'"
 markers = [
+    "backend: tests for the FastAPI backend (auto-tagged by path)",
+    "sdk: tests for the agent-sdk Python package (auto-tagged by path)",
+    "games: tests for game engine logic (auto-tagged under games/)",
     "e2e: end-to-end tests that require a live kubernetes cluster",
 ]
 

@@ -147,4 +147,4 @@ agent = MCPAgent(
 
 - [MCP Gateway](gateway.md) — Docker and Kubernetes routing
 - [MCP Setup](setup.md) — Configuration and deployment
-- [SDK Guide](../sdk/mcp-agent.md) — Using MCPAgent
+- [SDK Guide](../sdk/overview.md) — Modern SDK overview (uses `BaseAgent` + `MCPClient`)

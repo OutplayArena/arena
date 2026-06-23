@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
@@ -31,7 +32,7 @@ from arena.session import GameSession, _serialize_state
 from arena.models.session import SessionModel
 from arena.models.api_key import ApiKey
 from arena.models.message_log import MessageLog
-from arena.auth.oauth import github_login, github_callback, google_login, google_callback, CALLBACK_BASE
+from arena.auth.oauth import github_login, github_callback, google_login, google_callback, _callback_base_for
 from arena.auth.jwt import create_access_token
 from arena.auth.dependencies import get_current_user, get_local_or_optional_user, require_user
 from arena.auth.apikey import generate_platform_key
@@ -74,6 +75,19 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="OutplayLabs Arena Agent Arena", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("JWT_SECRET", "dev-secret-change-me"))
+
+# CORS — defaults to "*" for local dev. Override with CORS_ALLOW_ORIGINS, e.g.
+#   CORS_ALLOW_ORIGINS="https://app.example.com,https://admin.example.com"
+#   CORS_ALLOW_ORIGINS="*"           # any origin (dev default)
+_cors_raw = os.environ.get("CORS_ALLOW_ORIGINS", "*").strip()
+_cors_list = [o.strip() for o in _cors_raw.split(",") if o.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.on_event("startup")
@@ -619,6 +633,9 @@ async def get_results(session_id: str, db: AsyncSession = Depends(get_db)):
         except Exception:
             await db.rollback()
 
+        result["config"] = (
+            session.config.to_dict() if hasattr(session.config, "to_dict") else {}
+        )
         return result
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -1030,7 +1047,7 @@ async def auth_github_callback(request: Request, db: AsyncSession = Depends(get_
     """Handle GitHub OAuth callback and issue a JWT."""
     user = await github_callback(request, db)
     token = create_access_token(str(user.id))
-    return RedirectResponse(url=f"{CALLBACK_BASE}/?token={token}")
+    return RedirectResponse(url=f"{_callback_base_for(request)}/?token={token}")
 
 
 @app.get(f"{API_PREFIX}/auth/google/login")
@@ -1044,7 +1061,7 @@ async def auth_google_callback(request: Request, db: AsyncSession = Depends(get_
     """Handle Google OAuth callback and issue a JWT."""
     user = await google_callback(request, db)
     token = create_access_token(str(user.id))
-    return RedirectResponse(url=f"{CALLBACK_BASE}/?token={token}")
+    return RedirectResponse(url=f"{_callback_base_for(request)}/?token={token}")
 
 
 @app.get(f"{API_PREFIX}/auth/me", response_model=UserResponse)

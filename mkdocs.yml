@@ -135,12 +135,35 @@ nav:
       - getting-started/quickstart.md
       - getting-started/concepts.md
   - SDK:
-      - sdk/overview.md
-      - sdk/arena-client.md
-      - sdk/mcp-agent.md
-      - sdk/llm-agent.md
-      - sdk/orchestrator.md
-      - sdk/reasoning.md
+      - Overview: sdk/overview.md
+      - BaseAgent: sdk/base-agent.md
+      - Lifecycle hooks: sdk/hooks.md
+      - Per-game agents: sdk/per-game-agents.md
+      - Seeding: sdk/seeding.md
+      - Quick play: sdk/quick-play.md
+      - Tools: sdk/tools.md
+      - Action parsers: sdk/parsers.md
+      - Registry: sdk/registry.md
+      - Transport: sdk/transport.md
+      - ArenaClient (REST): sdk/arena-client.md
+      - MCPClient: sdk/mcp-client.md
+      - Reasoning control: sdk/reasoning.md
+      - How-to guides:
+          - sdk/howto/index.md
+          - Your first agent: sdk/howto/first-agent.md
+          - Run a game with quick_play: sdk/howto/quick-play.md
+          - Subclass for a new game: sdk/howto/custom-game.md
+          - Customize a per-game agent: sdk/howto/per-game-custom.md
+          - Register your agent: sdk/howto/registry.md
+          - Make experiments reproducible: sdk/howto/seeding.md
+          - Run a multi-agent experiment: sdk/howto/multi-agent.md
+          - Run a batch of experiments: sdk/howto/batch-experiments.md
+          - Customize the tool-calling sub-loop: sdk/howto/tool-calling.md
+          - Use hooks for observability: sdk/howto/hooks-and-metrics.md
+          - REST vs MCP transport: sdk/howto/rest-vs-mcp.md
+          - Custom error handling: sdk/howto/error-handling.md
+          - Customize reasoning: sdk/howto/reasoning.md
+          - Build a custom agent loop: sdk/howto/custom-loop.md
       - API Reference: sdk/api-reference.md
   - API:
       - api/overview.md

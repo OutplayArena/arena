@@ -1,157 +1,222 @@
-# SDK API Reference
+# SDK API reference
 
-Complete API reference for the OutplayLabs Arena SDK. Auto-generated from source code.
+Full reference for every public symbol in the `outplaylabs-arena-sdk` package.
 
-## Modules
+## Top-level
 
 ::: outplaylabs_arena_sdk
     options:
       show_root_heading: false
-      show_root_toc_entry: false
-      heading_level: 2
+      members:
+        - BaseAgent
+        - LLMConfig
+        - ArenaClient
+        - MCPClient
+        - MCPAgent
+        - ReasoningModerator
+        - ReasoningConfig
+        - ReasoningEffort
+        - ReasoningStrategy
+        - ModelProfile
+        - MODEL_PROFILES
+        - quick_play
+        - GAME_AGENTS
+        - get_agent_class
+        - supported_games
+        - build_api_params
+        - build_system_prompt
+        - get_limits
+        - get_model_profile
 
-## ArenaClient
+## Per-game agents
+
+::: outplaylabs_arena_sdk.agents.games
+    options:
+      show_root_heading: false
+      members:
+        - ColonelBlottoAgent
+        - UltimatumAgent
+        - PrisonersDilemmaAgent
+        - RockPaperScissorsAgent
+        - BattleOfTheSexesAgent
+        - StagHuntAgent
+        - CentipedeAgent
+        - CournotDuopolyAgent
+        - PublicGoodsAgent
+        - TexasHoldEmAgent
+
+## Modules
+
+### `outplaylabs_arena_sdk.base`
+
+::: outplaylabs_arena_sdk.base.BaseAgent
+    options:
+      members:
+        - __init__
+        - run
+        - run_sync
+        - session_id
+        - config
+        - seed
+        - rng
+        - transport
+        - on_episode_start
+        - on_round_start
+        - on_observation
+        - on_tool_call
+        - on_action_decision
+        - on_action_result
+        - on_message_received
+        - on_round_end
+        - on_episode_end
+        - on_error
+        - parse_action
+        - action_format_hint
+        - maybe_communicate
+
+### `outplaylabs_arena_sdk.client`
 
 ::: outplaylabs_arena_sdk.client.ArenaClient
     options:
-      show_root_heading: true
-      heading_level: 3
+      members:
+        - __init__
+        - create_experiment
+        - for_player
+        - get_state
+        - get_observation
+        - submit_action
+        - get_results
+        - is_terminal
+        - list_games
+        - get_game_details
+        - get_game_metrics
+        - get_game_prompts
+        - get_game_skill
+        - get_agent_manifest
+        - get_mailbox
+        - send_message
 
-## MCPAgent
-
-::: outplaylabs_arena_sdk.agent.MCPAgent
-    options:
-      show_root_heading: true
-      heading_level: 3
-
-## RESTAgent
-
-::: outplaylabs_arena_sdk.agent.RESTAgent
-    options:
-      show_root_heading: true
-      heading_level: 3
-
-## MCPClient
+### `outplaylabs_arena_sdk.mcp_client`
 
 ::: outplaylabs_arena_sdk.mcp_client.MCPClient
     options:
-      show_root_heading: true
-      heading_level: 3
+      members:
+        - __init__
+        - connect
+        - disconnect
+        - get_observation
+        - get_game_state
+        - submit_action
+        - get_results
+        - list_games
+        - get_game_details
+        - get_game_metrics
+        - get_game_prompts
+        - get_game_skill
+        - get_agent_manifest
+        - get_mailbox
+        - send_message
 
-## LLMAgent
+### `outplaylabs_arena_sdk.parsers`
 
-::: outplaylabs_arena_sdk.llm_agent.LLMAgent
+::: outplaylabs_arena_sdk.parsers
     options:
-      show_root_heading: true
-      heading_level: 3
+      show_root_heading: false
+      members:
+        - parse_allocation
+        - parse_offer
+        - parse_accept_reject
+        - parse_choice
+        - parse_quantity
+        - parse_poker_action
 
-## LLMConfig
+### `outplaylabs_arena_sdk.tools`
 
-::: outplaylabs_arena_sdk.llm_agent.LLMConfig
+::: outplaylabs_arena_sdk.tools
     options:
-      show_root_heading: true
-      heading_level: 3
+      show_root_heading: false
+      members:
+        - build_backend_tools
+        - get_observation_tool
+        - get_game_state_tool
+        - get_mailbox_tool
+        - send_message_tool
+        - submit_action_tool
 
-## LLMAgentConfig
+### `outplaylabs_arena_sdk.transport`
 
-::: outplaylabs_arena_sdk.llm_agent.LLMAgentConfig
+::: outplaylabs_arena_sdk.transport.AsyncBackend
     options:
-      show_root_heading: true
-      heading_level: 3
+      members:
+        - __init__
+        - rest
+        - mcp
+        - transport
+        - get_state
+        - get_observation
+        - submit_action
+        - get_results
+        - get_mailbox
+        - send_message
+        - set_player_id
 
-## GameOrchestrator
+### `outplaylabs_arena_sdk.registry`
 
-::: outplaylabs_arena_sdk.orchestrator.GameOrchestrator
+::: outplaylabs_arena_sdk.registry
     options:
-      show_root_heading: true
-      heading_level: 3
+      show_root_heading: false
+      members:
+        - GAME_AGENTS
+        - register
+        - get_agent_class
+        - supported_games
 
-## OrchestratorConfig
+### `outplaylabs_arena_sdk.seed`
 
-::: outplaylabs_arena_sdk.orchestrator.OrchestratorConfig
+::: outplaylabs_arena_sdk.seed.SeedResolver
     options:
-      show_root_heading: true
-      heading_level: 3
+      members:
+        - __init__
+        - seed
+        - rng
+        - resolve_from_config
 
-## AgentSpec
-
-::: outplaylabs_arena_sdk.orchestrator.AgentSpec
-    options:
-      show_root_heading: true
-      heading_level: 3
-
-## quick_play
-
-::: outplaylabs_arena_sdk.quick_launch.quick_play
-    options:
-      show_root_heading: true
-      heading_level: 3
-
-## ReasoningModerator
+### `outplaylabs_arena_sdk.reasoning`
 
 ::: outplaylabs_arena_sdk.reasoning.ReasoningModerator
     options:
-      show_root_heading: true
-      heading_level: 3
-
-## ReasoningConfig
-
-::: outplaylabs_arena_sdk.reasoning.ReasoningConfig
-    options:
-      show_root_heading: true
-      heading_level: 3
-
-## ReasoningEffort
+      members:
+        - __init__
+        - from_config
+        - strategy
+        - effort
+        - get_api_params
+        - get_limits
+        - build_system_prompt
+        - prepare_request_body
+        - extract_response_text
 
 ::: outplaylabs_arena_sdk.reasoning.ReasoningEffort
     options:
       show_root_heading: true
-      heading_level: 3
-
-## ReasoningStrategy
 
 ::: outplaylabs_arena_sdk.reasoning.ReasoningStrategy
     options:
       show_root_heading: true
-      heading_level: 3
 
-## ModelProfile
+### `outplaylabs_arena_sdk.results`
 
-::: outplaylabs_arena_sdk.reasoning.ModelProfile
+::: outplaylabs_arena_sdk.results
     options:
-      show_root_heading: true
-      heading_level: 3
+      show_root_heading: false
+      members:
+        - format_results
+        - save_results
 
-## MODEL_PROFILES
+### `outplaylabs_arena_sdk.quick_play`
 
-::: outplaylabs_arena_sdk.reasoning.MODEL_PROFILES
+::: outplaylabs_arena_sdk.quick_play
     options:
-      show_root_heading: true
-      heading_level: 3
-
-## Utility Functions
-
-::: outplaylabs_arena_sdk.llm_agent.parse_allocation
-    options:
-      show_root_heading: true
-      heading_level: 3
-
-::: outplaylabs_arena_sdk.llm_agent.parse_offer
-    options:
-      show_root_heading: true
-      heading_level: 3
-
-::: outplaylabs_arena_sdk.llm_agent.parse_accept_reject
-    options:
-      show_root_heading: true
-      heading_level: 3
-
-::: outplaylabs_arena_sdk.results.format_results
-    options:
-      show_root_heading: true
-      heading_level: 3
-
-::: outplaylabs_arena_sdk.results.save_results
-    options:
-      show_root_heading: true
-      heading_level: 3
+      show_root_heading: false
+      members:
+        - quick_play

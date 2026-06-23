@@ -20,8 +20,15 @@ export default defineConfig({
   },
   server: {
     host: "0.0.0.0",
+    // Accept any Host header (so the dev server is reachable from Tailscale
+    // MagicDNS names, LAN IPs, etc.). Safe for local dev only — set to a
+    // specific list in production.
+    allowedHosts: true,
     proxy: {
-      "/api": "http://localhost:8000",
+      "/api": {
+        target: process.env.ARENA_API_TARGET ?? "http://localhost:8000",
+        changeOrigin: false,
+      },
     },
     fs: {
       allow: ["..", "../games/games"],
