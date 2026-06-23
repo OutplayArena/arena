@@ -89,6 +89,7 @@ function detectMetricKeys(report: BenchmarkReport): string[] {
 }
 
 const BASE_COLUMNS = ["Rank", "Model", "Provider", "Games Played", "Elo", "α-Rank"] as const;
+const HOME_PAGE_LIMIT = 10;
 
 function LeaderboardTable({ report, loading, error }: {
   report: BenchmarkReport | null;
@@ -97,6 +98,8 @@ function LeaderboardTable({ report, loading, error }: {
 }) {
   const metricKeys = report ? detectMetricKeys(report) : [];
   const allColumns = [...BASE_COLUMNS, ...metricKeys.map((k) => METRIC_LABELS[k] || k)];
+  const ranking = report ? report.ranking.slice(0, HOME_PAGE_LIMIT) : [];
+  const hasMore = report ? report.ranking.length > HOME_PAGE_LIMIT : false;
 
   if (loading) {
     return (
@@ -152,7 +155,7 @@ function LeaderboardTable({ report, loading, error }: {
           </tr>
         </thead>
         <tbody>
-          {report.ranking.map((agentId, i) => {
+          {ranking.map((agentId, i) => {
             const agent = report.agents[agentId];
             const [modelName, providerName] = agentId.includes("__")
               ? [agentId.split("__")[1] || agentId, agentId.split("__")[0] || "Unknown"]
@@ -195,6 +198,14 @@ function LeaderboardTable({ report, loading, error }: {
       <div className="px-5 py-3 border-t border-line flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-full bg-accent" />
         <span className="text-xs font-mono text-muted">{report.total_matches} matches recorded</span>
+        {hasMore && (
+          <Link
+            to="/leaderboard"
+            className="ml-auto inline-flex items-center gap-1 text-xs font-mono text-accent hover:text-accent/80 hover:underline transition-colors"
+          >
+            See full leaderboard →
+          </Link>
+        )}
       </div>
     </div>
   );
