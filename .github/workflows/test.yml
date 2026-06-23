@@ -64,7 +64,10 @@ jobs:
         run: uv sync --all-extras
 
       - name: Run backend tests
-        run: uv run pytest backend/tests/
+        # -m "backend and not e2e": backend/tests/ + games/ (game engines used by
+        # backend), excluding e2e tests that need a live minikube cluster.
+        # Auto-tagged by conftest.py based on file path.
+        run: uv run pytest -m "backend and not e2e"
         env:
           DATABASE_URL: postgresql+asyncpg://outplaylabs-arena:outplaylabs-arena@localhost:5432/outplaylabs-arena_test
           SECRET_KEY: test-secret-key-for-ci
@@ -85,6 +88,8 @@ jobs:
         run: uv sync --all-extras
 
       - name: Run SDK tests
-        run: uv run pytest agent-sdk/tests/
+        # -m sdk: agent-sdk/tests/ only. e2e is implicitly excluded by the
+        # default addopts ("-m 'not e2e'") since we don't override the marker.
+        run: uv run pytest -m sdk
         env:
           PYTHONUNBUFFERED: 1

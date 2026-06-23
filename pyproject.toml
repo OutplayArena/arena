@@ -12,6 +12,9 @@ dev-dependencies = [
 addopts = "-m 'not e2e'"
 testpaths = ["backend/tests", "agent-sdk/tests", "games"]
 markers = [
+    "backend: tests for the FastAPI backend + game engines (auto-tagged by path)",
+    "sdk: tests for the agent-sdk Python package (auto-tagged by path)",
+    "games: tests for game engine logic (auto-tagged under games/)",
     "e2e: end-to-end tests that require a live minikube cluster (deselect with -m 'not e2e')",
 ]
 
