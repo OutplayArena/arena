@@ -98,6 +98,17 @@ jobs:
       - name: Run SDK tests
         # -m sdk: agent-sdk/tests/ only. e2e is implicitly excluded by the
         # default addopts ("-m 'not e2e'") since we don't override the marker.
-        run: uv run pytest -m sdk
+        # --cov --cov-report=xml: produce coverage.xml so the SDK job's coverage
+        # is merged with the backend job's by Codecov. The backend job covers
+        # backend/ + games/; the SDK job covers agent-sdk/. Without this upload
+        # the SDK code reads as 0% in the merged report.
+        run: uv run pytest -m sdk --cov --cov-report=xml
         env:
           PYTHONUNBUFFERED: 1
+
+      - name: Upload coverage reports to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
