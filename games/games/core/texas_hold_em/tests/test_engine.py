@@ -1,8 +1,7 @@
 import pytest
-from games.core.texas_hold_em.config import TexasHoldEmExperimentConfig, config_from_dict
+from games.core.texas_hold_em.config import config_from_dict
 from games.core.texas_hold_em.engine import (
-    TexasHoldEmGame, TexasHoldEmState,
-    _evaluate_5, _best_hand, _to_call, STARTING_CHIPS, ANTE, BET_SIZE,
+    TexasHoldEmGame, _evaluate_5, _best_hand, _to_call, STARTING_CHIPS, ANTE, BET_SIZE,
 )
 
 

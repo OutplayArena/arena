@@ -118,9 +118,10 @@ class TestForgivingTFT:
         assert agent.act(history) == "cooperate"
 
     def test_player_b_tracks_a(self):
-        agent = ForgivingTFT(player="B")
+        agent = ForgivingTFT(player="B", forgiveness_prob=0.0)
         history = [{"actions": {"A": "defect", "B": "cooperate"}, "outcome": "DC"}]
-        assert agent.act(history) == "defect"
+        with patch("random.random", return_value=0.5):
+            assert agent.act(history) == "defect"
 
 
 class TestPavlov:

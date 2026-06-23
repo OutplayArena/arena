@@ -187,6 +187,26 @@ class TestCournotDuopoly:
         state = {"max_quantity": 100}
         assert agent.parse_action("I produce -5", state) == 0.0
 
+    def test_hint_includes_max_quantity(self):
+        agent = _agent(CournotDuopolyAgent)
+        agent._last_state = {"max_quantity": 50}
+        hint = agent.action_format_hint()
+        assert "50" in hint
+        assert "non-negative" in hint
+
+    def test_hint_fallback_when_no_state(self):
+        agent = _agent(CournotDuopolyAgent)
+        agent._last_state = None
+        hint = agent.action_format_hint()
+        assert "non-negative" in hint
+        assert "up to" not in hint
+
+    def test_hint_fallback_when_max_quantity_invalid(self):
+        agent = _agent(CournotDuopolyAgent)
+        agent._last_state = {"max_quantity": "not a number"}
+        hint = agent.action_format_hint()
+        assert "non-negative" in hint
+
 
 class TestPublicGoods:
     def test_contribute(self):
@@ -203,6 +223,46 @@ class TestPublicGoods:
         agent = _agent(PublicGoodsAgent)
         state = {"endowment": 20}
         assert agent.parse_action("nothing", state) == 10.0
+
+    def test_hint_includes_endowment(self):
+        agent = _agent(PublicGoodsAgent)
+        agent._last_state = {"endowment": 30}
+        hint = agent.action_format_hint()
+        assert "30" in hint
+        assert "contribution" in hint
+
+    def test_hint_fallback_when_no_state(self):
+        agent = _agent(PublicGoodsAgent)
+        agent._last_state = None
+        hint = agent.action_format_hint()
+        assert "contribution" in hint
+        assert "up to" not in hint
+
+    def test_hint_fallback_when_endowment_invalid(self):
+        agent = _agent(PublicGoodsAgent)
+        agent._last_state = {"endowment": "not a number"}
+        hint = agent.action_format_hint()
+        assert "contribution" in hint
+
+    def test_parse_action_fallback_endowment_when_invalid(self):
+        agent = _agent(PublicGoodsAgent)
+        # No endowment in state → defaults to 20.
+        result = agent.parse_action("15", {})
+        assert result == 15.0
+
+        # Negative endowment → defaults to 20.
+        result = agent.parse_action("15", {"endowment": -5})
+        assert result == 15.0
+
+    def test_parse_action_fallback_when_state_has_max(self):
+        agent = _agent(CournotDuopolyAgent)
+        # No max_quantity in state → defaults to 100.
+        result = agent.parse_action("75", {})
+        assert result == 75.0
+
+        # Negative max → defaults to 100.
+        result = agent.parse_action("75", {"max_quantity": -10})
+        assert result == 75.0
 
 
 class TestTexasHoldEm:
