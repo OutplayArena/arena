@@ -8,3 +8,5 @@ codecov:
     patch:
       default:
         target: 80%
+  ignore:
+    - "scripts/**"
