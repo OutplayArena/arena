@@ -625,7 +625,7 @@ async def get_results(session_id: str, db: AsyncSession = Depends(get_db)):
         result = session.results(evaluator=evaluator)
         result = sanitize_for_json(result)
 
-        # Also record in per-game registry
+        # Also record in per-game registry with agent metrics
         match = session.to_match()
         game_type = match.game_type
         if game_type and game_type != "unknown":
@@ -635,7 +635,9 @@ async def get_results(session_id: str, db: AsyncSession = Depends(get_db)):
                 a: float(np.mean(match.payoffs(a))) if match.payoffs(a) else 0.0
                 for a in match.agent_ids
             }
-            game_registry.record_match(match, avg_payoffs)
+            rich = result.get("rich_metrics", {})
+            agent_metrics = rich.get("agents", None)
+            game_registry.record_match(match, avg_payoffs, agent_metrics=agent_metrics)
 
         try:
             for key, reg in get_all_registries().items():
@@ -1135,13 +1137,17 @@ async def benchmark_report(
 
     evaluator = MatchEvaluator(registry)
     pop = evaluator.population_report(target)
+    agg = registry.aggregated_metrics(target)
     agent_summaries = {}
     for agent_id in target:
-        agent_summaries[agent_id] = {
+        base = {
             "elo": pop["elo_ratings"].get(agent_id),
             "alpha_rank": pop["alpha_rank_scores"].get(agent_id),
             "matches_played": registry.matches_played.get(agent_id, 0),
         }
+        if agent_id in agg:
+            base["metrics"] = agg[agent_id]
+        agent_summaries[agent_id] = base
 
     return sanitize_for_json({
         "agents": agent_summaries,

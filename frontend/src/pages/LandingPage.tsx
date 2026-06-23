@@ -65,18 +65,46 @@ function DocsIcon() {
   );
 }
 
+const METRIC_LABELS: Record<string, string> = {
+  avg_payoff: "Avg Payoff",
+  nash_gap: "Nash Gap",
+  cumulative_regret: "Regret",
+  strategy_entropy: "Entropy",
+  behavioral_consistency: "Consistency",
+  cooperation_rate: "Cooperation",
+};
+
+function formatMetric(key: string, val: number): string {
+  if (key === "cooperation_rate") return (val * 100).toFixed(0) + "%";
+  if (key === "nash_gap" || key === "cumulative_regret") return val.toFixed(3);
+  return val.toFixed(2);
+}
+
+function detectMetricKeys(report: BenchmarkReport): string[] {
+  for (const agentId of report.ranking) {
+    const m = report.agents[agentId]?.metrics;
+    if (m) return Object.keys(m).filter((k) => METRIC_LABELS[k]);
+  }
+  return [];
+}
+
+const BASE_COLUMNS = ["Rank", "Model", "Provider", "Games Played", "Elo", "α-Rank"] as const;
+
 function LeaderboardTable({ report, loading, error }: {
   report: BenchmarkReport | null;
   loading: boolean;
   error: string | null;
 }) {
+  const metricKeys = report ? detectMetricKeys(report) : [];
+  const allColumns = [...BASE_COLUMNS, ...metricKeys.map((k) => METRIC_LABELS[k] || k)];
+
   if (loading) {
     return (
       <div className="rounded-[var(--radius-card)] border border-line overflow-hidden bg-surface">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-line bg-surface-soft">
-              {["Rank", "Model", "Provider", "Games Played", "Elo", "α-Rank"].map((h) => (
+              {allColumns.map((h) => (
                 <th key={h} className="text-left px-5 py-3 text-xs font-mono font-medium text-muted">{h}</th>
               ))}
             </tr>
@@ -84,12 +112,11 @@ function LeaderboardTable({ report, loading, error }: {
           <tbody>
             {Array.from({ length: 5 }).map((_, i) => (
               <tr key={i} className={`border-b border-line/50 last:border-0 ${i % 2 === 1 ? "bg-surface-soft/50" : ""}`}>
-                <td className="px-5 py-3.5"><div className="w-6 h-6 rounded-full bg-surface-container animate-shimmer" /></td>
-                <td className="px-5 py-3.5"><div className="w-28 h-3 rounded bg-surface-container animate-shimmer" /></td>
-                <td className="px-5 py-3.5"><div className="w-16 h-3 rounded bg-surface-container animate-shimmer" /></td>
-                <td className="px-5 py-3.5"><div className="w-12 h-3 rounded bg-surface-container animate-shimmer" /></td>
-                <td className="px-5 py-3.5"><div className="w-14 h-3 rounded bg-surface-container animate-shimmer" /></td>
-                <td className="px-5 py-3.5"><div className="w-14 h-3 rounded bg-surface-container animate-shimmer" /></td>
+                {allColumns.map((_, ci) => (
+                  <td key={ci} className="px-5 py-3.5">
+                    <div className="w-14 h-3 rounded bg-surface-container animate-shimmer" />
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>
@@ -119,12 +146,9 @@ function LeaderboardTable({ report, loading, error }: {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-line bg-surface-soft">
-            <th className="text-left px-5 py-3 text-xs font-mono font-medium text-muted">Rank</th>
-            <th className="text-left px-5 py-3 text-xs font-mono font-medium text-muted">Model</th>
-            <th className="text-left px-5 py-3 text-xs font-mono font-medium text-muted">Provider</th>
-            <th className="text-left px-5 py-3 text-xs font-mono font-medium text-muted">Games Played</th>
-            <th className="text-left px-5 py-3 text-xs font-mono font-medium text-muted">Elo</th>
-            <th className="text-left px-5 py-3 text-xs font-mono font-medium text-muted">α-Rank</th>
+            {allColumns.map((h) => (
+              <th key={h} className="text-left px-5 py-3 text-xs font-mono font-medium text-muted">{h}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
@@ -155,6 +179,14 @@ function LeaderboardTable({ report, loading, error }: {
                 <td className="px-5 py-3.5">
                   <span className="text-xs font-mono text-ink">{agent.alpha_rank != null ? (agent.alpha_rank * 100).toFixed(1) + "%" : "—"}</span>
                 </td>
+                {metricKeys.map((key) => {
+                  const val = agent.metrics?.[key];
+                  return (
+                    <td key={key} className="px-5 py-3.5">
+                      <span className="text-xs font-mono text-ink">{val != null ? formatMetric(key, val) : "—"}</span>
+                    </td>
+                  );
+                })}
               </tr>
             );
           })}

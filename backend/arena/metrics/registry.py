@@ -9,6 +9,17 @@ import numpy as np
 from arena.metrics.contracts import Match
 from arena.metrics.ranking import RankingMetrics
 
+# Metrics aggregated from MatchEvaluator for display on the leaderboard.
+# These are stored as running sums and averaged when the report is built.
+_AGGREGATED_METRICS = frozenset({
+    "avg_payoff",
+    "nash_gap",
+    "cumulative_regret",
+    "strategy_entropy",
+    "behavioral_consistency",
+    "cooperation_rate",
+})
+
 
 class AgentRegistry:
     """
@@ -30,11 +41,21 @@ class AgentRegistry:
             defaultdict(lambda: defaultdict(list))
         self.match_history: list[str] = []
         self.matches_played: dict[str, int] = defaultdict(int)
+        # Running sums of per-agent metrics across all matches
+        self.agg_metrics: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        self.agg_metric_counts: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
 
-    def record_match(self, match: Match, avg_payoffs: dict[str, float]) -> None:
+    def record_match(
+        self,
+        match: Match,
+        avg_payoffs: dict[str, float],
+        agent_metrics: dict[str, dict] | None = None,
+    ) -> None:
         """
         Record a completed match. avg_payoffs maps agent_id → average payoff this match.
-        Updates Elo ratings and marginal pairwise payoffs for α-Rank.
+        Updates Elo ratings, marginal pairwise payoffs, and aggregated metrics for α-Rank.
+        agent_metrics is an optional dict of {agent_id: {metric_name: value}} from the
+        MatchEvaluator, used to build leaderboard columns (nash_gap, regret, etc.).
         """
         self.match_history.append(match.match_id)
         agents = match.agent_ids
@@ -50,6 +71,14 @@ class AgentRegistry:
         updated = RankingMetrics.update_elo_multiplayer(elo_snapshot, avg_payoffs)
         for a, new_rating in updated.items():
             self.elo_ratings[a] = new_rating
+
+        if agent_metrics:
+            for agent_id, metrics in agent_metrics.items():
+                for key in _AGGREGATED_METRICS:
+                    val = metrics.get(key)
+                    if val is not None and isinstance(val, (int, float)) and math.isfinite(val):
+                        self.agg_metrics[agent_id][key] += val
+                        self.agg_metric_counts[agent_id][key] += 1
 
     def marginal_mean(self, a: str, b: str) -> tuple[float, float] | None:
         records = self.marginal_payoffs.get(a, {}).get(b, [])
@@ -120,6 +149,21 @@ class AgentRegistry:
         probs = [v / total for v in scores.values()]
         return float(-sum(p * math.log2(p) for p in probs if p > 0))
 
+    def aggregated_metrics(self, agent_ids: list[str]) -> dict[str, dict[str, float]]:
+        """Return per-agent averages of all tracked metrics for the leaderboard."""
+        result = {}
+        for agent_id in agent_ids:
+            row = {}
+            counts = self.agg_metric_counts.get(agent_id, {})
+            sums = self.agg_metrics.get(agent_id, {})
+            for key in _AGGREGATED_METRICS:
+                c = counts.get(key, 0)
+                if c > 0:
+                    row[key] = sums[key] / c
+            if row:
+                result[agent_id] = row
+        return result
+
     # ── serialization for DB persistence ────────────────────────────────────
 
     def to_dict(self) -> dict:
@@ -132,6 +176,8 @@ class AgentRegistry:
             },
             "match_history": list(self.match_history),
             "matches_played": dict(self.matches_played),
+            "agg_metrics": {a: dict(d) for a, d in self.agg_metrics.items()},
+            "agg_metric_counts": {a: dict(d) for a, d in self.agg_metric_counts.items()},
         }
 
     @classmethod
@@ -145,4 +191,10 @@ class AgentRegistry:
         registry.match_history = data.get("match_history", [])
         for agent, count in data.get("matches_played", {}).items():
             registry.matches_played[agent] = count
+        for agent, metrics in data.get("agg_metrics", {}).items():
+            for key, val in metrics.items():
+                registry.agg_metrics[agent][key] = val
+        for agent, counts in data.get("agg_metric_counts", {}).items():
+            for key, val in counts.items():
+                registry.agg_metric_counts[agent][key] = val
         return registry

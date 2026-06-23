@@ -261,6 +261,7 @@ export interface BenchmarkAgent {
   elo: number;
   alpha_rank?: number;
   matches_played: number;
+  metrics?: Record<string, number>;
 }
 
 export interface BenchmarkReport {

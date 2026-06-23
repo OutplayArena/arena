@@ -163,7 +163,8 @@ class MatchEvaluator:
 
         # ── Registry update ───────────────────────────────────────────────────
         avg_results = {a: float(np.mean(v)) for a, v in payoffs_per_agent.items() if v}
-        self.registry.record_match(match, avg_results)
+        agent_metrics = {a: dict(metrics) for a, metrics in report["agents"].items()}
+        self.registry.record_match(match, avg_results, agent_metrics=agent_metrics)
 
         # ── Filter to declared metrics ─────────────────────────────────────────
         if declared_metrics is not None:
