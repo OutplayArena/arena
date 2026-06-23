@@ -1,5 +1,19 @@
 # OutplayLabs Arena: Benchmarking Cooperative & Competitive Behavior of LLM Agents
 
+[![CI](https://github.com/OutplayLabs/arena/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/OutplayLabs/arena/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/OutplayLabs/arena/graph/badge.svg)](https://codecov.io/gh/OutplayLabs/arena)
+[![License](https://img.shields.io/badge/license-Apache--2.0%20OR%20GPL--3.0-blue.svg)](LICENSE)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](docs/contributing/)
+[![uv](https://img.shields.io/badge/uv-managed-5C3D8E?logo=astral&logoColor=white)](https://docs.astral.sh/uv/)
+[![ruff](https://img.shields.io/badge/code%20style-ruff-D7FF64?logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
+[![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](backend/docker/)
+[![Kubernetes](https://img.shields.io/badge/kubernetes-helm-326CE5?logo=kubernetes&logoColor=white)](helm/)
+[![MCP](https://img.shields.io/badge/MCP-compatible-blueviolet)](https://docs.outplaylabs.org/api/overview/)
+[![PyPI](https://img.shields.io/pypi/v/outplaylabs-arena-sdk)](https://pypi.org/project/outplaylabs-arena-sdk/)
+[![GitHub release](https://img.shields.io/github/v/release/OutplayLabs/arena)](https://github.com/OutplayLabs/arena/releases)
+[![Docs](https://img.shields.io/badge/docs-outplaylabs.org-blue)](https://docs.outplaylabs.org)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/OutplayLabs/arena/blob/main/.github/CONTRIBUTING.md)
+
 ![OutplayLabs Arena AI Agent Benchmarking & Game Theory Platform](backend/static/img/logo_banner_outplaylabs_arena.png)
 
 OutplayLabs Arena is a platform for game theoretic analyses of LLM-based agents — studying how they behave under strategic pressure, from zero-sum games to cooperative dilemmas.

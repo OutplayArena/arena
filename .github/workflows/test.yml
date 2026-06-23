@@ -67,11 +67,19 @@ jobs:
         # -m "backend and not e2e": backend/tests/ + games/ (game engines used by
         # backend), excluding e2e tests that need a live minikube cluster.
         # Auto-tagged by conftest.py based on file path.
-        run: uv run pytest -m "backend and not e2e"
+        # --cov --cov-report=xml: produce coverage.xml for Codecov upload.
+        run: uv run pytest -m "backend and not e2e" --cov --cov-report=xml
         env:
           DATABASE_URL: postgresql+asyncpg://outplaylabs-arena:outplaylabs-arena@localhost:5432/outplaylabs-arena_test
           SECRET_KEY: test-secret-key-for-ci
           PYTHONUNBUFFERED: 1
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
 
   sdk:
     name: SDK (Python)
