@@ -11,6 +11,8 @@ import { KeysPage } from "./pages/KeysPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { GamesPage } from "./pages/GamesPage";
 import { PapersPage } from "./pages/PapersPage";
+import { LeaderboardPage } from "./pages/LeaderboardPage";
+import { AgentDetailPage } from "./pages/AgentDetailPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export default function App() {
@@ -70,6 +72,8 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/leaderboard" element={<LeaderboardPage />} />
+            <Route path="/leaderboard/:agentId" element={<AgentDetailPage />} />
             <Route path="/games" element={<GamesPage />} />
             <Route path="/papers" element={<PapersPage />} />
             <Route path="*" element={<NotFoundPage />} />

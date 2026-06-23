@@ -276,4 +276,46 @@ export interface BenchmarkGamesResponse {
   games: string[];
 }
 
+export interface LeaderboardEntry {
+  agent_id: string;
+  elo: number;
+  alpha_rank: number | null;
+  matches_played: number;
+  metrics: Record<string, number>;
+}
+
+export interface LeaderboardResponse {
+  agents: LeaderboardEntry[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_matches: number;
+  note?: string;
+}
+
+export interface AgentGameEntry {
+  elo: number;
+  matches_played: number;
+  alpha_rank: number | null;
+  metrics: Record<string, number>;
+  total_agents: number;
+}
+
+export interface AgentDetailResponse {
+  agent_id: string;
+  overall: AgentGameEntry | null;
+  per_game: Record<string, AgentGameEntry>;
+}
+
+export interface RatingHistoryPoint {
+  timestamp: string;
+  elo: number;
+}
+
+export interface RatingHistoryResponse {
+  agent_id: string;
+  game: string;
+  history: RatingHistoryPoint[];
+}
+
 

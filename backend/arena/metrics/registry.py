@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from collections import defaultdict
+from datetime import datetime, timezone
 from itertools import combinations
 
 import numpy as np
@@ -44,20 +45,29 @@ class AgentRegistry:
         # Running sums of per-agent metrics across all matches
         self.agg_metrics: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
         self.agg_metric_counts: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        # Match timestamps for time-range filtering (match_id -> isoformat str)
+        self.match_timestamps: dict[str, str] = {}
+        # Elo history snapshots for rating-over-time charts (agent_id -> [(ts, elo)])
+        self.elo_snapshots: dict[str, list[tuple[str, float]]] = defaultdict(list)
 
     def record_match(
         self,
         match: Match,
         avg_payoffs: dict[str, float],
         agent_metrics: dict[str, dict] | None = None,
+        timestamp: str | None = None,
     ) -> None:
         """
         Record a completed match. avg_payoffs maps agent_id → average payoff this match.
         Updates Elo ratings, marginal pairwise payoffs, and aggregated metrics for α-Rank.
         agent_metrics is an optional dict of {agent_id: {metric_name: value}} from the
         MatchEvaluator, used to build leaderboard columns (nash_gap, regret, etc.).
+        timestamp is an ISO-8601 string; defaults to now if not provided.
         """
         self.match_history.append(match.match_id)
+        ts = timestamp or datetime.now(timezone.utc).isoformat()
+        self.match_timestamps[match.match_id] = ts
+
         agents = match.agent_ids
         for a in agents:
             self.matches_played[a] += 1
@@ -71,6 +81,7 @@ class AgentRegistry:
         updated = RankingMetrics.update_elo_multiplayer(elo_snapshot, avg_payoffs)
         for a, new_rating in updated.items():
             self.elo_ratings[a] = new_rating
+            self.elo_snapshots[a].append((ts, new_rating))
 
         if agent_metrics:
             for agent_id, metrics in agent_metrics.items():
@@ -164,6 +175,10 @@ class AgentRegistry:
                 result[agent_id] = row
         return result
 
+    def get_rating_history(self, agent_id: str) -> list[tuple[str, float]]:
+        """Return the (timestamp, elo) snapshot series for a given agent."""
+        return list(self.elo_snapshots.get(agent_id, []))
+
     # ── serialization for DB persistence ────────────────────────────────────
 
     def to_dict(self) -> dict:
@@ -176,8 +191,10 @@ class AgentRegistry:
             },
             "match_history": list(self.match_history),
             "matches_played": dict(self.matches_played),
+            "match_timestamps": dict(self.match_timestamps),
             "agg_metrics": {a: dict(d) for a, d in self.agg_metrics.items()},
             "agg_metric_counts": {a: dict(d) for a, d in self.agg_metric_counts.items()},
+            "elo_snapshots": {a: list(pairs) for a, pairs in self.elo_snapshots.items()},
         }
 
     @classmethod
@@ -191,10 +208,13 @@ class AgentRegistry:
         registry.match_history = data.get("match_history", [])
         for agent, count in data.get("matches_played", {}).items():
             registry.matches_played[agent] = count
+        registry.match_timestamps = dict(data.get("match_timestamps", {}))
         for agent, metrics in data.get("agg_metrics", {}).items():
             for key, val in metrics.items():
                 registry.agg_metrics[agent][key] = val
         for agent, counts in data.get("agg_metric_counts", {}).items():
             for key, val in counts.items():
                 registry.agg_metric_counts[agent][key] = val
+        for agent, pairs in data.get("elo_snapshots", {}).items():
+            registry.elo_snapshots[agent] = [tuple(p) for p in pairs]
         return registry

@@ -61,6 +61,7 @@ export const NavBar = memo(function NavBar() {
       {/* Center nav */}
       <div className="hidden md:flex items-center gap-0.5">
         <NavLink to="/" end className={navLink}>Home</NavLink>
+        <NavLink to="/leaderboard" className={navLink}>Leaderboard</NavLink>
         {(user || !hasProviders) && (
           <NavLink to="/dashboard" className={navLink}>Dashboard</NavLink>
         )}
