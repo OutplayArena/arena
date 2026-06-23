@@ -74,9 +74,9 @@ jobs:
           SECRET_KEY: test-secret-key-for-ci
           PYTHONUNBUFFERED: 1
 
-      - name: Upload coverage to Codecov
+      - name: Upload coverage reports to Codecov
         if: always()
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
