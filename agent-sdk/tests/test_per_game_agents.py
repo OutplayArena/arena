@@ -268,35 +268,26 @@ class TestPublicGoods:
 class TestTexasHoldEm:
     def test_check(self):
         agent = _agent(TexasHoldEmAgent)
-        move, amount = agent.parse_action("I check", {})
-        assert move == "check"
-        assert amount == 0.0
+        assert agent.parse_action("I check", {}) == "check"
 
     def test_fold(self):
         agent = _agent(TexasHoldEmAgent)
-        move, amount = agent.parse_action("I fold my hand", {})
-        assert move == "fold"
-        assert amount == 0.0
+        assert agent.parse_action("I fold my hand", {}) == "fold"
 
     def test_bet_with_amount(self):
         agent = _agent(TexasHoldEmAgent)
-        move, amount = agent.parse_action("I bet 50", {})
-        assert move == "bet"
-        assert amount == 50.0
+        # parse_action returns the move name string; the engine uses a
+        # fixed bet size, so the amount is dropped.
+        assert agent.parse_action("I bet 50", {}) == "bet"
 
     def test_raise_with_amount(self):
         agent = _agent(TexasHoldEmAgent)
-        move, amount = agent.parse_action("raise 25", {})
-        assert move == "raise"
-        assert amount == 25.0
+        assert agent.parse_action("raise 25", {}) == "raise"
 
     def test_all_in(self):
         agent = _agent(TexasHoldEmAgent)
-        move, amount = agent.parse_action("all in", {})
-        assert move == "all_in"
-        assert amount == 0.0
+        assert agent.parse_action("all in", {}) == "all_in"
 
     def test_unknown_defaults_to_fold(self):
         agent = _agent(TexasHoldEmAgent)
-        move, _ = agent.parse_action("garbage", {})
-        assert move == "fold"
+        assert agent.parse_action("garbage", {}) == "fold"

@@ -63,7 +63,6 @@ async def _quick_play_async(
         agents={p: spec.get("model", "unknown") for p, spec in agents.items()},
         api_key=arena_api_key,
     )
-    session_id = created["session_id"]
     player_tokens = created["player_tokens"]
 
     if mcp_url is None and "mcp_url" in created:

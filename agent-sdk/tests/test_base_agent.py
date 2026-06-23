@@ -423,7 +423,11 @@ class TestToolCallingSubLoop:
                 observation={"system": "s", "turn": "t"},
                 state={"phase": "playing", "awaiting": ["A"]},
             )
-            assert action == [9, 1]
+            # The SDK normalizes the LLM's submit_action allocation through
+            # the per-game parse_action (via json.dumps). _PassthroughAgent's
+            # parse_action returns the text verbatim, so the action is the
+            # JSON-stringified version of the LLM's allocation.
+            assert action == "[9, 1]"
             # submit_action short-circuits the loop, so no other tools are dispatched.
             dispatch.assert_not_called()
 

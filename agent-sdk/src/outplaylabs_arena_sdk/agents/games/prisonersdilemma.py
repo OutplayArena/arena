@@ -1,8 +1,11 @@
 """Prisoner's Dilemma agent.
 
-Action: one of the scenario's two action labels (typically
-``"cooperate"`` / ``"defect"``).  Reads the exact labels from
-``state["scenario"]`` when present.
+Action: one of the canonical names ``"cooperate"`` or ``"defect"``. The
+backend's PD engine accepts only the canonical names regardless of
+``state["scenario"]``'s human-readable labels (e.g. "Stay silent" /
+"Betray"). The LLM is told the canonical names; ``parse_action`` looks
+for them in the LLM's text (case-insensitive, whole-word match) and
+falls back to ``"defect"`` if neither is present.
 """
 from __future__ import annotations
 
@@ -17,14 +20,10 @@ from outplaylabs_arena_sdk.registry import register
 class PrisonersDilemmaAgent(BaseAgent):
     """Agent that plays iterated or one-shot Prisoner's Dilemma."""
 
+    ACTIONS = ("cooperate", "defect")
+
     def action_format_hint(self) -> str:
-        scenario = (self._last_state or {}).get("scenario") or {}
-        a = scenario.get("cooperate_label", "cooperate")
-        b = scenario.get("defect_label", "defect")
-        return f'either "{a}" or "{b}" (lowercase, plain text).'
+        return f'either "{self.ACTIONS[0]}" or "{self.ACTIONS[1]}" (lowercase, plain text).'
 
     def parse_action(self, raw_text: str, state: dict[str, Any]) -> str:
-        scenario = state.get("scenario") or {}
-        a = scenario.get("cooperate_label", "cooperate")
-        b = scenario.get("defect_label", "defect")
-        return parse_choice(raw_text, [a, b], default=b)
+        return parse_choice(raw_text, list(self.ACTIONS), default=self.ACTIONS[1])

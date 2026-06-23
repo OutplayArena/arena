@@ -34,8 +34,7 @@ from __future__ import annotations
 import asyncio
 import json
 import random
-import time
-from typing import Any, Callable
+from typing import Any
 
 from openai import OpenAI
 
@@ -407,6 +406,17 @@ class BaseAgent:
                 if tc.function.name == "submit_action":
                     args = _safe_json_loads(tc.function.arguments) or {}
                     allocation = args.get("allocation", args)
+                    # Normalize via the per-game parser. The LLM sometimes wraps
+                    # the action in a dict like {"action": "take"} or returns a
+                    # list; route through parse_action (which already handles
+                    # the relevant game-specific extraction) so the canonical
+                    # backend format is always produced.
+                    try:
+                        allocation = self.parse_action(
+                            json.dumps(allocation, default=str), state
+                        )
+                    except Exception:
+                        pass
                     self.on_tool_call(tc.function.name, args, {"committed": True})
                     return allocation, content
 
@@ -488,7 +498,7 @@ class BaseAgent:
             f"Game action format: {self.action_format_hint()}",
             "Use the provided tools to inspect the game state, communicate, and submit your action.",
         ]
-        if self._reasoning is not None and self._llm_config.reasoning_effort != "none":
+        if self._reasoning is not None and self.llm_config.reasoning_effort != "none":
             parts = [self._reasoning.build_system_prompt(p) for p in parts]
         return " ".join(parts)
 
@@ -508,7 +518,7 @@ class BaseAgent:
     async def _ensure_ready(self) -> None:
         if self._transport is not None:
             return
-        rest = ArenaClient(self.arena_url)
+        rest = ArenaClient(self.arena_url, session_id=self._session_id, token=self.token)
         mcp_client: MCPClient | None = None
         if self.use_mcp and self.mcp_url:
             try:

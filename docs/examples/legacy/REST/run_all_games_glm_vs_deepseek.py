@@ -16,7 +16,7 @@ from openai import OpenAI
 sys.stdout.reconfigure(line_buffering=True)
 
 # API configuration
-API_KEY = "nka_aG5OOsNvr0XlU8myJrAfEaaxxaWMMNVfbZ8c6rssPZM"
+API_KEY = os.environ.get("OUTPLAYLABS_ARENA_API_KEY", "")
 BASE_URL = os.environ.get("OUTPLAYLABS_ARENA_BASE_URL", "http://127.0.0.1:8000/api")
 
 # Create HTTP/1.1-only connection pool to avoid HTTP/2 protocol errors
