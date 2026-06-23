@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { getLeaderboard, getBenchmarkGames } from "../api";
+import { InfoTooltip } from "../components/InfoTooltip";
 import type { LeaderboardResponse, LeaderboardEntry } from "../types";
 
 const PAGE_SIZE = 50;
@@ -338,6 +339,7 @@ export function LeaderboardPage() {
                           onClick={() => toggleSort(col.key)}
                         >
                           {col.label}
+                          <InfoTooltip metricKey={col.key} />
                           <SortIcon active={active} direction={active ? (sortDir as "asc" | "desc") : "desc"} />
                         </th>
                       );
