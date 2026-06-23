@@ -4,7 +4,6 @@ import math
 from collections import defaultdict
 from typing import Any
 
-import numpy as np
 
 
 class BehavioralMetrics:

@@ -70,7 +70,7 @@ async def _get_user_from_api_key(token: str, db: AsyncSession) -> User:
     result = await db.execute(
         select(ApiKey).where(
             ApiKey.key_hash == key_hash,
-            ApiKey.is_active == True,
+            ApiKey.is_active,
             (ApiKey.expires_at.is_(None)) | (ApiKey.expires_at > func.now()),
         )
     )

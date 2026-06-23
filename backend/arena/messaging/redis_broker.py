@@ -16,13 +16,17 @@ def _default_redis_url() -> str:
 
 
 class RedisBroker(MessageBroker):
-    def __init__(self, redis_url: str | None = None) -> None:
+    def __init__(
+        self,
+        redis_url: str | None = None,
+        redis_client: Any | None = None,
+    ) -> None:
         if aioredis is None:
             raise RuntimeError(
                 "redis is not installed. Install it with: pip install redis[hiredis]"
             )
         self.redis_url = redis_url or _default_redis_url()
-        self._redis: aioredis.Redis | None = None
+        self._redis: aioredis.Redis | None = redis_client
         self._pubsub: aioredis.client.PubSub | None = None
 
     async def _get_redis(self) -> aioredis.Redis:
