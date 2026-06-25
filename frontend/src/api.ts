@@ -267,9 +267,16 @@ export function getMailboxMessages(
   return request<{ messages: MailboxMessage[] }>(`/api/session/${sessionId}/mailbox/messages${params}`);
 }
 
-export function getBenchmarkReport(game?: string): Promise<BenchmarkReport> {
-  const query = game ? `?game=${game}` : "";
-  return request<BenchmarkReport>(`/api/benchmark/report${query}`);
+export function getBenchmarkReport(
+  game?: string,
+  params?: { date_from?: string; date_to?: string },
+): Promise<BenchmarkReport> {
+  const searchParams = new URLSearchParams();
+  if (game) searchParams.set("game", game);
+  if (params?.date_from) searchParams.set("date_from", params.date_from);
+  if (params?.date_to) searchParams.set("date_to", params.date_to);
+  const qs = searchParams.toString();
+  return request<BenchmarkReport>(`/api/benchmark/report${qs ? `?${qs}` : ""}`);
 }
 
 export function getBenchmarkGames(): Promise<BenchmarkGamesResponse> {

@@ -61,6 +61,7 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     await _persister.start()
     _logger = MessageLogger(_broker, _async_session_factory)
     await _logger.start()
+    await _load_registries_from_db()
     yield
     if _logger is not None:
         await _logger.stop()
@@ -90,25 +91,89 @@ app.add_middleware(
 )
 
 
-@app.on_event("startup")
-async def _load_registry_from_db() -> None:
+async def _load_registries_from_db() -> None:
+    """Load persisted AgentRegistry state from the agent_registry_states
+    table, then replay any completed sessions whose match_id is not yet in
+    the registries (backfill for sessions that completed against an older
+    backend version that didn't record per-game state)."""
+    import json
+    import logging
+    logger = logging.getLogger("arena.leaderboard")
     try:
         async with _async_session_factory() as db:
             from arena.models.agent_registry import AgentRegistryState
             from sqlalchemy import select
             result = await db.execute(select(AgentRegistryState))
             loaded_global = False
+            loaded_count = 0
             for row in result.scalars().all():
-                reg = AgentRegistry.from_dict(row.state_json)
+                state = row.state_json
+                if isinstance(state, (str, bytes, bytearray)):
+                    state = json.loads(state)
+                try:
+                    reg = AgentRegistry.from_dict(state)
+                except Exception as exc:
+                    logger.warning(
+                        "Skipping malformed agent_registry_states row key=%r: %s",
+                        row.key, exc,
+                    )
+                    continue
                 if row.key == "global" or row.key == "overall":
                     set_global_registry(reg)
                     loaded_global = True
                 else:
                     set_registry(reg, row.key)
+                loaded_count += 1
             if not loaded_global:
                 set_global_registry(AgentRegistry())
-    except Exception:
-        pass
+            logger.info("Loaded %d agent registry rows from DB (global=%s)",
+                        loaded_count, loaded_global)
+    except Exception as exc:
+        logger.warning("Failed to load agent registries from DB on startup: %s", exc)
+
+    # Backfill: any completed session whose match_id is not yet in the
+    # in-memory registries gets replayed through get_results() so its
+    # per-game metrics, Elo snapshots, and aggregated values are recorded.
+    try:
+        from arena.models.session import SessionModel
+        async with _async_session_factory() as db:
+            from sqlalchemy import select
+            result = await db.execute(
+                select(SessionModel).where(SessionModel.status.in_(("complete", "completed")))
+            )
+            sessions = result.scalars().all()
+        backfilled = 0
+        for sess_row in sessions:
+            try:
+                session = GameSession.from_db_row(sess_row)
+                evaluator = MatchEvaluator(get_global_registry())
+                _ = session.results(evaluator=evaluator)
+                match = session.to_match()
+                game_type = match.game_type
+                if game_type and game_type != "unknown":
+                    import numpy as np
+                    game_registry = get_game_registry(game_type)
+                    if match.match_id in game_registry.match_history:
+                        continue
+                    avg_payoffs = {
+                        a: float(np.mean(match.payoffs(a))) if match.payoffs(a) else 0.0
+                        for a in match.agent_ids
+                    }
+                    ts = sess_row.created_at.isoformat() if sess_row.created_at else None
+                    game_registry.record_match(match, avg_payoffs, timestamp=ts)
+                    backfilled += 1
+            except Exception:
+                continue
+        if backfilled:
+            async with _async_session_factory() as db:
+                for key, reg in get_all_registries().items():
+                    try:
+                        await save_registry(reg, db, key)
+                    except Exception:
+                        pass
+        logger.info("Backfilled %d completed sessions into leaderboard registries", backfilled)
+    except Exception as exc:
+        logger.warning("Leaderboard backfill failed: %s", exc)
 
 
 class ActionRequest(BaseModel):
@@ -1129,6 +1194,8 @@ async def auth_user(
 async def benchmark_report(
     agent_ids: str | None = Query(default=None, description="Comma-separated agent IDs"),
     game: str | None = Query(default=None, description="Game type to filter by (e.g. colonelblotto)"),
+    date_from: str | None = Query(default=None, description="ISO date: only include agents active after this"),
+    date_to: str | None = Query(default=None, description="ISO date: only include agents active before this"),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -1148,12 +1215,29 @@ async def benchmark_report(
     else:
         target = known_agents
 
+    # Time-range filter on agent activity (mirrors the leaderboard's logic).
+    if date_from or date_to:
+        filtered = []
+        for a in target:
+            snaps = registry.elo_snapshots.get(a, [])
+            if not snaps:
+                continue
+            day_min = min(t[:10] for t, _ in snaps)
+            day_max = max(t[:10] for t, _ in snaps)
+            if date_from and day_max < date_from:
+                continue
+            if date_to and day_min > date_to:
+                continue
+            filtered.append(a)
+        target = filtered
+
     if len(target) < 2:
         return sanitize_for_json({
             "agents": {a: {"elo": registry.elo_ratings.get(a), "matches_played": 0} for a in target},
             "ranking": target,
             "population": {},
             "total_matches": len(registry.match_history),
+            "date_range": _registry_date_range(registry),
             "note": "Need at least 2 agents for α-Rank computation.",
         })
 
@@ -1176,6 +1260,7 @@ async def benchmark_report(
         "ranking": pop["alpha_rank_ranking"],
         "population": pop,
         "total_matches": len(registry.match_history),
+        "date_range": _registry_date_range(registry),
     })
 
 
@@ -1235,6 +1320,24 @@ def _safe_sort_key(agent_data: dict, key: str) -> tuple:
     return (0, val)
 
 
+def _registry_date_range(registry: AgentRegistry) -> dict:
+    """Return the inclusive [min_date, max_date] (YYYY-MM-DD) of recorded
+    match activity, derived from the registry's Elo snapshots. Empty dict
+    when no activity exists yet."""
+    ts_min: str | None = None
+    ts_max: str | None = None
+    for snaps in registry.elo_snapshots.values():
+        for ts, _ in snaps:
+            day = ts[:10] if len(ts) >= 10 else ts
+            if ts_min is None or day < ts_min:
+                ts_min = day
+            if ts_max is None or day > ts_max:
+                ts_max = day
+    if ts_min is None or ts_max is None:
+        return {"min_date": None, "max_date": None}
+    return {"min_date": ts_min, "max_date": ts_max}
+
+
 def _build_leaderboard_entries(
     registry: AgentRegistry,
     agent_ids: list[str],
@@ -1244,6 +1347,7 @@ def _build_leaderboard_entries(
     page_size: int = 50,
 ) -> dict:
     """Build paginated, sorted leaderboard entries from a registry."""
+    date_range = _registry_date_range(registry)
     if len(agent_ids) < 2:
         entries = []
         for a in agent_ids:
@@ -1260,6 +1364,7 @@ def _build_leaderboard_entries(
             "page": page,
             "page_size": page_size,
             "total_matches": len(registry.match_history),
+            "date_range": date_range,
             "note": "Need at least 2 agents for α-Rank computation.",
         }
 
@@ -1291,6 +1396,7 @@ def _build_leaderboard_entries(
         "page": page,
         "page_size": page_size,
         "total_matches": len(registry.match_history),
+        "date_range": date_range,
     }
 
 
@@ -1319,19 +1425,19 @@ async def get_leaderboard(
     else:
         target = known
 
-    # Time-range filter on agent activity
+    # Time-range filter on agent activity. Agents with no snapshots are
+    # excluded when a date filter is set — they have no recorded activity.
     if date_from or date_to:
         filtered = []
         for a in target:
             snaps = registry.elo_snapshots.get(a, [])
             if not snaps:
-                filtered.append(a)
                 continue
-            ts_min = min(t for t, _ in snaps)
-            ts_max = max(t for t, _ in snaps)
-            if date_from and ts_max < date_from:
+            day_min = min(t[:10] for t, _ in snaps)
+            day_max = max(t[:10] for t, _ in snaps)
+            if date_from and day_max < date_from:
                 continue
-            if date_to and ts_min > date_to:
+            if date_to and day_min > date_to:
                 continue
             filtered.append(a)
         target = filtered
