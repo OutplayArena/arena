@@ -62,9 +62,6 @@ export const NavBar = memo(function NavBar() {
       <div className="hidden md:flex items-center gap-0.5">
         <NavLink to="/" end className={navLink}>Home</NavLink>
         <NavLink to="/leaderboard" className={navLink}>Leaderboard</NavLink>
-        {(user || !hasProviders) && (
-          <NavLink to="/dashboard" className={navLink}>Dashboard</NavLink>
-        )}
         {docs_url && (
           <a href={docs_url} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 text-sm font-medium text-muted hover:text-ink hover:bg-surface-container rounded-[var(--radius-chip)] transition-colors duration-150">
             Docs
@@ -87,6 +84,20 @@ export const NavBar = memo(function NavBar() {
         >
           {theme === "light" ? <MoonIcon /> : <SunIcon />}
         </button>
+
+        {(user || !hasProviders) && (
+          <NavLink
+            to="/dashboard"
+            className={({ isActive }) =>
+              "ml-1 inline-flex items-center h-7 px-3 rounded-[var(--radius-button)] text-xs font-semibold transition-colors duration-150 " +
+              (isActive
+                ? "bg-accent-soft text-accent"
+                : "text-muted hover:text-ink hover:bg-surface-container")
+            }
+          >
+            Dashboard
+          </NavLink>
+        )}
 
         {hasProviders && !user && (
           <NavLink
