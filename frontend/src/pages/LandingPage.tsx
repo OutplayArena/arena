@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSiteConfig } from "../hooks/useSiteConfig";
 import { WaveBackground } from "../components/WaveBackground";
@@ -94,14 +94,38 @@ export function LandingPage() {
     dateFrom: "",
     dateTo: "",
   });
+  // Track whether we've already auto-populated the date range from the data.
+  // We only do this once on the first response so the user's clear is preserved.
+  const dateInitDone = useRef(false);
 
   useEffect(() => {
-    getBenchmarkReport(filters.game || undefined)
-      .then((r) => { setReport(r); setError(null); })
+    getBenchmarkReport(filters.game || undefined, {
+      date_from: filters.dateFrom || undefined,
+      date_to: filters.dateTo || undefined,
+    })
+      .then((r) => {
+        setReport(r);
+        setError(null);
+      })
       .catch((e) => setError(e.message ?? "Unknown error"))
       .finally(() => setLoading(false));
-  }, [filters.game]);
+  }, [filters.game, filters.dateFrom, filters.dateTo]);
 
+  // Auto-populate the date filters with the data's min/max so the pickers
+  // default to the first / last match date on first load. Runs once.
+  const dataMin = report?.date_range?.min_date;
+  const dataMax = report?.date_range?.max_date;
+  useEffect(() => {
+    if (dateInitDone.current) return;
+    if (!dataMin || !dataMax) return;
+    dateInitDone.current = true;
+    if (filters.dateFrom || filters.dateTo) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFilters((prev) => ({ ...prev, dateFrom: dataMin, dateTo: dataMax }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataMin, dataMax]);
+
+  const dataRange = report?.date_range ?? { min_date: null, max_date: null };
   const allRows = reportToRows(report);
   const rows = allRows.slice(0, HOME_PAGE_LIMIT);
   const hasMore = allRows.length > HOME_PAGE_LIMIT;
@@ -222,6 +246,7 @@ export function LandingPage() {
               value={filters}
               onChange={setFilters}
               align="center"
+              dateRange={dataRange}
             />
           </div>
 

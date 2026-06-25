@@ -1194,6 +1194,8 @@ async def auth_user(
 async def benchmark_report(
     agent_ids: str | None = Query(default=None, description="Comma-separated agent IDs"),
     game: str | None = Query(default=None, description="Game type to filter by (e.g. colonelblotto)"),
+    date_from: str | None = Query(default=None, description="ISO date: only include agents active after this"),
+    date_to: str | None = Query(default=None, description="ISO date: only include agents active before this"),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -1213,12 +1215,29 @@ async def benchmark_report(
     else:
         target = known_agents
 
+    # Time-range filter on agent activity (mirrors the leaderboard's logic).
+    if date_from or date_to:
+        filtered = []
+        for a in target:
+            snaps = registry.elo_snapshots.get(a, [])
+            if not snaps:
+                continue
+            ts_min = min(t for t, _ in snaps)
+            ts_max = max(t for t, _ in snaps)
+            if date_from and ts_max < date_from:
+                continue
+            if date_to and ts_min > date_to:
+                continue
+            filtered.append(a)
+        target = filtered
+
     if len(target) < 2:
         return sanitize_for_json({
             "agents": {a: {"elo": registry.elo_ratings.get(a), "matches_played": 0} for a in target},
             "ranking": target,
             "population": {},
             "total_matches": len(registry.match_history),
+            "date_range": _registry_date_range(registry),
             "note": "Need at least 2 agents for α-Rank computation.",
         })
 
@@ -1241,6 +1260,7 @@ async def benchmark_report(
         "ranking": pop["alpha_rank_ranking"],
         "population": pop,
         "total_matches": len(registry.match_history),
+        "date_range": _registry_date_range(registry),
     })
 
 
@@ -1300,6 +1320,24 @@ def _safe_sort_key(agent_data: dict, key: str) -> tuple:
     return (0, val)
 
 
+def _registry_date_range(registry: AgentRegistry) -> dict:
+    """Return the inclusive [min_date, max_date] (YYYY-MM-DD) of recorded
+    match activity, derived from the registry's Elo snapshots. Empty dict
+    when no activity exists yet."""
+    ts_min: str | None = None
+    ts_max: str | None = None
+    for snaps in registry.elo_snapshots.values():
+        for ts, _ in snaps:
+            day = ts[:10] if len(ts) >= 10 else ts
+            if ts_min is None or day < ts_min:
+                ts_min = day
+            if ts_max is None or day > ts_max:
+                ts_max = day
+    if ts_min is None or ts_max is None:
+        return {"min_date": None, "max_date": None}
+    return {"min_date": ts_min, "max_date": ts_max}
+
+
 def _build_leaderboard_entries(
     registry: AgentRegistry,
     agent_ids: list[str],
@@ -1309,6 +1347,7 @@ def _build_leaderboard_entries(
     page_size: int = 50,
 ) -> dict:
     """Build paginated, sorted leaderboard entries from a registry."""
+    date_range = _registry_date_range(registry)
     if len(agent_ids) < 2:
         entries = []
         for a in agent_ids:
@@ -1325,6 +1364,7 @@ def _build_leaderboard_entries(
             "page": page,
             "page_size": page_size,
             "total_matches": len(registry.match_history),
+            "date_range": date_range,
             "note": "Need at least 2 agents for α-Rank computation.",
         }
 
@@ -1356,6 +1396,7 @@ def _build_leaderboard_entries(
         "page": page,
         "page_size": page_size,
         "total_matches": len(registry.match_history),
+        "date_range": date_range,
     }
 
 

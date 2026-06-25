@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { getLeaderboard } from "../api";
 import { LeaderboardFilters, type LeaderboardFiltersValue } from "../components/LeaderboardFilters";
@@ -114,6 +114,9 @@ export function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
+  // Track whether we've already auto-populated the date range from the data.
+  // We only do this once on the first response so the user's clear is preserved.
+  const dateInitDone = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -126,11 +129,32 @@ export function LeaderboardPage() {
       date_from: dateFrom || undefined,
       date_to: dateTo || undefined,
     })
-      .then((res) => { if (!cancelled) { setData(res); setError(null); } })
+      .then((res) => {
+        if (cancelled) return;
+        setData(res);
+        setError(null);
+      })
       .catch((e) => { if (!cancelled) setError(e.message ?? "Unknown error"); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [game, sortBy, sortDir, page, dateFrom, dateTo, retry]);
+
+  // Auto-populate the URL with the data's min/max dates so the date pickers
+  // default to the first / last match date on first load. Runs exactly once,
+  // only when the data arrives, only if the URL has no date params.
+  const dataMin = data?.date_range?.min_date;
+  const dataMax = data?.date_range?.max_date;
+  useEffect(() => {
+    if (dateInitDone.current) return;
+    if (!dataMin || !dataMax) return;
+    dateInitDone.current = true;
+    if (searchParams.get("date_from") || searchParams.get("date_to")) return;
+    const next = new URLSearchParams(searchParams);
+    next.set("date_from", dataMin);
+    next.set("date_to", dataMax);
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataMin, dataMax]);
 
   const updateParams = (updates: Record<string, string>) => {
     const next = new URLSearchParams(searchParams);
@@ -171,6 +195,7 @@ export function LeaderboardPage() {
     metrics: a.metrics,
   }));
 
+  const dataRange = data?.date_range ?? { min_date: null, max_date: null };
   const filters: LeaderboardFiltersValue = { game, dateFrom, dateTo };
 
   const handleFiltersChange = (next: LeaderboardFiltersValue) => {
@@ -201,6 +226,7 @@ export function LeaderboardPage() {
             value={filters}
             onChange={handleFiltersChange}
             onClear={handleClear}
+            dateRange={dataRange}
           />
         </div>
 

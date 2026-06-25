@@ -13,11 +13,13 @@ function TestHarness({
   initial,
   align,
   gameOnly,
+  dateRange,
   onChangeSpy,
 }: {
   initial?: Partial<LeaderboardFiltersValue>;
   align?: "left" | "center";
   gameOnly?: boolean;
+  dateRange?: { min_date: string | null; max_date: string | null };
   onChangeSpy: (next: LeaderboardFiltersValue) => void;
 }) {
   const [value, setValue] = useState<LeaderboardFiltersValue>({
@@ -39,6 +41,7 @@ function TestHarness({
       }}
       align={align}
       gameOnly={gameOnly}
+      dateRange={dateRange}
     />
   );
 }
@@ -146,5 +149,36 @@ describe("LeaderboardFilters", () => {
     });
     const wrapper = screen.getByTestId("leaderboard-filters");
     expect(wrapper.className).toContain("justify-center");
+  });
+
+  it("shows the data range hint when dateRange is provided", async () => {
+    server.use(
+      http.get("/api/games", () => HttpResponse.json([{ slug: "ultimatum", name: "Ultimatum Game" }])),
+      http.get("/api/benchmark/games", () => HttpResponse.json(GAMES_RESPONSE)),
+    );
+    renderWithProviders(
+      <TestHarness
+        onChangeSpy={vi.fn()}
+        dateRange={{ min_date: "2025-01-01", max_date: "2025-03-31" }}
+      />,
+    );
+    await waitFor(() => {
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("leaderboard-filter-data-range")).toBeInTheDocument();
+    expect(screen.getByTestId("leaderboard-filter-data-range").textContent).toContain("2025-01-01");
+    expect(screen.getByTestId("leaderboard-filter-data-range").textContent).toContain("2025-03-31");
+  });
+
+  it("hides the data range hint when no range is known", async () => {
+    server.use(
+      http.get("/api/games", () => HttpResponse.json([{ slug: "ultimatum", name: "Ultimatum Game" }])),
+      http.get("/api/benchmark/games", () => HttpResponse.json(GAMES_RESPONSE)),
+    );
+    renderWithProviders(<TestHarness onChangeSpy={vi.fn()} />);
+    await waitFor(() => {
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("leaderboard-filter-data-range")).not.toBeInTheDocument();
   });
 });

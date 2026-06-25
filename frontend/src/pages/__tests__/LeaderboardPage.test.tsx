@@ -28,6 +28,7 @@ const SAMPLE_RESPONSE: LeaderboardResponse = {
   page: 1,
   page_size: 50,
   total_matches: 80,
+  date_range: { min_date: "2025-01-01", max_date: "2025-03-31" },
 };
 
 const EMPTY_RESPONSE: LeaderboardResponse = {
@@ -36,6 +37,7 @@ const EMPTY_RESPONSE: LeaderboardResponse = {
   page: 1,
   page_size: 50,
   total_matches: 0,
+  date_range: { min_date: null, max_date: null },
 };
 
 const GAMES_RESPONSE: BenchmarkGamesResponse = {
@@ -210,18 +212,18 @@ describe("LeaderboardPage", () => {
     });
   });
 
-  it("renders date filter inputs", async () => {
+  it("renders date filter buttons (From / To)", async () => {
     mockLeaderboardEndpoint(SAMPLE_RESPONSE);
     renderWithProviders(<LeaderboardPage />, { initialRoute: "/leaderboard" });
     await waitFor(() => {
       expect(screen.getByText("claude-opus-4-8")).toBeInTheDocument();
     });
-    // The page has two <input type="date"> elements (From, To).
-    const dateInputs = document.querySelectorAll('input[type="date"]');
-    expect(dateInputs.length).toBe(2);
+    // The From / To date pickers are buttons (with calendar popups).
+    expect(screen.getByTestId("leaderboard-filter-from")).toBeInTheDocument();
+    expect(screen.getByTestId("leaderboard-filter-to")).toBeInTheDocument();
   });
 
-  it("applies the date_from filter to the API request", async () => {
+  it("applies the date_from filter to the API request via the calendar popup", async () => {
     let lastUrl = "";
     server.use(
       http.get("/api/leaderboard", ({ request }) => {
@@ -235,10 +237,20 @@ describe("LeaderboardPage", () => {
     await waitFor(() => {
       expect(screen.getByText("claude-opus-4-8")).toBeInTheDocument();
     });
-    const fromInput = screen.getByTestId("leaderboard-filter-from") as HTMLInputElement;
-    await user.type(fromInput, "2025-01-01");
+    // Open the From popup and click on a day cell. The SAMPLE_RESPONSE
+    // min/max is 2025-01-01..2025-03-31, so we pick a day within that range.
+    const fromButton = screen.getByTestId("leaderboard-filter-from");
+    await user.click(fromButton);
+    const popup = await screen.findByTestId("leaderboard-filter-from-popup");
+    const dayButtons = Array.from(
+      popup.querySelectorAll<HTMLButtonElement>("button[data-testid^='leaderboard-filter-from-day-']"),
+    );
+    const enabled = dayButtons.find((b) => !b.disabled);
+    expect(enabled).toBeDefined();
+    const ymd = enabled!.getAttribute("data-testid")!.replace("leaderboard-filter-from-day-", "");
+    await user.click(enabled!);
     await waitFor(() => {
-      expect(lastUrl).toContain("date_from=2025-01-01");
+      expect(lastUrl).toContain(`date_from=${ymd}`);
     });
   });
 
@@ -338,6 +350,7 @@ describe("LeaderboardPage", () => {
       page: 1,
       page_size: 50,
       total_matches: 5000,
+      date_range: { min_date: "2024-01-01", max_date: "2025-12-31" },
     };
     mockLeaderboardEndpoint(manyAgents);
     renderWithProviders(<LeaderboardPage />, { initialRoute: "/leaderboard" });

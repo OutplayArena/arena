@@ -269,6 +269,8 @@ export interface BenchmarkReport {
   ranking: string[];
   population: Record<string, unknown>;
   total_matches: number;
+  /** Inclusive [min_date, max_date] of recorded match activity, in YYYY-MM-DD. */
+  date_range?: { min_date: string | null; max_date: string | null };
   note?: string;
 }
 
@@ -290,6 +292,8 @@ export interface LeaderboardResponse {
   page: number;
   page_size: number;
   total_matches: number;
+  /** Inclusive [min_date, max_date] of recorded match activity, in YYYY-MM-DD. */
+  date_range: { min_date: string | null; max_date: string | null };
   note?: string;
 }
 

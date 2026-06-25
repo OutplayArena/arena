@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getBenchmarkGames } from "../api";
 import { useGameNames, gameName } from "../hooks/useGameNames";
+import { DatePicker } from "./DatePicker";
 
 export interface LeaderboardFiltersValue {
   game: string;
@@ -15,6 +16,11 @@ export interface LeaderboardFiltersProps {
   align?: "left" | "center";
   /** When true, only the game dropdown is rendered (used by the home preview). */
   gameOnly?: boolean;
+  /**
+   * Optional date range of the data, used to clamp the date pickers and to
+   * auto-populate empty date fields with the first/last match date.
+   */
+  dateRange?: { min_date: string | null; max_date: string | null };
 }
 
 const FILTER_INPUT_CLS =
@@ -36,6 +42,7 @@ export function LeaderboardFilters({
   onClear,
   align = "left",
   gameOnly = false,
+  dateRange,
 }: LeaderboardFiltersProps) {
   const [games, setGames] = useState<string[]>([]);
   const gameNames = useGameNames();
@@ -48,11 +55,19 @@ export function LeaderboardFilters({
     return () => { cancelled = true; };
   }, []);
 
-  const hasActiveFilter = Boolean(value.game || value.dateFrom || value.dateTo);
+  const hasActiveFilter = Boolean(
+    value.game || value.dateFrom || value.dateTo,
+  );
 
   const update = (patch: Partial<LeaderboardFiltersValue>) => {
     onChange({ ...value, ...patch });
   };
+
+  const minDate = dateRange?.min_date ?? undefined;
+  const maxDate = dateRange?.max_date ?? undefined;
+  const showRange = Boolean(
+    !gameOnly && dateRange?.min_date && dateRange?.max_date,
+  );
 
   return (
     <div
@@ -92,21 +107,25 @@ export function LeaderboardFilters({
       {!gameOnly && (
         <>
           <Field label="From">
-            <input
-              type="date"
+            <DatePicker
               value={value.dateFrom}
-              onChange={(e) => update({ dateFrom: e.target.value })}
-              className={FILTER_INPUT_CLS}
-              data-testid="leaderboard-filter-from"
+              onChange={(v) => update({ dateFrom: v })}
+              minDate={minDate}
+              maxDate={maxDate}
+              label="From"
+              testId="leaderboard-filter-from"
+              align={align === "center" ? "end" : "start"}
             />
           </Field>
           <Field label="To">
-            <input
-              type="date"
+            <DatePicker
               value={value.dateTo}
-              onChange={(e) => update({ dateTo: e.target.value })}
-              className={FILTER_INPUT_CLS}
-              data-testid="leaderboard-filter-to"
+              onChange={(v) => update({ dateTo: v })}
+              minDate={minDate}
+              maxDate={maxDate}
+              label="To"
+              testId="leaderboard-filter-to"
+              align={align === "center" ? "end" : "start"}
             />
           </Field>
         </>
@@ -120,6 +139,15 @@ export function LeaderboardFilters({
         >
           Clear filters
         </button>
+      )}
+
+      {!gameOnly && showRange && (
+        <span
+          className="text-[11px] font-mono text-muted"
+          data-testid="leaderboard-filter-data-range"
+        >
+          data: {dateRange.min_date} → {dateRange.max_date}
+        </span>
       )}
     </div>
   );
