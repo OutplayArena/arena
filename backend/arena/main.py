@@ -27,7 +27,7 @@ from arena.game_registry import GameRegistry, GameRegistryError
 from arena.manifest import build_agent_manifest
 from arena.messaging import RedisBroker, StatePersister, MessageLogger
 from arena.messaging.broker import MessageBroker
-from arena.metrics import AgentRegistry, get_global_registry, set_global_registry, MatchEvaluator, load_registry, save_registry
+from arena.metrics import AgentRegistry, get_global_registry, set_global_registry, set_registry, get_all_registries, get_game_registry, MatchEvaluator, save_registry
 from arena.session import GameSession, _serialize_state
 from arena.models.session import SessionModel
 from arena.models.api_key import ApiKey
@@ -94,8 +94,19 @@ app.add_middleware(
 async def _load_registry_from_db() -> None:
     try:
         async with _async_session_factory() as db:
-            registry = await load_registry(db)
-            set_global_registry(registry)
+            from arena.models.agent_registry import AgentRegistryState
+            from sqlalchemy import select
+            result = await db.execute(select(AgentRegistryState))
+            loaded_global = False
+            for row in result.scalars().all():
+                reg = AgentRegistry.from_dict(row.state_json)
+                if row.key == "global" or row.key == "overall":
+                    set_global_registry(reg)
+                    loaded_global = True
+                else:
+                    set_registry(reg, row.key)
+            if not loaded_global:
+                set_global_registry(AgentRegistry())
     except Exception:
         pass
 
@@ -627,9 +638,29 @@ async def get_results(session_id: str, db: AsyncSession = Depends(get_db)):
         evaluator = MatchEvaluator(registry)
         result = session.results(evaluator=evaluator)
         result = sanitize_for_json(result)
+
+        # Also record in per-game registry with agent metrics
+        match = session.to_match()
+        game_type = match.game_type
+        if game_type and game_type != "unknown":
+            import numpy as np
+            game_registry = get_game_registry(game_type)
+            avg_payoffs = {
+                a: float(np.mean(match.payoffs(a))) if match.payoffs(a) else 0.0
+                for a in match.agent_ids
+            }
+            rich = result.get("rich_metrics", {})
+            agent_metrics = rich.get("agents", None)
+            session_row = await db.execute(
+                select(SessionModel).where(SessionModel.id == session_id)
+            )
+            sess = session_row.scalar_one_or_none()
+            ts = sess.created_at.isoformat() if sess and sess.created_at else None
+            game_registry.record_match(match, avg_payoffs, agent_metrics=agent_metrics, timestamp=ts)
+
         try:
-            await save_registry(registry, db)
-            await db.commit()
+            for key, reg in get_all_registries().items():
+                await save_registry(reg, db, key)
         except Exception:
             await db.rollback()
 
@@ -1097,13 +1128,19 @@ async def auth_user(
 @app.get(f"{API_PREFIX}/benchmark/report")
 async def benchmark_report(
     agent_ids: str | None = Query(default=None, description="Comma-separated agent IDs"),
+    game: str | None = Query(default=None, description="Game type to filter by (e.g. colonelblotto)"),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Return the current benchmark leaderboard — Elo, α-Rank, and per-dimension scores
-    for all tracked agents. Pass ?agent_ids=a,b,c to restrict to specific agents.
+    for all tracked agents. Pass ?agent_ids=a,b,c to restrict to specific agents,
+    or ?game=colonelblotto to view per-game rankings.
     """
-    registry = get_global_registry()
+    if game:
+        registry = get_game_registry(game)
+    else:
+        registry = get_global_registry()
+
     known_agents = list(registry.elo_ratings.keys())
     if agent_ids:
         requested = [a.strip() for a in agent_ids.split(",") if a.strip()]
@@ -1112,28 +1149,51 @@ async def benchmark_report(
         target = known_agents
 
     if len(target) < 2:
-        return {
+        return sanitize_for_json({
             "agents": {a: {"elo": registry.elo_ratings.get(a), "matches_played": 0} for a in target},
             "ranking": target,
             "population": {},
             "total_matches": len(registry.match_history),
             "note": "Need at least 2 agents for α-Rank computation.",
-        }
+        })
 
-    pop = registry.population_report(target)
+    evaluator = MatchEvaluator(registry)
+    pop = evaluator.population_report(target)
+    agg = registry.aggregated_metrics(target)
     agent_summaries = {}
     for agent_id in target:
-        agent_summaries[agent_id] = {
+        base = {
             "elo": pop["elo_ratings"].get(agent_id),
             "alpha_rank": pop["alpha_rank_scores"].get(agent_id),
+            "matches_played": registry.matches_played.get(agent_id, 0),
         }
+        if agent_id in agg:
+            base["metrics"] = agg[agent_id]
+        agent_summaries[agent_id] = base
 
-    return {
+    return sanitize_for_json({
         "agents": agent_summaries,
         "ranking": pop["alpha_rank_ranking"],
         "population": pop,
         "total_matches": len(registry.match_history),
-    }
+    })
+
+
+@app.get(f"{API_PREFIX}/benchmark/games")
+async def benchmark_games(
+    db: AsyncSession = Depends(get_db),
+):
+    """List game types that have benchmark data."""
+    try:
+        from arena.models.agent_registry import AgentRegistryState
+        from sqlalchemy import select
+        result = await db.execute(
+            select(AgentRegistryState.key).where(AgentRegistryState.key.like("game:%"))
+        )
+        games = [row[0].replace("game:", "", 1) for row in result.all()]
+        return sanitize_for_json({"games": sorted(games)})
+    except Exception:
+        return sanitize_for_json({"games": []})
 
 
 @app.delete(f"{API_PREFIX}/benchmark/reset")
@@ -1147,6 +1207,204 @@ async def benchmark_reset(
     await db.commit()
     set_global_registry(AgentRegistry())
     return {"reset": True}
+
+
+# Leaderboard (paginated, sortable) 
+_SORTABLE_KEYS = frozenset({
+    "elo", "alpha_rank", "matches_played",
+    "avg_payoff", "nash_gap", "cumulative_regret",
+    "strategy_entropy", "behavioral_consistency", "cooperation_rate",
+})
+
+
+def _safe_sort_key(agent_data: dict, key: str) -> tuple:
+    """Return a sortable value, placing None/missing at the end."""
+    val = agent_data.get(key)
+    if key == "alpha_rank":
+        val = agent_data.get("alpha_rank")
+    if key == "elo":
+        val = agent_data.get("elo")
+    if key == "matches_played":
+        val = agent_data.get("matches_played")
+    if key in ("avg_payoff", "nash_gap", "cumulative_regret",
+               "strategy_entropy", "behavioral_consistency", "cooperation_rate"):
+        metrics = agent_data.get("metrics", {})
+        val = metrics.get(key)
+    if val is None:
+        return (1, 0)
+    return (0, val)
+
+
+def _build_leaderboard_entries(
+    registry: AgentRegistry,
+    agent_ids: list[str],
+    sort_by: str = "alpha_rank",
+    sort_dir: str = "desc",
+    page: int = 1,
+    page_size: int = 50,
+) -> dict:
+    """Build paginated, sorted leaderboard entries from a registry."""
+    if len(agent_ids) < 2:
+        entries = []
+        for a in agent_ids:
+            entries.append({
+                "agent_id": a,
+                "elo": registry.elo_ratings.get(a),
+                "alpha_rank": registry.compute_alpha_rank_scores([a]).get(a) if agent_ids else None,
+                "matches_played": registry.matches_played.get(a, 0),
+                "metrics": registry.aggregated_metrics([a]).get(a, {}),
+            })
+        return {
+            "agents": entries,
+            "total": len(entries),
+            "page": page,
+            "page_size": page_size,
+            "total_matches": len(registry.match_history),
+            "note": "Need at least 2 agents for α-Rank computation.",
+        }
+
+    evaluator = MatchEvaluator(registry)
+    pop = evaluator.population_report(agent_ids)
+    agg = registry.aggregated_metrics(agent_ids)
+
+    entries = []
+    for a in agent_ids:
+        entries.append({
+            "agent_id": a,
+            "elo": pop["elo_ratings"].get(a),
+            "alpha_rank": pop["alpha_rank_scores"].get(a),
+            "matches_played": registry.matches_played.get(a, 0),
+            "metrics": agg.get(a, {}),
+        })
+
+    reverse = sort_dir.lower() != "asc"
+    entries.sort(key=lambda e: _safe_sort_key(e, sort_by), reverse=reverse)
+
+    total = len(entries)
+    start = (page - 1) * page_size
+    end = start + page_size
+    page_entries = entries[start:end]
+
+    return {
+        "agents": page_entries,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_matches": len(registry.match_history),
+    }
+
+
+@app.get(f"{API_PREFIX}/leaderboard")
+async def get_leaderboard(
+    game: str | None = Query(default=None, description="Game type filter (e.g. colonelblotto)"),
+    sort_by: str = Query(default="alpha_rank", description="Field to sort by"),
+    sort_dir: str = Query(default="desc", description="Sort direction: asc or desc"),
+    page: int = Query(default=1, ge=1, description="Page number"),
+    page_size: int = Query(default=50, ge=1, le=200, description="Items per page"),
+    agent_ids: str | None = Query(default=None, description="Comma-separated agent IDs to filter"),
+    date_from: str | None = Query(default=None, description="ISO date: only include agents active after this"),
+    date_to: str | None = Query(default=None, description="ISO date: only include agents active before this"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Paginated, sortable leaderboard. Returns agents sorted by the chosen metric."""
+    if game:
+        registry = get_game_registry(game)
+    else:
+        registry = get_global_registry()
+
+    known = list(registry.elo_ratings.keys())
+    if agent_ids:
+        requested = [a.strip() for a in agent_ids.split(",") if a.strip()]
+        target = [a for a in requested if a in known]
+    else:
+        target = known
+
+    # Time-range filter on agent activity
+    if date_from or date_to:
+        filtered = []
+        for a in target:
+            snaps = registry.elo_snapshots.get(a, [])
+            if not snaps:
+                filtered.append(a)
+                continue
+            ts_min = min(t for t, _ in snaps)
+            ts_max = max(t for t, _ in snaps)
+            if date_from and ts_max < date_from:
+                continue
+            if date_to and ts_min > date_to:
+                continue
+            filtered.append(a)
+        target = filtered
+
+    if sort_by not in _SORTABLE_KEYS:
+        sort_by = "alpha_rank"
+
+    result = _build_leaderboard_entries(
+        registry, target,
+        sort_by=sort_by, sort_dir=sort_dir,
+        page=page, page_size=page_size,
+    )
+    return sanitize_for_json(result)
+
+
+@app.get(f"{API_PREFIX}/leaderboard/agents/{{agent_id}}")
+async def get_agent_detail(
+    agent_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return per-game breakdown for a single agent across all registries."""
+    detail: dict[str, Any] = {
+        "agent_id": agent_id,
+        "overall": None,
+        "per_game": {},
+    }
+
+    for key, reg in get_all_registries().items():
+        if agent_id not in reg.elo_ratings:
+            continue
+
+        known = list(reg.elo_ratings.keys())
+        agg = reg.aggregated_metrics([agent_id]).get(agent_id, {})
+        entry = {
+            "elo": reg.elo_ratings.get(agent_id),
+            "matches_played": reg.matches_played.get(agent_id, 0),
+            "alpha_rank": None,
+            "metrics": agg,
+            "total_agents": len(known),
+        }
+
+        if len(known) >= 2:
+            scores = reg.compute_alpha_rank_scores(known)
+            entry["alpha_rank"] = scores.get(agent_id)
+
+        if key == "overall":
+            detail["overall"] = entry
+        else:
+            game_name = key.replace("game:", "", 1)
+            detail["per_game"][game_name] = entry
+
+    return sanitize_for_json(detail)
+
+
+@app.get(f"{API_PREFIX}/leaderboard/agents/{{agent_id}}/history")
+async def get_agent_history(
+    agent_id: str,
+    game: str | None = Query(default=None, description="Game type for per-game history"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return Elo rating time series for an agent."""
+    if game:
+        registry = get_game_registry(game)
+    else:
+        registry = get_global_registry()
+
+    history = registry.get_rating_history(agent_id)
+    points = [{"timestamp": ts, "elo": elo} for ts, elo in history]
+    return sanitize_for_json({
+        "agent_id": agent_id,
+        "game": game or "overall",
+        "history": points,
+    })
 
 
 # ── Site config ────────────────────────────────────────────────────────

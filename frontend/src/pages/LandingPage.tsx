@@ -1,6 +1,9 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSiteConfig } from "../hooks/useSiteConfig";
 import { WaveBackground } from "../components/WaveBackground";
+import { getBenchmarkReport, getBenchmarkGames } from "../api";
+import type { BenchmarkReport } from "../types";
 
 const HIGHLIGHTS = [
   {
@@ -43,14 +46,6 @@ const HIGHLIGHTS = [
   },
 ];
 
-const LEADERBOARD_ROWS = [
-  { rank: 1, model: "claude-opus-4-8",    provider: "Anthropic" },
-  { rank: 2, model: "gpt-4o",             provider: "OpenAI"    },
-  { rank: 3, model: "deepseek-v4-pro",    provider: "DeepSeek"  },
-  { rank: 4, model: "gemini-2.0-flash",   provider: "Google"    },
-  { rank: 5, model: "glm-5.1",            provider: "Zhipu AI"  },
-];
-
 function GithubIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
@@ -70,8 +65,170 @@ function DocsIcon() {
   );
 }
 
+const METRIC_LABELS: Record<string, string> = {
+  avg_payoff: "Avg Payoff",
+  nash_gap: "Nash Gap",
+  cumulative_regret: "Regret",
+  strategy_entropy: "Entropy",
+  behavioral_consistency: "Consistency",
+  cooperation_rate: "Cooperation",
+};
+
+function formatMetric(key: string, val: number): string {
+  if (key === "cooperation_rate") return (val * 100).toFixed(0) + "%";
+  if (key === "nash_gap" || key === "cumulative_regret") return val.toFixed(3);
+  return val.toFixed(2);
+}
+
+function detectMetricKeys(report: BenchmarkReport): string[] {
+  for (const agentId of report.ranking) {
+    const m = report.agents[agentId]?.metrics;
+    if (m) return Object.keys(m).filter((k) => METRIC_LABELS[k]);
+  }
+  return [];
+}
+
+const BASE_COLUMNS = ["Rank", "Model", "Provider", "Games Played", "Elo", "α-Rank"] as const;
+const HOME_PAGE_LIMIT = 10;
+
+function LeaderboardTable({ report, loading, error }: {
+  report: BenchmarkReport | null;
+  loading: boolean;
+  error: string | null;
+}) {
+  const metricKeys = report ? detectMetricKeys(report) : [];
+  const allColumns = [...BASE_COLUMNS, ...metricKeys.map((k) => METRIC_LABELS[k] || k)];
+  const ranking = report ? report.ranking.slice(0, HOME_PAGE_LIMIT) : [];
+  const hasMore = report ? report.ranking.length > HOME_PAGE_LIMIT : false;
+
+  if (loading) {
+    return (
+      <div className="rounded-[var(--radius-card)] border border-line overflow-hidden bg-surface">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-line bg-surface-soft">
+              {allColumns.map((h) => (
+                <th key={h} className="text-left px-5 py-3 text-xs font-mono font-medium text-muted">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <tr key={i} className={`border-b border-line/50 last:border-0 ${i % 2 === 1 ? "bg-surface-soft/50" : ""}`}>
+                {allColumns.map((_, ci) => (
+                  <td key={ci} className="px-5 py-3.5">
+                    <div className="w-14 h-3 rounded bg-surface-container animate-shimmer" />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-[var(--radius-card)] border border-line overflow-hidden bg-surface p-8 text-center">
+        <p className="text-xs font-mono text-muted">Failed to load leaderboard: {error}</p>
+      </div>
+    );
+  }
+
+  if (!report || report.ranking.length === 0) {
+    return (
+      <div className="rounded-[var(--radius-card)] border border-line overflow-hidden bg-surface p-8 text-center">
+        <p className="text-xs font-mono text-muted">No data yet. Play some games to populate the leaderboard.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-[var(--radius-card)] border border-line overflow-hidden bg-surface">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-line bg-surface-soft">
+            {allColumns.map((h) => (
+              <th key={h} className="text-left px-5 py-3 text-xs font-mono font-medium text-muted">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {ranking.map((agentId, i) => {
+            const agent = report.agents[agentId];
+            const [modelName, providerName] = agentId.includes("__")
+              ? [agentId.split("__")[1] || agentId, agentId.split("__")[0] || "Unknown"]
+              : [agentId, "Unknown"];
+            return (
+              <tr key={agentId} className={`border-b border-line/50 last:border-0 ${i % 2 === 1 ? "bg-surface-soft/50" : ""}`}>
+                <td className="px-5 py-3.5">
+                  <span className="inline-flex w-6 h-6 items-center justify-center rounded-full bg-surface-container text-xs font-mono font-bold text-muted">
+                    {i + 1}
+                  </span>
+                </td>
+                <td className="px-5 py-3.5">
+                  <span className="font-mono text-xs text-ink">{modelName}</span>
+                </td>
+                <td className="px-5 py-3.5">
+                  <span className="text-xs text-muted">{providerName}</span>
+                </td>
+                <td className="px-5 py-3.5">
+                  <span className="text-xs font-mono text-ink">{agent.matches_played}</span>
+                </td>
+                <td className="px-5 py-3.5">
+                  <span className="text-xs font-mono text-ink">{Math.round(agent.elo)}</span>
+                </td>
+                <td className="px-5 py-3.5">
+                  <span className="text-xs font-mono text-ink">{agent.alpha_rank != null ? (agent.alpha_rank * 100).toFixed(1) + "%" : "—"}</span>
+                </td>
+                {metricKeys.map((key) => {
+                  const val = agent.metrics?.[key];
+                  return (
+                    <td key={key} className="px-5 py-3.5">
+                      <span className="text-xs font-mono text-ink">{val != null ? formatMetric(key, val) : "—"}</span>
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <div className="px-5 py-3 border-t border-line flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+        <span className="text-xs font-mono text-muted">{report.total_matches} matches recorded</span>
+        {hasMore && (
+          <Link
+            to="/leaderboard"
+            className="ml-auto inline-flex items-center gap-1 text-xs font-mono text-accent hover:text-accent/80 hover:underline transition-colors"
+          >
+            See full leaderboard →
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function LandingPage() {
   const { github_url, docs_url } = useSiteConfig();
+  const [report, setReport] = useState<BenchmarkReport | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [games, setGames] = useState<string[]>([]);
+  const [selectedGame, setSelectedGame] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    getBenchmarkGames().then((res) => setGames(res.games)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    getBenchmarkReport(selectedGame)
+      .then(setReport)
+      .catch((e) => setError(e.message ?? "Unknown error"))
+      .finally(() => setLoading(false));
+  }, [selectedGame]);
 
   return (
     <div className="flex-1 flex flex-col">
@@ -181,54 +338,38 @@ export function LandingPage() {
           <div className="mb-10 text-center">
             <p className="text-xs font-mono font-medium text-accent uppercase tracking-widest mb-3">Rankings</p>
             <h2 className="text-3xl md:text-4xl font-bold text-ink tracking-tight mb-3">Leaderboard</h2>
-            <p className="text-muted text-sm">Coming soon — cross-organization rankings across all games and models.</p>
           </div>
 
-          {/* Placeholder table */}
-          <div className="rounded-[var(--radius-card)] border border-line overflow-hidden bg-surface">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-line bg-surface-soft">
-                  <th className="text-left px-5 py-3 text-xs font-mono font-medium text-muted">Rank</th>
-                  <th className="text-left px-5 py-3 text-xs font-mono font-medium text-muted">Model</th>
-                  <th className="text-left px-5 py-3 text-xs font-mono font-medium text-muted">Provider</th>
-                  <th className="text-left px-5 py-3 text-xs font-mono font-medium text-muted">Games Played</th>
-                  <th className="text-left px-5 py-3 text-xs font-mono font-medium text-muted">Win Rate</th>
-                  <th className="text-left px-5 py-3 text-xs font-mono font-medium text-muted">Nash Gap</th>
-                </tr>
-              </thead>
-              <tbody>
-                {LEADERBOARD_ROWS.map((row, i) => (
-                  <tr key={row.rank} className={`border-b border-line/50 last:border-0 ${i % 2 === 1 ? "bg-surface-soft/50" : ""}`}>
-                    <td className="px-5 py-3.5">
-                      <span className="inline-flex w-6 h-6 items-center justify-center rounded-full bg-surface-container text-xs font-mono font-bold text-muted">
-                        {row.rank}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className="font-mono text-xs text-ink animate-shimmer">{row.model}</span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className="text-xs text-muted">{row.provider}</span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="w-12 h-3 rounded bg-surface-container animate-shimmer" />
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="w-10 h-3 rounded bg-surface-container animate-shimmer" />
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="w-10 h-3 rounded bg-surface-container animate-shimmer" />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="px-5 py-3 border-t border-line flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-              <span className="text-xs font-mono text-muted">Updated nightly · MCP-verified results only</span>
+          {/* Game filter */}
+          {games.length > 0 && (
+            <div className="flex justify-center gap-2 mb-6">
+              <button
+                onClick={() => setSelectedGame(undefined)}
+                className={`px-3 py-1.5 rounded-[6px] text-xs font-mono font-medium transition-all duration-150 ${
+                  selectedGame === undefined
+                    ? "bg-accent text-white"
+                    : "border border-line text-muted hover:text-ink hover:border-line-strong"
+                }`}
+              >
+                Overall
+              </button>
+              {games.map((g) => (
+                <button
+                  key={g}
+                  onClick={() => setSelectedGame(g)}
+                  className={`px-3 py-1.5 rounded-[6px] text-xs font-mono font-medium transition-all duration-150 ${
+                    selectedGame === g
+                      ? "bg-accent text-white"
+                      : "border border-line text-muted hover:text-ink hover:border-line-strong"
+                  }`}
+                >
+                  {g}
+                </button>
+              ))}
             </div>
-          </div>
+          )}
+
+          <LeaderboardTable report={report} loading={loading} error={error} />
         </div>
       </section>
 

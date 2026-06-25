@@ -16,6 +16,11 @@ import type {
   MetricDescriptor,
   ScenarioInfo,
   MailboxMessage,
+  BenchmarkReport,
+  BenchmarkGamesResponse,
+  LeaderboardResponse,
+  AgentDetailResponse,
+  RatingHistoryResponse,
 } from "./types";
 
 export class ApiError extends Error {
@@ -260,6 +265,47 @@ export function getMailboxMessages(
 ): Promise<{ messages: MailboxMessage[] }> {
   const params = player ? `?player=${player}` : "";
   return request<{ messages: MailboxMessage[] }>(`/api/session/${sessionId}/mailbox/messages${params}`);
+}
+
+export function getBenchmarkReport(game?: string): Promise<BenchmarkReport> {
+  const query = game ? `?game=${game}` : "";
+  return request<BenchmarkReport>(`/api/benchmark/report${query}`);
+}
+
+export function getBenchmarkGames(): Promise<BenchmarkGamesResponse> {
+  return request<BenchmarkGamesResponse>("/api/benchmark/games");
+}
+
+export function getLeaderboard(params?: {
+  game?: string;
+  sort_by?: string;
+  sort_dir?: string;
+  page?: number;
+  page_size?: number;
+  agent_ids?: string;
+  date_from?: string;
+  date_to?: string;
+}): Promise<LeaderboardResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.game) searchParams.set("game", params.game);
+  if (params?.sort_by) searchParams.set("sort_by", params.sort_by);
+  if (params?.sort_dir) searchParams.set("sort_dir", params.sort_dir);
+  if (params?.page) searchParams.set("page", String(params.page));
+  if (params?.page_size) searchParams.set("page_size", String(params.page_size));
+  if (params?.agent_ids) searchParams.set("agent_ids", params.agent_ids);
+  if (params?.date_from) searchParams.set("date_from", params.date_from);
+  if (params?.date_to) searchParams.set("date_to", params.date_to);
+  const qs = searchParams.toString();
+  return request<LeaderboardResponse>(`/api/leaderboard${qs ? `?${qs}` : ""}`);
+}
+
+export function getAgentDetail(agentId: string): Promise<AgentDetailResponse> {
+  return request<AgentDetailResponse>(`/api/leaderboard/agents/${agentId}`);
+}
+
+export function getAgentHistory(agentId: string, game?: string): Promise<RatingHistoryResponse> {
+  const qs = game ? `?game=${game}` : "";
+  return request<RatingHistoryResponse>(`/api/leaderboard/agents/${agentId}/history${qs}`);
 }
 
 
