@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { getLeaderboard, getBenchmarkGames } from "../api";
+import { useGameNames, gameName } from "../hooks/useGameNames";
 import { InfoTooltip } from "../components/InfoTooltip";
 import type { LeaderboardResponse, LeaderboardEntry } from "../types";
 
@@ -157,6 +158,7 @@ export function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
+  const gameNames = useGameNames();
 
   useEffect(() => {
     getBenchmarkGames().then((res) => setGames(res.games)).catch(() => {});
@@ -225,11 +227,11 @@ export function LeaderboardPage() {
             <select
               value={game}
               onChange={(e) => updateParams({ game: e.target.value })}
-              className={FILTER_INPUT_CLS + " min-w-[130px]"}
+              className={FILTER_INPUT_CLS + " min-w-[180px]"}
             >
-              <option value="">Overall</option>
+              <option value="">All games (overall)</option>
               {games.map((g) => (
-                <option key={g} value={g}>{g}</option>
+                <option key={g} value={g}>{gameName(g, gameNames)}</option>
               ))}
             </select>
           </div>

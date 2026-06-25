@@ -154,6 +154,62 @@ describe("LeaderboardPage", () => {
     expect(select).toBeInTheDocument();
   });
 
+  it("shows human-readable game names in the dropdown (not slugs)", async () => {
+    // Use a wider set of games so we can verify the lookup across multiple.
+    server.use(
+      http.get("/api/leaderboard", () => HttpResponse.json(SAMPLE_RESPONSE)),
+      http.get("/api/benchmark/games", () =>
+        HttpResponse.json<BenchmarkGamesResponse>({
+          games: ["colonelblotto", "ultimatum", "battle_of_the_sexes"],
+        }),
+      ),
+    );
+    renderWithProviders(<LeaderboardPage />, { initialRoute: "/leaderboard" });
+    await waitFor(() => {
+      expect(screen.getByText("claude-opus-4-8")).toBeInTheDocument();
+    });
+    // Wait for /api/games to populate the cache.
+    await waitFor(() => {
+      const select = document.querySelector("select") as HTMLSelectElement;
+      const optionTexts = Array.from(select.querySelectorAll("option")).map((o) => o.textContent);
+      expect(optionTexts).toContain("Colonel Blotto");
+    });
+    const select = document.querySelector("select") as HTMLSelectElement;
+    const optionTexts = Array.from(select.querySelectorAll("option")).map((o) => o.textContent);
+    expect(optionTexts[0]).toBe("All games (overall)");
+    // Human-readable labels (from /api/games) should appear, not slugs.
+    expect(optionTexts).toContain("Colonel Blotto");
+    expect(optionTexts).toContain("Ultimatum Game");
+    expect(optionTexts).toContain("Battle of the Sexes");
+    // Slugs should not appear as visible labels.
+    expect(optionTexts).not.toContain("colonelblotto");
+    expect(optionTexts).not.toContain("ultimatum");
+  });
+
+  it("submits the slug (not the label) when a game is selected", async () => {
+    let lastUrl = "";
+    server.use(
+      http.get("/api/leaderboard", ({ request }) => {
+        lastUrl = request.url;
+        return HttpResponse.json(SAMPLE_RESPONSE);
+      }),
+      http.get("/api/benchmark/games", () => HttpResponse.json(GAMES_RESPONSE)),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<LeaderboardPage />, { initialRoute: "/leaderboard" });
+    await waitFor(() => {
+      expect(screen.getByText("claude-opus-4-8")).toBeInTheDocument();
+    });
+    // Select the option by its (human-readable) label; the API call should
+    // still be made with the slug.
+    const select = document.querySelector("select") as HTMLSelectElement;
+    await user.selectOptions(select, "Ultimatum Game");
+    await waitFor(() => {
+      expect(lastUrl).toContain("game=ultimatum");
+      expect(lastUrl).not.toContain("Ultimatum%20Game");
+    });
+  });
+
   it("renders date filter inputs", async () => {
     mockLeaderboardEndpoint(SAMPLE_RESPONSE);
     renderWithProviders(<LeaderboardPage />, { initialRoute: "/leaderboard" });

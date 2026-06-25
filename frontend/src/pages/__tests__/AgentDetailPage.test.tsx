@@ -113,10 +113,26 @@ describe("AgentDetailPage", () => {
     expect(screen.getByText("1500")).toBeInTheDocument();
   });
 
-  it("renders per-game breakdown cards", async () => {
+  it("renders per-game breakdown cards with human-readable names", async () => {
     mockAgentEndpoints(SAMPLE_DETAIL, SAMPLE_HISTORY);
     renderAgentDetail("/leaderboard/anthropic__claude-opus-4-8");
     await waitFor(() => {
+      expect(screen.getByText("Colonel Blotto")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Ultimatum Game")).toBeInTheDocument();
+  });
+
+  it("falls back to the slug when no human-readable name is available", async () => {
+    // Don't mock /api/games here — keep the cache empty so the slug is used.
+    server.use(
+      http.get("/api/leaderboard/agents/:agentId", () => HttpResponse.json(SAMPLE_DETAIL)),
+      http.get("/api/leaderboard/agents/:agentId/history", () => HttpResponse.json(SAMPLE_HISTORY)),
+      // Make /api/games fail so the cache stays empty.
+      http.get("/api/games", () => new HttpResponse("boom", { status: 500 })),
+    );
+    renderAgentDetail("/leaderboard/anthropic__claude-opus-4-8");
+    await waitFor(() => {
+      // When the names map is empty, the slug is shown.
       expect(screen.getByText("colonelblotto")).toBeInTheDocument();
     });
     expect(screen.getByText("ultimatum")).toBeInTheDocument();

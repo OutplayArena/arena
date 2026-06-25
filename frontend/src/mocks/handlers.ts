@@ -1,9 +1,24 @@
 import { http, HttpResponse } from "msw";
-import type { CreateExperimentResponse, GameState, GameResult, GameAgent, ScenarioInfo, MetricDescriptor } from "../types";
+import type { CreateExperimentResponse, GameState, GameResult, GameAgent, GameEntry, ScenarioInfo, MetricDescriptor } from "../types";
 
 const API = "/api";
 
+const MOCK_GAMES: GameEntry[] = [
+  { slug: "battle_of_the_sexes", name: "Battle of the Sexes" },
+  { slug: "centipede", name: "Centipede Game" },
+  { slug: "colonelblotto", name: "Colonel Blotto" },
+  { slug: "cournot_duopoly", name: "Cournot Duopoly" },
+  { slug: "prisonersdilemma", name: "Prisoner's Dilemma" },
+  { slug: "public_goods", name: "Public Goods Game" },
+  { slug: "rock_paper_scissors", name: "Rock-Paper-Scissors" },
+  { slug: "stag_hunt", name: "Stag Hunt" },
+  { slug: "texas_hold_em", name: "Texas Hold'em" },
+  { slug: "ultimatum", name: "Ultimatum Game" },
+];
+
 export const handlers = [
+  http.get(`${API}/games`, () => HttpResponse.json<GameEntry[]>(MOCK_GAMES)),
+
   http.post(`${API}/experiment`, () => {
     return HttpResponse.json<CreateExperimentResponse>({
       session_id: "test-session-123",

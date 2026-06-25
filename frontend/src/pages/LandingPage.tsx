@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSiteConfig } from "../hooks/useSiteConfig";
+import { useGameNames, gameName } from "../hooks/useGameNames";
 import { WaveBackground } from "../components/WaveBackground";
 import { getBenchmarkReport, getBenchmarkGames } from "../api";
 import type { BenchmarkReport } from "../types";
@@ -218,6 +219,7 @@ export function LandingPage() {
   const [error, setError] = useState<string | null>(null);
   const [games, setGames] = useState<string[]>([]);
   const [selectedGame, setSelectedGame] = useState<string | undefined>(undefined);
+  const gameNames = useGameNames();
 
   useEffect(() => {
     getBenchmarkGames().then((res) => setGames(res.games)).catch(() => {});
@@ -340,32 +342,36 @@ export function LandingPage() {
             <h2 className="text-3xl md:text-4xl font-bold text-ink tracking-tight mb-3">Leaderboard</h2>
           </div>
 
-          {/* Game filter */}
+          {/* Game filter (dropdown) */}
           {games.length > 0 && (
-            <div className="flex justify-center gap-2 mb-6">
-              <button
-                onClick={() => setSelectedGame(undefined)}
-                className={`px-3 py-1.5 rounded-[6px] text-xs font-mono font-medium transition-all duration-150 ${
-                  selectedGame === undefined
-                    ? "bg-accent text-white"
-                    : "border border-line text-muted hover:text-ink hover:border-line-strong"
-                }`}
-              >
-                Overall
-              </button>
-              {games.map((g) => (
-                <button
-                  key={g}
-                  onClick={() => setSelectedGame(g)}
-                  className={`px-3 py-1.5 rounded-[6px] text-xs font-mono font-medium transition-all duration-150 ${
-                    selectedGame === g
-                      ? "bg-accent text-white"
-                      : "border border-line text-muted hover:text-ink hover:border-line-strong"
-                  }`}
+            <div className="flex justify-center mb-6">
+              <label className="relative inline-flex items-center">
+                <span className="sr-only">Filter leaderboard by game</span>
+                <select
+                  value={selectedGame ?? ""}
+                  onChange={(e) => setSelectedGame(e.target.value || undefined)}
+                  className="appearance-none cursor-pointer h-9 pl-3 pr-9 text-sm rounded-[var(--radius-input)] border border-line bg-surface text-ink font-mono outline-none transition-colors hover:border-line-strong focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-soft)] min-w-[220px]"
                 >
-                  {g}
-                </button>
-              ))}
+                  <option value="">All games (overall)</option>
+                  {games.map((g) => (
+                    <option key={g} value={g}>{gameName(g, gameNames)}</option>
+                  ))}
+                </select>
+                <svg
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted"
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </label>
             </div>
           )}
 

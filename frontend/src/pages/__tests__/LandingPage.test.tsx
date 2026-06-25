@@ -142,17 +142,25 @@ describe("LandingPage leaderboard", () => {
     });
   });
 
-  it("renders game filter buttons when games are available", async () => {
+  it("renders game filter dropdown when games are available", async () => {
     mockBenchmark(SAMPLE_REPORT);
     renderWithProviders(<LandingPage />, { initialRoute: "/" });
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /overall/i })).toBeInTheDocument();
+      expect(screen.getByText("claude-opus-4-8")).toBeInTheDocument();
     });
-    expect(screen.getByRole("button", { name: /colonelblotto/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /ultimatum/i })).toBeInTheDocument();
+    const select = document.querySelector("select");
+    expect(select).toBeInTheDocument();
+    // "All games (overall)" is the default option.
+    const options = Array.from(select!.querySelectorAll("option"));
+    expect(options[0]?.textContent).toBe("All games (overall)");
+    // Every game from the API appears in the dropdown with its human-readable
+    // name (from /api/games) once that endpoint has resolved.
+    const optionTexts = options.map((o) => o.textContent);
+    expect(optionTexts).toContain("Colonel Blotto");
+    expect(optionTexts).toContain("Ultimatum Game");
   });
 
-  it("switches the report when a game filter button is clicked", async () => {
+  it("switches the report when a different game is selected", async () => {
     let requestedGame: string | undefined;
     server.use(
       http.get("/api/benchmark/report", ({ request }) => {
@@ -167,8 +175,9 @@ describe("LandingPage leaderboard", () => {
     await waitFor(() => {
       expect(screen.getByText("claude-opus-4-8")).toBeInTheDocument();
     });
-    // Click on a specific game.
-    await user.click(screen.getByRole("button", { name: /ultimatum/i }));
+    // Pick a specific game in the dropdown by its (human-readable) label.
+    const select = document.querySelector("select") as HTMLSelectElement;
+    await user.selectOptions(select, "ultimatum");
     await waitFor(() => {
       expect(requestedGame).toBe("ultimatum");
     });

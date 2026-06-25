@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getAgentDetail, getAgentHistory } from "../api";
+import { useGameNames, gameName } from "../hooks/useGameNames";
 import type { AgentDetailResponse, RatingHistoryResponse } from "../types";
 
 const METRIC_LABELS: Record<string, string> = {
@@ -84,6 +85,8 @@ export function AgentDetailPage() {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [decodedId]);
+
+  const gameNames = useGameNames();
 
   if (loading) {
     return (
@@ -170,17 +173,17 @@ export function AgentDetailPage() {
           <div>
             <h2 className="text-sm font-semibold text-ink mb-3">Per-Game Performance</h2>
             <div className="space-y-3">
-              {gameEntries.map(([gameName, entry]) => {
+              {gameEntries.map(([gameSlug, entry]) => {
                 const gameMetricKeys = entry.metrics
                   ? Object.keys(entry.metrics).filter((k) => METRIC_LABELS[k])
                   : [];
                 return (
                   <div
-                    key={gameName}
+                    key={gameSlug}
                     className="rounded-[var(--radius-card)] border border-line bg-surface p-4"
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-xs font-mono font-semibold text-ink">{gameName}</h3>
+                      <h3 className="text-xs font-mono font-semibold text-ink">{gameName(gameSlug, gameNames)}</h3>
                       <span className="text-[10px] font-mono text-muted">
                         {entry.matches_played} matches · {entry.total_agents} agents in pool
                       </span>
