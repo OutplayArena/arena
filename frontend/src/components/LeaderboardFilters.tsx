@@ -141,7 +141,7 @@ export function LeaderboardFilters({
         </button>
       )}
 
-      {!gameOnly && showRange && (
+      {!gameOnly && showRange && dateRange && (
         <span
           className="text-[11px] font-mono text-muted"
           data-testid="leaderboard-filter-data-range"

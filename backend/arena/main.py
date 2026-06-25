@@ -1222,11 +1222,11 @@ async def benchmark_report(
             snaps = registry.elo_snapshots.get(a, [])
             if not snaps:
                 continue
-            ts_min = min(t for t, _ in snaps)
-            ts_max = max(t for t, _ in snaps)
-            if date_from and ts_max < date_from:
+            day_min = min(t[:10] for t, _ in snaps)
+            day_max = max(t[:10] for t, _ in snaps)
+            if date_from and day_max < date_from:
                 continue
-            if date_to and ts_min > date_to:
+            if date_to and day_min > date_to:
                 continue
             filtered.append(a)
         target = filtered
@@ -1433,11 +1433,11 @@ async def get_leaderboard(
             snaps = registry.elo_snapshots.get(a, [])
             if not snaps:
                 continue
-            ts_min = min(t for t, _ in snaps)
-            ts_max = max(t for t, _ in snaps)
-            if date_from and ts_max < date_from:
+            day_min = min(t[:10] for t, _ in snaps)
+            day_max = max(t[:10] for t, _ in snaps)
+            if date_from and day_max < date_from:
                 continue
-            if date_to and ts_min > date_to:
+            if date_to and day_min > date_to:
                 continue
             filtered.append(a)
         target = filtered

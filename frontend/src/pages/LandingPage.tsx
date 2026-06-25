@@ -152,7 +152,7 @@ export function LandingPage() {
           {/* Announcement chip */}
           <div className="inline-flex items-center gap-2 px-3 py-1 mb-8 rounded-[6px] border border-accent/30 bg-accent-soft text-accent text-xs font-mono font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-            Open source · MIT License
+            Open source · Apache 2.0 / GPL-3.0
           </div>
 
           <h1 className="text-7xl md:text-8xl font-black text-ink leading-none tracking-tight mb-5">

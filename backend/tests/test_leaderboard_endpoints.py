@@ -463,6 +463,30 @@ class TestGetLeaderboardEndpoint:
         finally:
             _clear_db_override()
 
+    def test_same_day_range_includes_agents_active_on_that_day(self):
+        """Regression: when date_from == date_to and all snapshots fall on
+        that single day, the agent must NOT be filtered out. The previous
+        implementation compared the full ISO timestamp (e.g.
+        "2026-06-25T14:23:45...") against the date-only filter string, so
+        the timestamp string was always > the date string and every agent
+        got excluded from a same-day range."""
+        r = AgentRegistry()
+        r.record_match(
+            _make_match(["A", "B"], "m1"),
+            {"A": 1.0, "B": 0.0},
+            timestamp="2026-06-25T14:23:45.123456+00:00",
+        )
+        arena.metrics.set_global_registry(r)
+        _get_db_override(_stub_db())
+        try:
+            client = TestClient(app)
+            res = client.get("/leaderboard?date_from=2026-06-25&date_to=2026-06-25")
+            ids = {e["agent_id"] for e in res.json()["agents"]}
+            assert "A" in ids, f"agent A was filtered out of same-day range; got ids={ids}"
+            assert "B" in ids
+        finally:
+            _clear_db_override()
+
     def test_no_date_filter_includes_all_agents(self):
         r = AgentRegistry()
         r.record_match(_make_match(["A", "B"], "m1"), {"A": 1.0, "B": 0.0})

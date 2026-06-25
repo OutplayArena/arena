@@ -42,6 +42,27 @@ describe("DatePicker", () => {
     expect(screen.getByText("2025-01-15")).toBeInTheDocument();
   });
 
+  it("uses a theme-aware color class on the calendar icon (not raw text-muted)", () => {
+    renderWithProviders(<DatePicker value="" onChange={() => {}} label="From" testId="dp" />);
+    const trigger = screen.getByTestId("dp");
+    // The calendar icon is the last <svg> inside the trigger (the first one is the clear button when set).
+    const svgs = trigger.querySelectorAll("svg");
+    const calendarIcon = svgs[svgs.length - 1];
+    const cls = calendarIcon.getAttribute("class") ?? "";
+    // Must include a class that tracks --color-ink so it switches with the theme.
+    expect(cls).toMatch(/text-ink/);
+    // Must NOT be plain text-muted (which is too dim on dark backgrounds).
+    expect(cls).not.toMatch(/\btext-muted\b/);
+  });
+
+  it("clear button uses a theme-aware color class when a value is set", () => {
+    renderWithProviders(<DatePicker value="2025-01-15" onChange={() => {}} label="From" testId="dp" />);
+    const clearBtn = screen.getByTestId("dp-clear");
+    const cls = clearBtn.getAttribute("class") ?? "";
+    expect(cls).toMatch(/text-ink/);
+    expect(cls).not.toMatch(/\btext-muted\b/);
+  });
+
   it("opens the calendar popup when the trigger is clicked", async () => {
     const user = userEvent.setup();
     renderWithProviders(<DatePicker value="" onChange={() => {}} label="From" testId="dp" />);

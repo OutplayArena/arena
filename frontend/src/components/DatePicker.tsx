@@ -12,6 +12,8 @@ const TRIGGER_CLS =
   "inline-flex items-center gap-1.5 h-9 px-3 text-sm font-mono rounded-[var(--radius-input)] border border-line bg-surface text-ink outline-none transition-colors " +
   "hover:border-line-strong focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-soft)] cursor-pointer";
 
+const ICON_CLS = "text-ink/65 dark:text-ink/70";
+
 function startOfMonth(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), 1);
 }
@@ -155,7 +157,7 @@ export function DatePicker({
             aria-label={`Clear ${label} date`}
             data-testid={testId ? `${testId}-clear` : undefined}
             onClick={handleClear}
-            className="ml-0.5 -mr-1 w-4 h-4 flex items-center justify-center rounded text-muted hover:text-ink hover:bg-surface-container"
+            className="ml-0.5 -mr-1 w-4 h-4 flex items-center justify-center rounded text-ink/65 hover:text-ink hover:bg-surface-container dark:text-ink/70"
           >
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <line x1="6" y1="6" x2="18" y2="18" />
@@ -172,7 +174,7 @@ export function DatePicker({
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="text-muted"
+          className={ICON_CLS}
           aria-hidden="true"
         >
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -194,7 +196,7 @@ export function DatePicker({
             <button
               type="button"
               onClick={() => setViewMonth((d) => shiftMonth(d, -1))}
-              className="w-7 h-7 flex items-center justify-center rounded-[var(--radius-chip)] text-muted hover:text-ink hover:bg-surface-container transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-[var(--radius-chip)] text-ink/65 hover:text-ink hover:bg-surface-container dark:text-ink/70 transition-colors"
               aria-label="Previous month"
               data-testid={testId ? `${testId}-prev` : undefined}
             >
@@ -208,7 +210,7 @@ export function DatePicker({
             <button
               type="button"
               onClick={() => setViewMonth((d) => shiftMonth(d, 1))}
-              className="w-7 h-7 flex items-center justify-center rounded-[var(--radius-chip)] text-muted hover:text-ink hover:bg-surface-container transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-[var(--radius-chip)] text-ink/65 hover:text-ink hover:bg-surface-container dark:text-ink/70 transition-colors"
               aria-label="Next month"
               data-testid={testId ? `${testId}-next` : undefined}
             >
@@ -235,7 +237,7 @@ export function DatePicker({
               const classes = [
                 "h-7 w-7 mx-auto flex items-center justify-center rounded-[var(--radius-chip)] text-xs font-mono transition-colors",
                 disabled
-                  ? "text-muted/30 cursor-not-allowed"
+                  ? "text-ink/25 dark:text-ink/30 cursor-not-allowed"
                   : isSelected
                     ? "bg-accent text-white"
                     : isToday
@@ -266,7 +268,7 @@ export function DatePicker({
               <button
                 type="button"
                 onClick={() => { onChange(""); setOpen(false); }}
-                className="text-[11px] font-mono text-muted hover:text-ink transition-colors"
+                className="text-[11px] font-mono text-ink/65 hover:text-ink dark:text-ink/70 transition-colors"
                 data-testid={testId ? `${testId}-popup-clear` : undefined}
               >
                 Clear
