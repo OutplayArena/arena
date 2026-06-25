@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSiteConfig } from "../hooks/useSiteConfig";
-import { useGameNames, gameName } from "../hooks/useGameNames";
 import { WaveBackground } from "../components/WaveBackground";
-import { getBenchmarkReport, getBenchmarkGames } from "../api";
+import { LeaderboardFilters, type LeaderboardFiltersValue } from "../components/LeaderboardFilters";
+import { LeaderboardTable } from "../components/LeaderboardTable";
+import type { LeaderboardTableRow } from "../components/leaderboardShared";
+import { getBenchmarkReport } from "../api";
 import type { BenchmarkReport } from "../types";
 
 const HIGHLIGHTS = [
@@ -11,7 +13,7 @@ const HIGHLIGHTS = [
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3"/>
-        <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
+        <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12 2.12"/>
       </svg>
     ),
     title: "Grounded in Theory",
@@ -66,150 +68,20 @@ function DocsIcon() {
   );
 }
 
-const METRIC_LABELS: Record<string, string> = {
-  avg_payoff: "Avg Payoff",
-  nash_gap: "Nash Gap",
-  cumulative_regret: "Regret",
-  strategy_entropy: "Entropy",
-  behavioral_consistency: "Consistency",
-  cooperation_rate: "Cooperation",
-};
-
-function formatMetric(key: string, val: number): string {
-  if (key === "cooperation_rate") return (val * 100).toFixed(0) + "%";
-  if (key === "nash_gap" || key === "cumulative_regret") return val.toFixed(3);
-  return val.toFixed(2);
-}
-
-function detectMetricKeys(report: BenchmarkReport): string[] {
-  for (const agentId of report.ranking) {
-    const m = report.agents[agentId]?.metrics;
-    if (m) return Object.keys(m).filter((k) => METRIC_LABELS[k]);
-  }
-  return [];
-}
-
-const BASE_COLUMNS = ["Rank", "Model", "Provider", "Games Played", "Elo", "α-Rank"] as const;
 const HOME_PAGE_LIMIT = 10;
 
-function LeaderboardTable({ report, loading, error }: {
-  report: BenchmarkReport | null;
-  loading: boolean;
-  error: string | null;
-}) {
-  const metricKeys = report ? detectMetricKeys(report) : [];
-  const allColumns = [...BASE_COLUMNS, ...metricKeys.map((k) => METRIC_LABELS[k] || k)];
-  const ranking = report ? report.ranking.slice(0, HOME_PAGE_LIMIT) : [];
-  const hasMore = report ? report.ranking.length > HOME_PAGE_LIMIT : false;
-
-  if (loading) {
-    return (
-      <div className="rounded-[var(--radius-card)] border border-line overflow-hidden bg-surface">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-line bg-surface-soft">
-              {allColumns.map((h) => (
-                <th key={h} className="text-left px-5 py-3 text-xs font-mono font-medium text-muted">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <tr key={i} className={`border-b border-line/50 last:border-0 ${i % 2 === 1 ? "bg-surface-soft/50" : ""}`}>
-                {allColumns.map((_, ci) => (
-                  <td key={ci} className="px-5 py-3.5">
-                    <div className="w-14 h-3 rounded bg-surface-container animate-shimmer" />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-[var(--radius-card)] border border-line overflow-hidden bg-surface p-8 text-center">
-        <p className="text-xs font-mono text-muted">Failed to load leaderboard: {error}</p>
-      </div>
-    );
-  }
-
-  if (!report || report.ranking.length === 0) {
-    return (
-      <div className="rounded-[var(--radius-card)] border border-line overflow-hidden bg-surface p-8 text-center">
-        <p className="text-xs font-mono text-muted">No data yet. Play some games to populate the leaderboard.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-[var(--radius-card)] border border-line overflow-hidden bg-surface">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-line bg-surface-soft">
-            {allColumns.map((h) => (
-              <th key={h} className="text-left px-5 py-3 text-xs font-mono font-medium text-muted">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {ranking.map((agentId, i) => {
-            const agent = report.agents[agentId];
-            const [modelName, providerName] = agentId.includes("__")
-              ? [agentId.split("__")[1] || agentId, agentId.split("__")[0] || "Unknown"]
-              : [agentId, "Unknown"];
-            return (
-              <tr key={agentId} className={`border-b border-line/50 last:border-0 ${i % 2 === 1 ? "bg-surface-soft/50" : ""}`}>
-                <td className="px-5 py-3.5">
-                  <span className="inline-flex w-6 h-6 items-center justify-center rounded-full bg-surface-container text-xs font-mono font-bold text-muted">
-                    {i + 1}
-                  </span>
-                </td>
-                <td className="px-5 py-3.5">
-                  <span className="font-mono text-xs text-ink">{modelName}</span>
-                </td>
-                <td className="px-5 py-3.5">
-                  <span className="text-xs text-muted">{providerName}</span>
-                </td>
-                <td className="px-5 py-3.5">
-                  <span className="text-xs font-mono text-ink">{agent.matches_played}</span>
-                </td>
-                <td className="px-5 py-3.5">
-                  <span className="text-xs font-mono text-ink">{Math.round(agent.elo)}</span>
-                </td>
-                <td className="px-5 py-3.5">
-                  <span className="text-xs font-mono text-ink">{agent.alpha_rank != null ? (agent.alpha_rank * 100).toFixed(1) + "%" : "—"}</span>
-                </td>
-                {metricKeys.map((key) => {
-                  const val = agent.metrics?.[key];
-                  return (
-                    <td key={key} className="px-5 py-3.5">
-                      <span className="text-xs font-mono text-ink">{val != null ? formatMetric(key, val) : "—"}</span>
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      <div className="px-5 py-3 border-t border-line flex items-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-        <span className="text-xs font-mono text-muted">{report.total_matches} matches recorded</span>
-        {hasMore && (
-          <Link
-            to="/leaderboard"
-            className="ml-auto inline-flex items-center gap-1 text-xs font-mono text-accent hover:text-accent/80 hover:underline transition-colors"
-          >
-            See full leaderboard →
-          </Link>
-        )}
-      </div>
-    </div>
-  );
+function reportToRows(report: BenchmarkReport | null): LeaderboardTableRow[] {
+  if (!report) return [];
+  return report.ranking.map((agentId) => {
+    const agent = report.agents[agentId];
+    return {
+      agentId,
+      matches_played: agent?.matches_played ?? 0,
+      elo: agent?.elo ?? 0,
+      alpha_rank: agent?.alpha_rank ?? null,
+      metrics: agent?.metrics,
+    };
+  });
 }
 
 export function LandingPage() {
@@ -217,20 +89,22 @@ export function LandingPage() {
   const [report, setReport] = useState<BenchmarkReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [games, setGames] = useState<string[]>([]);
-  const [selectedGame, setSelectedGame] = useState<string | undefined>(undefined);
-  const gameNames = useGameNames();
+  const [filters, setFilters] = useState<LeaderboardFiltersValue>({
+    game: "",
+    dateFrom: "",
+    dateTo: "",
+  });
 
   useEffect(() => {
-    getBenchmarkGames().then((res) => setGames(res.games)).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    getBenchmarkReport(selectedGame)
-      .then(setReport)
+    getBenchmarkReport(filters.game || undefined)
+      .then((r) => { setReport(r); setError(null); })
       .catch((e) => setError(e.message ?? "Unknown error"))
       .finally(() => setLoading(false));
-  }, [selectedGame]);
+  }, [filters.game]);
+
+  const allRows = reportToRows(report);
+  const rows = allRows.slice(0, HOME_PAGE_LIMIT);
+  const hasMore = allRows.length > HOME_PAGE_LIMIT;
 
   return (
     <div className="flex-1 flex flex-col">
@@ -342,40 +216,32 @@ export function LandingPage() {
             <h2 className="text-3xl md:text-4xl font-bold text-ink tracking-tight mb-3">Leaderboard</h2>
           </div>
 
-          {/* Game filter (dropdown) */}
-          {games.length > 0 && (
-            <div className="flex justify-center mb-6">
-              <label className="relative inline-flex items-center">
-                <span className="sr-only">Filter leaderboard by game</span>
-                <select
-                  value={selectedGame ?? ""}
-                  onChange={(e) => setSelectedGame(e.target.value || undefined)}
-                  className="appearance-none cursor-pointer h-9 pl-3 pr-9 text-sm rounded-[var(--radius-input)] border border-line bg-surface text-ink font-mono outline-none transition-colors hover:border-line-strong focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-soft)] min-w-[220px]"
-                >
-                  <option value="">All games (overall)</option>
-                  {games.map((g) => (
-                    <option key={g} value={g}>{gameName(g, gameNames)}</option>
-                  ))}
-                </select>
-                <svg
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted"
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </label>
-            </div>
-          )}
+          {/* Filters (game + date range) */}
+          <div className="mb-6">
+            <LeaderboardFilters
+              value={filters}
+              onChange={setFilters}
+              align="center"
+            />
+          </div>
 
-          <LeaderboardTable report={report} loading={loading} error={error} />
+          <LeaderboardTable
+            rows={rows}
+            totalMatches={report?.total_matches ?? 0}
+            loading={loading}
+            error={error}
+            loadingRows={5}
+            footerTrailing={
+              hasMore ? (
+                <Link
+                  to="/leaderboard"
+                  className="ml-auto inline-flex items-center gap-1 text-xs font-mono text-accent hover:text-accent/80 hover:underline transition-colors"
+                >
+                  See full leaderboard →
+                </Link>
+              ) : undefined
+            }
+          />
         </div>
       </section>
 

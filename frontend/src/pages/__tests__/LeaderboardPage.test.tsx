@@ -221,6 +221,40 @@ describe("LeaderboardPage", () => {
     expect(dateInputs.length).toBe(2);
   });
 
+  it("applies the date_from filter to the API request", async () => {
+    let lastUrl = "";
+    server.use(
+      http.get("/api/leaderboard", ({ request }) => {
+        lastUrl = request.url;
+        return HttpResponse.json(SAMPLE_RESPONSE);
+      }),
+      http.get("/api/benchmark/games", () => HttpResponse.json(GAMES_RESPONSE)),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<LeaderboardPage />, { initialRoute: "/leaderboard" });
+    await waitFor(() => {
+      expect(screen.getByText("claude-opus-4-8")).toBeInTheDocument();
+    });
+    const fromInput = screen.getByTestId("leaderboard-filter-from") as HTMLInputElement;
+    await user.type(fromInput, "2025-01-01");
+    await waitFor(() => {
+      expect(lastUrl).toContain("date_from=2025-01-01");
+    });
+  });
+
+  it("uses the same shared filter bar as the landing page (Game / From / To)", async () => {
+    mockLeaderboardEndpoint(SAMPLE_RESPONSE);
+    renderWithProviders(<LeaderboardPage />, { initialRoute: "/leaderboard" });
+    await waitFor(() => {
+      expect(screen.getByText("claude-opus-4-8")).toBeInTheDocument();
+    });
+    // The shared filter bar renders the testid on both pages.
+    expect(screen.getByTestId("leaderboard-filters")).toBeInTheDocument();
+    // The From/To date inputs are present (and have the shared data-testids).
+    expect(screen.getByTestId("leaderboard-filter-from")).toBeInTheDocument();
+    expect(screen.getByTestId("leaderboard-filter-to")).toBeInTheDocument();
+  });
+
   it("renders agent names as clickable links (buttons)", async () => {
     mockLeaderboardEndpoint(SAMPLE_RESPONSE);
     renderWithProviders(<LeaderboardPage />, { initialRoute: "/leaderboard" });
@@ -234,7 +268,7 @@ describe("LeaderboardPage", () => {
     expect(link.tagName).toBe("BUTTON");
   });
 
-  it("toggles sort direction when clicking the same column", async () => {
+  it("toggles sort direction when clicking the same sort chip", async () => {
     let lastUrl = "";
     server.use(
       http.get("/api/leaderboard", ({ request }) => {
@@ -248,9 +282,14 @@ describe("LeaderboardPage", () => {
     await waitFor(() => {
       expect(screen.getByText("claude-opus-4-8")).toBeInTheDocument();
     });
-    // Click on Elo header to toggle direction.
-    const eloHeader = screen.getByRole("columnheader", { name: /elo/i });
-    await user.click(eloHeader);
+    // The sort controls now live in a chip row above the table.
+    // The "Elo" sort chip is a button whose text starts with "Elo".
+    const eloChips = screen.getAllByRole("button", { name: /elo/i });
+    // The first match is the sort chip; subsequent matches include the
+    // metric tooltip icons. Click the chip that has the bare label.
+    const eloChip = eloChips.find((b) => b.textContent?.trim().startsWith("Elo"));
+    expect(eloChip).toBeDefined();
+    await user.click(eloChip!);
     await waitFor(() => {
       // The next API call should include sort_dir=asc (was desc).
       expect(lastUrl).toContain("sort_dir=asc");

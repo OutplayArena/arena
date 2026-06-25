@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "../../mocks/server";
-import { useGameNames, gameName } from "../useGameNames";
+import { useGameNames, gameName, prettifySlug } from "../useGameNames";
 
 describe("useGameNames", () => {
   beforeEach(() => {
@@ -58,8 +58,8 @@ describe("useGameNames", () => {
 });
 
 describe("gameName helper", () => {
-  it("returns the slug unchanged when the map is empty", () => {
-    expect(gameName("ultimatum", new Map())).toBe("ultimatum");
+  it("prettifies the slug when the map is empty (no raw underscores)", () => {
+    expect(gameName("ultimatum", new Map())).toBe("Ultimatum");
   });
 
   it("returns 'Overall' for undefined", () => {
@@ -71,8 +71,36 @@ describe("gameName helper", () => {
     expect(gameName("ultimatum", names)).toBe("Ultimatum Game");
   });
 
-  it("falls back to the slug if the slug is not in the map", () => {
+  it("prettifies the slug if the slug is not in the map (no raw underscores)", () => {
     const names = new Map([["ultimatum", "Ultimatum Game"]]);
-    expect(gameName("unknown_game", names)).toBe("unknown_game");
+    expect(gameName("unknown_game", names)).toBe("Unknown Game");
+  });
+
+  it("prefers the map value over a prettified slug when both apply", () => {
+    const names = new Map([["battle_of_the_sexes", "Battle of the Sexes"]]);
+    // Map value wins even if prettifySlug would produce the same string.
+    expect(gameName("battle_of_the_sexes", names)).toBe("Battle of the Sexes");
+  });
+});
+
+describe("prettifySlug", () => {
+  it("replaces underscores with spaces and title-cases each word", () => {
+    expect(prettifySlug("battle_of_the_sexes")).toBe("Battle Of The Sexes");
+  });
+
+  it("replaces dashes with spaces and title-cases each word", () => {
+    expect(prettifySlug("rock-paper-scissors")).toBe("Rock Paper Scissors");
+  });
+
+  it("handles a single word", () => {
+    expect(prettifySlug("ultimatum")).toBe("Ultimatum");
+  });
+
+  it("collapses repeated separators", () => {
+    expect(prettifySlug("foo__bar--baz")).toBe("Foo Bar Baz");
+  });
+
+  it("returns an empty string for an empty slug", () => {
+    expect(prettifySlug("")).toBe("");
   });
 });

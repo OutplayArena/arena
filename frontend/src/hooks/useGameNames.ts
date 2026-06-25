@@ -58,8 +58,23 @@ export function useGameNames(): Map<string, string> {
   return cache ?? new Map();
 }
 
-/** Synchronous lookup; returns the slug unchanged if no entry is known. */
+/**
+ * Convert a technical slug (e.g. `colonel_blotto`, `battle_of_the_sexes`) into
+ * a human-readable label (`Colonel Blotto`, `Battle of the Sexes`). Used as
+ * a fallback when the `/api/games` lookup table is empty (loading or error),
+ * so the UI never has to show raw underscores to end users.
+ */
+export function prettifySlug(slug: string): string {
+  if (!slug) return "";
+  return slug
+    .split(/[_-]+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/** Synchronous lookup with a prettified-slug fallback. */
 export function gameName(slug: string | undefined, names: Map<string, string>): string {
   if (!slug) return "Overall";
-  return names.get(slug) ?? slug;
+  return names.get(slug) ?? prettifySlug(slug);
 }

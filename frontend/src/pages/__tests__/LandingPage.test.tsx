@@ -200,4 +200,36 @@ describe("LandingPage leaderboard", () => {
     // cooperation_rate for anthropic__claude-opus-4-8 is 0.6 → "60%".
     expect(screen.getByText("60%")).toBeInTheDocument();
   });
+
+  it("uses a combined Agent column (model + provider) — same as the full leaderboard", async () => {
+    mockBenchmark(SAMPLE_REPORT);
+    renderWithProviders(<LandingPage />, { initialRoute: "/" });
+    await waitFor(() => {
+      expect(screen.getByText("claude-opus-4-8")).toBeInTheDocument();
+    });
+    // The "Agent" column header is present (not separate "Model" / "Provider").
+    expect(screen.getByRole("columnheader", { name: "Agent" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Model" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Provider" })).not.toBeInTheDocument();
+  });
+
+  it("renders agent names as clickable buttons that navigate to the detail page", async () => {
+    mockBenchmark(SAMPLE_REPORT);
+    renderWithProviders(<LandingPage />, { initialRoute: "/" });
+    await waitFor(() => {
+      expect(screen.getByText("claude-opus-4-8")).toBeInTheDocument();
+    });
+    const link = screen.getByRole("button", { name: /claude-opus-4-8/i });
+    expect(link.tagName).toBe("BUTTON");
+  });
+
+  it("exposes a From/To date range filter (same as the full leaderboard)", async () => {
+    mockBenchmark(SAMPLE_REPORT);
+    renderWithProviders(<LandingPage />, { initialRoute: "/" });
+    await waitFor(() => {
+      expect(screen.getByText("claude-opus-4-8")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("leaderboard-filter-from")).toBeInTheDocument();
+    expect(screen.getByTestId("leaderboard-filter-to")).toBeInTheDocument();
+  });
 });

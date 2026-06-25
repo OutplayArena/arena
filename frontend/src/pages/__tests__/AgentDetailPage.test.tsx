@@ -122,20 +122,21 @@ describe("AgentDetailPage", () => {
     expect(screen.getByText("Ultimatum Game")).toBeInTheDocument();
   });
 
-  it("falls back to the slug when no human-readable name is available", async () => {
-    // Don't mock /api/games here — keep the cache empty so the slug is used.
+  it("prettifies the slug when no human-readable name is available (no raw underscores)", async () => {
+    // Make /api/games fail so the cache stays empty — the UI must still show
+    // a human-readable label, never the raw slug.
     server.use(
       http.get("/api/leaderboard/agents/:agentId", () => HttpResponse.json(SAMPLE_DETAIL)),
       http.get("/api/leaderboard/agents/:agentId/history", () => HttpResponse.json(SAMPLE_HISTORY)),
-      // Make /api/games fail so the cache stays empty.
       http.get("/api/games", () => new HttpResponse("boom", { status: 500 })),
     );
     renderAgentDetail("/leaderboard/anthropic__claude-opus-4-8");
     await waitFor(() => {
-      // When the names map is empty, the slug is shown.
-      expect(screen.getByText("colonelblotto")).toBeInTheDocument();
+      // slug "colonelblotto" → prettified "Colonelblotto"
+      expect(screen.getByText("Colonelblotto")).toBeInTheDocument();
     });
-    expect(screen.getByText("ultimatum")).toBeInTheDocument();
+    // slug "ultimatum" → prettified "Ultimatum"
+    expect(screen.getByText("Ultimatum")).toBeInTheDocument();
   });
 
   it("renders Elo rating history chart when history is present", async () => {
