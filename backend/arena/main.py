@@ -61,6 +61,7 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     await _persister.start()
     _logger = MessageLogger(_broker, _async_session_factory)
     await _logger.start()
+    await _load_registries_from_db()
     yield
     if _logger is not None:
         await _logger.stop()
@@ -90,25 +91,89 @@ app.add_middleware(
 )
 
 
-@app.on_event("startup")
-async def _load_registry_from_db() -> None:
+async def _load_registries_from_db() -> None:
+    """Load persisted AgentRegistry state from the agent_registry_states
+    table, then replay any completed sessions whose match_id is not yet in
+    the registries (backfill for sessions that completed against an older
+    backend version that didn't record per-game state)."""
+    import json
+    import logging
+    logger = logging.getLogger("arena.leaderboard")
     try:
         async with _async_session_factory() as db:
             from arena.models.agent_registry import AgentRegistryState
             from sqlalchemy import select
             result = await db.execute(select(AgentRegistryState))
             loaded_global = False
+            loaded_count = 0
             for row in result.scalars().all():
-                reg = AgentRegistry.from_dict(row.state_json)
+                state = row.state_json
+                if isinstance(state, (str, bytes, bytearray)):
+                    state = json.loads(state)
+                try:
+                    reg = AgentRegistry.from_dict(state)
+                except Exception as exc:
+                    logger.warning(
+                        "Skipping malformed agent_registry_states row key=%r: %s",
+                        row.key, exc,
+                    )
+                    continue
                 if row.key == "global" or row.key == "overall":
                     set_global_registry(reg)
                     loaded_global = True
                 else:
                     set_registry(reg, row.key)
+                loaded_count += 1
             if not loaded_global:
                 set_global_registry(AgentRegistry())
-    except Exception:
-        pass
+            logger.info("Loaded %d agent registry rows from DB (global=%s)",
+                        loaded_count, loaded_global)
+    except Exception as exc:
+        logger.warning("Failed to load agent registries from DB on startup: %s", exc)
+
+    # Backfill: any completed session whose match_id is not yet in the
+    # in-memory registries gets replayed through get_results() so its
+    # per-game metrics, Elo snapshots, and aggregated values are recorded.
+    try:
+        from arena.models.session import SessionModel
+        async with _async_session_factory() as db:
+            from sqlalchemy import select
+            result = await db.execute(
+                select(SessionModel).where(SessionModel.status.in_(("complete", "completed")))
+            )
+            sessions = result.scalars().all()
+        backfilled = 0
+        for sess_row in sessions:
+            try:
+                session = GameSession.from_db_row(sess_row)
+                evaluator = MatchEvaluator(get_global_registry())
+                _ = session.results(evaluator=evaluator)
+                match = session.to_match()
+                game_type = match.game_type
+                if game_type and game_type != "unknown":
+                    import numpy as np
+                    game_registry = get_game_registry(game_type)
+                    if match.match_id in game_registry.match_history:
+                        continue
+                    avg_payoffs = {
+                        a: float(np.mean(match.payoffs(a))) if match.payoffs(a) else 0.0
+                        for a in match.agent_ids
+                    }
+                    ts = sess_row.created_at.isoformat() if sess_row.created_at else None
+                    game_registry.record_match(match, avg_payoffs, timestamp=ts)
+                    backfilled += 1
+            except Exception:
+                continue
+        if backfilled:
+            async with _async_session_factory() as db:
+                for key, reg in get_all_registries().items():
+                    try:
+                        await save_registry(reg, db, key)
+                    except Exception:
+                        pass
+        logger.info("Backfilled %d completed sessions into leaderboard registries", backfilled)
+    except Exception as exc:
+        logger.warning("Leaderboard backfill failed: %s", exc)
 
 
 class ActionRequest(BaseModel):
@@ -1319,13 +1384,13 @@ async def get_leaderboard(
     else:
         target = known
 
-    # Time-range filter on agent activity
+    # Time-range filter on agent activity. Agents with no snapshots are
+    # excluded when a date filter is set — they have no recorded activity.
     if date_from or date_to:
         filtered = []
         for a in target:
             snaps = registry.elo_snapshots.get(a, [])
             if not snaps:
-                filtered.append(a)
                 continue
             ts_min = min(t for t, _ in snaps)
             ts_max = max(t for t, _ in snaps)
