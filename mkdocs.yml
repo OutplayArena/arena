@@ -3,8 +3,8 @@ site_url: https://docs.agent-arena.local
 site_description: >-
   Benchmarking cooperative and competitive behavior of LLM agents
   through game theory.
-repo_url: https://github.com/outplaylabs/arena
-repo_name: outplaylabs/arena
+repo_url: https://arena.core-aix.org
+repo_name: arena
 edit_uri: edit/main/docs/
 
 theme:
@@ -125,7 +125,7 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/outplaylabs/arena
+      link: https://arena.core-aix.org
   generator: false
 
 nav:

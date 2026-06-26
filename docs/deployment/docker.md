@@ -11,7 +11,7 @@ Deploy OutplayArena using Docker Compose for local development or single-server 
 
 ```bash
 # Clone repository
-git clone https://github.com/outplaylabs/arena.git
+git clone https://arena.core-aix.org/arena.git
 cd arena
 
 # Configure environment
