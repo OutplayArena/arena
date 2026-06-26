@@ -51,7 +51,7 @@ Player A proposes a split of a fixed sum; Player B accepts or rejects. Both get 
 ## Example
 
 ```python
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 results = quick_play(
     game="ultimatum",

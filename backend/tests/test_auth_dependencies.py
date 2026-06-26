@@ -93,7 +93,7 @@ class TestEnsureLocalUser:
 
         user = await _ensure_local_user(db)
         assert user.id == LOCAL_USER_ID
-        assert user.email == "local@outplaylabs-arena.local"
+        assert user.email == "local@outplayarena.local"
         db.add.assert_called_once()
         db.commit.assert_called_once()
 

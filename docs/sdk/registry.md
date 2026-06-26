@@ -1,11 +1,11 @@
 # Registry
 
-`outplaylabs_arena_sdk.registry` provides the `GAME_AGENTS` map and the `@register` decorator that power `quick_play` and other slug-based lookups.
+`outplayarena_sdk.registry` provides the `GAME_AGENTS` map and the `@register` decorator that power `quick_play` and other slug-based lookups.
 
 ## The map
 
 ```python
-from outplaylabs_arena_sdk import GAME_AGENTS, supported_games, get_agent_class
+from outplayarena_sdk import GAME_AGENTS, supported_games, get_agent_class
 
 # All 10 built-in per-game agents are registered automatically when
 # their modules are imported (which happens via the top-level __init__).
@@ -31,8 +31,8 @@ get_agent_class("nonexistent")
 If you build a custom `BaseAgent` subclass for a new game, register it so `quick_play` and `get_agent_class` can find it:
 
 ```python
-from outplaylabs_arena_sdk import BaseAgent
-from outplaylabs_arena_sdk.registry import register
+from outplayarena_sdk import BaseAgent
+from outplayarena_sdk.registry import register
 
 
 @register("my-custom-game")
@@ -59,14 +59,14 @@ class UltimatumClone(BaseAgent):
 
 ## When to import custom agents
 
-The `agents/games/__init__.py` is imported by the top-level `outplaylabs_arena_sdk/__init__.py`, so the 10 built-in per-game agents are registered automatically.
+The `agents/games/__init__.py` is imported by the top-level `outplayarena_sdk/__init__.py`, so the 10 built-in per-game agents are registered automatically.
 
 For custom subclasses, **import them once at app startup** so the `@register` decorator runs before anyone calls `quick_play` or `get_agent_class`:
 
 ```python
 # my_app/agents.py
-from outplaylabs_arena_sdk.registry import register
-from outplaylabs_arena_sdk import BaseAgent
+from outplayarena_sdk.registry import register
+from outplayarena_sdk import BaseAgent
 
 
 @register("my-game")
@@ -75,7 +75,7 @@ class MyGameAgent(BaseAgent):
 
 # main.py
 import my_app.agents  # registers MyGameAgent on import
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 results = quick_play(game="my-game", agents={...})  # uses MyGameAgent
 ```
@@ -85,7 +85,7 @@ results = quick_play(game="my-game", agents={...})  # uses MyGameAgent
 `GAME_AGENTS` is a plain `dict`, so you can remove entries in tests or when unloading a plugin:
 
 ```python
-from outplaylabs_arena_sdk import GAME_AGENTS
+from outplayarena_sdk import GAME_AGENTS
 
 def _unregister(slug: str) -> None:
     GAME_AGENTS.pop(slug, None)

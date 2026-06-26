@@ -2,10 +2,10 @@
 
 `BaseAgent` is the SDK's single entry point for building autonomous agents. It owns the full lifecycle: connect a backend transport, resolve the effective experiment config (and seed), drive the per-turn loop, call the LLM with the backend's tools, and submit actions.
 
-Per-game knowledge lives in subclasses under [`outplaylabs_arena_sdk.agents.games`](per-game-agents.md). Those override `parse_action` to convert the LLM's text into the game's structured action, and `action_format_hint` to guide the LLM. `BaseAgent` itself does not know any game rules.
+Per-game knowledge lives in subclasses under [`outplayarena_sdk.agents.games`](per-game-agents.md). Those override `parse_action` to convert the LLM's text into the game's structured action, and `action_format_hint` to guide the LLM. `BaseAgent` itself does not know any game rules.
 
 ```python
-from outplaylabs_arena_sdk import BaseAgent, LLMConfig
+from outplayarena_sdk import BaseAgent, LLMConfig
 
 
 class RockPaperScissorsAgent(BaseAgent):
@@ -13,7 +13,7 @@ class RockPaperScissorsAgent(BaseAgent):
         return 'one of "rock", "paper", "scissors" (lowercase, plain text).'
 
     def parse_action(self, raw_text, state):
-        from outplaylabs_arena_sdk.parsers import parse_choice
+        from outplayarena_sdk.parsers import parse_choice
         return parse_choice(raw_text, ["rock", "paper", "scissors"], default="rock")
 
 

@@ -1,6 +1,6 @@
 # Kubernetes Deployment
 
-Deploy OutplayLabs Arena on Kubernetes using the Helm chart for production deployments.
+Deploy OutplayArena on Kubernetes using the Helm chart for production deployments.
 
 ## Prerequisites
 
@@ -157,7 +157,7 @@ database:
 backend:
   env:
     - name: DATABASE_URL
-      value: "postgresql+asyncpg://user:pass@external-db:5432/outplaylabs-arena"
+      value: "postgresql+asyncpg://user:pass@external-db:5432/outplayarena"
 ```
 
 ### Migrations
@@ -179,11 +179,11 @@ kubectl -n arena exec -it deployment/arena-backend -- \
 ```bash
 # Backup database
 kubectl -n arena exec -it statefulset/arena-db -- \
-  pg_dump -U outplaylabs-arena outplaylabs-arena > backup.sql
+  pg_dump -U outplayarena outplayarena > backup.sql
 
 # Restore database
 cat backup.sql | kubectl -n arena exec -i statefulset/arena-db -- \
-  psql -U outplaylabs-arena outplaylabs-arena
+  psql -U outplayarena outplayarena
 ```
 
 ## Scaling

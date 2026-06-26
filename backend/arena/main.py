@@ -74,7 +74,7 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         _broker = None
 
 
-app = FastAPI(title="OutplayLabs Arena Agent Arena", lifespan=lifespan)
+app = FastAPI(title="OutplayArena", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("JWT_SECRET", "dev-secret-change-me"))
 
 # CORS — defaults to "*" for local dev. Override with CORS_ALLOW_ORIGINS, e.g.

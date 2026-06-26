@@ -24,7 +24,7 @@ from openai import OpenAI
 
 sys.stdout.reconfigure(line_buffering=True)
 
-OUTPLAYLABS_ARENA_BASE_URL = os.environ.get("OUTPLAYLABS_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
+OUTPLAYARENA_BASE_URL = os.environ.get("OUTPLAYARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
 SESSION_KEY = os.environ.get("SESSION_KEY", "nks_NDdlZmQwN2QtNzJjMy00OTJmLWI1NzEtZTNiNmUyYjFhNjNmOkI6OWRhNTE4NGVlZWQ1ZDgyODdhMzczMGRjMmVmMzM1YjhiYTQ1NTU3YjFmNjNjMDZhY2I2NDdhNzE3MzhlZTdkMQ")
 OPENCODE_GO_API_BASE = "https://opencode.ai/zen/v1"
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "results")
@@ -56,7 +56,7 @@ def parse_action(text):
 
 def get_interactive_state(session_id, player, token):
     response = httpx.get(
-        f"{OUTPLAYLABS_ARENA_BASE_URL}/session/{session_id}/interactive/state",
+        f"{OUTPLAYARENA_BASE_URL}/session/{session_id}/interactive/state",
         params={"player": player},
         headers={"Authorization": f"Bearer {token}"},
         timeout=10.0,
@@ -67,7 +67,7 @@ def get_interactive_state(session_id, player, token):
 
 def get_mailbox_messages(session_id, player, token):
     response = httpx.get(
-        f"{OUTPLAYLABS_ARENA_BASE_URL}/session/{session_id}/mailbox/messages",
+        f"{OUTPLAYARENA_BASE_URL}/session/{session_id}/mailbox/messages",
         params={"player": player},
         headers={"Authorization": f"Bearer {token}"},
         timeout=10.0,
@@ -78,7 +78,7 @@ def get_mailbox_messages(session_id, player, token):
 
 def send_mailbox_message(session_id, content, recipient, token):
     response = httpx.post(
-        f"{OUTPLAYLABS_ARENA_BASE_URL}/session/{session_id}/mailbox/send",
+        f"{OUTPLAYARENA_BASE_URL}/session/{session_id}/mailbox/send",
         json={"content": content, "recipient": recipient},
         headers={"Authorization": f"Bearer {token}"},
         timeout=10.0,
@@ -272,7 +272,7 @@ async def play_game():
         print(f"  Scores: A={total_scores.get('A', 0)} B={total_scores.get('B', 0)}")
 
         obs_response = httpx.get(
-            f"{OUTPLAYLABS_ARENA_BASE_URL}/session/{session_id}/observation",
+            f"{OUTPLAYARENA_BASE_URL}/session/{session_id}/observation",
             params={"player": player, "variant": "neutral"},
             headers={"Authorization": f"Bearer {SESSION_KEY}"},
             timeout=10.0,
@@ -290,7 +290,7 @@ async def play_game():
             print(f"  {MODEL} -> {action}")
 
         result = httpx.post(
-            f"{OUTPLAYLABS_ARENA_BASE_URL}/session/{session_id}/interactive/action",
+            f"{OUTPLAYARENA_BASE_URL}/session/{session_id}/interactive/action",
             params={"player": player},
             headers={"Authorization": f"Bearer {SESSION_KEY}"},
             json={"action": action},
@@ -303,7 +303,7 @@ async def play_game():
         await asyncio.sleep(POLL_INTERVAL)
 
     results_response = httpx.get(
-        f"{OUTPLAYLABS_ARENA_BASE_URL}/session/{session_id}/results",
+        f"{OUTPLAYARENA_BASE_URL}/session/{session_id}/results",
         timeout=10.0,
     )
     results_response.raise_for_status()

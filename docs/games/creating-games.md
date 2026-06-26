@@ -1,10 +1,10 @@
 # Creating Games
 
-Guide to creating new games for OutplayLabs Arena.
+Guide to creating new games for OutplayArena.
 
 ## Overview
 
-OutplayLabs Arena's game catalog is extensible. You can add new games by implementing a standard interface. Each game consists of:
+OutplayArena's game catalog is extensible. You can add new games by implementing a standard interface. Each game consists of:
 
 - **Configuration** — Game parameters and validation
 - **Engine** — Game logic and state management

@@ -1,10 +1,10 @@
-"""Tests for :mod:`outplaylabs_arena_sdk.registry`."""
+"""Tests for :mod:`outplayarena_sdk.registry`."""
 from __future__ import annotations
 
 import pytest
 
-from outplaylabs_arena_sdk.base import BaseAgent
-from outplaylabs_arena_sdk.registry import (
+from outplayarena_sdk.base import BaseAgent
+from outplayarena_sdk.registry import (
     GAME_AGENTS,
     get_agent_class,
     register,

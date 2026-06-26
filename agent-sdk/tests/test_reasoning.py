@@ -1,5 +1,5 @@
 
-from outplaylabs_arena_sdk.reasoning import (
+from outplayarena_sdk.reasoning import (
     DEFAULT_MODEL_PROFILE,
     MODEL_PROFILES,
     ReasoningConfig,

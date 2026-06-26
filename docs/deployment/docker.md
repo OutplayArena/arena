@@ -1,6 +1,6 @@
 # Docker Deployment
 
-Deploy OutplayLabs Arena using Docker Compose for local development or single-server deployments.
+Deploy OutplayArena using Docker Compose for local development or single-server deployments.
 
 ## Prerequisites
 
@@ -77,7 +77,7 @@ Edit `.env` in the repository root:
 
 ```bash
 # Database
-DATABASE_URL=postgresql+asyncpg://outplaylabs-arena:outplaylabs-arena@db:5432/outplaylabs-arena
+DATABASE_URL=postgresql+asyncpg://outplayarena:outplayarena@db:5432/outplayarena
 
 # API
 API_PREFIX=/api
@@ -169,10 +169,10 @@ docker volume ls | grep pgdata
 
 ```bash
 # Backup database
-docker compose exec db pg_dump -U outplaylabs-arena outplaylabs-arena > backup.sql
+docker compose exec db pg_dump -U outplayarena outplayarena > backup.sql
 
 # Restore database
-cat backup.sql | docker compose exec -T db psql -U outplaylabs-arena outplaylabs-arena
+cat backup.sql | docker compose exec -T db psql -U outplayarena outplayarena
 ```
 
 ## Development Mode
@@ -253,7 +253,7 @@ Documentation is deployed to Cloudflare Pages automatically via GitHub Actions. 
 docker compose logs backend
 
 # Check database connectivity
-docker compose exec backend python -c "import asyncpg; asyncpg.connect('postgresql://outplaylabs-arena:outplaylabs-arena@db:5432/outplaylabs-arena')"
+docker compose exec backend python -c "import asyncpg; asyncpg.connect('postgresql://outplayarena:outplayarena@db:5432/outplayarena')"
 ```
 
 ### Migrations Fail

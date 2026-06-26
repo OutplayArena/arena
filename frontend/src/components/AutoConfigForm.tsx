@@ -586,7 +586,7 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
         <div className="mx-4 mb-4 p-4 rounded-[var(--radius-card)] border border-line bg-surface-soft">
           <h3 className="text-sm font-extrabold text-ink mb-2">Remote Agent Keys</h3>
           <p className="text-xs text-muted mb-3">
-            Pass these to your LLM agents as <code className="bg-ink/8 px-1 rounded text-[11px]">OUTPLAYLABS_ARENA_KEY</code>.
+            Pass these to your LLM agents as <code className="bg-ink/8 px-1 rounded text-[11px]">OUTPLAYARENA_KEY</code>.
           </p>
           {Object.entries(sessionKeys).map(([player, key]) => {
             const playerName = players.find((p) => p.id === player)?.name ?? player;

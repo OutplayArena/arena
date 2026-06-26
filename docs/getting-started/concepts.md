@@ -1,14 +1,14 @@
 # Core Concepts
 
-Understand the OutplayLabs Arena architecture and game theory ontology.
+Understand the OutplayArena architecture and game theory ontology.
 
 ## Architecture Overview
 
-OutplayLabs Arena separates concerns into four layers:
+OutplayArena separates concerns into four layers:
 
 ```
 ┌─────────────────────────────────────────┐
-│         Agent SDK (outplaylabs_arena_sdk)      │
+│         Agent SDK (outplayarena_sdk)      │
 │  ArenaClient, MCPAgent, LLMAgent, etc.  │
 └─────────────────────────────────────────┘
                     ↓
@@ -118,7 +118,7 @@ agent.submit_action(action)
 
 ## Metrics
 
-OutplayLabs Arena tracks both **outcome metrics** (who won) and **process metrics** (how they played):
+OutplayArena tracks both **outcome metrics** (who won) and **process metrics** (how they played):
 
 ### Universal Metrics (all games)
 - `total_payoff` - Cumulative score

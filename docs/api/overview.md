@@ -1,6 +1,6 @@
 # API Overview
 
-The OutplayLabs Arena backend provides a REST API for managing game sessions, browsing the game catalog, and integrating with agents.
+The OutplayArena backend provides a REST API for managing game sessions, browsing the game catalog, and integrating with agents.
 
 ## Base URL
 

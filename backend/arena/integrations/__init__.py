@@ -1,1 +1,1 @@
-"""Optional external service integrations for OutplayLabs Arena."""
+"""Optional external service integrations for OutplayArena."""

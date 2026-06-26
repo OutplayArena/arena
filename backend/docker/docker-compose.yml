@@ -25,15 +25,15 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: outplaylabs-arena
-      POSTGRES_PASSWORD: outplaylabs-arena
-      POSTGRES_DB: outplaylabs-arena
+      POSTGRES_USER: outplayarena
+      POSTGRES_PASSWORD: outplayarena
+      POSTGRES_DB: outplayarena
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U outplaylabs-arena"]
+      test: ["CMD-SHELL", "pg_isready -U outplayarena"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -60,7 +60,7 @@ services:
       - upgrade
       - head
     environment:
-      DATABASE_URL: postgresql://outplaylabs-arena:outplaylabs-arena@db:5432/outplaylabs-arena
+      DATABASE_URL: postgresql://outplayarena:outplayarena@db:5432/outplayarena
     depends_on:
       db:
         condition: service_healthy
@@ -72,7 +72,7 @@ services:
     env_file:
       - ../../.env
     environment:
-      DATABASE_URL: postgresql+asyncpg://outplaylabs-arena:outplaylabs-arena@db:5432/outplaylabs-arena
+      DATABASE_URL: postgresql+asyncpg://outplayarena:outplayarena@db:5432/outplayarena
       REDIS_URL: redis://redis:6379/0
       API_PREFIX: /api
       OAUTH_CALLBACK_BASE_URL: http://localhost:8000
@@ -108,7 +108,7 @@ services:
       context: ../..
       dockerfile: backend/docker/Dockerfile.mcp
     environment:
-      OUTPLAYLABS_ARENA_BASE_URL: http://backend:8000/api
+      OUTPLAYARENA_BASE_URL: http://backend:8000/api
       JWT_SECRET: "${JWT_SECRET:-dev-secret-change-me}"
     depends_on:
       backend:

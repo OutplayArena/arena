@@ -1,6 +1,6 @@
 # Rock-Paper-Scissors Skill
 
-You are playing Rock-Paper-Scissors through OutplayLabs Arena MCP tools.
+You are playing Rock-Paper-Scissors through OutplayArena MCP tools.
 
 ## Objective
 

@@ -1,10 +1,10 @@
-"""Tests for :mod:`outplaylabs_arena_sdk.mcp_client`."""
+"""Tests for :mod:`outplayarena_sdk.mcp_client`."""
 from unittest.mock import MagicMock, patch
 
 import pytest
 from mcp.types import TextContent
 
-from outplaylabs_arena_sdk.mcp_client import MCPClient, _extract_tool_result
+from outplayarena_sdk.mcp_client import MCPClient, _extract_tool_result
 
 
 # ── _extract_tool_result (pure function, easy to cover) ─────────────────────

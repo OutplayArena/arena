@@ -20,7 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "agent-sdk" / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
-from outplaylabs_arena_sdk import ArenaClient, MCPAgent
+from outplayarena_sdk import ArenaClient, MCPAgent
 from games.core.colonelblotto.config import config_from_dict
 
 # Configuration
@@ -81,7 +81,7 @@ def call_llm_with_tools(model: str, observation: dict, agent: MCPAgent) -> list[
     Returns the parsed allocation list, or balanced fallback on failure.
     """
     from openai import OpenAI
-    from outplaylabs_arena_sdk.client import GAME_TOOLS
+    from outplayarena_sdk.client import GAME_TOOLS
 
     if not OPENCODE_API_KEY:
         raise ValueError("OPENCODE_API_KEY not set")

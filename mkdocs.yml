@@ -1,4 +1,4 @@
-site_name: Docs - OutplayLabs Arena
+site_name: Docs - OutplayArena
 site_url: https://docs.agent-arena.local
 site_description: >-
   Benchmarking cooperative and competitive behavior of LLM agents
@@ -9,8 +9,8 @@ edit_uri: edit/main/docs/
 
 theme:
   name: material
-  logo: img/logo_only_outplaylabs_arena.png
-  favicon: img/favicon_outplaylabs_arena.png
+  logo: img/logo_only_outplayarena.png
+  favicon: img/favicon_outplayarena.png
   font:
     text: Inter
     code: JetBrains Mono

@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 from arena import mcp_server
-from outplaylabs_arena_sdk.client import ArenaClient
+from outplayarena_sdk.client import ArenaClient
 from arena.auth.session_key import derive_session_key
 
 
@@ -164,7 +164,7 @@ def test_get_session_raises_without_context():
 
 
 def test_arena_client_reads_from_context_var(session_ctx_a, monkeypatch):
-    monkeypatch.setattr(mcp_server, "OUTPLAYLABS_ARENA_BASE_URL", "http://arena.test")
+    monkeypatch.setattr(mcp_server, "OUTPLAYARENA_BASE_URL", "http://arena.test")
 
     client = mcp_server.arena_client()
 

@@ -371,7 +371,7 @@ class TestBuildAgentManifestEdgeCases:
 
     def test_manifest_default_registry(self):
         manifest = build_agent_manifest("colonelblotto")
-        assert manifest["platform"] == "outplaylabs-arena"
+        assert manifest["platform"] == "outplayarena"
         assert manifest["manifest_version"] == "1.0"
 
     def test_manifest_includes_metrics(self):

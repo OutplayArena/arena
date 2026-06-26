@@ -21,7 +21,7 @@ import uuid
 import httpx
 import pytest
 
-from outplaylabs_arena_sdk.mcp_client import MCPClient
+from outplayarena_sdk.mcp_client import MCPClient
 from arena.auth.session_key import derive_session_key
 
 # ── Configuration ────────────────────────────────────────────────────────────

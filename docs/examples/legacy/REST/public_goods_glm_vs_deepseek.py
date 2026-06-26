@@ -15,13 +15,13 @@ from datetime import datetime, timezone
 
 from openai import OpenAI
 
-from outplaylabs_arena_sdk import ArenaClient
+from outplayarena_sdk import ArenaClient
 from games.core.public_goods.config import config_from_dict
 
 sys.stdout.reconfigure(line_buffering=True)
 
-OUTPLAYLABS_ARENA_BASE_URL = os.environ.get("OUTPLAYLABS_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
-OUTPLAYLABS_ARENA_API_KEY = os.environ["OUTPLAYLABS_ARENA_API_KEY"]
+OUTPLAYARENA_BASE_URL = os.environ.get("OUTPLAYARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
+OUTPLAYARENA_API_KEY = os.environ["OUTPLAYARENA_API_KEY"]
 OPENCODE_GO_API_BASE = "https://opencode.ai/zen/v1"
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "results")
 
@@ -107,7 +107,7 @@ async def run_match():
             print(f"  [{model}] warmup failed ({e}), continuing anyway")
     print()
 
-    arena = ArenaClient(OUTPLAYLABS_ARENA_BASE_URL)
+    arena = ArenaClient(OUTPLAYARENA_BASE_URL)
     config = config_from_dict({
         "game": "public_goods",
         "variant": "classic",
@@ -120,14 +120,14 @@ async def run_match():
     created = arena.create_experiment(
         config,
         agents={pid: model for pid, model in PLAYER_MODELS.items()},
-        api_key=OUTPLAYLABS_ARENA_API_KEY,
+        api_key=OUTPLAYARENA_API_KEY,
     )
     session_id = created["session_id"]
     print(f"Session: {session_id}")
     print()
 
     players = {
-        pid: ArenaClient.for_player(OUTPLAYLABS_ARENA_BASE_URL, created, pid)
+        pid: ArenaClient.for_player(OUTPLAYARENA_BASE_URL, created, pid)
         for pid in PLAYER_MODELS
     }
 

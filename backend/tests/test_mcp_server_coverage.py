@@ -172,10 +172,10 @@ class TestGetAgentManifestTool:
 class TestOutplaylabsArenaIntro:
     def test_intro_returns_user_message(self, monkeypatch):
         monkeypatch.setattr(mcp_server, "arena_client", lambda: _StubArenaClient())
-        result = mcp_server.outplaylabs_arena_intro()
+        result = mcp_server.outplayarena_intro()
         assert isinstance(result, list)
         assert result[0]["role"] == "user"
-        assert "OutplayLabs Arena" in result[0]["content"]
+        assert "OutplayArena" in result[0]["content"]
         assert "Authentication" in result[0]["content"]
 
 
@@ -199,7 +199,7 @@ class TestOutplaylabsArenaGamePrompt:
             },
         )
         monkeypatch.setattr(mcp_server, "arena_client", lambda: client)
-        result = mcp_server.outplaylabs_arena_game_prompt("blotto")
+        result = mcp_server.outplayarena_game_prompt("blotto")
         assert len(result) == 1
         content = result[0]["content"]
         assert "Colonel Blotto" in content
@@ -211,7 +211,7 @@ class TestOutplaylabsArenaGamePrompt:
     def test_game_prompt_with_no_skill_falls_back(self, monkeypatch):
         client = _StubArenaClient(skill=None, prompts={"system": "sys"})
         monkeypatch.setattr(mcp_server, "arena_client", lambda: client)
-        result = mcp_server.outplaylabs_arena_game_prompt("missing")
+        result = mcp_server.outplayarena_game_prompt("missing")
         assert "missing Skill" in result[0]["content"]
         assert "System Prompt Template" in result[0]["content"]
 
@@ -221,7 +221,7 @@ class TestOutplaylabsArenaGamePrompt:
             prompts=None,
         )
         monkeypatch.setattr(mcp_server, "arena_client", lambda: client)
-        result = mcp_server.outplaylabs_arena_game_prompt("g")
+        result = mcp_server.outplayarena_game_prompt("g")
         content = result[0]["content"]
         # No system/turn templates
         assert "System Prompt Template" not in content
@@ -239,7 +239,7 @@ class TestOutplaylabsArenaGamePrompt:
             prompts={},
         )
         monkeypatch.setattr(mcp_server, "arena_client", lambda: client)
-        result = mcp_server.outplaylabs_arena_game_prompt("pd")
+        result = mcp_server.outplayarena_game_prompt("pd")
         assert "TFT works well" in result[0]["content"]
 
 

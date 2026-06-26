@@ -23,7 +23,7 @@ class BaseAgent:
 
 ```python
 import logging
-from outplaylabs_arena_sdk import ColonelBlottoAgent
+from outplayarena_sdk import ColonelBlottoAgent
 
 
 class LoggedColonelBlottoAgent(ColonelBlottoAgent):

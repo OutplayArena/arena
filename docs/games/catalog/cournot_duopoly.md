@@ -54,7 +54,7 @@ Two firms simultaneously choose quantities. Market price is determined by invers
 ## Example
 
 ```python
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 results = quick_play(
     game="cournot_duopoly",

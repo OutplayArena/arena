@@ -33,9 +33,9 @@ export function LoginPage() {
         <div className="rounded-[var(--radius-card)] border border-line bg-surface shadow-elevation-3 p-8 flex flex-col gap-6">
           {/* Logo */}
           <div className="flex flex-col items-center gap-3 text-center">
-            <img src="/img/logo_only_outplaylabs_arena.png" alt="OutplayLabs Arena" className="h-10 w-auto" />
+            <img src="/img/logo_only_outplayarena.png" alt="OutplayArena" className="h-10 w-auto" />
             <div>
-              <h1 className="text-lg font-bold text-ink">Sign in to OutplayLabs Arena</h1>
+              <h1 className="text-lg font-bold text-ink">Sign in to OutplayArena</h1>
               <p className="text-xs text-muted mt-1">Research-grade AI agent benchmarking</p>
             </div>
           </div>

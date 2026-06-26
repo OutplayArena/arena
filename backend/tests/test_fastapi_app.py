@@ -311,7 +311,7 @@ def test_fastapi_serves_visualizer_index():
     response = client.get("/")
 
     assert response.status_code == 200
-    assert "OutplayLabs Arena" in response.text
+    assert "OutplayArena" in response.text
     assert "/assets/index-" in response.text
 
 

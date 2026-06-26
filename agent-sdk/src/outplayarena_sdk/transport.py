@@ -1,4 +1,4 @@
-"""Async backend transport for the OutplayLabs Arena SDK.
+"""Async backend transport for the OutplayArena SDK.
 
 Wraps :class:`ArenaClient` (REST) and :class:`MCPClient` (streamable-http) in
 a single async interface that :class:`BaseAgent` can drive without caring
@@ -14,8 +14,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from outplaylabs_arena_sdk.client import ArenaClient
-from outplaylabs_arena_sdk.mcp_client import MCPClient
+from outplayarena_sdk.client import ArenaClient
+from outplayarena_sdk.mcp_client import MCPClient
 
 
 class AsyncBackend:

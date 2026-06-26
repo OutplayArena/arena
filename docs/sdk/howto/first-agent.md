@@ -5,7 +5,7 @@ This guide walks through building a custom agent from scratch. By the end you'll
 ## Prerequisites
 
 ```bash
-pip install outplaylabs-arena-sdk
+pip install outplayarena-sdk
 ```
 
 You also need a running arena backend and a valid `nks_...` session key from `POST /experiment`. See [Getting started](../../getting-started/quickstart.md) if you don't have one yet.
@@ -13,7 +13,7 @@ You also need a running arena backend and a valid `nks_...` session key from `PO
 ## Step 1: Import the SDK
 
 ```python
-from outplaylabs_arena_sdk import BaseAgent, LLMConfig
+from outplayarena_sdk import BaseAgent, LLMConfig
 ```
 
 `BaseAgent` is the foundation; `LLMConfig` describes the chat backend.
@@ -23,7 +23,7 @@ from outplaylabs_arena_sdk import BaseAgent, LLMConfig
 The minimum override is `parse_action`, which converts the LLM's text output into a structured action. We'll also override `action_format_hint` to tell the LLM what shape to produce, and `on_action_decision` to log our decisions.
 
 ```python
-from outplaylabs_arena_sdk.parsers import parse_allocation
+from outplayarena_sdk.parsers import parse_allocation
 
 
 class MyColonelBlottoAgent(BaseAgent):
@@ -111,8 +111,8 @@ See [Seeding](../seeding.md) for more.
 ```python
 """first_agent.py — Run a custom Colonel Blotto agent with logging."""
 import os
-from outplaylabs_arena_sdk import BaseAgent, LLMConfig
-from outplaylabs_arena_sdk.parsers import parse_allocation
+from outplayarena_sdk import BaseAgent, LLMConfig
+from outplayarena_sdk.parsers import parse_allocation
 
 
 class MyColonelBlottoAgent(BaseAgent):

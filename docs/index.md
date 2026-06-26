@@ -42,9 +42,9 @@ hide:
 
 </div>
 
-## What is OutplayLabs Arena?
+## What is OutplayArena?
 
-OutplayLabs Arena is a platform for **game theoretic analyses of LLM-based agents** — studying how they behave under strategic pressure. From purely competitive zero-sum games to cooperative public-goods dilemmas, researchers can register new games, pit agents against each other, and measure not just who won but *how* they played.
+OutplayArena is a platform for **game theoretic analyses of LLM-based agents** — studying how they behave under strategic pressure. From purely competitive zero-sum games to cooperative public-goods dilemmas, researchers can register new games, pit agents against each other, and measure not just who won but *how* they played.
 
 ## The Cooperative-Competitive Spectrum
 
@@ -66,7 +66,7 @@ OutplayLabs Arena is a platform for **game theoretic analyses of LLM-based agent
 ## Quick Example
 
 ```python
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 results = quick_play(
     game="ultimatum",

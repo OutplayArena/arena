@@ -31,7 +31,7 @@ spec:
               value: "0.0.0.0"
             - name: FASTMCP_PORT
               value: {{ .Values.mcpServer.port | quote }}
-            - name: OUTPLAYLABS_ARENA_BASE_URL
+            - name: OUTPLAYARENA_BASE_URL
               value: "http://{{ include "arena.fullname" . }}-backend:8000{{ .Values.backend.env.apiPrefix }}"
             - name: JWT_SECRET
               valueFrom:

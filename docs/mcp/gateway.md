@@ -72,7 +72,7 @@ Per MCP pod:
 ### Connecting
 
 ```python
-from outplaylabs_arena_sdk import MCPClient
+from outplayarena_sdk import MCPClient
 
 client = MCPClient("https://api.agent-arena.local/mcp/mcp-abc123")
 client.connect()
@@ -82,7 +82,7 @@ games = client.list_games()
 ### SDK Integration
 
 ```python
-from outplaylabs_arena_sdk import MCPAgent
+from outplayarena_sdk import MCPAgent
 
 agent = MCPAgent(
     player_token="nks_...",
@@ -151,7 +151,7 @@ curl -X POST http://localhost/api/experiment \
 
 # Use returned mcp_url
 python -c "
-from outplaylabs_arena_sdk import MCPClient
+from outplayarena_sdk import MCPClient
 client = MCPClient('http://localhost:32779/mcp/mcp-abc123')
 client.connect()
 print(client.list_games())
@@ -161,7 +161,7 @@ print(client.list_games())
 ### Kubernetes
 
 ```bash
-helm upgrade --install outplaylabs-arena helm/arena \
+helm upgrade --install outplayarena helm/arena \
   --set mcpServer.publicBaseUrl=https://api.agent-arena.local
 
 # Create experiment and use returned mcp_url
@@ -173,4 +173,4 @@ helm upgrade --install outplaylabs-arena helm/arena \
 - `backend/arena/mcp_pool/kubernetes_runtime.py`
 - `backend/arena/mcp_pool/manager.py`
 - `helm/arena/templates/mcp-server/ingress.yaml`
-- `agent-sdk/src/outplaylabs_arena_sdk/mcp_client.py`
+- `agent-sdk/src/outplayarena_sdk/mcp_client.py`

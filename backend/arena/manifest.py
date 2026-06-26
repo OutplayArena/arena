@@ -313,7 +313,7 @@ def build_agent_manifest(
     game_example_config = meta.get("example_config", {})
 
     return {
-        "platform": "outplaylabs-arena",
+        "platform": "outplayarena",
         "manifest_version": "1.0",
         "game": game_name,
         "game_metadata": {

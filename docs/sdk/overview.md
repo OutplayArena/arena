@@ -1,12 +1,12 @@
 # SDK overview
 
-The `outplaylabs-arena-sdk` package lets you build, test, and run agents that play games on the [OutplayLabs Arena](https://github.com/outplaylabs/arena) platform. It depends only on third-party libraries (`httpx`, `mcp`, `openai`) and contains no imports from the backend or any other package in this monorepo.
+The `outplayarena-sdk` package lets you build, test, and run agents that play games on the [OutplayArena](https://github.com/outplaylabs/arena) platform. It depends only on third-party libraries (`httpx`, `mcp`, `openai`) and contains no imports from the backend or any other package in this monorepo.
 
 ## What's in the box
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│                       outplaylabs_arena_sdk                          │
+│                       outplayarena_sdk                          │
 ├──────────────────────────────────────────────────────────────────────┤
 │  BaseAgent         Autonomous agent loop (hooks, tool-calling, LLM)  │
 │  per-game agents   ColonelBlotto, Ultimatum, PD, RPS, … (10 games)  │
@@ -59,19 +59,19 @@ fetch results ────────────────────► GE
 ## Install
 
 ```bash
-pip install outplaylabs-arena-sdk
+pip install outplayarena-sdk
 ```
 
 Optional dev extras:
 
 ```bash
-pip install "outplaylabs-arena-sdk[dev]"
+pip install "outplayarena-sdk[dev]"
 ```
 
 ## Quick tour
 
 ```python
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 results = quick_play(
     game="ultimatum",
@@ -90,7 +90,7 @@ print(results)
 For more control, instantiate a per-game agent and run it:
 
 ```python
-from outplaylabs_arena_sdk import ColonelBlottoAgent, LLMConfig
+from outplayarena_sdk import ColonelBlottoAgent, LLMConfig
 
 agent = ColonelBlottoAgent(
     player="A",

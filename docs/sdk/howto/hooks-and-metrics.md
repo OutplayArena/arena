@@ -7,7 +7,7 @@ This guide shows the patterns most teams use, from the simplest `print` to a ful
 ## Pattern 1: `print` debugging
 
 ```python
-from outplaylabs_arena_sdk import ColonelBlottoAgent
+from outplayarena_sdk import ColonelBlottoAgent
 
 
 class DebugColonelBlottoAgent(ColonelBlottoAgent):
@@ -36,7 +36,7 @@ Pass `verbose=True` to the agent constructor to get a few extra prints from the 
 
 ```python
 import logging
-from outplaylabs_arena_sdk import ColonelBlottoAgent
+from outplayarena_sdk import ColonelBlottoAgent
 
 
 class LoggedColonelBlottoAgent(ColonelBlottoAgent):
@@ -86,7 +86,7 @@ logging.getLogger().handlers[0].setFormatter(JsonFormatter())
 ## Pattern 3: metrics client (W&B, MLflow, custom)
 
 ```python
-from outplaylabs_arena_sdk import ColonelBlottoAgent
+from outplayarena_sdk import ColonelBlottoAgent
 
 
 class WandBColonelBlottoAgent(ColonelBlottoAgent):
@@ -121,7 +121,7 @@ class WandBColonelBlottoAgent(ColonelBlottoAgent):
 
 ```python
 from opentelemetry import trace
-from outplaylabs_arena_sdk import ColonelBlottoAgent
+from outplayarena_sdk import ColonelBlottoAgent
 
 
 tracer = trace.get_tracer(__name__)
@@ -158,7 +158,7 @@ class TracedColonelBlottoAgent(ColonelBlottoAgent):
 ## Pattern 5: replay buffer
 
 ```python
-from outplaylabs_arena_sdk import ColonelBlottoAgent
+from outplayarena_sdk import ColonelBlottoAgent
 import json
 
 

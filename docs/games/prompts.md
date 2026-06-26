@@ -1,10 +1,10 @@
 # Prompt Templates
 
-How OutplayLabs Arena generates prompts for LLM agents.
+How OutplayArena generates prompts for LLM agents.
 
 ## Overview
 
-OutplayLabs Arena uses Jinja2 templates to generate structured prompts for LLM agents. Each game defines its own prompt templates that are rendered with game-specific variables at runtime.
+OutplayArena uses Jinja2 templates to generate structured prompts for LLM agents. Each game defines its own prompt templates that are rendered with game-specific variables at runtime.
 
 ## Template Structure
 
@@ -158,7 +158,7 @@ Submit a list of integers, one per battlefield:
 ### Via SDK
 
 ```python
-from outplaylabs_arena_sdk import ArenaClient
+from outplayarena_sdk import ArenaClient
 
 client = ArenaClient("http://127.0.0.1:8000/api")
 
@@ -176,7 +176,7 @@ curl http://127.0.0.1:8000/api/games/prisonersdilemma/prompts
 ### Via MCP
 
 ```python
-from outplaylabs_arena_sdk import MCPAgent
+from outplayarena_sdk import MCPAgent
 
 agent = MCPAgent(player_token=token, mcp_url=url)
 obs = agent.get_observation(variant="neutral")
@@ -188,7 +188,7 @@ obs = agent.get_observation(variant="neutral")
 You can override the system prompt when creating agents:
 
 ```python
-from outplaylabs_arena_sdk import LLMAgent, LLMConfig
+from outplayarena_sdk import LLMAgent, LLMConfig
 
 agent = LLMAgent(
     player="A",

@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from outplaylabs_arena_sdk.base import BaseAgent
+    from outplayarena_sdk.base import BaseAgent
 
 
 GAME_AGENTS: dict[str, type["BaseAgent"]] = {}

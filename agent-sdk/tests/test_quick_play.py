@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from outplaylabs_arena_sdk.quick_play import quick_play
+from outplayarena_sdk.quick_play import quick_play
 
 
 def _fake_create_experiment(mcp_url=None):
@@ -20,10 +20,10 @@ class TestQuickPlayAsync:
     @pytest.mark.asyncio
     async def test_runs_single_agent(self):
         """Single-agent case: just runs that one agent."""
-        from outplaylabs_arena_sdk.quick_play import _quick_play_async
+        from outplayarena_sdk.quick_play import _quick_play_async
 
-        with patch("outplaylabs_arena_sdk.quick_play.ArenaClient") as MockClient, \
-             patch("outplaylabs_arena_sdk.quick_play.get_agent_class") as mock_get:
+        with patch("outplayarena_sdk.quick_play.ArenaClient") as MockClient, \
+             patch("outplayarena_sdk.quick_play.get_agent_class") as mock_get:
             mock_rest = MagicMock()
             mock_rest.create_experiment.return_value = _fake_create_experiment()
             MockClient.return_value = mock_rest
@@ -45,10 +45,10 @@ class TestQuickPlayAsync:
 
     @pytest.mark.asyncio
     async def test_runs_two_agents_via_gather(self):
-        from outplaylabs_arena_sdk.quick_play import _quick_play_async
+        from outplayarena_sdk.quick_play import _quick_play_async
 
-        with patch("outplaylabs_arena_sdk.quick_play.ArenaClient") as MockClient, \
-             patch("outplaylabs_arena_sdk.quick_play.get_agent_class") as mock_get:
+        with patch("outplayarena_sdk.quick_play.ArenaClient") as MockClient, \
+             patch("outplayarena_sdk.quick_play.get_agent_class") as mock_get:
             mock_rest = MagicMock()
             mock_rest.create_experiment.return_value = _fake_create_experiment()
             MockClient.return_value = mock_rest
@@ -73,10 +73,10 @@ class TestQuickPlayAsync:
 
     @pytest.mark.asyncio
     async def test_uses_mcp_url_from_response(self):
-        from outplaylabs_arena_sdk.quick_play import _quick_play_async
+        from outplayarena_sdk.quick_play import _quick_play_async
 
-        with patch("outplaylabs_arena_sdk.quick_play.ArenaClient") as MockClient, \
-             patch("outplaylabs_arena_sdk.quick_play.get_agent_class") as mock_get:
+        with patch("outplayarena_sdk.quick_play.ArenaClient") as MockClient, \
+             patch("outplayarena_sdk.quick_play.get_agent_class") as mock_get:
             mock_rest = MagicMock()
             mock_rest.create_experiment.return_value = _fake_create_experiment(
                 mcp_url="http://mcp:9999"
@@ -99,10 +99,10 @@ class TestQuickPlayAsync:
 
     @pytest.mark.asyncio
     async def test_explicit_mcp_url_overrides_response(self):
-        from outplaylabs_arena_sdk.quick_play import _quick_play_async
+        from outplayarena_sdk.quick_play import _quick_play_async
 
-        with patch("outplaylabs_arena_sdk.quick_play.ArenaClient") as MockClient, \
-             patch("outplaylabs_arena_sdk.quick_play.get_agent_class") as mock_get:
+        with patch("outplayarena_sdk.quick_play.ArenaClient") as MockClient, \
+             patch("outplayarena_sdk.quick_play.get_agent_class") as mock_get:
             mock_rest = MagicMock()
             mock_rest.create_experiment.return_value = _fake_create_experiment(
                 mcp_url="http://mcp-from-response:9999"
@@ -126,11 +126,11 @@ class TestQuickPlayAsync:
 
 class TestSyncWrapper:
     def test_quick_play_calls_asyncio_run(self):
-        with patch("outplaylabs_arena_sdk.quick_play._quick_play_async") as mock_async:
+        with patch("outplayarena_sdk.quick_play._quick_play_async") as mock_async:
             mock_async.return_value = {"winner": "A"}
 
             # Patch asyncio.run to capture the coroutine
-            with patch("outplaylabs_arena_sdk.quick_play.asyncio.run") as mock_run:
+            with patch("outplayarena_sdk.quick_play.asyncio.run") as mock_run:
                 mock_run.return_value = {"winner": "A"}
 
                 result = quick_play(

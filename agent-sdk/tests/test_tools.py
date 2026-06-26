@@ -1,7 +1,7 @@
-"""Tests for :mod:`outplaylabs_arena_sdk.tools`."""
+"""Tests for :mod:`outplayarena_sdk.tools`."""
 from __future__ import annotations
 
-from outplaylabs_arena_sdk.tools import (
+from outplayarena_sdk.tools import (
     build_backend_tools,
     get_game_state_tool,
     get_mailbox_tool,

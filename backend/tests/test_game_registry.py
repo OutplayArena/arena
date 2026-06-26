@@ -96,7 +96,7 @@ def test_registry_skill_missing_game():
 def test_build_agent_manifest_colonelblotto():
     manifest = build_agent_manifest("colonelblotto")
 
-    assert manifest["platform"] == "outplaylabs-arena"
+    assert manifest["platform"] == "outplayarena"
     assert manifest["manifest_version"] == "1.0"
     assert manifest["game"] == "colonelblotto"
     assert manifest["game_metadata"]["name"] == "Colonel Blotto"

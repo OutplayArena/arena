@@ -7,7 +7,7 @@ directly.
 
 Example::
 
-    from outplaylabs_arena_sdk import quick_play
+    from outplayarena_sdk import quick_play
 
     results = quick_play(
         game="colonelblotto",
@@ -35,9 +35,9 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from outplaylabs_arena_sdk.base import BaseAgent, LLMConfig
-from outplaylabs_arena_sdk.client import ArenaClient
-from outplaylabs_arena_sdk.registry import get_agent_class
+from outplayarena_sdk.base import BaseAgent, LLMConfig
+from outplayarena_sdk.client import ArenaClient
+from outplayarena_sdk.registry import get_agent_class
 
 
 async def _quick_play_async(

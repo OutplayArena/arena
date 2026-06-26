@@ -14,7 +14,7 @@ The simplest customization: override the dispatch of a single tool. `BaseAgent._
 
 ```python
 import json
-from outplaylabs_arena_sdk import ColonelBlottoAgent
+from outplayarena_sdk import ColonelBlottoAgent
 
 
 class LoggingColonelBlottoAgent(ColonelBlottoAgent):
@@ -31,8 +31,8 @@ class LoggingColonelBlottoAgent(ColonelBlottoAgent):
 Want the LLM to be able to call a tool that isn't one of the five backend tools? Override `_decide_with_tools` to inject your own schemas:
 
 ```python
-from outplaylabs_arena_sdk import ColonelBlottoAgent
-from outplaylabs_arena_sdk.tools import build_backend_tools
+from outplayarena_sdk import ColonelBlottoAgent
+from outplayarena_sdk.tools import build_backend_tools
 
 
 class StrategyNoteAgent(ColonelBlottoAgent):

@@ -104,7 +104,7 @@ def generate_game_page(game_dir: Path, game_yaml: dict) -> str:
         "## Example",
         "",
         "```python",
-        "from outplaylabs_arena_sdk import quick_play",
+        "from outplayarena_sdk import quick_play",
         "",
         "results = quick_play(",
         f'    game="{game_dir.name}",',
@@ -126,7 +126,7 @@ def generate_overview_page(games_data: list[tuple[Path, dict]]) -> str:
     lines = [
         "# Games Overview",
         "",
-        "OutplayLabs Arena includes a catalog of game theory scenarios spanning the cooperative-competitive spectrum.",
+        "OutplayArena includes a catalog of game theory scenarios spanning the cooperative-competitive spectrum.",
         "",
         "## Game Catalog",
         "",
@@ -188,7 +188,7 @@ def generate_metrics_page(games_data: list[tuple[Path, dict]]) -> str:
     lines = [
         "# Metrics Reference",
         "",
-        "Comprehensive reference for all metrics tracked across OutplayLabs Arena games.",
+        "Comprehensive reference for all metrics tracked across OutplayArena games.",
         "",
         "## Universal Metrics",
         "",

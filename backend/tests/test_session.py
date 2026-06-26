@@ -72,7 +72,7 @@ def test_create_session_with_wandb_starts_logger(monkeypatch):
             return self
 
     monkeypatch.setenv(
-        "OUTPLAYLABS_ARENA_WANDB_ENCRYPTION_KEY",
+        "OUTPLAYARENA_WANDB_ENCRYPTION_KEY",
         "0" * 64,
     )
     monkeypatch.setattr("arena.session.WandbGameLogger", FakeLogger)

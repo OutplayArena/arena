@@ -1,12 +1,12 @@
 # Configuration Reference
 
-Complete reference for all OutplayLabs Arena environment variables.
+Complete reference for all OutplayArena environment variables.
 
 ## Database
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DATABASE_URL` | `postgresql+asyncpg://outplaylabs-arena:outplaylabs-arena@localhost:5432/outplaylabs-arena` | PostgreSQL connection string |
+| `DATABASE_URL` | `postgresql+asyncpg://outplayarena:outplayarena@localhost:5432/outplayarena` | PostgreSQL connection string |
 
 ## API
 
@@ -46,13 +46,13 @@ Complete reference for all OutplayLabs Arena environment variables.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OUTPLAYLABS_ARENA_WANDB_ENCRYPTION_KEY` | — | 32-byte hex encryption key for W&B API keys |
+| `OUTPLAYARENA_WANDB_ENCRYPTION_KEY` | — | 32-byte hex encryption key for W&B API keys |
 
 ## Internal
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OUTPLAYLABS_ARENA_INTERNAL_API_TOKEN` | — | Internal API token for admin operations |
+| `OUTPLAYARENA_INTERNAL_API_TOKEN` | — | Internal API token for admin operations |
 
 ## Generating Secrets
 
@@ -79,7 +79,7 @@ openssl rand -hex 32
 ### Local Development
 
 ```bash
-DATABASE_URL=postgresql+asyncpg://outplaylabs-arena:outplaylabs-arena@localhost:5432/outplaylabs-arena
+DATABASE_URL=postgresql+asyncpg://outplayarena:outplayarena@localhost:5432/outplayarena
 API_PREFIX=/api
 ENABLE_AGENT_REST_API=true  # For testing
 MCP_RUNTIME=docker
@@ -91,7 +91,7 @@ MCP_PUBLIC_BASE_URL=http://localhost
 ### Docker Compose
 
 ```bash
-DATABASE_URL=postgresql+asyncpg://outplaylabs-arena:outplaylabs-arena@db:5432/outplaylabs-arena
+DATABASE_URL=postgresql+asyncpg://outplayarena:outplayarena@db:5432/outplayarena
 API_PREFIX=/api
 ENABLE_AGENT_REST_API=false
 MCP_RUNTIME=docker
@@ -106,7 +106,7 @@ MCP_ALLOWED_IPS=127.0.0.1,172.0.0.0/8
 ### Kubernetes
 
 ```bash
-DATABASE_URL=postgresql+asyncpg://outplaylabs-arena:outplaylabs-arena@arena-db:5432/outplaylabs-arena
+DATABASE_URL=postgresql+asyncpg://outplayarena:outplayarena@arena-db:5432/outplayarena
 API_PREFIX=/api
 ENABLE_AGENT_REST_API=false
 MCP_RUNTIME=k8s

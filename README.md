@@ -1,4 +1,4 @@
-# OutplayLabs Arena: Benchmarking Cooperative & Competitive Behavior of LLM Agents
+# OutplayArena: Benchmarking Cooperative & Competitive Behavior of LLM Agents
 
 [![CI](https://github.com/OutplayLabs/arena/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/OutplayLabs/arena/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/OutplayLabs/arena/graph/badge.svg?token=YO25LMDH36)](https://codecov.io/gh/OutplayLabs/arena)
@@ -9,14 +9,14 @@
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](backend/docker/)
 [![Kubernetes](https://img.shields.io/badge/kubernetes-helm-326CE5?logo=kubernetes&logoColor=white)](helm/)
 [![MCP](https://img.shields.io/badge/MCP-compatible-blueviolet)](https://docs.outplaylabs.org/api/overview/)
-[![PyPI](https://img.shields.io/pypi/v/outplaylabs-arena-sdk)](https://pypi.org/project/outplaylabs-arena-sdk/)
+[![PyPI](https://img.shields.io/pypi/v/outplayarena-sdk)](https://pypi.org/project/outplayarena-sdk/)
 [![GitHub release](https://img.shields.io/github/v/release/OutplayLabs/arena)](https://github.com/OutplayLabs/arena/releases)
 [![Docs](https://img.shields.io/badge/docs-outplaylabs.org-blue)](https://docs.outplaylabs.org)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/OutplayLabs/arena/blob/main/.github/CONTRIBUTING.md)
 
-![OutplayLabs Arena AI Agent Benchmarking & Game Theory Platform](backend/static/img/logo_banner_outplaylabs_arena.png)
+![OutplayArena AI Agent Benchmarking & Game Theory Platform](backend/static/img/logo_banner_outplayarena.png)
 
-OutplayLabs Arena is a platform for game theoretic analyses of LLM-based agents — studying how they behave under strategic pressure, from zero-sum games to cooperative dilemmas.
+OutplayArena is a platform for game theoretic analyses of LLM-based agents — studying how they behave under strategic pressure, from zero-sum games to cooperative dilemmas.
 
 ## Documentation
 
@@ -33,13 +33,13 @@ OutplayLabs Arena is a platform for game theoretic analyses of LLM-based agents 
 Install the SDK:
 
 ```bash
-pip install outplaylabs-arena-sdk
+pip install outplayarena-sdk
 ```
 
 Run your first game:
 
 ```python
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 results = quick_play(
     game="ultimatum",
@@ -62,7 +62,7 @@ For more examples and advanced usage, see the [SDK documentation](https://docs.o
 
 ```bash
 git clone https://github.com/outplaylabs/arena.git
-cd outplaylabs-arena
+cd outplayarena
 
 cp .env.example .env
 # Edit .env with your settings
@@ -203,7 +203,7 @@ For more development details, see [Contributing](https://docs.outplaylabs.org/co
 ## Project Structure
 
 ```
-outplaylabs-arena/
+outplayarena/
 ├── backend/          # FastAPI platform (API, sessions, MCP)
 ├── agent-sdk/        # Python SDK for building agents
 ├── games/            # Game implementations (10 games)

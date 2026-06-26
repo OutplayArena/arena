@@ -5,8 +5,8 @@ If you build a custom `BaseAgent` subclass and want `quick_play` to find it by g
 ## Basic registration
 
 ```python
-from outplaylabs_arena_sdk import BaseAgent
-from outplaylabs_arena_sdk.registry import register
+from outplayarena_sdk import BaseAgent
+from outplayarena_sdk.registry import register
 
 
 @register("trading-game")
@@ -15,7 +15,7 @@ class TradingGameAgent(BaseAgent):
         return "a single number (your price offer)"
 
     def parse_action(self, raw_text, state):
-        from outplaylabs_arena_sdk.parsers import parse_quantity
+        from outplayarena_sdk.parsers import parse_quantity
         return parse_quantity(raw_text, max_quantity=state.get("max_price", 100.0))
 ```
 
@@ -33,7 +33,7 @@ If the agent is in `my_agents.py` and you only have one app, just import it at t
 # main.py
 import my_agents  # noqa: F401  - registers MyAgent on import
 
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 results = quick_play(game="my-game", agents={...})
 ```
 
@@ -66,7 +66,7 @@ class TradingGameAgentV2(BaseAgent):
 If you really need to replace a registration (e.g. in a test), remove the old entry first:
 
 ```python
-from outplaylabs_arena_sdk import GAME_AGENTS
+from outplayarena_sdk import GAME_AGENTS
 
 @register("trading-game")
 class TradingGameAgent(BaseAgent):
@@ -83,7 +83,7 @@ class FakeTradingGameAgent(BaseAgent):
 ## Looking up agents
 
 ```python
-from outplaylabs_arena_sdk import GAME_AGENTS, get_agent_class, supported_games
+from outplayarena_sdk import GAME_AGENTS, get_agent_class, supported_games
 
 # List every registered game
 print(supported_games())

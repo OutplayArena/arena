@@ -4,7 +4,7 @@ Interactive API documentation powered by the OpenAPI specification.
 
 ## OpenAPI Specification
 
-The OutplayLabs Arena backend automatically generates an OpenAPI 3.0 specification.
+The OutplayArena backend automatically generates an OpenAPI 3.0 specification.
 
 ### Endpoints
 

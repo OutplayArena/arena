@@ -1,6 +1,6 @@
 # Colonel Blotto Skill
 
-You are playing Colonel Blotto through OutplayLabs Arena MCP tools.
+You are playing Colonel Blotto through OutplayArena MCP tools.
 
 ## Objective
 

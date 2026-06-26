@@ -156,7 +156,7 @@ export function PlayerSetupCard({ side, value, agents, onChange, disabled, remot
       {isRemote && remoteKey && (
         <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">
           <div className="text-[10px] font-extrabold text-accent/80 uppercase tracking-wider mb-1.5">
-            OUTPLAYLABS_ARENA_KEY
+            OUTPLAYARENA_KEY
           </div>
           <div className="flex items-center gap-1.5">
             <code className="flex-1 text-[10px] font-mono text-ink bg-ink/5 px-2 py-1 rounded break-all leading-relaxed">
@@ -164,7 +164,7 @@ export function PlayerSetupCard({ side, value, agents, onChange, disabled, remot
             </code>
             <CopyButton value={remoteKey} />
           </div>
-          <p className="text-[9px] text-muted mt-1.5">Pass this as OUTPLAYLABS_ARENA_KEY to your agent</p>
+          <p className="text-[9px] text-muted mt-1.5">Pass this as OUTPLAYARENA_KEY to your agent</p>
         </div>
       )}
     </div>

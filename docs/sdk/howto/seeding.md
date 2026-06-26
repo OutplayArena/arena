@@ -12,7 +12,7 @@ The SDK exposes the experiment's effective `seed` via `agent.seed` and provides 
 ## The basic pattern
 
 ```python
-from outplaylabs_arena_sdk import ColonelBlottoAgent, LLMConfig
+from outplayarena_sdk import ColonelBlottoAgent, LLMConfig
 
 agent = ColonelBlottoAgent(
     player="A",
@@ -59,7 +59,7 @@ If you need `agent.seed` to be available before the loop starts, fetch the state
 
 ```python
 import httpx
-from outplaylabs_arena_sdk import ColonelBlottoAgent, LLMConfig, ArenaClient
+from outplayarena_sdk import ColonelBlottoAgent, LLMConfig, ArenaClient
 
 # Create the experiment yourself to know the seed up front.
 rest = ArenaClient("http://127.0.0.1:8000/api")

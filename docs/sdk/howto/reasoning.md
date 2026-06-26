@@ -14,7 +14,7 @@
 Set the level on `LLMConfig`:
 
 ```python
-from outplaylabs_arena_sdk import ColonelBlottoAgent, LLMConfig, ReasoningEffort
+from outplayarena_sdk import ColonelBlottoAgent, LLMConfig, ReasoningEffort
 
 agent = ColonelBlottoAgent(
     ...,
@@ -55,7 +55,7 @@ If the model isn't in `MODEL_PROFILES`, the moderator falls back to `BUDGET_PROM
 ## Inspect the moderator
 
 ```python
-from outplaylabs_arena_sdk import ReasoningModerator, ReasoningEffort
+from outplayarena_sdk import ReasoningModerator, ReasoningEffort
 
 mod = ReasoningModerator("gpt-5", effort=ReasoningEffort.HIGH)
 print(mod.profile.provider)         # "openai"
@@ -106,7 +106,7 @@ class CustomReasoningAgent(ColonelBlottoAgent):
 If the model isn't in `MODEL_PROFILES`, the moderator falls back to a default `BUDGET_PROMPT` strategy. You can register a custom profile:
 
 ```python
-from outplaylabs_arena_sdk.reasoning import (
+from outplayarena_sdk.reasoning import (
     ModelProfile, ReasoningStrategy, MODEL_PROFILES,
 )
 

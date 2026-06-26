@@ -7,9 +7,9 @@ dev:
 
 database:
   image: postgres:16-alpine
-  database: outplaylabs-arena
-  user: outplaylabs-arena
-  password: outplaylabs-arena
+  database: outplayarena
+  user: outplayarena
+  password: outplayarena
   storage: 10Gi
   storageClassName: ""
   createPV: false
