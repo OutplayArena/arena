@@ -8,3 +8,6 @@ codecov:
     patch:
       default:
         target: 80%
+  ignore:
+    - "games/games/_template/**"
+    - "scripts/**"
