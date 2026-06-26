@@ -37,17 +37,23 @@ services:
       # explicitly so the provider can talk to the socket.
       DOCKER_API_VERSION: ${DOCKER_API_VERSION:-1.55}
       DOCKER_PROVIDER_API_VERSION: ${DOCKER_API_VERSION:-1.55}
+      TRAEFIK_LOG_LEVEL: DEBUG
     volumes:
       # Dynamic config (e.g. the stripPrefix middleware for /docs-static)
       - ./dynamic:/dynamic:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_acme:/letsencrypt
     command:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=deploy_default
       - --entrypoints.web.address=:80
       - --entrypoints.web.http.redirections.entryPoint.to=websecure
       - --entrypoints.web.http.redirections.entryPoint.scheme=https
       - --entrypoints.websecure.address=:443
       - --entrypoints.websecure.http.tls=true
+      - --entrypoints.traefik.address=:8080
+      - --api.insecure=true
       - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}
       - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
       - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
@@ -59,9 +65,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik_acme:/letsencrypt
+      - "8080:8080"
     logging: *default-logging
     restart: unless-stopped
     labels:
@@ -173,9 +177,18 @@ services:
     build:
       context: ..
       dockerfile: docs/Dockerfile
+    # Expose the docs directly on a host port as a fallback. Traefik's
+    # docs route is also defined (see labels below) but is known to be
+    # fragile; the host port gives us a reliable way to verify the
+    # container is serving content. The React app's iframe is hardcoded
+    # to /docs-static/ which routes via Traefik; if that breaks, the
+    # docs are still reachable at this port for debugging.
+    ports:
+      - "8001:80"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.arena-docs.rule=Host(`${DOMAIN}`) && PathPrefix(`/docs-static`)"
+      - "traefik.http.routers.arena-docs.rule=PathPrefix(`/docs/`)"
+      - "traefik.http.routers.arena-docs.priority=1000"
       - "traefik.http.routers.arena-docs.entrypoints=websecure"
       - "traefik.http.routers.arena-docs.tls=true"
       - "traefik.http.routers.arena-docs.tls.certresolver=letsencrypt"
