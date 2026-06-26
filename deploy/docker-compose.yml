@@ -27,7 +27,10 @@ x-logging: &default-logging
 
 services:
   traefik:
-    image: traefik:v3.3
+    # Pin to a recent v3 minor that supports Docker API >=1.40. The v3.3
+    # tag predates that and the provider fails with "client version
+    # 1.24 is too old". Bump on minor releases as needed.
+    image: traefik:v3.5
     command:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
