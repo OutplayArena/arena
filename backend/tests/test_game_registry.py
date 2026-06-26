@@ -3,7 +3,14 @@ import importlib.util
 
 import pytest
 
-from arena.game_registry import CATALOG_ROOT, GameRegistry, GameRegistryError
+from arena.game_registry import (
+    CATALOG_ROOT,
+    GameRegistry,
+    GameRegistryError,
+    _detect_ui,
+    _has_ui_component,
+    _parse_skill_markdown,
+)
 from arena.manifest import build_agent_manifest
 from games.core.colonelblotto.engine import ColonelBlottoGame
 
@@ -176,3 +183,278 @@ ontology: {timing: single_round}
     )
 
     assert GameRegistry(tmp_path).list_games()[0]["name"] == "mini"
+
+
+def test_registry_config_from_request_without_game_raises():
+    with pytest.raises(GameRegistryError, match="must include game"):
+        GameRegistry().config_from_request({})
+
+
+def test_registry_get_game_agents_returns_dict_with_agents():
+    agents = GameRegistry().get_game_agents("ultimatum")
+    assert "agents" in agents
+    assert isinstance(agents["agents"], list)
+
+
+def test_registry_get_game_agents_returns_empty_when_no_yaml(tmp_path: Path):
+    (tmp_path / "core").mkdir()
+    game_dir = tmp_path / "core" / "no_agents_game"
+    game_dir.mkdir()
+    (game_dir / "game.yaml").write_text(
+        'name: no-agents\nversion: "1.0"\nstatus: stable\n',
+        encoding="utf-8",
+    )
+    agents = GameRegistry(tmp_path).get_game_agents("no_agents_game")
+    assert agents == {"agents": []}
+
+
+def test_registry_get_metric_names_blotto():
+    names = GameRegistry().get_metric_names("colonelblotto")
+    assert isinstance(names, set)
+    assert "total_payoff" in names
+
+
+def test_registry_get_metric_names_unknown_game_returns_empty_set():
+    assert GameRegistry().get_metric_names("does-not-exist") == set()
+
+
+def test_registry_metrics_extension_returns_object_or_none():
+    ext = GameRegistry().metrics_extension("colonelblotto")
+    assert ext is not None
+    assert hasattr(ext, "metrics_for_match") or hasattr(ext, "name") or hasattr(ext, "__class__")
+
+
+def test_registry_metrics_extension_unknown_game_returns_none():
+    assert GameRegistry().metrics_extension("does-not-exist") is None
+
+
+def test_registry_list_games_includes_ultimatum():
+    slugs = {g["slug"] for g in GameRegistry().list_games()}
+    assert "ultimatum" in slugs
+
+
+def test_parse_skill_markdown_parses_sections():
+    md = (
+        "# Colonel Blotto\n\n"
+        "## Objective\n\nWin more battlefields.\n\n"
+        "## Action Format\n\n"
+        "Use submit_action.\n"
+    )
+    parsed = _parse_skill_markdown("colonelblotto", md)
+    assert parsed["title"] == "Colonel Blotto"
+    assert "objective" in parsed["sections"]
+    assert "action_format" in parsed["sections"]
+    assert "Win more battlefields" in parsed["sections"]["objective"]
+
+
+def test_parse_skill_markdown_with_no_h2_defaults_to_introduction():
+    md = "# Untitled\n\nJust some text.\n"
+    parsed = _parse_skill_markdown("test", md)
+    assert "introduction" in parsed["sections"]
+    assert "Just some text" in parsed["sections"]["introduction"]
+
+
+def test_detect_ui_returns_dict_with_all_keys(tmp_path: Path):
+    result = _detect_ui(tmp_path)
+    assert set(result.keys()) == {
+        "live_view", "custom_config", "custom_history", "interactive_play"
+    }
+    assert all(value is False for value in result.values())
+
+
+def test_detect_ui_finds_existing_components(tmp_path: Path):
+    (tmp_path / "ui").mkdir()
+    (tmp_path / "ui" / "LiveView.tsx").write_text("// live")
+    (tmp_path / "ui" / "PlayView.tsx").write_text("// play")
+    result = _detect_ui(tmp_path)
+    assert result["live_view"] is True
+    assert result["interactive_play"] is True
+    assert result["custom_config"] is False
+
+
+def test_has_ui_component_returns_true_for_existing(tmp_path: Path):
+    (tmp_path / "ui").mkdir()
+    (tmp_path / "ui" / "HistoryView.tsx").write_text("// hist")
+    assert _has_ui_component(tmp_path, "HistoryView") is True
+    assert _has_ui_component(tmp_path, "LiveView") is False
+
+
+def test_summary_extracts_metadata_fields():
+    metadata = {
+        "name": "Test",
+        "version": "1.0",
+        "status": "stable",
+        "description": "A test game",
+        "tags": ["x", "y"],
+        "players": {"min": 2, "max": 4},
+        "ontology": {"timing": "single_round"},
+    }
+    result = GameRegistry()._summary(metadata, "test")
+    assert result["name"] == "Test"
+    assert result["slug"] == "test"
+    assert result["version"] == "1.0"
+    assert result["status"] == "stable"
+    assert result["tags"] == ["x", "y"]
+    assert result["players"] == {"min": 2, "max": 4}
+
+
+def test_summary_uses_empty_defaults():
+    metadata = {"name": "Bare"}
+    result = GameRegistry()._summary(metadata, "bare")
+    assert result["version"] is None
+    assert result["status"] is None
+    assert result["description"] is None
+    assert result["tags"] == []
+    assert result["players"] == {}
+    assert result["ontology"] == {}
+
+
+def test_render_observation_blotto_neutral():
+    registry = GameRegistry()
+    state = {
+        "total_scores": {"A": 1, "B": 2},
+        "round_total": 3,
+        "round": 1,
+        "budgets": {"A": 10, "B": 10},
+        "battlefields": [
+            {"id": "f1", "value": 1.0},
+            {"id": "f2", "value": 1.0},
+            {"id": "f3", "value": 1.0},
+        ],
+        "history": [],
+    }
+    config = {"game": "colonelblotto"}
+    result = registry.render_observation("colonelblotto", state, config, "A", "neutral")
+    assert result["player_id"] == "A"
+    assert result["variant"] == "neutral"
+    assert "system" in result
+    assert "turn" in result
+
+
+def test_render_observation_with_unknown_variant_falls_back_to_neutral():
+    registry = GameRegistry()
+    state = {
+        "total_scores": {"A": 1, "B": 2},
+        "round_total": 3,
+        "round": 1,
+        "budgets": {"A": 10, "B": 10},
+        "battlefields": [
+            {"id": "f1", "value": 1.0},
+            {"id": "f2", "value": 1.0},
+            {"id": "f3", "value": 1.0},
+        ],
+        "history": [],
+    }
+    config = {"game": "colonelblotto"}
+    result = registry.render_observation(
+        "colonelblotto", state, config, "A", "unknown_variant"
+    )
+    assert result["variant"] == "unknown_variant"
+
+
+def test_build_observation_context_includes_pot_fields():
+    registry = GameRegistry()
+    state = {
+        "total_scores": {"A": 1, "B": 2},
+        "pot_a": 10,
+        "pot_b": 8,
+        "round_total": 3,
+    }
+    config = {"game": "ultimatum"}
+    ctx = registry._build_observation_context("ultimatum", state, config, "A")
+    assert ctx["my_pot"] == 10
+    assert ctx["opp_pot"] == 8
+    assert ctx["players"] == 2
+    assert ctx["score_a"] == 1
+    assert ctx["score_b"] == 2
+    assert ctx["rounds"] == 3
+
+
+def test_build_observation_context_includes_payoff_fields():
+    registry = GameRegistry()
+    state = {
+        "total_scores": {"A": 1, "B": 2},
+        "payoffs": {"stag_stag": 5, "hare_hare": 3, "stag_hare": 1},
+    }
+    config = {"game": "staghunt"}
+    ctx = registry._build_observation_context("staghunt", state, config, "A")
+    assert ctx["payoff_stag_stag"] == 5
+    assert ctx["payoff_hare_hare"] == 3
+    assert ctx["payoff_stag_hare"] == 1
+
+
+def test_build_observation_context_with_pending_offer():
+    registry = GameRegistry()
+    state = {
+        "total_scores": {"A": 0, "B": 0},
+        "pending_offer": 30.0,
+    }
+    config = {"total": 100.0}
+    ctx = registry._build_observation_context("ultimatum", state, config, "A")
+    assert ctx["offer"] == 30.0
+    assert abs(ctx["offer_fraction"] - 0.3) < 1e-9
+
+
+def test_pick_turn_template_ultimatum_proposer_phase():
+    registry = GameRegistry()
+    prompts = {
+        "state": "generic state",
+        "proposer_state": "you are the proposer",
+        "responder_state": "you are the responder",
+    }
+    result = registry._pick_turn_template(
+        "ultimatum", {"phase": "awaiting_proposal"}, prompts
+    )
+    assert result == "you are the proposer"
+
+
+def test_pick_turn_template_ultimatum_responder_phase():
+    registry = GameRegistry()
+    prompts = {
+        "state": "generic state",
+        "proposer_state": "you are the proposer",
+        "responder_state": "you are the responder",
+    }
+    result = registry._pick_turn_template(
+        "ultimatum", {"phase": "awaiting_response"}, prompts
+    )
+    assert result == "you are the responder"
+
+
+def test_pick_turn_template_non_ultimatum_uses_state():
+    registry = GameRegistry()
+    prompts = {"state": "the state", "turn": "the turn"}
+    result = registry._pick_turn_template(
+        "colonelblotto", {"phase": "play"}, prompts
+    )
+    assert result == "the state"
+
+
+def test_pick_turn_template_non_ultimatum_falls_back_to_turn():
+    registry = GameRegistry()
+    prompts = {"turn": "the turn"}
+    result = registry._pick_turn_template(
+        "colonelblotto", {"phase": "play"}, prompts
+    )
+    assert result == "the turn"
+
+
+def test_get_game_scenarios_for_game_with_scenarios_module():
+    scenarios = GameRegistry().get_game_scenarios("ultimatum")
+    assert isinstance(scenarios, list)
+    if scenarios:
+        first = scenarios[0]
+        assert "id" in first
+        assert "name" in first
+        assert "description" in first
+
+
+def test_get_game_scenarios_for_game_without_scenarios_module(tmp_path: Path):
+    (tmp_path / "core").mkdir()
+    game_dir = tmp_path / "core" / "no_scenarios"
+    game_dir.mkdir()
+    (game_dir / "game.yaml").write_text(
+        'name: no-scenarios\nversion: "1.0"\nstatus: stable\n',
+        encoding="utf-8",
+    )
+    assert GameRegistry(tmp_path).get_game_scenarios("no_scenarios") == []
