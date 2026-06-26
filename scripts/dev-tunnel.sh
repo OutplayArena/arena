@@ -62,7 +62,7 @@ start_all() {
   rdp="${FORWARDS[${RELEASE}-redis]%%:*}"
   echo "    Backend    http://${HOST_IP}:${bp}/  (also serves the SPA at /)"
   echo "    MCP        http://${HOST_IP}:${mp}/"
-  echo "    Docs       http://${HOST_IP}:${dp}/"
+  echo "    Docs       http://${HOST_IP}:${dp}/  (also reachable in-app at /docs via Vite proxy)"
   echo "    Postgres   ${HOST_IP}:${pgp}"
   echo "    Redis      ${HOST_IP}:${rdp}"
   echo

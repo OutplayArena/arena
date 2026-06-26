@@ -63,9 +63,7 @@ export const NavBar = memo(function NavBar() {
         <NavLink to="/" end className={navLink}>Home</NavLink>
         <NavLink to="/leaderboard" className={navLink}>Leaderboard</NavLink>
         {docs_url && (
-          <a href={docs_url} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 text-sm font-medium text-muted hover:text-ink hover:bg-surface-container rounded-[var(--radius-chip)] transition-colors duration-150">
-            Docs
-          </a>
+          <NavLink to="/docs" className={navLink}>Docs</NavLink>
         )}
         {github_url && (
           <a href={github_url} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 text-sm font-medium text-muted hover:text-ink hover:bg-surface-container rounded-[var(--radius-chip)] transition-colors duration-150 flex items-center gap-1.5">

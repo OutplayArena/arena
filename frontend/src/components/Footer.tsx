@@ -48,7 +48,7 @@ export const Footer = memo(function Footer() {
         <div>
           <p className="text-xs font-semibold text-ink mb-3 uppercase tracking-wider">Resources</p>
           <ul className="space-y-2">
-            {docs_url && <li><a href={docs_url} target="_blank" rel="noopener noreferrer" className="text-xs text-muted hover:text-ink transition-colors no-underline">Docs</a></li>}
+            {docs_url && <li><Link to="/docs" className="text-xs text-muted hover:text-ink transition-colors no-underline">Docs</Link></li>}
             {github_url && <li><a href={`${github_url}/tree/main/examples`} target="_blank" rel="noopener noreferrer" className="text-xs text-muted hover:text-ink transition-colors no-underline">Examples</a></li>}
             <li><Link to="/papers" className="text-xs text-muted hover:text-ink transition-colors no-underline">Papers</Link></li>
           </ul>

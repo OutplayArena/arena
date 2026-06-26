@@ -128,9 +128,9 @@ needed.
 **Reach from this host (or any Tailscale node):**
 
 ```
-http://<host-ip>:30090/    Backend API + SPA
+http://<host-ip>:30090/    Backend API + SPA (and /docs via the integrated Docs route)
 http://<host-ip>:9998/     MCP
-http://<host-ip>:8080/     Docs
+http://<host-ip>:8080/     Docs (also reachable directly; the SPA proxies /docs to it)
 <host-ip>:5432             Postgres  (psql, pgAdmin, etc.)
 <host-ip>:6379             Redis
 ```
@@ -142,8 +142,13 @@ when it finishes.
 
 ```bash
 cd frontend && npm run dev
-# open http://localhost:5173   (vite proxies /api to localhost:30090)
-# Override the API target with:  ARENA_API_TARGET=http://<host-ip>:30090 npm run dev
+# open http://localhost:5173
+#   /api/* is proxied to localhost:30090 (or $ARENA_API_TARGET)
+#   /docs/* is proxied to localhost:8080 (or $ARENA_DOCS_TARGET) — the
+#     React app renders the mkdocs site inside an iframe at /docs
+# Override defaults with:
+#   ARENA_API_TARGET=http://<host-ip>:30090 npm run dev
+#   ARENA_DOCS_TARGET=http://<host-ip>:8080 npm run dev
 ```
 
 **Day-to-day commands:**

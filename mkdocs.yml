@@ -1,5 +1,8 @@
 site_name: Docs - OutplayArena
-site_url: https://docs.agent-arena.local
+# The docs are served under /docs on the main app origin (Vite proxies in
+# dev, Traefik + stripPrefix routes in prod). Mkdocs generates relative
+# asset URLs by default, so no other configuration is needed.
+site_url: https://arena.core-aix.org/docs/
 site_description: >-
   Benchmarking cooperative and competitive behavior of LLM agents
   through game theory.
