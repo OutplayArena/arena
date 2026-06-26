@@ -50,7 +50,7 @@ Have an idea? Open an issue describing:
 ### Clone and Install
 
 ```bash
-git clone https://github.com/outplaylabs/arena.git
+git clone https://arena.core-aix.org/arena.git
 cd arena
 
 # Install Python packages

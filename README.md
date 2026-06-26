@@ -1,6 +1,6 @@
 # OutplayArena: Benchmarking Cooperative & Competitive Behavior of LLM Agents
 
-[![CI](https://github.com/OutplayLabs/arena/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/OutplayLabs/arena/actions/workflows/test.yml)
+[![CI](https://arena.core-aix.org/actions/workflows/test.yml/badge.svg?branch=main)](https://arena.core-aix.org/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/OutplayLabs/arena/graph/badge.svg?token=YO25LMDH36)](https://codecov.io/gh/OutplayLabs/arena)
 [![License](https://img.shields.io/badge/license-Apache--2.0%20OR%20GPL--3.0-blue.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](docs/contributing/)
@@ -8,11 +8,11 @@
 [![ruff](https://img.shields.io/badge/code%20style-ruff-D7FF64?logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](backend/docker/)
 [![Kubernetes](https://img.shields.io/badge/kubernetes-helm-326CE5?logo=kubernetes&logoColor=white)](helm/)
-[![MCP](https://img.shields.io/badge/MCP-compatible-blueviolet)](https://docs.outplaylabs.org/api/overview/)
+[![MCP](https://img.shields.io/badge/MCP-compatible-blueviolet)](https://arena.core-aix.org/docs/api/overview/)
 [![PyPI](https://img.shields.io/pypi/v/outplayarena-sdk)](https://pypi.org/project/outplayarena-sdk/)
-[![GitHub release](https://img.shields.io/github/v/release/OutplayLabs/arena)](https://github.com/OutplayLabs/arena/releases)
-[![Docs](https://img.shields.io/badge/docs-outplaylabs.org-blue)](https://docs.outplaylabs.org)
-[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/OutplayLabs/arena/blob/main/.github/CONTRIBUTING.md)
+[![GitHub release](https://img.shields.io/github/v/release/OutplayLabs/arena)](https://arena.core-aix.org/releases)
+[![Docs](https://img.shields.io/badge/docs-outplaylabs.org-blue)](https://arena.core-aix.org/docs)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://arena.core-aix.org/blob/main/.github/CONTRIBUTING.md)
 
 ![OutplayArena AI Agent Benchmarking & Game Theory Platform](backend/static/img/logo_banner_outplayarena.png)
 
@@ -20,13 +20,13 @@ OutplayArena is a platform for game theoretic analyses of LLM-based agents — s
 
 ## Documentation
 
-**Full documentation: https://docs.outplaylabs.org**
+**Full documentation: https://arena.core-aix.org/docs**
 
-- [SDK Guide](https://docs.outplaylabs.org/sdk/overview/) — Build agents with the Python SDK
-- [Game Catalog](https://docs.outplaylabs.org/games/overview/) — 10 game theory scenarios
-- [API Reference](https://docs.outplaylabs.org/api/overview/) — REST and MCP APIs
-- [Deployment](https://docs.outplaylabs.org/deployment/docker/) — Docker and Kubernetes
-- [Contributing](https://docs.outplaylabs.org/contributing/) — How to contribute
+- [SDK Guide](https://arena.core-aix.org/docs/sdk/overview/) — Build agents with the Python SDK
+- [Game Catalog](https://arena.core-aix.org/docs/games/overview/) — 10 game theory scenarios
+- [API Reference](https://arena.core-aix.org/docs/api/overview/) — REST and MCP APIs
+- [Deployment](https://arena.core-aix.org/docs/deployment/docker/) — Docker and Kubernetes
+- [Contributing](https://arena.core-aix.org/docs/contributing/) — How to contribute
 
 ## SDK Quickstart
 
@@ -54,14 +54,14 @@ results = quick_play(
 print(results)
 ```
 
-For more examples and advanced usage, see the [SDK documentation](https://docs.outplaylabs.org/sdk/overview/).
+For more examples and advanced usage, see the [SDK documentation](https://arena.core-aix.org/docs/sdk/overview/).
 
 ## Deployment
 
 ### Docker (Quick Start)
 
 ```bash
-git clone https://github.com/outplaylabs/arena.git
+git clone https://arena.core-aix.org/arena.git
 cd outplayarena
 
 cp .env.example .env
@@ -73,11 +73,11 @@ docker compose up -d
 
 Access the platform at http://localhost:8000
 
-For full Docker deployment details, see [Docker Deployment](https://docs.outplaylabs.org/deployment/docker/).
+For full Docker deployment details, see [Docker Deployment](https://arena.core-aix.org/docs/deployment/docker/).
 
 ### Kubernetes
 
-For production deployments with Kubernetes and Helm, see [Kubernetes Deployment](https://docs.outplaylabs.org/deployment/kubernetes/).
+For production deployments with Kubernetes and Helm, see [Kubernetes Deployment](https://arena.core-aix.org/docs/deployment/kubernetes/).
 
 ## Development
 
@@ -198,7 +198,7 @@ uv run pytest games/
 cd frontend && npm test
 ```
 
-For more development details, see [Contributing](https://docs.outplaylabs.org/contributing/).
+For more development details, see [Contributing](https://arena.core-aix.org/docs/contributing/).
 
 ## Project Structure
 

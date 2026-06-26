@@ -45,10 +45,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/outplaylabs/arena"
-Documentation = "https://docs.outplaylabs.org"
-Repository = "https://github.com/outplaylabs/arena"
-Issues = "https://github.com/outplaylabs/arena/issues"
+Homepage = "https://arena.core-aix.org"
+Documentation = "https://arena.core-aix.org/docs"
+Repository = "https://arena.core-aix.org"
+Issues = "https://arena.core-aix.org/issues"
 
 [build-system]
 requires = ["hatchling"]
