@@ -19,7 +19,7 @@ Traefik (:80, :443)   ←  Let's Encrypt TLS
    ├─ <DOMAIN>/              → backend (FastAPI + React SPA)
    ├─ <DOMAIN>/api/...       → backend
    ├─ <DOMAIN>/mcp/...       → mcp (1 long-running container)
-   └─ <DOMAIN>/docs-static/  → docs (mkdocs Material)
+   └─ <DOMAIN>/docs/         → docs (mkdocs Material; /docs prefix stripped)
 
 postgres  ←  /opt/arena/postgres_data  (named volume)
 redis     ←  /opt/arena/redis_data     (named volume, AOF)
@@ -162,7 +162,8 @@ Healthcheck for https://<DOMAIN>
   [OK]   API site-config           .../api/site-config  (HTTP 200)
   [OK]   API games                 .../api/games  (HTTP 200)
   [OK]   MCP health                .../mcp/health  (HTTP 200)
-  [OK]   Docs index                .../docs-static/  (HTTP 200)
+  [OK]   Docs index                .../docs/  (HTTP 200)
+  [OK]   Docs page                 .../docs/getting-started/  (HTTP 200)
 All checks passed.
 ```
 

@@ -1,6 +1,10 @@
 http:
   middlewares:
-    strip-docs-static:
+    # Strip the /docs prefix Traefik matches on, so the docs container
+    # (which serves the mkdocs site from its own root) receives the
+    # remainder of the path. The React app's DocsPage iframe sets its
+    # src to /docs/<splat>, so this matches that traffic.
+    strip-docs:
       stripPrefix:
         prefixes:
-          - /docs-static
+          - /docs

@@ -74,7 +74,16 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         _broker = None
 
 
-app = FastAPI(title="OutplayArena", lifespan=lifespan)
+app = FastAPI(
+    title="OutplayArena",
+    lifespan=lifespan,
+    # Move Swagger UI / ReDoc / OpenAPI schema off the SPA's reserved
+    # paths (/docs and /redoc are mounted as an in-app iframe of the
+    # mkdocs site, /openapi.json conflicts with the SPA's router).
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
+)
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("JWT_SECRET", "dev-secret-change-me"))
 
 # CORS — defaults to "*" for local dev. Override with CORS_ALLOW_ORIGINS, e.g.

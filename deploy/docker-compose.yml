@@ -4,7 +4,7 @@
 #   Internet → Traefik (:80, :443, Let's Encrypt)
 #                ├─ <DOMAIN>/          → backend (FastAPI + React SPA)
 #                ├─ <DOMAIN>/mcp/      → mcp (single long-running MCP server)
-#                └─ <DOMAIN>/docs-static/ → docs (mkdocs Material)
+#                └─ <DOMAIN>/docs/     → docs (mkdocs Material; /docs prefix stripped)
 #
 # Volumes:
 #   - postgres_data   Postgres data  (backed up nightly by restic)
@@ -39,7 +39,7 @@ services:
       DOCKER_PROVIDER_API_VERSION: ${DOCKER_API_VERSION:-1.55}
       TRAEFIK_LOG_LEVEL: DEBUG
     volumes:
-      # Dynamic config (e.g. the stripPrefix middleware for /docs-static)
+      # Dynamic config (e.g. the stripPrefix middleware for /docs)
       - ./dynamic:/dynamic:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_acme:/letsencrypt
@@ -178,11 +178,12 @@ services:
       context: ..
       dockerfile: docs/Dockerfile
     # Expose the docs directly on a host port as a fallback. Traefik's
-    # docs route is also defined (see labels below) but is known to be
-    # fragile; the host port gives us a reliable way to verify the
-    # container is serving content. The React app's iframe is hardcoded
-    # to /docs-static/ which routes via Traefik; if that breaks, the
-    # docs are still reachable at this port for debugging.
+    # docs route is also defined (see labels below) but the host port
+    # gives us a reliable way to verify the container is serving
+    # content even when the Traefik route is misconfigured. The React
+    # app's DocsPage iframe loads /docs/<splat> which routes via
+    # Traefik; if that breaks, the docs are still reachable at this
+    # port for debugging.
     ports:
       - "8001:80"
     labels:
@@ -194,7 +195,7 @@ services:
       - "traefik.http.routers.arena-docs.tls.certresolver=letsencrypt"
       - "traefik.http.routers.arena-docs.service=arena-docs"
       - "traefik.http.services.arena-docs.loadbalancer.server.port=80"
-      - "traefik.http.routers.arena-docs.middlewares=strip-docs-static@file"
+      - "traefik.http.routers.arena-docs.middlewares=strip-docs@file"
     logging: *default-logging
     restart: unless-stopped
 

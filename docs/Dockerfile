@@ -38,4 +38,6 @@ COPY docs/nginx.conf                /etc/nginx/conf.d/default.conf
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://localhost/health || exit 1
+  # 127.0.0.1 (not localhost) on Alpine: musl's getent returns ::1 first,
+  # but nginx only listens on IPv4, so the wget would fail.
+  CMD wget -qO- http://127.0.0.1/health || exit 1
