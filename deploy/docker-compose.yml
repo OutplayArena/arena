@@ -30,12 +30,13 @@ services:
     # Pin to a recent v3 minor that supports Docker API >=1.40. The v3.3
     # tag predates that and the provider fails with "client version
     # 1.24 is too old". Bump on minor releases as needed.
-    image: traefik:v3.5
+    image: traefik:v3.7
     environment:
       # The Traefik Docker provider hardcodes an old API version;
       # modern Docker daemons (>=29.x) reject it. Pin the version
       # explicitly so the provider can talk to the socket.
       DOCKER_API_VERSION: ${DOCKER_API_VERSION:-1.55}
+      DOCKER_PROVIDER_API_VERSION: ${DOCKER_API_VERSION:-1.55}
     command:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
