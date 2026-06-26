@@ -37,7 +37,7 @@ check "API site-config"           "$BASE/api/site-config"
 check "API games"                 "$BASE/api/games"
 check "MCP health"                "$BASE/mcp/health"
 check "Docs index"                "$BASE/docs/"
-check "Docs page"                 "$BASE/docs/getting-started/"
+check "Docs page"                 "$BASE/docs/sdk/overview/"
 
 if (( FAIL )); then
     echo "FAILED — at least one check above is red"
