@@ -8,3 +8,17 @@ spec:
   rateLimit:
     average: {{ .Values.traefik.middleware.rateLimit.average }}
     burst: {{ .Values.traefik.middleware.rateLimit.burst }}
+---
+# Strips the /docs prefix from incoming requests so the docs service
+# (which serves from its own root) sees the path without the prefix.
+# Used by the /docs IngressRoute rule below.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "arena.fullname" . }}-strip-docs
+  labels:
+    {{- include "arena.labels" . | nindent 4 }}
+spec:
+  stripPrefix:
+    prefixes:
+      - /docs

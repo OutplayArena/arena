@@ -29,6 +29,16 @@ export default defineConfig({
         target: process.env.ARENA_API_TARGET ?? "http://localhost:8000",
         changeOrigin: false,
       },
+      // Proxy /docs to the mkdocs-built static site. In dev, the docs pod
+      // is reached via `scripts/dev-tunnel.sh` on port 8080 by default;
+      // override with ARENA_DOCS_TARGET for a non-standard setup.
+      // pathRewrite strips the /docs prefix so the docs service can serve
+      // its files from its own root.
+      "/docs": {
+        target: process.env.ARENA_DOCS_TARGET ?? "http://localhost:8080",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/docs\/?/, "/") || "/",
+      },
     },
     fs: {
       allow: ["..", "../games/games"],

@@ -191,14 +191,12 @@ export function LandingPage() {
             )}
 
             {docs_url && (
-              <a
-                href={docs_url}
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                to="/docs"
                 className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[var(--radius-button)] border border-line text-muted font-medium text-sm bg-surface/60 backdrop-blur-sm transition-all duration-150 hover:text-ink hover:border-line-strong hover:-translate-y-px active:translate-y-0"
               >
                 <DocsIcon /> Docs
-              </a>
+              </Link>
             )}
           </div>
 
