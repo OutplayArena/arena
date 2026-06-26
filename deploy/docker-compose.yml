@@ -33,6 +33,11 @@ services:
     image: traefik:v3.5
     command:
       - --providers.docker=true
+      # The Traefik Docker provider hardcodes an old API version; modern
+      # Docker daemons (>=29.x) reject it. Pin the version explicitly so
+      # the provider can talk to the socket. Set DOCKER_API_VERSION in
+      # the .env to match the host's dockerd.
+      - --providers.docker.apiVersion=${DOCKER_API_VERSION}
       - --providers.docker.exposedbydefault=false
       - --entrypoints.web.address=:80
       - --entrypoints.web.http.redirections.entryPoint.to=websecure
