@@ -68,7 +68,7 @@ Classic social dilemma. Two players simultaneously choose to cooperate or defect
 ## Example
 
 ```python
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 results = quick_play(
     game="prisonersdilemma",

@@ -8,12 +8,12 @@ For most agent-building scenarios, use [`BaseAgent`](base-agent.md) instead &mda
 
 `MCPClient` is a synchronous class that maintains a single MCP session and offers a blocking API for tool calls. It is built on top of the `mcp` library's `streamablehttp_client`.
 
-The OutplayLabs Arena exposes a stateless MCP server at `/mcp` on each backend pod. The server authenticates requests via a Bearer token (the `nks_...` session key) and dispatches each tool call to the underlying REST API.
+The OutplayArena exposes a stateless MCP server at `/mcp` on each backend pod. The server authenticates requests via a Bearer token (the `nks_...` session key) and dispatches each tool call to the underlying REST API.
 
 ## Basic usage
 
 ```python
-from outplaylabs_arena_sdk import MCPClient
+from outplayarena_sdk import MCPClient
 
 client = MCPClient(
     mcp_url="http://127.0.0.1:8000/mcp",

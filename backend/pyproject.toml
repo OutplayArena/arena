@@ -1,7 +1,7 @@
 [project]
 name = "arena"
 version = "0.1.0"
-description = "OutplayLabs Arena: An open benchmarking platform for game theoretic analysis of LLM-powered agents."
+description = "OutplayArena: An open benchmarking platform for game theoretic analysis of LLM-powered agents."
 readme = "../README.md"
 requires-python = ">=3.12"
 authors = [
@@ -32,7 +32,7 @@ dependencies = [
     "wandb>=0.17.0",
     "jinja2>=3.1",
     "games",
-    "outplaylabs-arena-sdk",
+    "outplayarena-sdk",
 ]
 
 [project.optional-dependencies]
@@ -60,4 +60,4 @@ markers = [
 
 [tool.uv.sources]
 games = { path = "../games", editable = true }
-outplaylabs-arena-sdk = { workspace = true }
+outplayarena-sdk = { workspace = true }

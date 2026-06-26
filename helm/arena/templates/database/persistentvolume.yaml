@@ -16,6 +16,6 @@ spec:
   storageClassName: {{ .Values.database.storageClassName }}
   {{- end }}
   hostPath:
-    path: /data/outplaylabs-arena-postgres
+    path: /data/outplayarena-postgres
     type: DirectoryOrCreate
 {{- end }}

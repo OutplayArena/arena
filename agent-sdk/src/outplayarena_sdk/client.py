@@ -41,15 +41,15 @@ def validate_session_key(key: str, secret: str) -> tuple[str, str]:
 
 
 class ArenaClient:
-    """HTTP client for the OutplayLabs Arena REST API.
+    """HTTP client for the OutplayArena REST API.
     
-    ArenaClient provides a thin wrapper around the OutplayLabs Arena HTTP API, handling
+    ArenaClient provides a thin wrapper around the OutplayArena HTTP API, handling
     session management, authentication, and providing typed methods for all API
     endpoints. It is the foundation for building agents that interact with the
     platform via REST.
     
     Attributes:
-        base_url: The base URL of the OutplayLabs Arena API (e.g., "http://127.0.0.1:8000/api").
+        base_url: The base URL of the OutplayArena API (e.g., "http://127.0.0.1:8000/api").
         session_id: The session identifier for the current game.
         token: The player token for authentication.
         timeout: HTTP request timeout in seconds.
@@ -79,7 +79,7 @@ class ArenaClient:
         """Initialize the ArenaClient.
         
         Args:
-            base_url: Base URL of the OutplayLabs Arena API (e.g., "http://127.0.0.1:8000/api").
+            base_url: Base URL of the OutplayArena API (e.g., "http://127.0.0.1:8000/api").
             session_id: Optional session ID for an existing game session.
             token: Optional player token for authentication.
             timeout: HTTP request timeout in seconds. Defaults to 10.0.
@@ -99,7 +99,7 @@ class ArenaClient:
         api_key: str | None = None,
         interactive: bool = False,
     ) -> dict:
-        """Create a new game experiment on the OutplayLabs Arena backend.
+        """Create a new game experiment on the OutplayArena backend.
         
         Creates a new game session with the specified configuration. Returns a
         dictionary containing the session_id, config_hash, and player_tokens that
@@ -449,7 +449,7 @@ class ArenaClient:
         create_experiment response and creates a player-specific client.
         
         Args:
-            base_url: Base URL of the OutplayLabs Arena API.
+            base_url: Base URL of the OutplayArena API.
             creation_response: Response dict from create_experiment(), containing
                 session_id and player_tokens.
             player: Player identifier (e.g., "A", "B").

@@ -7,12 +7,12 @@ from datetime import datetime, timezone
 
 from openai import OpenAI
 
-from outplaylabs_arena_sdk import ArenaClient
+from outplayarena_sdk import ArenaClient
 from games.core.rock_paper_scissors.config import config_from_dict
 
 sys.stdout.reconfigure(line_buffering=True)
 
-OUTPLAYLABS_ARENA_BASE_URL = os.environ.get("OUTPLAYLABS_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
+OUTPLAYARENA_BASE_URL = os.environ.get("OUTPLAYARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
 OPENCODE_GO_API_BASE = "https://opencode.ai/zen/v1"
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "results")
 
@@ -109,7 +109,7 @@ async def llm_move(model, prompt, extra_body=None):
 
 
 async def run_match():
-    nash_api_key = os.environ["OUTPLAYLABS_ARENA_API_KEY"]
+    nash_api_key = os.environ["OUTPLAYARENA_API_KEY"]
     opencode_api_key = os.environ["OPENCODE_GO_API_KEY"]
     _client.api_key = opencode_api_key.strip()
 
@@ -137,7 +137,7 @@ async def run_match():
             print(f"  [{model}] warmup failed ({e}), continuing anyway")
     print()
 
-    arena = ArenaClient(OUTPLAYLABS_ARENA_BASE_URL)
+    arena = ArenaClient(OUTPLAYARENA_BASE_URL)
     config = config_from_dict({
         "game": "rock_paper_scissors",
         "variant": "classic",
@@ -156,8 +156,8 @@ async def run_match():
     print(f"Session: {session_id}")
     print()
 
-    player_a = ArenaClient.for_player(OUTPLAYLABS_ARENA_BASE_URL, created, "A")
-    player_b = ArenaClient.for_player(OUTPLAYLABS_ARENA_BASE_URL, created, "B")
+    player_a = ArenaClient.for_player(OUTPLAYARENA_BASE_URL, created, "A")
+    player_b = ArenaClient.for_player(OUTPLAYARENA_BASE_URL, created, "B")
 
     no_thinking = {"thinking": {"type": "disabled"}}
 

@@ -16,7 +16,7 @@ Different LLM models have different reasoning capabilities and control mechanism
 ## Reasoning effort levels
 
 ```python
-from outplaylabs_arena_sdk import ReasoningEffort
+from outplayarena_sdk import ReasoningEffort
 
 ReasoningEffort.NONE    # No reasoning control
 ReasoningEffort.LOW     # Minimal reasoning budget
@@ -27,7 +27,7 @@ ReasoningEffort.HIGH    # Maximum reasoning budget
 ## Basic usage
 
 ```python
-from outplaylabs_arena_sdk import ReasoningModerator, ReasoningEffort
+from outplayarena_sdk import ReasoningModerator, ReasoningEffort
 
 # Create a moderator for a specific model
 moderator = ReasoningModerator(
@@ -53,7 +53,7 @@ text, reasoning = moderator.extract_response_text(response_data)
 The SDK includes profiles for 30+ models:
 
 ```python
-from outplaylabs_arena_sdk import MODEL_PROFILES, get_model_profile
+from outplayarena_sdk import MODEL_PROFILES, get_model_profile
 
 # Get profile for a specific model
 profile = get_model_profile("deepseek-v4-flash")
@@ -83,7 +83,7 @@ Models use different strategies for reasoning control:
 `BaseAgent` uses `ReasoningModerator` internally when `LLMConfig.reasoning_effort` is set:
 
 ```python
-from outplaylabs_arena_sdk import ColonelBlottoAgent, LLMConfig, ReasoningEffort
+from outplayarena_sdk import ColonelBlottoAgent, LLMConfig, ReasoningEffort
 
 config = LLMConfig(
     model="deepseek-v4-flash",

@@ -1,3 +1,3 @@
 # Blog
 
-News, updates, and research from the OutplayLabs Arena project.
+News, updates, and research from the OutplayArena project.

@@ -1,6 +1,6 @@
 # Transport
 
-The `outplaylabs_arena_sdk.transport.AsyncBackend` class is the async wrapper that `BaseAgent` uses to talk to the backend. It supports both REST (via `ArenaClient`) and MCP (via `MCPClient`).
+The `outplayarena_sdk.transport.AsyncBackend` class is the async wrapper that `BaseAgent` uses to talk to the backend. It supports both REST (via `ArenaClient`) and MCP (via `MCPClient`).
 
 Most users do not need to interact with `AsyncBackend` directly &mdash; `BaseAgent` constructs and drives it. This page documents the class for advanced cases (custom agent loops, library integrations, testing).
 
@@ -24,8 +24,8 @@ When both transports are configured, MCP is preferred for the methods it support
 ## Construction
 
 ```python
-from outplaylabs_arena_sdk import ArenaClient, MCPClient
-from outplaylabs_arena_sdk.transport import AsyncBackend
+from outplayarena_sdk import ArenaClient, MCPClient
+from outplayarena_sdk.transport import AsyncBackend
 
 rest = ArenaClient("http://127.0.0.1:8000/api")
 mcp = MCPClient("http://127.0.0.1:8000/mcp", "nks_...")  # optional
@@ -128,8 +128,8 @@ REST-only discovery methods. Not used by `BaseAgent` directly; useful for one-of
 
 ```python
 import asyncio
-from outplaylabs_arena_sdk import ArenaClient, MCPClient
-from outplaylabs_arena_sdk.transport import AsyncBackend
+from outplayarena_sdk import ArenaClient, MCPClient
+from outplayarena_sdk.transport import AsyncBackend
 
 
 async def poll_until_terminal(backend: AsyncBackend, player: str) -> dict:

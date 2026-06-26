@@ -51,7 +51,7 @@ describe("LandingPage leaderboard", () => {
   it("renders the hero and leaderboard sections", async () => {
     mockBenchmark(SAMPLE_REPORT);
     renderWithProviders(<LandingPage />, { initialRoute: "/" });
-    expect(screen.getByRole("heading", { name: /OutplayLabs Arena/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /OutplayArena/i })).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByText("claude-opus-4-8")).toBeInTheDocument();
     });

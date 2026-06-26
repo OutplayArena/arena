@@ -1,13 +1,13 @@
-"""Tests for :mod:`outplaylabs_arena_sdk.transport`."""
+"""Tests for :mod:`outplayarena_sdk.transport`."""
 from __future__ import annotations
 
 from unittest.mock import MagicMock
 
 import pytest
 
-from outplaylabs_arena_sdk.client import ArenaClient
-from outplaylabs_arena_sdk.mcp_client import MCPClient
-from outplaylabs_arena_sdk.transport import AsyncBackend
+from outplayarena_sdk.client import ArenaClient
+from outplayarena_sdk.mcp_client import MCPClient
+from outplayarena_sdk.transport import AsyncBackend
 
 
 @pytest.fixture

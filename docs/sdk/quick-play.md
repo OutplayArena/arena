@@ -3,7 +3,7 @@
 `quick_play()` is the one-call helper for running a game between two LLM agents. It auto-picks the right per-game agent class based on the `game=` argument, creates the experiment, runs both agents in parallel, and returns the final results.
 
 ```python
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 results = quick_play(
     game="ultimatum",
@@ -43,7 +43,7 @@ def quick_play(
 | `game` | Game slug. Must be a key in the [`GAME_AGENTS` registry](registry.md). |
 | `agents` | Dict mapping player IDs to their LLM config. Each config supports: `model`, `api_key`, `base_url`, `temperature`, `max_tokens`, `extra_body`, `fallback_model`, `reasoning_effort`, `action_parser` (legacy), `system_prompt`, `use_mcp`. |
 | `arena_url` | Backend REST API base URL. |
-| `arena_api_key` | API key for experiment creation (the `OUTPLAYLABS_ARENA_API_KEY`). |
+| `arena_api_key` | API key for experiment creation (the `OUTPLAYARENA_API_KEY`). |
 | `config` | Game-specific config dict. Defaults to `{"game": game, "seed": seed}` if not provided. |
 | `seed` | Seed for the experiment. The same seed is passed to both agents so they see the same `agent.rng` stream. |
 | `jwt_secret` | Optional JWT secret. Falls back to the `JWT_SECRET` env var. |
@@ -103,7 +103,7 @@ agents = {
 ### One-line game
 
 ```python
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 results = quick_play(
     game="colonelblotto",
@@ -120,7 +120,7 @@ results = quick_play(
 
 ```python
 import os
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 results = quick_play(
     game="ultimatum",
@@ -129,14 +129,14 @@ results = quick_play(
         "B": {"model": "claude-3-opus", "api_key": os.environ["ANTHROPIC_API_KEY"]},
     },
     arena_url=os.environ["ARENA_URL"],
-    arena_api_key=os.environ["OUTPLAYLABS_ARENA_API_KEY"],
+    arena_api_key=os.environ["OUTPLAYARENA_API_KEY"],
 )
 ```
 
 ### Multi-round experiment
 
 ```python
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 results = []
 for seed in range(10):

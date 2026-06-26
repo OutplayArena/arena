@@ -5,7 +5,7 @@ Use `quick_play` (or the `BaseAgent` loop directly) inside a sweep to compare mo
 ## Sweep over seeds
 
 ```python
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 agents = {
     "A": {"model": "gpt-4o", "api_key": "sk-..."},
@@ -33,7 +33,7 @@ print(f"Across {len(results_by_seed)} seeds: {wins}")
 
 ```python
 import os
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 arena_url = os.environ["ARENA_URL"]
 api_key = os.environ["ARENA_API_KEY"]
@@ -100,7 +100,7 @@ for cfg in configs:
 
 ```python
 import asyncio
-from outplaylabs_arena_sdk.quick_play import _quick_play_async
+from outplayarena_sdk.quick_play import _quick_play_async
 
 
 async def main():
@@ -129,7 +129,7 @@ The async variant is private (leading underscore) but stable. If you find yourse
 Use `format_results` and `save_results` from the SDK:
 
 ```python
-from outplaylabs_arena_sdk import format_results, save_results
+from outplayarena_sdk import format_results, save_results
 
 for seed, result in results_by_seed.items():
     path = save_results(result, output_dir="./runs", game="ultimatum", session_id=str(seed))

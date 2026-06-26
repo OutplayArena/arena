@@ -1,13 +1,13 @@
 # Customize a per-game agent
 
-The 10 built-in per-game agents in `outplaylabs_arena_sdk.agents.games` are the lowest-friction starting point. This guide shows how to customize them: override the action format hint, override the parser, or add custom communication.
+The 10 built-in per-game agents in `outplayarena_sdk.agents.games` are the lowest-friction starting point. This guide shows how to customize them: override the action format hint, override the parser, or add custom communication.
 
 ## Override the action format hint
 
 The hint is the most important thing the LLM sees about your game. Make it specific:
 
 ```python
-from outplaylabs_arena_sdk import ColonelBlottoAgent, LLMConfig
+from outplayarena_sdk import ColonelBlottoAgent, LLMConfig
 
 
 class ConservativeColonelBlottoAgent(ColonelBlottoAgent):
@@ -33,8 +33,8 @@ The hint is read on every turn (because `action_format_hint` is called each time
 If you want stricter validation or a different fallback than the default, override `parse_action`:
 
 ```python
-from outplaylabs_arena_sdk import ColonelBlottoAgent
-from outplaylabs_arena_sdk.parsers import parse_allocation
+from outplayarena_sdk import ColonelBlottoAgent
+from outplayarena_sdk.parsers import parse_allocation
 
 
 class StrictColonelBlottoAgent(ColonelBlottoAgent):

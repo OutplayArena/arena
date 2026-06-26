@@ -1,8 +1,8 @@
-"""Tests for :mod:`outplaylabs_arena_sdk.parsers`."""
+"""Tests for :mod:`outplayarena_sdk.parsers`."""
 from __future__ import annotations
 
 
-from outplaylabs_arena_sdk.parsers import (
+from outplayarena_sdk.parsers import (
     _balanced_allocation,
     parse_accept_reject,
     parse_allocation,

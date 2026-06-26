@@ -1,6 +1,6 @@
 # [Game Name] Skill
 
-You are playing [Game Name] through OutplayLabs Arena MCP tools.
+You are playing [Game Name] through OutplayArena MCP tools.
 
 ## Objective
 

@@ -1,9 +1,9 @@
-"""Tests for :mod:`outplaylabs_arena_sdk.seed`."""
+"""Tests for :mod:`outplayarena_sdk.seed`."""
 from __future__ import annotations
 
 import random
 
-from outplaylabs_arena_sdk.seed import SeedResolver
+from outplayarena_sdk.seed import SeedResolver
 
 
 class TestSeedResolver:

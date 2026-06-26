@@ -8,7 +8,7 @@ from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 
-ENCRYPTION_KEY_ENV = "OUTPLAYLABS_ARENA_WANDB_ENCRYPTION_KEY"
+ENCRYPTION_KEY_ENV = "OUTPLAYARENA_WANDB_ENCRYPTION_KEY"
 
 
 class WandbConfigError(ValueError):

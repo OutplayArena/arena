@@ -1,4 +1,4 @@
-"""Per-game agent subclasses for the OutplayLabs Arena SDK.
+"""Per-game agent subclasses for the OutplayArena SDK.
 
 Each module exposes an :class:`BaseAgent` subclass that knows the action
 format for one game in ``games/games/core/``. Subclasses override
@@ -13,5 +13,5 @@ The 10 games currently supported:
     rock_paper_scissors   stag_hunt           texas_hold_em
     ultimatum
 
-Re-exports live in :mod:`outplaylabs_arena_sdk.agents.games`.
+Re-exports live in :mod:`outplayarena_sdk.agents.games`.
 """

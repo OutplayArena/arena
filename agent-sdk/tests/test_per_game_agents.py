@@ -7,7 +7,7 @@ import hmac
 import os
 
 
-from outplaylabs_arena_sdk.agents.games import (
+from outplayarena_sdk.agents.games import (
     BattleOfTheSexesAgent,
     CentipedeAgent,
     ColonelBlottoAgent,
@@ -19,7 +19,7 @@ from outplaylabs_arena_sdk.agents.games import (
     TexasHoldEmAgent,
     UltimatumAgent,
 )
-from outplaylabs_arena_sdk.base import LLMConfig
+from outplayarena_sdk.base import LLMConfig
 
 
 def _token(player: str = "A") -> str:
@@ -113,7 +113,7 @@ class TestPrisonersDilemma:
         assert agent.parse_action("garbage", state) == "defect"
 
     def test_actions_constant(self):
-        from outplaylabs_arena_sdk.agents.games.prisonersdilemma import (
+        from outplayarena_sdk.agents.games.prisonersdilemma import (
             PrisonersDilemmaAgent,
         )
         assert PrisonersDilemmaAgent.ACTIONS == ("cooperate", "defect")

@@ -21,11 +21,11 @@ from datetime import datetime, timezone
 import httpx
 from openai import OpenAI
 
-from outplaylabs_arena_sdk import ArenaClient
+from outplayarena_sdk import ArenaClient
 
 sys.stdout.reconfigure(line_buffering=True)
 
-OUTPLAYLABS_ARENA_BASE_URL = os.environ.get("OUTPLAYLABS_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
+OUTPLAYARENA_BASE_URL = os.environ.get("OUTPLAYARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
 SESSION_KEY = os.environ.get("SESSION_KEY", "nks_NWJkN2EzMjgtYzFjMi00OTFjLTlkNzQtOWY2NTU2NzM5ZDkwOkI6YzA3OTYyZTM4ODBlNjZlMjdlMDlhN2Y4NzI1N2Y5ZGQ5MDgzZjVhOWU1Y2JiZTQ1MzMwODA5YzVkZGY4MzAyYg")
 OPENCODE_GO_API_BASE = "https://opencode.ai/zen/v1"
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "results")
@@ -56,7 +56,7 @@ def parse_action(text):
 
 def get_interactive_state(session_id, player, token):
     response = httpx.get(
-        f"{OUTPLAYLABS_ARENA_BASE_URL}/session/{session_id}/interactive/state",
+        f"{OUTPLAYARENA_BASE_URL}/session/{session_id}/interactive/state",
         params={"player": player},
         headers={"Authorization": f"Bearer {token}"},
         timeout=10.0,
@@ -112,7 +112,7 @@ async def play_game():
     print()
 
     agent = ArenaClient(
-        base_url=OUTPLAYLABS_ARENA_BASE_URL,
+        base_url=OUTPLAYARENA_BASE_URL,
         session_id=session_id,
         token=SESSION_KEY,
     )
@@ -163,7 +163,7 @@ async def play_game():
             print(f"  {MODEL} -> {action}")
 
         result = httpx.post(
-            f"{OUTPLAYLABS_ARENA_BASE_URL}/session/{session_id}/interactive/action",
+            f"{OUTPLAYARENA_BASE_URL}/session/{session_id}/interactive/action",
             params={"player": player},
             headers={"Authorization": f"Bearer {SESSION_KEY}"},
             json={"action": action},

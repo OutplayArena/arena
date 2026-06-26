@@ -1,4 +1,4 @@
-# OutplayLabs Arena Documentation Site - Execution Plan
+# OutplayArena Documentation Site - Execution Plan
 
 ## Overview
 Build a beautiful documentation website using MkDocs Material that matches the frontend design system, with auto-generated API reference from Python docstrings and OpenAPI spec, auto-generated game catalog from YAML files, versioning via mike, and a blog for changelog/research updates.
@@ -130,7 +130,7 @@ Create `scripts/build_game_docs.py`:
 
 #### B2: Wire Up Auto-Generated Docs
 - Configure mkdocstrings in `mkdocs.yml` for SDK API reference
-- Create `docs/sdk/api-reference.md` with `::: outplaylabs_arena_sdk` directives
+- Create `docs/sdk/api-reference.md` with `::: outplayarena_sdk` directives
 - Create `docs/api/reference.md` with embedded Redoc web component loading OpenAPI spec
 - Test that auto-generated pages render correctly
 

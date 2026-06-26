@@ -18,7 +18,7 @@ The backend would expose a `state["awaiting"]` list of player IDs whose turn it 
 The minimum override is `parse_action`. We also override `action_format_hint` to tell the LLM what shape to produce.
 
 ```python
-from outplaylabs_arena_sdk import BaseAgent
+from outplayarena_sdk import BaseAgent
 
 
 class TradingGameAgent(BaseAgent):
@@ -28,7 +28,7 @@ class TradingGameAgent(BaseAgent):
     def parse_action(self, raw_text, state):
         # Use the built-in parse_quantity to extract a number,
         # clamping to [0, max_price].
-        from outplaylabs_arena_sdk.parsers import parse_quantity
+        from outplayarena_sdk.parsers import parse_quantity
         max_price = state.get("max_price", 100.0)
         return parse_quantity(raw_text, max_quantity=max_price)
 ```
@@ -72,7 +72,7 @@ When this returns a string, the agent sends it via the mailbox and fires `on_mes
 To use your agent with `quick_play`, register it:
 
 ```python
-from outplaylabs_arena_sdk import register
+from outplayarena_sdk import register
 
 @register("trading-game")
 class TradingGameAgent(BaseAgent):
@@ -104,8 +104,8 @@ See [Use hooks for observability](hooks-and-metrics.md) for more.
 ```python
 """trading_game_agent.py — A custom BaseAgent subclass for a trading game."""
 import os
-from outplaylabs_arena_sdk import BaseAgent, LLMConfig, register
-from outplaylabs_arena_sdk.parsers import parse_quantity
+from outplayarena_sdk import BaseAgent, LLMConfig, register
+from outplayarena_sdk.parsers import parse_quantity
 
 
 @register("trading-game")

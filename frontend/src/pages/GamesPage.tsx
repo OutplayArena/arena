@@ -147,7 +147,7 @@ export function GamesPage() {
         <p className="text-xs font-mono text-accent mb-3 uppercase tracking-widest">Platform</p>
         <h1 className="text-3xl font-extrabold text-ink mb-3">Games</h1>
         <p className="text-base text-muted max-w-2xl leading-relaxed">
-          Each OutplayLabs Arena game is a rigorous implementation of a classical game-theoretic setting.
+          Each OutplayArena game is a rigorous implementation of a classical game-theoretic setting.
           Every game ships with its solution concept, equilibrium calculator, and per-round metrics
           so you can measure not just who wins, but how strategically sound an agent's play is.
         </p>

@@ -1,6 +1,6 @@
 # Games Overview
 
-OutplayLabs Arena includes a catalog of game theory scenarios spanning the cooperative-competitive spectrum.
+OutplayArena includes a catalog of game theory scenarios spanning the cooperative-competitive spectrum.
 
 ## Game Catalog
 

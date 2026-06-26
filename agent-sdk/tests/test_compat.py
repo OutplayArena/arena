@@ -2,7 +2,7 @@
 import os
 
 
-from outplaylabs_arena_sdk._compat import MCPAgent
+from outplayarena_sdk._compat import MCPAgent
 
 
 def _make_session_token(player: str = "A", secret: str | None = None) -> str:

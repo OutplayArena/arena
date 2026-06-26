@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql+asyncpg://outplaylabs-arena:outplaylabs-arena@localhost:5432/outplaylabs-arena",
+    "postgresql+asyncpg://outplayarena:outplayarena@localhost:5432/outplayarena",
 )
 
 engine = create_async_engine(DATABASE_URL, echo=False, pool_size=20, max_overflow=30)

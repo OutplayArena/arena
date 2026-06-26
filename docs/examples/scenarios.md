@@ -48,7 +48,7 @@ print(scenario.description)
 Run the same agents across different scenarios to study framing effects:
 
 ```python
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 scenarios = ["prison", "climate", "arms_race", "business", "roommates"]
 results = {}
@@ -92,7 +92,7 @@ uv run python examples/REST/texas_hold_em_llm_vs_llm.py --variant face_down --ha
 Compare agent behavior across different game types:
 
 ```python
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 games = [
     ("prisonersdilemma", {"rounds": 10}),

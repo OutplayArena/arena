@@ -27,7 +27,7 @@ async def _ensure_local_user(db: AsyncSession) -> User:
     if user is None:
         user = User(
             id=LOCAL_USER_ID,
-            email="local@outplaylabs-arena.local",
+            email="local@outplayarena.local",
             name="Local User",
             provider="local",
             provider_user_id="local",

@@ -1,6 +1,6 @@
 # Per-game agents
 
-The SDK ships with one `BaseAgent` subclass per game in `games/games/core/`. Each subclass knows the action format for its game and overrides `parse_action` accordingly. They are registered in the `GAME_AGENTS` map keyed by game slug, and re-exported both at the top level and under `outplaylabs_arena_sdk.agents.games`.
+The SDK ships with one `BaseAgent` subclass per game in `games/games/core/`. Each subclass knows the action format for its game and overrides `parse_action` accordingly. They are registered in the `GAME_AGENTS` map keyed by game slug, and re-exported both at the top level and under `outplayarena_sdk.agents.games`.
 
 ## The 10 agents
 
@@ -21,7 +21,7 @@ The SDK ships with one `BaseAgent` subclass per game in `games/games/core/`. Eac
 
 ```python
 # Top-level re-exports (preferred for new code)
-from outplaylabs_arena_sdk import (
+from outplayarena_sdk import (
     ColonelBlottoAgent, UltimatumAgent, PrisonersDilemmaAgent,
     RockPaperScissorsAgent, BattleOfTheSexesAgent, StagHuntAgent,
     CentipedeAgent, CournotDuopolyAgent, PublicGoodsAgent,
@@ -29,7 +29,7 @@ from outplaylabs_arena_sdk import (
 )
 
 # Submodule (equivalent)
-from outplaylabs_arena_sdk.agents.games import (
+from outplayarena_sdk.agents.games import (
     ColonelBlottoAgent, UltimatumAgent, PrisonersDilemmaAgent,
     RockPaperScissorsAgent, BattleOfTheSexesAgent, StagHuntAgent,
     CentipedeAgent, CournotDuopolyAgent, PublicGoodsAgent,
@@ -40,7 +40,7 @@ from outplaylabs_arena_sdk.agents.games import (
 ## Direct usage
 
 ```python
-from outplaylabs_arena_sdk import ColonelBlottoAgent, LLMConfig
+from outplayarena_sdk import ColonelBlottoAgent, LLMConfig
 
 agent = ColonelBlottoAgent(
     player="A",
@@ -57,8 +57,8 @@ results = agent.run_sync()
 `quick_play()` and the `GAME_AGENTS` map let you pick the right agent from a game slug:
 
 ```python
-from outplaylabs_arena_sdk import GAME_AGENTS, get_agent_class
-from outplaylabs_arena_sdk import LLMConfig
+from outplayarena_sdk import GAME_AGENTS, get_agent_class
+from outplayarena_sdk import LLMConfig
 
 # All 10 slugs are available:
 print(list(GAME_AGENTS.keys()))
@@ -75,8 +75,8 @@ agent = cls(player="A", player_token="nks_...", arena_url=..., llm_config=LLMCon
 The default subclass is the lowest-friction starting point. Override `action_format_hint` to bias the LLM, or override `parse_action` for stricter validation:
 
 ```python
-from outplaylabs_arena_sdk import ColonelBlottoAgent, LLMConfig
-from outplaylabs_arena_sdk.parsers import parse_allocation
+from outplayarena_sdk import ColonelBlottoAgent, LLMConfig
+from outplayarena_sdk.parsers import parse_allocation
 
 
 class ConservativeColonelBlottoAgent(ColonelBlottoAgent):

@@ -1,10 +1,10 @@
 # MCP Setup
 
-Configuration and deployment of MCP servers for OutplayLabs Arena.
+Configuration and deployment of MCP servers for OutplayArena.
 
 ## Prerequisites
 
-- OutplayLabs Arena backend running
+- OutplayArena backend running
 - Traefik (for Docker) or Traefik Ingress Controller (for Kubernetes)
 - Docker or Kubernetes cluster
 

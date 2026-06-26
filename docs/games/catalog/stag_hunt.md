@@ -65,7 +65,7 @@ A 2-player symmetric coordination game with two Nash equilibria. (Stag, Stag) is
 ## Example
 
 ```python
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 results = quick_play(
     game="stag_hunt",

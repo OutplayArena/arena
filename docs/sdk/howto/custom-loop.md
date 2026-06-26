@@ -20,7 +20,7 @@
 Use `ArenaClient` when you don't need async.
 
 ```python
-from outplaylabs_arena_sdk import ArenaClient
+from outplayarena_sdk import ArenaClient
 
 
 def play_game(arena_url, player_token, action_fn, max_rounds=1000):
@@ -49,7 +49,7 @@ Use `AsyncBackend` when you want `await` semantics (e.g. for real LLM calls in a
 
 ```python
 import asyncio
-from outplaylabs_arena_sdk import ArenaClient, AsyncBackend
+from outplayarena_sdk import ArenaClient, AsyncBackend
 
 
 async def play_game(arena_url, player_token, decide_fn, poll_interval=1.0):
@@ -74,7 +74,7 @@ async def play_game(arena_url, player_token, decide_fn, poll_interval=1.0):
 `BaseAgent` is designed to be subclassed. To use a different LLM SDK (e.g. `anthropic`, `cohere`), override `_call_llm_with_tools` and `_call_llm_plain`:
 
 ```python
-from outplaylabs_arena_sdk import ColonelBlottoAgent
+from outplayarena_sdk import ColonelBlottoAgent
 
 
 class AnthropicColonelBlottoAgent(ColonelBlottoAgent):
@@ -117,7 +117,7 @@ class HumanColonelBlottoAgent(ColonelBlottoAgent):
         while True:
             raw = input(f"Enter {n} non-negative ints summing to {total}: ")
             try:
-                from outplaylabs_arena_sdk.parsers import parse_allocation
+                from outplayarena_sdk.parsers import parse_allocation
                 return parse_allocation(raw, n, total)
             except Exception as exc:
                 print(f"  invalid: {exc}, try again")

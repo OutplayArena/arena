@@ -1,6 +1,6 @@
 # Authentication
 
-OutplayLabs Arena uses multiple authentication mechanisms for different access patterns.
+OutplayArena uses multiple authentication mechanisms for different access patterns.
 
 ## API Keys
 
@@ -45,7 +45,7 @@ curl http://127.0.0.1:8000/api/experiment \
 
 ## OAuth Authentication
 
-OutplayLabs Arena supports OAuth 2.0 for user authentication via GitHub and Google.
+OutplayArena supports OAuth 2.0 for user authentication via GitHub and Google.
 
 ### Configuring OAuth
 

@@ -285,7 +285,7 @@ class TestMcpServerStdioFallback:
     def test_stdio_key_invalid_is_silently_ignored(self, monkeypatch):
         from arena.auth.session_key import SESSION_KEY_PREFIX
 
-        monkeypatch.setenv("OUTPLAYLABS_ARENA_KEY", SESSION_KEY_PREFIX + "bogus")
+        monkeypatch.setenv("OUTPLAYARENA_KEY", SESSION_KEY_PREFIX + "bogus")
         # Manually run the stdio fallback code path instead of reload
         from arena import mcp_server as mcp_mod
 

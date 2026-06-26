@@ -10,7 +10,7 @@ from transformers import pipeline
 import yaml
 
 from arena.game_components.game_agent import GameAgent
-from outplaylabs_arena_sdk.reasoning import ReasoningModerator
+from outplayarena_sdk.reasoning import ReasoningModerator
 
 
 PROMPTS_PATH = Path(__file__).with_name("prompts.yaml")
@@ -43,7 +43,7 @@ def render_llm_agent_prompt(num_battlefields, total_resources, history):
     )
 
 
-# DUPLICATE: Also defined in agent-sdk/src/outplaylabs_arena_sdk/llm_agent.py as _balanced_allocation
+# DUPLICATE: Also defined in agent-sdk/src/outplayarena_sdk/llm_agent.py as _balanced_allocation
 # Keep implementations in sync.
 def balanced_allocation(num_battlefields, total_resources):
     base = total_resources // num_battlefields
@@ -146,7 +146,7 @@ class LLMAgent(Agent):
             return base_prompt
         return reasoning.build_system_prompt(base_prompt)
 
-    # DUPLICATE: Also defined in agent-sdk/src/outplaylabs_arena_sdk/llm_agent.py as a standalone function
+    # DUPLICATE: Also defined in agent-sdk/src/outplayarena_sdk/llm_agent.py as a standalone function
     # Keep implementations in sync. This version has the bool guard that the SDK version should also have.
     def parse_allocation(self, text):
         match = re.search(r"\[[^\]]+\]", text)
@@ -224,7 +224,7 @@ class LiteLLMAgent(Agent):
     def _fallback_allocation(self):
         return balanced_allocation(self.num_battlefields, self.total_resources)
 
-    # DUPLICATE: Also defined in agent-sdk/src/outplaylabs_arena_sdk/llm_agent.py as a standalone function
+    # DUPLICATE: Also defined in agent-sdk/src/outplayarena_sdk/llm_agent.py as a standalone function
     # Keep implementations in sync. Note: This version is missing the bool guard that the LLMAgent version has.
     def parse_allocation(self, text):
         match = re.search(r"\[[^\]]+\]", text)

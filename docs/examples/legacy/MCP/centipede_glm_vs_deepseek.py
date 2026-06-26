@@ -19,15 +19,15 @@ from datetime import datetime, timezone
 from openai import OpenAI
 
 
-from outplaylabs_arena_sdk import MCPAgent
+from outplayarena_sdk import MCPAgent
 
-from outplaylabs_arena_sdk import ArenaClient
+from outplayarena_sdk import ArenaClient
 from games.core.centipede.config import config_from_dict
 
 sys.stdout.reconfigure(line_buffering=True)
 
-OUTPLAYLABS_ARENA_BASE_URL = os.environ.get("OUTPLAYLABS_ARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
-OUTPLAYLABS_ARENA_API_KEY  = os.environ["OUTPLAYLABS_ARENA_API_KEY"]
+OUTPLAYARENA_BASE_URL = os.environ.get("OUTPLAYARENA_BASE_URL") or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
+OUTPLAYARENA_API_KEY  = os.environ["OUTPLAYARENA_API_KEY"]
 OPENCODE_API_BASE   = "https://opencode.ai/zen/v1"
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "results")
 
@@ -80,7 +80,7 @@ async def run():
     print()
 
     # ── ORCHESTRATOR ──────────────────────────────────────────────────────────
-    arena  = ArenaClient(OUTPLAYLABS_ARENA_BASE_URL)
+    arena  = ArenaClient(OUTPLAYARENA_BASE_URL)
     config = config_from_dict({
         "game": "centipede", "players": 2,
         "max_steps": MAX_STEPS,
@@ -89,7 +89,7 @@ async def run():
         "seed": 42,
     })
     created = arena.create_experiment(
-        config, agents={"A": PLAYER_A_MODEL, "B": PLAYER_B_MODEL}, api_key=OUTPLAYLABS_ARENA_API_KEY,
+        config, agents={"A": PLAYER_A_MODEL, "B": PLAYER_B_MODEL}, api_key=OUTPLAYARENA_API_KEY,
     )
     session_id    = created["session_id"]
     player_tokens = created["player_tokens"]
@@ -100,8 +100,8 @@ async def run():
     print()
 
     # ── AGENTS ────────────────────────────────────────────────────────────────
-    agents = {"A": MCPAgent(player_tokens["A"], OUTPLAYLABS_ARENA_BASE_URL),
-              "B": MCPAgent(player_tokens["B"], OUTPLAYLABS_ARENA_BASE_URL)}
+    agents = {"A": MCPAgent(player_tokens["A"], OUTPLAYARENA_BASE_URL),
+              "B": MCPAgent(player_tokens["B"], OUTPLAYARENA_BASE_URL)}
 
     no_thinking = {"thinking": {"type": "disabled"}}
     pass_count  = 0

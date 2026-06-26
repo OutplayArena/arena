@@ -1,5 +1,5 @@
 """
-End-to-end games test using the OutplayLabs Arena SDK.
+End-to-end games test using the OutplayArena SDK.
 
 Runs all 10 games with GLM-5.1 (Player A) vs DeepSeek V4 Pro (Player B/C)
 via OpenCode Zen. 2 rounds per game, no thinking for either model.
@@ -8,8 +8,8 @@ Uses the SDK's per-game agents (quick_play) which handle action format
 parsing correctly for every game, including texas_hold_em.
 
 Environment:
-    OUTPLAYLABS_ARENA_BASE_URL  Backend REST API (default http://127.0.0.1:8000/api)
-    OUTPLAYLABS_ARENA_API_KEY   Bearer token (Arena account API key)
+    OUTPLAYARENA_BASE_URL  Backend REST API (default http://127.0.0.1:8000/api)
+    OUTPLAYARENA_API_KEY   Bearer token (Arena account API key)
     OPENCODE_GO_API_KEY         OpenCode Zen API key
 """
 import asyncio
@@ -18,12 +18,12 @@ import sys
 import time
 from typing import Any
 
-from outplaylabs_arena_sdk.quick_play import _quick_play_async
+from outplayarena_sdk.quick_play import _quick_play_async
 
 sys.stdout.reconfigure(line_buffering=True)
 
-ARENA_URL = os.environ.get("OUTPLAYLABS_ARENA_BASE_URL", "http://127.0.0.1:8000/api")
-ARENA_API_KEY = os.environ.get("OUTPLAYLABS_ARENA_API_KEY", "")
+ARENA_URL = os.environ.get("OUTPLAYARENA_BASE_URL", "http://127.0.0.1:8000/api")
+ARENA_API_KEY = os.environ.get("OUTPLAYARENA_API_KEY", "")
 OPENCODE_BASE_URL = "https://opencode.ai/zen/v1"
 OPENCODE_API_KEY = (
     os.environ.get("OPENCODE_GO_API_KEY")
@@ -32,7 +32,7 @@ OPENCODE_API_KEY = (
 JWT_SECRET = os.environ.get("JWT_SECRET", "")
 
 if not ARENA_API_KEY:
-    sys.exit("ERROR: OUTPLAYLABS_ARENA_API_KEY env var is required")
+    sys.exit("ERROR: OUTPLAYARENA_API_KEY env var is required")
 if not OPENCODE_API_KEY:
     sys.exit("ERROR: OPENCODE_GO_API_KEY (or OPENCODE_API_KEY) env var is required")
 if not JWT_SECRET:

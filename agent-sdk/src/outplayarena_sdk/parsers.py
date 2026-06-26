@@ -1,4 +1,4 @@
-"""Action parsers for the OutplayLabs Arena SDK.
+"""Action parsers for the OutplayArena SDK.
 
 Each parser turns raw LLM text into a structured game action. The parsers
 are forgiving: when the LLM produces unparseable output, they fall back to

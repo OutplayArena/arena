@@ -1,5 +1,5 @@
-"""Backward-compat shim. Prefer :class:`outplaylabs_arena_sdk.MCPClient` directly,
-or use :class:`outplaylabs_arena_sdk.BaseAgent` for the new autonomous-loop API.
+"""Backward-compat shim. Prefer :class:`outplayarena_sdk.MCPClient` directly,
+or use :class:`outplayarena_sdk.BaseAgent` for the new autonomous-loop API.
 
 This module exists so existing scripts and examples that imported ``MCPAgent``
 keep working after the rework.  New code should use ``BaseAgent`` (see
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from outplaylabs_arena_sdk.mcp_client import MCPClient as _MCPClient
+from outplayarena_sdk.mcp_client import MCPClient as _MCPClient
 
 
 class MCPAgent(_MCPClient):
@@ -20,15 +20,15 @@ class MCPAgent(_MCPClient):
     because they were already inherited or trivial to recover from the
     session key.
 
-    Prefer :class:`outplaylabs_arena_sdk.BaseAgent` (and its
+    Prefer :class:`outplayarena_sdk.BaseAgent` (and its
     per-game subclasses) for new code.
     """
 
     @property
     def player(self) -> str:
         """Player identifier extracted from the session key."""
-        from outplaylabs_arena_sdk.base import _default_jwt_secret
-        from outplaylabs_arena_sdk.client import validate_session_key
+        from outplayarena_sdk.base import _default_jwt_secret
+        from outplayarena_sdk.client import validate_session_key
 
         try:
             _, player = validate_session_key(self.session_key, _default_jwt_secret())

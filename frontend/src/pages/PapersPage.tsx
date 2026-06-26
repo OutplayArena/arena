@@ -20,7 +20,7 @@ export function PapersPage() {
       <p className="text-sm text-quiet max-w-md leading-relaxed">
         We're compiling a curated reading list — foundational game theory papers,
         empirical studies on LLM strategic reasoning, and new research produced
-        using OutplayLabs Arena. Check back soon.
+        using OutplayArena. Check back soon.
       </p>
 
       {/* Divider */}

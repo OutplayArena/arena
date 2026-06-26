@@ -8,9 +8,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from outplaylabs_arena_sdk.base import BaseAgent
-from outplaylabs_arena_sdk.parsers import parse_quantity
-from outplaylabs_arena_sdk.registry import register
+from outplayarena_sdk.base import BaseAgent
+from outplayarena_sdk.parsers import parse_quantity
+from outplayarena_sdk.registry import register
 
 
 @register("cournot_duopoly")

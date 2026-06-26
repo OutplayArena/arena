@@ -1,9 +1,9 @@
 """
-Hermes vs OutplayLabs Arena SDK — end-to-end Colonel Blotto game.
+Hermes vs OutplayArena SDK — end-to-end Colonel Blotto game.
 
 Launches the hermes-agent harness (with an on-the-fly skill + MCP config)
-as Player A and a OutplayLabs Arena SDK MCPAgent as Player B. Both play a multi-round
-Colonel Blotto game through OutplayLabs Arena's MCP server.
+as Player A and a OutplayArena SDK MCPAgent as Player B. Both play a multi-round
+Colonel Blotto game through OutplayArena's MCP server.
 
 Usage:
     python scripts/hermes_vs_sdk_e2e.py
@@ -36,7 +36,7 @@ import yaml
 
 # Add SDK to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "agent-sdk" / "src"))
-from outplaylabs_arena_sdk.mcp_client import MCPClient  # noqa: E402
+from outplayarena_sdk.mcp_client import MCPClient  # noqa: E402
 
 # ── Configuration ────────────────────────────────────────────────────────────
 
@@ -110,7 +110,7 @@ asyncio.run(main())
 # ── Skill builder ────────────────────────────────────────────────────────────
 
 def _build_skill_content(manifest: dict) -> str:
-    """Build a hermes SKILL.md from the OutplayLabs Arena agent manifest."""
+    """Build a hermes SKILL.md from the OutplayArena agent manifest."""
     tools_lines: list[str] = []
     for t in manifest.get("tools", []):
         name = t["name"]
@@ -130,15 +130,15 @@ def _build_skill_content(manifest: dict) -> str:
 
     return f"""---
 name: arena-colonel-blotto
-description: "Play Colonel Blotto on OutplayLabs Arena using MCP tools"
+description: "Play Colonel Blotto on OutplayArena using MCP tools"
 version: 1.0.0
-author: outplaylabs-arena
-tags: [outplaylabs-arena, game-theory, colonel-blotto, strategy]
+author: outplayarena
+tags: [outplayarena, game-theory, colonel-blotto, strategy]
 ---
 
-# Colonel Blotto on OutplayLabs Arena
+# Colonel Blotto on OutplayArena
 
-You are playing Colonel Blotto through OutplayLabs Arena's MCP server.
+You are playing Colonel Blotto through OutplayArena's MCP server.
 All MCP tools are prefixed `mcp_arena_`.
 
 ## Objective
@@ -181,10 +181,10 @@ def _setup_hermes_home(
     session_key: str,
     skill_content: str,
 ) -> str:
-    """Create a temporary hermes home with OutplayLabs Arena MCP config and skill.
+    """Create a temporary hermes home with OutplayArena MCP config and skill.
 
     Merges the real hermes config (model/provider settings) with our
-    OutplayLabs Arena MCP config so the agent can connect to both its LLM and
+    OutplayArena MCP config so the agent can connect to both its LLM and
     the game server.
     """
     hermes_home = tempfile.mkdtemp(prefix="hermes_arena_")
@@ -214,7 +214,7 @@ def _setup_hermes_home(
         import shutil
         shutil.copytree(real_skills, Path(hermes_home) / "skills", symlinks=True, dirs_exist_ok=True)
 
-    # Write our OutplayLabs Arena skill
+    # Write our OutplayArena skill
     skill_dir = Path(hermes_home) / "skills" / "arena-colonel-blotto"
     skill_dir.mkdir(parents=True, exist_ok=True)
     (skill_dir / "SKILL.md").write_text(skill_content, encoding="utf-8")
@@ -225,7 +225,7 @@ def _setup_hermes_home(
 def _hermes_oneshot_prompt(player: str, rounds: int, n_fields: int, total: int) -> str:
     """Build the oneshot prompt that tells hermes to play autonomously."""
     return (
-        f"You are Player {player} in a Colonel Blotto game on OutplayLabs Arena. "
+        f"You are Player {player} in a Colonel Blotto game on OutplayArena. "
         f"The game has {rounds} rounds, {n_fields} battlefields, and you have {total} troops per round.\n\n"
         f"CRITICAL RULE: DO NOT write any text responses. ONLY make tool calls. "
         f"Never ask if you should continue — just do it. "

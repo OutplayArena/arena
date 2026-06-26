@@ -8,11 +8,11 @@ load_dotenv()
 
 from mcp.server.transport_security import TransportSecuritySettings  # noqa: E402
 from mcp.server.fastmcp import FastMCP  # noqa: E402
-from outplaylabs_arena_sdk.client import ArenaClient  # noqa: E402
+from outplayarena_sdk.client import ArenaClient  # noqa: E402
 from arena.auth.session_key import SESSION_KEY_PREFIX, validate_session_key  # noqa: E402
 
-OUTPLAYLABS_ARENA_BASE_URL = (
-    os.environ.get("OUTPLAYLABS_ARENA_BASE_URL")
+OUTPLAYARENA_BASE_URL = (
+    os.environ.get("OUTPLAYARENA_BASE_URL")
     or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
 )
 
@@ -20,9 +20,9 @@ OUTPLAYLABS_ARENA_BASE_URL = (
 _session_ctx: ContextVar[tuple[str, str, str]] = ContextVar("session_ctx")
 
 # Stdio-mode fallback: when LLMAgent spawns a local MCP subprocess it passes
-# OUTPLAYLABS_ARENA_KEY via the environment.  Pre-populate the ContextVar for the
+# OUTPLAYARENA_KEY via the environment.  Pre-populate the ContextVar for the
 # lifetime of that process so tool calls work without HTTP middleware.
-_stdio_key = os.environ.get("OUTPLAYLABS_ARENA_KEY")
+_stdio_key = os.environ.get("OUTPLAYARENA_KEY")
 if _stdio_key:
     try:
         _stdio_sid, _stdio_player = validate_session_key(_stdio_key)
@@ -96,7 +96,7 @@ def get_session() -> tuple[str, str, str]:
 def arena_client() -> ArenaClient:
     session_id, _player, session_key = get_session()
     return ArenaClient(
-        base_url=OUTPLAYLABS_ARENA_BASE_URL,
+        base_url=OUTPLAYARENA_BASE_URL,
         session_id=session_id,
         token=session_key,
         http_client=httpx.Client(timeout=10.0),
@@ -219,25 +219,25 @@ def get_agent_manifest(game: str) -> dict:
     - Auth instructions and MCP endpoint URL
 
     External agent harnesses can download this manifest to understand
-    how to interact with the platform without needing the OutplayLabs Arena SDK.
+    how to interact with the platform without needing the OutplayArena SDK.
     """
     return arena_client().get_agent_manifest(game)
 
 
 @mcp.prompt("arena-intro")
-def outplaylabs_arena_intro() -> list[dict]:
+def outplayarena_intro() -> list[dict]:
     """
     Universal platform introduction for external MCP agents.
 
-    Teaches the agent how OutplayLabs Arena works: authentication, available tools,
+    Teaches the agent how OutplayArena works: authentication, available tools,
     game lifecycle, and how to discover per-game skills.
     """
     return [
         {
             "role": "user",
             "content": (
-                "# OutplayLabs Arena Platform\n\n"
-                "You are an agent playing games on the OutplayLabs Arena platform via MCP tools.\n\n"
+                "# OutplayArena Platform\n\n"
+                "You are an agent playing games on the OutplayArena platform via MCP tools.\n\n"
                 "## Authentication\n"
                 "Every MCP request carries: `Authorization: Bearer nks_<session_key>`\n"
                 "Your session key is provided when an experiment is created via the platform API.\n\n"
@@ -277,7 +277,7 @@ def outplaylabs_arena_intro() -> list[dict]:
 
 
 @mcp.prompt("arena-game-{game}")
-def outplaylabs_arena_game_prompt(game: str) -> list[dict]:
+def outplayarena_game_prompt(game: str) -> list[dict]:
     """
     Per-game introduction prompt. Returns the skill guide and prompt templates
     for the specified game, ready for use as LLM context.

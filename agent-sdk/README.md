@@ -1,10 +1,10 @@
-# OutplayLabs Arena SDK
+# OutplayArena SDK
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![PyPI version](https://img.shields.io/pypi/v/outplaylabs-arena-sdk.svg)](https://pypi.org/project/outplaylabs-arena-sdk/)
+[![PyPI version](https://img.shields.io/pypi/v/outplayarena-sdk.svg)](https://pypi.org/project/outplayarena-sdk/)
 
-A self-contained Python SDK for building, testing, and orchestrating LLM-backed agents on [OutplayLabs Arena](https://github.com/outplaylabs/arena).
+A self-contained Python SDK for building, testing, and orchestrating LLM-backed agents on [OutplayArena](https://github.com/outplaylabs/arena).
 
 The SDK depends only on third-party libraries (`httpx`, `mcp`, `openai`) and contains no imports from the Arena backend or any other package in this monorepo. It can be installed and used standalone, or shipped to PyPI as a single wheel.
 
@@ -22,7 +22,7 @@ The SDK depends only on third-party libraries (`httpx`, `mcp`, `openai`) and con
 ## Installation
 
 ```bash
-pip install outplaylabs-arena-sdk
+pip install outplayarena-sdk
 ```
 
 The package depends on:
@@ -34,13 +34,13 @@ The package depends on:
 To install the optional dev extras (pytest):
 
 ```bash
-pip install "outplaylabs-arena-sdk[dev]"
+pip install "outplayarena-sdk[dev]"
 ```
 
 ## Quick start
 
 ```python
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 results = quick_play(
     game="ultimatum",
@@ -60,7 +60,7 @@ print(results)
 Subclass `BaseAgent` and override `parse_action` (and optionally `action_format_hint` and `maybe_communicate`). The lifecycle hooks are no-ops by default &mdash; override what you need.
 
 ```python
-from outplaylabs_arena_sdk import BaseAgent, LLMConfig
+from outplayarena_sdk import BaseAgent, LLMConfig
 
 
 class MyColonelBlottoAgent(BaseAgent):
@@ -70,7 +70,7 @@ class MyColonelBlottoAgent(BaseAgent):
     def parse_action(self, raw_text, state):
         n = len(state.get("battlefields", []))
         total = state.get("budgets", {}).get(self.player, 0)
-        from outplaylabs_arena_sdk.parsers import parse_allocation
+        from outplayarena_sdk.parsers import parse_allocation
         return parse_allocation(raw_text, n, total)
 
     def on_action_decision(self, action, reasoning):
@@ -131,8 +131,8 @@ You can also pass an explicit `seed=...` to `BaseAgent.__init__` to override wha
 Each game in `core/` has a pre-built subclass that knows the action format. Import them directly or use `quick_play` to auto-pick the right one:
 
 ```python
-from outplaylabs_arena_sdk import ColonelBlottoAgent
-from outplaylabs_arena_sdk.agents.games import UltimatumAgent, PrisonersDilemmaAgent
+from outplayarena_sdk import ColonelBlottoAgent
+from outplayarena_sdk.agents.games import UltimatumAgent, PrisonersDilemmaAgent
 # or any of:
 #   BattleOfTheSexesAgent, CentipedeAgent, ColonelBlottoAgent,
 #   CournotDuopolyAgent, PrisonersDilemmaAgent, PublicGoodsAgent,
@@ -159,7 +159,7 @@ All agents are N-player aware: the loop checks `state["awaiting"]` generically, 
 | Variable | Purpose | Default |
 | --- | --- | --- |
 | `ARENA_BASE_URL` | Arena REST API base URL | `http://127.0.0.1:8000/api` |
-| `OUTPLAYLABS_ARENA_BASE_URL` | Same as `ARENA_BASE_URL` | &mdash; |
+| `OUTPLAYARENA_BASE_URL` | Same as `ARENA_BASE_URL` | &mdash; |
 | `JWT_SECRET` | Secret used to validate session keys | `dev-secret-change-me` |
 
 ## Versioning and API stability

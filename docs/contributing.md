@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for your interest in contributing to OutplayLabs Arena! This guide will help you get started.
+Thank you for your interest in contributing to OutplayArena! This guide will help you get started.
 
 ## Ways to Contribute
 
@@ -283,4 +283,4 @@ Documentation is automatically deployed to Cloudflare Pages when changes are pus
 
 By contributing, you agree that your contributions will be licensed under the project's license.
 
-Thank you for contributing to OutplayLabs Arena!
+Thank you for contributing to OutplayArena!

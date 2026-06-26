@@ -5,7 +5,7 @@ The fastest way to play a game on the arena. No subclassing, no agent class, no 
 ## One-liner
 
 ```python
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 results = quick_play(
     game="ultimatum",
@@ -33,7 +33,7 @@ print(results["winner"], results["total_scores"])
 
 ```python
 import os
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 results = quick_play(
     game="colonelblotto",
@@ -99,7 +99,7 @@ The `config` dict is passed straight through to the backend; the `seed` is added
 ### Sweep over seeds
 
 ```python
-from outplaylabs_arena_sdk import quick_play
+from outplayarena_sdk import quick_play
 
 results_by_seed = {}
 for seed in range(5):

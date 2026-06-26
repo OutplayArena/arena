@@ -12,7 +12,7 @@ Most games on the arena are 2-player, but several support N players (Public Good
 
 ```python
 import os
-from outplaylabs_arena_sdk import ArenaClient
+from outplayarena_sdk import ArenaClient
 
 rest = ArenaClient("http://127.0.0.1:8000/api")
 created = rest.create_experiment(
@@ -38,7 +38,7 @@ The `created["config"]` is the effective config echoed back from the backend (si
 
 ```python
 import asyncio
-from outplaylabs_arena_sdk import PublicGoodsAgent, LLMConfig
+from outplayarena_sdk import PublicGoodsAgent, LLMConfig
 
 # Five LLM configs (could be the same model, different models, or a mix)
 llm_configs = {
@@ -96,7 +96,7 @@ for player, res in results.items():
 import asyncio
 import os
 
-from outplaylabs_arena_sdk import ArenaClient, LLMConfig, PublicGoodsAgent
+from outplayarena_sdk import ArenaClient, LLMConfig, PublicGoodsAgent
 
 
 async def main():

@@ -1,4 +1,4 @@
-"""Reasoning control module for LLM agents in the OutplayLabs Arena SDK.
+"""Reasoning control module for LLM agents in the OutplayArena SDK.
 
 Provides enums, dataclasses, and utility functions for managing model-specific
 reasoning behaviour, including effort levels, strategy selection, API parameter

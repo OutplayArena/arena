@@ -18,10 +18,10 @@ Discovery tools (`list_games`, `get_game_details`, `get_game_skill`, `get_agent_
 
 ## Schemas
 
-The schemas are defined in `outplaylabs_arena_sdk.tools` and can be built with `build_backend_tools()`:
+The schemas are defined in `outplayarena_sdk.tools` and can be built with `build_backend_tools()`:
 
 ```python
-from outplaylabs_arena_sdk.tools import build_backend_tools
+from outplayarena_sdk.tools import build_backend_tools
 
 tools = build_backend_tools(
     action_format_hint="a Python list of N non-negative integers summing to TOTAL"
@@ -168,7 +168,7 @@ loop terminates; action = [40, 30, 30]
 If you need a different set of tools (e.g. for a custom MCP server), construct the schemas directly:
 
 ```python
-from outplaylabs_arena_sdk.tools import (
+from outplayarena_sdk.tools import (
     get_observation_tool,
     get_game_state_tool,
     get_mailbox_tool,

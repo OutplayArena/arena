@@ -3,7 +3,7 @@ import json
 import httpx
 import pytest
 
-from outplaylabs_arena_sdk.client import ArenaClient
+from outplayarena_sdk.client import ArenaClient
 from games.core.colonelblotto.config import ColonelBlottoExperimentConfig
 
 

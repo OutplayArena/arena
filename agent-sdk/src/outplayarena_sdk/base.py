@@ -1,4 +1,4 @@
-"""Base agent for the OutplayLabs Arena SDK.
+"""Base agent for the OutplayArena SDK.
 
 :class:`BaseAgent` is the single entry point for building autonomous agents
 that play games on the platform. It owns the full lifecycle:
@@ -11,15 +11,15 @@ that play games on the platform. It owns the full lifecycle:
   4. Emit lifecycle hooks at every meaningful point so subclasses (and
      end users) can plug in custom logic.
 
-Per-game knowledge lives in subclasses under :mod:`outplaylabs_arena_sdk.agents.games`.
+Per-game knowledge lives in subclasses under :mod:`outplayarena_sdk.agents.games`.
 Those override :meth:`parse_action` to convert the LLM's text output into
 the game's structured action format, and :meth:`action_format_hint` to
 guide the LLM. :class:`BaseAgent` itself does not know any game rules.
 
 Example::
 
-    from outplaylabs_arena_sdk.llm_config import LLMConfig
-    from outplaylabs_arena_sdk.agents.games import ColonelBlottoAgent
+    from outplayarena_sdk.llm_config import LLMConfig
+    from outplayarena_sdk.agents.games import ColonelBlottoAgent
 
     agent = ColonelBlottoAgent(
         player="A",
@@ -38,13 +38,13 @@ from typing import Any
 
 from openai import OpenAI
 
-from outplaylabs_arena_sdk.client import ArenaClient, validate_session_key
-from outplaylabs_arena_sdk.mcp_client import MCPClient
-from outplaylabs_arena_sdk.parsers import _safe_json_loads
-from outplaylabs_arena_sdk.reasoning import ReasoningModerator
-from outplaylabs_arena_sdk.seed import SeedResolver
-from outplaylabs_arena_sdk.tools import build_backend_tools
-from outplaylabs_arena_sdk.transport import AsyncBackend
+from outplayarena_sdk.client import ArenaClient, validate_session_key
+from outplayarena_sdk.mcp_client import MCPClient
+from outplayarena_sdk.parsers import _safe_json_loads
+from outplayarena_sdk.reasoning import ReasoningModerator
+from outplayarena_sdk.seed import SeedResolver
+from outplayarena_sdk.tools import build_backend_tools
+from outplayarena_sdk.transport import AsyncBackend
 
 
 class LLMConfig:
@@ -493,7 +493,7 @@ class BaseAgent:
 
     def _compose_system_prompt(self) -> str:
         parts = [
-            "You are an autonomous agent playing a game on the OutplayLabs Arena.",
+            "You are an autonomous agent playing a game on the OutplayArena.",
             f"You are player {self.player}.",
             f"Game action format: {self.action_format_hint()}",
             "Use the provided tools to inspect the game state, communicate, and submit your action.",

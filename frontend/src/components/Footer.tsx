@@ -12,7 +12,7 @@ export const Footer = memo(function Footer() {
         {/* Col 1: Brand */}
         <div className="col-span-2 md:col-span-1">
           <Link to="/" className="flex items-center gap-2 no-underline mb-3">
-            <img src="/img/logo_only_outplaylabs_arena.png" alt="OutplayLabs Arena" className="h-6 w-auto" />
+            <img src="/img/logo_only_outplayarena.png" alt="OutplayArena" className="h-6 w-auto" />
             <span className="text-sm font-bold text-ink">OutplayLabs</span>
           </Link>
           <p className="text-xs text-muted leading-relaxed max-w-[180px]">
@@ -58,7 +58,7 @@ export const Footer = memo(function Footer() {
       {/* Bottom bar */}
       <div className="border-t border-line px-6 py-4 max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
         <p className="text-xs text-muted">
-          {footer.copyright || "© OutplayLabs Arena Contributors"}
+          {footer.copyright || "© OutplayArena Contributors"}
         </p>
         <div className="flex items-center gap-2">
           <span

@@ -2,12 +2,12 @@
 
 Action parsers convert the LLM's raw text output into the structured format a game expects. They are forgiving by design: when the LLM produces unparseable output, they fall back to a safe default rather than raising, so the agent loop never crashes on bad generations.
 
-The per-game agents in [`outplaylabs_arena_sdk.agents.games`](per-game-agents.md) all delegate to these parsers. You can also use them directly when writing your own agent subclasses.
+The per-game agents in [`outplayarena_sdk.agents.games`](per-game-agents.md) all delegate to these parsers. You can also use them directly when writing your own agent subclasses.
 
 ## `parse_allocation`
 
 ```python
-from outplaylabs_arena_sdk.parsers import parse_allocation
+from outplayarena_sdk.parsers import parse_allocation
 
 parse_allocation(text: str, n_fields: int, total: int) -> list[int]
 ```
@@ -27,7 +27,7 @@ Used by `ColonelBlottoAgent`.
 ## `parse_offer`
 
 ```python
-from outplaylabs_arena_sdk.parsers import parse_offer
+from outplayarena_sdk.parsers import parse_offer
 
 parse_offer(text: str, total: float, min_offer: float = 0.0) -> float
 ```
@@ -46,7 +46,7 @@ Used by `UltimatumAgent` (proposer).
 ## `parse_accept_reject`
 
 ```python
-from outplaylabs_arena_sdk.parsers import parse_accept_reject
+from outplayarena_sdk.parsers import parse_accept_reject
 
 parse_accept_reject(text: str) -> str
 ```
@@ -65,7 +65,7 @@ Used by `UltimatumAgent` (responder).
 ## `parse_choice`
 
 ```python
-from outplaylabs_arena_sdk.parsers import parse_choice
+from outplayarena_sdk.parsers import parse_choice
 
 parse_choice(text: str, options: list[str], default: str | None = None) -> str
 ```
@@ -85,7 +85,7 @@ Used by `PrisonersDilemmaAgent`, `RockPaperScissorsAgent`, `BattleOfTheSexesAgen
 ## `parse_quantity`
 
 ```python
-from outplaylabs_arena_sdk.parsers import parse_quantity
+from outplayarena_sdk.parsers import parse_quantity
 
 parse_quantity(text: str, max_quantity: float, default: float | None = None) -> float
 ```
@@ -105,7 +105,7 @@ Used by `CournotDuopolyAgent`, `PublicGoodsAgent`.
 ## `parse_poker_action`
 
 ```python
-from outplaylabs_arena_sdk.parsers import parse_poker_action
+from outplayarena_sdk.parsers import parse_poker_action
 
 parse_poker_action(
     text: str,
@@ -130,7 +130,7 @@ Used by `TexasHoldEmAgent`.
 ## `_balanced_allocation`
 
 ```python
-from outplaylabs_arena_sdk.parsers import _balanced_allocation
+from outplayarena_sdk.parsers import _balanced_allocation
 
 _balanced_allocation(n: int, total: int) -> list[int]
 ```
@@ -157,7 +157,7 @@ If you have a game with an unusual action format, write a parser that:
 Then override `parse_action` on a `BaseAgent` subclass to use it:
 
 ```python
-from outplaylabs_arena_sdk import BaseAgent, LLMConfig
+from outplayarena_sdk import BaseAgent, LLMConfig
 import re
 
 

@@ -1,4 +1,4 @@
-"""Tests for :mod:`outplaylabs_arena_sdk.base` (BaseAgent).
+"""Tests for :mod:`outplayarena_sdk.base` (BaseAgent).
 
 These tests use a fully-mocked OpenAI client and a fake transport so the
 agent loop can be exercised end-to-end without hitting a real backend.
@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from outplaylabs_arena_sdk.base import BaseAgent, LLMConfig
+from outplayarena_sdk.base import BaseAgent, LLMConfig
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -933,7 +933,7 @@ class TestEnsureReady:
             mcp_url="http://mcp:9999",
         )
 
-        with patch("outplaylabs_arena_sdk.base.MCPClient") as MockMCP:
+        with patch("outplayarena_sdk.base.MCPClient") as MockMCP:
             mock_mcp = MagicMock()
             mock_mcp.connect.side_effect = RuntimeError("connection refused")
             MockMCP.return_value = mock_mcp

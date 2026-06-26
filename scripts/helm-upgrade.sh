@@ -70,7 +70,7 @@ DB_PORT=5432
 REDIS_PORT=6379
 
 echo "==============================================================="
-echo "  OutplayLabs Arena — local dev cluster bootstrap"
+echo "  OutplayArena — local dev cluster bootstrap"
 echo "==============================================================="
 echo "Project root:  $PROJECT_ROOT"
 echo "Helm release:  $RELEASE  (namespace: $NS)"

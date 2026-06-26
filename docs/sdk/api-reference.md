@@ -1,10 +1,10 @@
 # SDK API reference
 
-Full reference for every public symbol in the `outplaylabs-arena-sdk` package.
+Full reference for every public symbol in the `outplayarena-sdk` package.
 
 ## Top-level
 
-::: outplaylabs_arena_sdk
+::: outplayarena_sdk
     options:
       show_root_heading: false
       members:
@@ -30,7 +30,7 @@ Full reference for every public symbol in the `outplaylabs-arena-sdk` package.
 
 ## Per-game agents
 
-::: outplaylabs_arena_sdk.agents.games
+::: outplayarena_sdk.agents.games
     options:
       show_root_heading: false
       members:
@@ -47,9 +47,9 @@ Full reference for every public symbol in the `outplaylabs-arena-sdk` package.
 
 ## Modules
 
-### `outplaylabs_arena_sdk.base`
+### `outplayarena_sdk.base`
 
-::: outplaylabs_arena_sdk.base.BaseAgent
+::: outplayarena_sdk.base.BaseAgent
     options:
       members:
         - __init__
@@ -74,9 +74,9 @@ Full reference for every public symbol in the `outplaylabs-arena-sdk` package.
         - action_format_hint
         - maybe_communicate
 
-### `outplaylabs_arena_sdk.client`
+### `outplayarena_sdk.client`
 
-::: outplaylabs_arena_sdk.client.ArenaClient
+::: outplayarena_sdk.client.ArenaClient
     options:
       members:
         - __init__
@@ -96,9 +96,9 @@ Full reference for every public symbol in the `outplaylabs-arena-sdk` package.
         - get_mailbox
         - send_message
 
-### `outplaylabs_arena_sdk.mcp_client`
+### `outplayarena_sdk.mcp_client`
 
-::: outplaylabs_arena_sdk.mcp_client.MCPClient
+::: outplayarena_sdk.mcp_client.MCPClient
     options:
       members:
         - __init__
@@ -117,9 +117,9 @@ Full reference for every public symbol in the `outplaylabs-arena-sdk` package.
         - get_mailbox
         - send_message
 
-### `outplaylabs_arena_sdk.parsers`
+### `outplayarena_sdk.parsers`
 
-::: outplaylabs_arena_sdk.parsers
+::: outplayarena_sdk.parsers
     options:
       show_root_heading: false
       members:
@@ -130,9 +130,9 @@ Full reference for every public symbol in the `outplaylabs-arena-sdk` package.
         - parse_quantity
         - parse_poker_action
 
-### `outplaylabs_arena_sdk.tools`
+### `outplayarena_sdk.tools`
 
-::: outplaylabs_arena_sdk.tools
+::: outplayarena_sdk.tools
     options:
       show_root_heading: false
       members:
@@ -143,9 +143,9 @@ Full reference for every public symbol in the `outplaylabs-arena-sdk` package.
         - send_message_tool
         - submit_action_tool
 
-### `outplaylabs_arena_sdk.transport`
+### `outplayarena_sdk.transport`
 
-::: outplaylabs_arena_sdk.transport.AsyncBackend
+::: outplayarena_sdk.transport.AsyncBackend
     options:
       members:
         - __init__
@@ -160,9 +160,9 @@ Full reference for every public symbol in the `outplaylabs-arena-sdk` package.
         - send_message
         - set_player_id
 
-### `outplaylabs_arena_sdk.registry`
+### `outplayarena_sdk.registry`
 
-::: outplaylabs_arena_sdk.registry
+::: outplayarena_sdk.registry
     options:
       show_root_heading: false
       members:
@@ -171,9 +171,9 @@ Full reference for every public symbol in the `outplaylabs-arena-sdk` package.
         - get_agent_class
         - supported_games
 
-### `outplaylabs_arena_sdk.seed`
+### `outplayarena_sdk.seed`
 
-::: outplaylabs_arena_sdk.seed.SeedResolver
+::: outplayarena_sdk.seed.SeedResolver
     options:
       members:
         - __init__
@@ -181,9 +181,9 @@ Full reference for every public symbol in the `outplaylabs-arena-sdk` package.
         - rng
         - resolve_from_config
 
-### `outplaylabs_arena_sdk.reasoning`
+### `outplayarena_sdk.reasoning`
 
-::: outplaylabs_arena_sdk.reasoning.ReasoningModerator
+::: outplayarena_sdk.reasoning.ReasoningModerator
     options:
       members:
         - __init__
@@ -196,26 +196,26 @@ Full reference for every public symbol in the `outplaylabs-arena-sdk` package.
         - prepare_request_body
         - extract_response_text
 
-::: outplaylabs_arena_sdk.reasoning.ReasoningEffort
+::: outplayarena_sdk.reasoning.ReasoningEffort
     options:
       show_root_heading: true
 
-::: outplaylabs_arena_sdk.reasoning.ReasoningStrategy
+::: outplayarena_sdk.reasoning.ReasoningStrategy
     options:
       show_root_heading: true
 
-### `outplaylabs_arena_sdk.results`
+### `outplayarena_sdk.results`
 
-::: outplaylabs_arena_sdk.results
+::: outplayarena_sdk.results
     options:
       show_root_heading: false
       members:
         - format_results
         - save_results
 
-### `outplaylabs_arena_sdk.quick_play`
+### `outplayarena_sdk.quick_play`
 
-::: outplaylabs_arena_sdk.quick_play
+::: outplayarena_sdk.quick_play
     options:
       show_root_heading: false
       members:

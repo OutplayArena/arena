@@ -1,6 +1,6 @@
 # Seeding
 
-Reproducible experiments require that the random number generator be seeded identically at every layer. The OutplayLabs Arena SDK auto-consumes the experiment's effective seed from the backend so the user can plug it into their own random generators.
+Reproducible experiments require that the random number generator be seeded identically at every layer. The OutplayArena SDK auto-consumes the experiment's effective seed from the backend so the user can plug it into their own random generators.
 
 ## What the SDK resolves
 
@@ -11,7 +11,7 @@ On the first backend response, `BaseAgent` pulls `config["seed"]` out of that pa
 ## Basic usage
 
 ```python
-from outplaylabs_arena_sdk import ColonelBlottoAgent, LLMConfig
+from outplayarena_sdk import ColonelBlottoAgent, LLMConfig
 
 agent = ColonelBlottoAgent(
     player="A",
@@ -70,4 +70,4 @@ If the experiment config has no `seed` (or a non-integer value), `agent.seed` is
 
 ## Per-game agents
 
-The seeding contract is the same for every per-game agent in `outplaylabs_arena_sdk.agents.games`. Each one inherits from `BaseAgent` and gets `seed` / `rng` for free.
+The seeding contract is the same for every per-game agent in `outplayarena_sdk.agents.games`. Each one inherits from `BaseAgent` and gets `seed` / `rng` for free.
