@@ -1,0 +1,6 @@
+http:
+  middlewares:
+    strip-docs-static:
+      stripPrefix:
+        prefixes:
+          - /docs-static
