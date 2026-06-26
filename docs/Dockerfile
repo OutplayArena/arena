@@ -1,9 +1,16 @@
 # ──── Stage 1: build ─────────────────────────────────────────────────────────
-FROM squidfunk/mkdocs-material:9 AS builder
+# Use python:3.12-slim as the base so mkdocstrings can introspect the
+# agent-sdk (which requires Python >=3.12). The squidfunk/mkdocs-material
+# image ships Python 3.11 and needs the deadsnakes PPA to get 3.12; using
+# python:3.12-slim is simpler and smaller.
+FROM python:3.12-slim AS builder
 
-RUN pip install --no-cache-dir \
-    mkdocstrings-python \
-    pyyaml
+RUN pip install --no-cache-dir --upgrade pip \
+ && pip install --no-cache-dir \
+      mkdocs-material \
+      mkdocstrings[python] \
+      pymdown-extensions \
+      pyyaml
 
 WORKDIR /docs
 
@@ -20,7 +27,7 @@ COPY agent-sdk/src/                 /docs/agent-sdk/src/
 COPY games/games/                   /docs/games/games/
 
 RUN python /docs/scripts/build_game_docs.py
-RUN mkdocs build
+RUN mkdocs build --strict
 
 # ──── Stage 2: serve ─────────────────────────────────────────────────────────
 FROM nginx:1.27-alpine
