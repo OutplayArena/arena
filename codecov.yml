@@ -9,4 +9,5 @@ codecov:
       default:
         target: 80%
   ignore:
+    - "games/games/_template/**"
     - "scripts/**"
