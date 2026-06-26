@@ -112,6 +112,12 @@ class TestPrisonersDilemma:
         state = {"scenario": {"cooperate_label": "cooperate", "defect_label": "defect"}}
         assert agent.parse_action("garbage", state) == "defect"
 
+    def test_actions_constant(self):
+        from outplaylabs_arena_sdk.agents.games.prisonersdilemma import (
+            PrisonersDilemmaAgent,
+        )
+        assert PrisonersDilemmaAgent.ACTIONS == ("cooperate", "defect")
+
 
 class TestRockPaperScissors:
     def test_rock(self):

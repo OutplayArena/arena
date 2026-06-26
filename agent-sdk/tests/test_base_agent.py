@@ -516,6 +516,42 @@ class TestToolCallingSubLoop:
 
         assert action == "[3, 3]"
 
+    @pytest.mark.asyncio
+    async def test_submits_via_tool_call_swallows_parse_action_errors(self):
+        """The submit_action path routes the LLM's allocation through
+        parse_action via json.dumps. If parse_action raises, the original
+        allocation is used (the except branch is the new line in
+        _decide_with_tools)."""
+        agent = _PassthroughAgent(
+            player="A", player_token=_make_session_token(),
+            arena_url="http://x", llm_config=_make_llm_config(),
+        )
+        # Make parse_action blow up so the except: pass branch runs.
+        def boom(*args, **kwargs):
+            raise Exception("kaboom")
+        agent.parse_action = boom
+
+        tool_call = MagicMock()
+        tool_call.id = "call_1"
+        tool_call.function.name = "submit_action"
+        tool_call.function.arguments = '{"allocation": {"alpha": 1, "beta": 0}}'
+
+        agent._openai = MagicMock()
+        agent._openai.chat.completions.create = MagicMock(
+            return_value=_mock_response(tool_calls=[tool_call])
+        )
+
+        with patch.object(agent, "_dispatch_tool_call", new=AsyncMock()):
+            action, _text = await agent._decide_with_tools(
+                observation={"system": "s", "turn": "t"},
+                state={"phase": "playing", "awaiting": ["A"]},
+            )
+            # On Exception, the fallback `function_call` dict is built and
+            # _dispatch_tool_call receives the original allocation under
+            # `arguments` (json.dumps of the dict), and `committed=True`.
+            # The action returned to the caller is the original allocation.
+            assert action == {"alpha": 1, "beta": 0}
+
 
 # ── Additional coverage: hooks, defaults, and lifecycle edges ────────────────
 
