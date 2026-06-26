@@ -192,6 +192,7 @@ nav:
       - mcp/gateway.md
       - mcp/setup.md
   - Deployment:
+      - deployment/single-vps.md
       - deployment/docker.md
       - deployment/kubernetes.md
       - deployment/configuration.md
