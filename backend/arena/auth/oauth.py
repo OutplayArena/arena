@@ -1,4 +1,3 @@
-import logging
 import os
 import uuid
 from datetime import datetime, timezone
@@ -12,8 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from arena.models.user import User
 
-_oauth_log = logging.getLogger("arena.auth.oauth")
-
 # Read OAUTH_CALLBACK_BASE_URL from .env directly so a stale shell export
 # can't pollute the dev fallback. Falls back to os.environ, then default.
 _ENV = dotenv_values(Path(__file__).resolve().parents[3] / ".env")
@@ -21,16 +18,6 @@ CALLBACK_BASE = (
     _ENV.get("OAUTH_CALLBACK_BASE_URL")
     or os.environ.get("OAUTH_CALLBACK_BASE_URL")
     or "http://localhost:8000"
-)
-
-# OAUTH_ALLOWED_BASES: comma-separated list of origins allowed as the OAuth
-# callback base (e.g. "https://arena.core-aix.org"). When unset (dev), the
-# Host header is trusted directly — set it in production to lock down the
-# redirect_uri and prevent Host-header injection attacks.
-_ALLOWED_CALLBACK_BASES: frozenset[str] = frozenset(
-    b.strip()
-    for b in os.environ.get("OAUTH_ALLOWED_BASES", "").split(",")
-    if b.strip()
 )
 
 oauth = OAuth()
@@ -92,29 +79,20 @@ async def _upsert_user(db: AsyncSession, provider: str, provider_user_id: str, e
 def _callback_base_for(request: Any) -> str:
     """Build the OAuth callback base URL.
 
-    When OAUTH_ALLOWED_BASES is set (production), only origins in that list are
-    accepted — anything else falls back to OAUTH_CALLBACK_BASE_URL, preventing
-    Host-header injection from redirecting OAuth callbacks to attacker domains.
-
-    When OAUTH_ALLOWED_BASES is unset (dev), the Host header is trusted
-    directly so any LAN IP, Tailscale MagicDNS name, or localhost works
-    without extra config.
+    Priority:
+      1. The request's ``Host`` header + scheme (so the redirect_uri matches
+         whatever hostname the user is accessing the SPA from — works for
+         any Tailscale MagicDNS name, LAN IP, or ``localhost``).
+      2. ``OAUTH_CALLBACK_BASE_URL`` env var — only used as a hard override
+         if the request has no ``Host`` header (shouldn't happen in
+         practice). Set this in production to lock the callback to a
+         specific origin. Leave unset (the default) for dev.
     """
     host = request.headers.get("host")
     if host:
+        # Trust X-Forwarded-Proto if a proxy is in front of us
         scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
-        candidate = f"{scheme}://{host}"
-        if _ALLOWED_CALLBACK_BASES:
-            if candidate in _ALLOWED_CALLBACK_BASES:
-                return candidate
-            _oauth_log.warning(
-                "OAuth callback Host rejected: %r not in OAUTH_ALLOWED_BASES; "
-                "falling back to OAUTH_CALLBACK_BASE_URL",
-                candidate,
-            )
-        else:
-            # Dev: no allowlist configured — trust the Host header as-is.
-            return candidate
+        return f"{scheme}://{host}"
     return CALLBACK_BASE.rstrip("/") or f"{request.url.scheme}://{request.url.netloc}"
 
 

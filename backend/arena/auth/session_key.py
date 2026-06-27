@@ -2,11 +2,11 @@ import hashlib
 import hmac
 import secrets
 
-from arena.auth import SESSION_KEY_SECRET
+from arena.auth import JWT_SECRET
 
 
 def _session_key_secret() -> bytes:
-    return hashlib.sha256(SESSION_KEY_SECRET.encode("utf-8")).digest()
+    return hashlib.sha256(JWT_SECRET.encode("utf-8")).digest()
 
 
 # DUPLICATE: Also defined in agent-sdk/src/outplayarena_sdk/client.py
