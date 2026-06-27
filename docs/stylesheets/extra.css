@@ -549,6 +549,12 @@ html {
 /* ─── Material footer hidden — replaced by our custom footer ──────── */
 .md-footer { display: none; }
 
+/* ─── Custom 4-column footer hidden — duplicates the React app's Footer ── */
+/* When /docs is wrapped by the React iframe the custom footer is double   */
+/* chrome (the React Footer sits below the iframe). Hide it here so users   */
+/* see only the mkdocs header (search, theme, GitHub) + sidebar + content.  */
+.na-footer { display: none; }
+
 /* ─── Source link button ───────────────────────────────────────────── */
 .md-source {
   border-radius: var(--na-radius-chip);
