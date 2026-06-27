@@ -31,7 +31,7 @@ env:
 
 jobs:
   build:
-    name: Build & push ${{ matrix.image.name }}
+    name: Build & push ${{ matrix.name }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -91,7 +91,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.image.name }}
+          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.name }}
           tags: |
             type=raw,value=${{ steps.tag.outputs.tag }},enable=${{ startsWith(github.ref, 'refs/tags/v') || inputs.tag != '' }}
             type=raw,value=${{ steps.tag.outputs.semver }},enable=${{ startsWith(github.ref, 'refs/tags/v') || inputs.tag != '' }}
