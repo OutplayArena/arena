@@ -79,6 +79,12 @@ include = [
 # ``search_parent_directories`` lets setuptools-scm (used under the hood by
 # hatch-vcs) walk up from the ``agent-sdk/`` subdir to find the monorepo's
 # git history.
+#
+# ``fallback-version`` is used when the build runs without git history
+# (e.g. Docker image builds with ``pip install ./agent-sdk`` — the
+# ``.git`` directory is not shipped into the image). Docker builds also
+# set ``SETUPTOOLS_SCM_PRETEND_VERSION`` explicitly to the tag-derived
+# version, so the fallback is just a safety net.
 [tool.hatch.version]
 source = "vcs"
-raw-options = { local_scheme = "no-local-version", search_parent_directories = true }
+raw-options = { local_scheme = "no-local-version", search_parent_directories = true, fallback_version = "0.0.0+unknown" }
