@@ -4,5 +4,6 @@ from arena.models.session import SessionModel
 from arena.models.api_key import ApiKey
 from arena.models.message_log import MessageLog
 from arena.models.mailbox_message import MailboxMessage
+from arena.models.error_log import ErrorLog
 
-__all__ = ["Base", "User", "SessionModel", "ApiKey", "MessageLog", "MailboxMessage"]
+__all__ = ["Base", "User", "SessionModel", "ApiKey", "MessageLog", "MailboxMessage", "ErrorLog"]

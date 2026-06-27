@@ -56,6 +56,14 @@ _logger: MessageLogger | None = None
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     global _broker, _persister, _logger
+
+    # Run pending Alembic migrations before any service touches the
+    # schema. ``upgrade head`` is idempotent — it only applies revisions
+    # newer than the current head, so it's safe to call on every boot.
+    # We invoke the synchronous alembic API from a thread executor so
+    # the async event loop is never blocked (alembic uses a sync engine).
+    await _run_alembic_upgrade()
+
     _broker = RedisBroker()
     _persister = StatePersister(_broker, _async_session_factory)
     await _persister.start()
@@ -72,6 +80,57 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     if _broker is not None:
         await _broker.close()
         _broker = None
+
+
+async def _run_alembic_upgrade() -> None:
+    """Apply pending Alembic migrations on app startup.
+
+    Alembic itself is sync; we run it in the default executor so the
+    event loop isn't blocked. We log the head before and after so an
+    operator can see what changed.
+    """
+    import asyncio
+    from logging import getLogger
+
+    from alembic import command
+    from alembic.config import Config
+    from alembic.runtime.migration import MigrationContext
+    from sqlalchemy import create_engine
+
+    from arena.db import DATABASE_URL
+
+    alembic_log = getLogger("arena.migrations")
+
+    sync_url = DATABASE_URL.replace("+asyncpg", "")
+    cfg = Config(str(Path(__file__).resolve().parent.parent / "alembic.ini"))
+    cfg.set_main_option("sqlalchemy.url", sync_url)
+
+    def _current_head() -> str | None:
+        engine = create_engine(sync_url)
+        try:
+            with engine.connect() as conn:
+                ctx = MigrationContext.configure(conn)
+                return ctx.get_current_revision()
+        finally:
+            engine.dispose()
+
+    def _upgrade() -> None:
+        before = _current_head()
+        command.upgrade(cfg, "head")
+        after = _current_head()
+        if before != after:
+            alembic_log.info("Applied Alembic migrations: %s -> %s", before, after)
+        else:
+            alembic_log.info("Alembic schema up to date at head=%s", after)
+
+    try:
+        await asyncio.get_running_loop().run_in_executor(None, _upgrade)
+    except Exception as exc:  # noqa: BLE001
+        # Migration failure is fatal: the rest of the lifespan and the
+        # request handlers all assume the schema is current. Re-raise so
+        # uvicorn exits with a non-zero status and Docker restarts us.
+        alembic_log.exception("Alembic upgrade failed: %s", exc)
+        raise
 
 
 app = FastAPI(
@@ -98,6 +157,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Catch-all exception handler: every unhandled error gets a UUID, the
+# traceback is persisted to error_logs, and the response shows the
+# UUID with a link to a prefilled GitHub issue. See arena.error_handler.
+from arena.error_handler import register_error_handlers  # noqa: E402
+register_error_handlers(app)
 
 
 async def _load_registries_from_db() -> None:
