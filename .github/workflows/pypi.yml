@@ -19,25 +19,21 @@ jobs:
   publish:
     name: Build & publish outplayarena-sdk
     runs-on: ubuntu-latest
-    environment:
-      # The 'pypi' GitHub environment gates real-PyPI publishes — push a
-      # tag, then a maintainer approves the deployment run. The token
-      # below is the 'pypi' environment's PYPI_API_TOKEN.
-      name: pypi
-      url: https://pypi.org/p/outplayarena-sdk
-    permissions:
-      contents: read
     defaults:
       run:
         working-directory: agent-sdk
+    environment:
+      # Configure trusted publishing on PyPI for the
+      # 'OutplayArena/arena' repo / 'publish' environment.
+      name: pypi
+      url: https://pypi.org/p/outplayarena-sdk
+    permissions:
+      id-token: write   # required for PyPI trusted publishing (OIDC)
     steps:
       - uses: actions/checkout@v4
-        with:
-          # hatch-vcs needs full history to derive the version from the
-          # nearest v*.*.* tag (the trigger of this workflow).
-          fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
@@ -56,26 +52,15 @@ jobs:
       - name: Publish to PyPI
         if: github.event_name == 'push'
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          # The build step produced artefacts in `agent-sdk/dist/`. The
-          # action's `packages-dir` defaults to `dist/` relative to
-          # `GITHUB_WORKSPACE` (the repo root) and does NOT honour the
-          # workflow's `defaults.run.working-directory`, so the path is
-          # explicit here.
-          packages-dir: agent-sdk/dist
-          password: ${{ secrets.PYPI_API_TOKEN }}
+        # Trusted publishing: no API token needed; PyPI matches the
+        # 'pypi' environment on the OutplayArena/arena repo.
 
       - name: Publish to TestPyPI
         if: github.event_name == 'workflow_dispatch' && inputs.repository == 'testpypi'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: agent-sdk/dist
           repository-url: https://test.pypi.org/legacy/
-          password: ${{ secrets.PYPI_TESTPYPI_TOKEN }}
 
       - name: Publish to PyPI (manual)
         if: github.event_name == 'workflow_dispatch' && inputs.repository == 'pypi'
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: agent-sdk/dist
-          password: ${{ secrets.PYPI_API_TOKEN }}
