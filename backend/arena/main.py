@@ -57,6 +57,16 @@ _logger: MessageLogger | None = None
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     global _broker, _persister, _logger
 
+    # Fail fast if JWT_SECRET is still the insecure default. Bypass by setting
+    # ALLOW_INSECURE_JWT_SECRET=1 in local dev (or set a real secret in .env).
+    from arena.auth import JWT_SECRET as _jwt_secret
+    if _jwt_secret == "dev-secret-change-me" and not os.environ.get("ALLOW_INSECURE_JWT_SECRET"):
+        raise RuntimeError(
+            "JWT_SECRET is set to the insecure default value. "
+            "Generate a real secret with: openssl rand -hex 32\n"
+            "Set ALLOW_INSECURE_JWT_SECRET=1 to bypass this check in local dev."
+        )
+
     # Run pending Alembic migrations before any service touches the
     # schema. ``upgrade head`` is idempotent — it only applies revisions
     # newer than the current head, so it's safe to call on every boot.
@@ -817,10 +827,18 @@ async def fail_session(
     request: dict[str, Any],
     db: AsyncSession = Depends(get_db),
     broker: MessageBroker = Depends(get_broker),
+    authorization: str | None = Header(default=None),
     _: None = require_agent_api(),
 ):
     """Mark a session as failed with an error message."""
     session = await get_session(session_id, db)
+    # Require a valid session key for this session — prevents unauthenticated
+    # callers from disrupting sessions when ENABLE_AGENT_REST_API=true.
+    token = bearer_token(authorization)
+    try:
+        session.player_for_token(token)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
     session.mark_failed(request.get("error", "unknown error"))
     state_dict = _serialize_state(session.state)
     await broker.enqueue("state:persist", {

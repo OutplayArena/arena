@@ -6,6 +6,10 @@ os.environ.setdefault("GITHUB_CLIENT_ID", "")
 os.environ.setdefault("GITHUB_CLIENT_SECRET", "")
 os.environ.setdefault("GOOGLE_CLIENT_ID", "")
 os.environ.setdefault("GOOGLE_CLIENT_SECRET", "")
+# arena.main's lifespan refuses to start with the default JWT_SECRET. Use a
+# non-default value for the test process; production must override this.
+os.environ.setdefault("JWT_SECRET", "test-jwt-secret-not-the-insecure-default")
+os.environ.setdefault("ALLOW_INSECURE_JWT_SECRET", "1")
 
 
 def pytest_collection_modifyitems(config, items):
