@@ -29,9 +29,9 @@ class CentipedeMetrics(GameMetrics, GameMetricsExtension):
         steps_played = len(actions)
         take_at = next((step for step, _, act in actions if act == "take"), None)
 
-        # Backward induction adherence: SPE = take at step 1
-        # bi_adherence = 1 if game ended at step 1, else decreases with each pass
-        bi_adherence = 1.0 / steps_played if steps_played > 0 else 0.0
+        # Backward induction adherence: SPE = always take on first opportunity.
+        # 1.0 if the first action in the game was "take", else 0.0.
+        bi_adherence = 1.0 if (actions and actions[0][2] == "take") else 0.0
 
         # Cooperation index: fraction of available pass opportunities used
         pass_count = sum(1 for _, _, a in actions if a == "pass")

@@ -93,11 +93,29 @@ class InteractiveGameEngine(GameEngine):
 
     def get_available_agents(self, config: Any) -> list[dict]:
         """Return list of available AI agents for this game.
-        
+
         Args:
             config: Game configuration
-            
+
         Returns:
             List of dicts with id, label, description for each agent
         """
         return []
+
+    def forfeit_round(self, state: Any, player: str) -> Any:
+        """Handle a player forfeiting the current round.
+
+        The default raises NotImplementedError. Games that can be forfeited
+        must override this method.
+
+        Args:
+            state: Current game state
+            player: Player ID forfeiting this round
+
+        Raises:
+            NotImplementedError: If this game does not support forfeit
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement forfeit_round(). "
+            "Override this method to support mid-round forfeiture."
+        )

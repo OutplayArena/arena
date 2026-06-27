@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from arena.interactive_game_engine import InteractiveGameEngine
 from games.core.public_goods.metrics import PublicGoodsMetrics
@@ -17,6 +17,9 @@ class PGGState:
     pending_punishments: dict[str, dict[str, float]]  # punisher -> {target: amount}
     history: list[dict]
     total_scores: dict[str, float]
+    # Contribution payoffs held between contribution and punishment phases.
+    # Stored as a proper field so state survives serialization round-trips.
+    round_payoffs: dict[str, float] = field(default_factory=dict)
 
 
 class PublicGoodsGame(InteractiveGameEngine):
@@ -208,7 +211,7 @@ class PublicGoodsGame(InteractiveGameEngine):
             "round_payoffs": dict(round_payoffs),
         }
         state.history.append(entry)
-        state._round_payoffs = round_payoffs  # type: ignore[attr-defined]
+        state.round_payoffs = round_payoffs
 
         if resolve_final:
             for p in self.player_ids:
@@ -219,7 +222,7 @@ class PublicGoodsGame(InteractiveGameEngine):
         return state
 
     def _resolve_punishment(self, state: PGGState) -> PGGState:
-        round_payoffs = getattr(state, "_round_payoffs", {})
+        round_payoffs = state.round_payoffs
         # Apply contributions to total first
         for p in self.player_ids:
             state.total_scores[p] = round(state.total_scores[p] + round_payoffs.get(p, 0.0), 2)
@@ -248,6 +251,7 @@ class PublicGoodsGame(InteractiveGameEngine):
         return state
 
     def _advance_round(self, state: PGGState) -> PGGState:
+        state.round_payoffs = {}
         if state.round_number >= self.num_rounds:
             state.phase = "complete"
             state.awaiting = []

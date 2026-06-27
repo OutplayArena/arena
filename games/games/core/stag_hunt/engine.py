@@ -174,6 +174,37 @@ class StagHuntGame(InteractiveGameEngine):
 
         return state
 
+    def forfeit_round(self, state: StagHuntState, player: str) -> StagHuntState:
+        """Player forfeits — treated as choosing hare while opponent chooses stag."""
+        opponent = "B" if player == "A" else "A"
+        state = deepcopy(state)
+        # Forfeiting = choosing hare; opponent gets stag-vs-hare advantage.
+        if player == "A":
+            outcome = "HS"
+            payoff_a, payoff_b = self.payoff_hare_hare, self.payoff_stag_hare
+        else:
+            outcome = "SH"
+            payoff_a, payoff_b = self.payoff_stag_hare, self.payoff_hare_hare
+        state.total_scores["A"] = round(state.total_scores["A"] + payoff_a, 2)
+        state.total_scores["B"] = round(state.total_scores["B"] + payoff_b, 2)
+        state.history.append({
+            "round":        state.round_number,
+            "actions":      {player: "hare", opponent: "stag"},
+            "outcome":      outcome,
+            "payoffs":      {"A": payoff_a, "B": payoff_b},
+            "forfeit":      True,
+            "forfeit_by":   player,
+            "total_scores": dict(state.total_scores),
+        })
+        if state.round_number >= self.num_rounds:
+            state.phase = "complete"
+            state.awaiting = []
+        else:
+            state.round_number += 1
+            state.awaiting = ["A", "B"]
+            state.pending_actions = {}
+        return state
+
     def is_terminal(self, state: StagHuntState) -> bool:
         return state.phase == "complete"
 
