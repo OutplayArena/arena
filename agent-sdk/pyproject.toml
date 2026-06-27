@@ -1,17 +1,17 @@
 [project]
 name = "outplayarena-sdk"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Python SDK for building and testing agents on OutplayArena."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [
     { name = "Ryan Zhang", email = "ryan.zhang@yale.edu" },
-    { name = "Herbert Woisetschlaeger", email = "herbert@woisetschlaeger.fyi" },
+    { name = "Herbert Woisetschläger", email = "herbert@woisetschlaeger.fyi" },
 ]
 keywords = [
     "arena",
-    "outplaylabs",
+    "outplayarena",
     "agent",
     "llm",
     "game-theory",
@@ -20,7 +20,7 @@ keywords = [
     "sdk",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
@@ -49,21 +49,36 @@ Homepage = "https://arena.core-aix.org"
 Documentation = "https://arena.core-aix.org/docs"
 Repository = "https://github.com/OutplayArena/arena"
 Issues = "https://github.com/OutplayArena/arena/issues"
+Changelog = "https://github.com/OutplayArena/arena/blob/main/agent-sdk/CHANGELOG.md"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/outplayarena_sdk"]
-
-[tool.hatch.build.targets.wheel.sources]
-"src" = ""
+# Ship the PEP 561 marker so downstream type checkers (mypy, pyright) treat
+# the package as typed.
+include = ["src/outplayarena_sdk/py.typed"]
 
 [tool.hatch.build.targets.sdist]
 include = [
     "src/outplayarena_sdk",
     "README.md",
     "LICENSE",
+    "CHANGELOG.md",
     "pyproject.toml",
 ]
+
+# Single source of truth for the version: the next ``git tag vX.Y.Z`` sets
+# the version to X.Y.Z. Tags with extra dots (v0.1.0rc1, v0.1.0.post1) also
+# work — hatch-vcs normalises them to PEP 440. We use the default
+# ``(?P<version>\d+\.\d+\.\d+\S*)`` pattern, which matches ``vX.Y.Z`` and
+# ``vX.Y.Z.postN`` / ``vX.Y.ZrcN`` (PEP 440-compatible) tags.
+#
+# ``search_parent_directories`` lets setuptools-scm (used under the hood by
+# hatch-vcs) walk up from the ``agent-sdk/`` subdir to find the monorepo's
+# git history.
+[tool.hatch.version]
+source = "vcs"
+raw-options = { local_scheme = "no-local-version", search_parent_directories = true }
