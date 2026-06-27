@@ -4,7 +4,7 @@ import { useSiteConfig } from "../hooks/useSiteConfig";
 
 
 export const Footer = memo(function Footer() {
-  const { github_url, docs_url, privacy_notice_url, footer } = useSiteConfig();
+  const { github_url, docs_url, privacy_notice_url } = useSiteConfig();
 
   return (
     <footer className="border-t border-line bg-surface-soft">
@@ -13,7 +13,7 @@ export const Footer = memo(function Footer() {
         <div className="col-span-2 md:col-span-1">
           <Link to="/" className="flex items-center gap-2 no-underline mb-3">
             <img src="/img/logo_only_outplayarena.png" alt="OutplayArena" className="h-6 w-auto" />
-            <span className="text-sm font-bold text-ink">OutplayLabs</span>
+            <span className="text-sm font-bold text-ink">OutplayArena</span>
           </Link>
           <p className="text-xs text-muted leading-relaxed max-w-[180px]">
             Rigorous, reproducible benchmarks for strategic AI behavior.
@@ -58,7 +58,15 @@ export const Footer = memo(function Footer() {
       {/* Bottom bar */}
       <div className="border-t border-line px-6 py-4 max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
         <p className="text-xs text-muted">
-          {footer.copyright || "© OutplayArena Contributors"}
+          © 2026 -{" "}
+          <a
+            href="https://github.com/OutplayArena/arena/graphs/contributors"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-muted hover:text-ink transition-colors"
+          >
+            OutplayArena Contributors
+          </a>
         </p>
         <div className="flex items-center gap-2">
           <span

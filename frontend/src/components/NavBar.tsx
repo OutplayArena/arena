@@ -55,7 +55,7 @@ export const NavBar = memo(function NavBar() {
       {/* Logo */}
       <NavLink to="/" className="flex items-center gap-2 no-underline shrink-0">
         <img src="/img/logo_only_outplayarena.png" alt="OutplayArena" className="h-7 w-auto" />
-        <span className="text-sm font-bold text-ink tracking-tight">OutplayLabs</span>
+        <span className="text-sm font-bold text-ink tracking-tight">OutplayArena</span>
       </NavLink>
 
       {/* Center nav */}

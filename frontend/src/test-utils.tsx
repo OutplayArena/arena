@@ -3,7 +3,10 @@ import { render, type RenderOptions } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { AppProvider } from "./state";
 import { AuthContext } from "./context/AuthContext";
+import { ThemeContext } from "./context/ThemeContext";
+import { SiteConfigContext } from "./context/SiteConfigContext";
 import type { AuthState } from "./context/AuthContext";
+import type { SiteConfig } from "./types";
 
 /* eslint-disable react-refresh/only-export-components */
 
@@ -35,6 +38,15 @@ function createMockAuthNoUser(overrides: Partial<AuthState> = {}): AuthState {
 
 import { vi } from "vitest";
 
+const mockTheme = { theme: "light" as const, toggle: vi.fn() };
+const mockSiteConfig: SiteConfig = {
+  github_url: "",
+  docs_url: "",
+  privacy_notice_url: "",
+  about_text: "",
+  footer: { copyright: "", tagline: "" },
+};
+
 interface CustomRenderOptions extends Omit<RenderOptions, "wrapper"> {
   auth?: AuthState;
   initialRoute?: string;
@@ -42,13 +54,17 @@ interface CustomRenderOptions extends Omit<RenderOptions, "wrapper"> {
 
 function AllProviders({ children, auth, initialRoute = "/" }: { children: ReactNode; auth: AuthState; initialRoute: string }) {
   return (
-    <AuthContext.Provider value={auth}>
-      <MemoryRouter initialEntries={[initialRoute]}>
-        <AppProvider>
-          {children}
-        </AppProvider>
-      </MemoryRouter>
-    </AuthContext.Provider>
+    <ThemeContext.Provider value={mockTheme}>
+      <SiteConfigContext.Provider value={mockSiteConfig}>
+        <AuthContext.Provider value={auth}>
+          <MemoryRouter initialEntries={[initialRoute]}>
+            <AppProvider>
+              {children}
+            </AppProvider>
+          </MemoryRouter>
+        </AuthContext.Provider>
+      </SiteConfigContext.Provider>
+    </ThemeContext.Provider>
   );
 }
 

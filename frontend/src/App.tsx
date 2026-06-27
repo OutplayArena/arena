@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { NavBar } from "./components/NavBar";
 import { Footer } from "./components/Footer";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -17,9 +17,17 @@ import { DocsPage } from "./pages/DocsPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export default function App() {
+  // Hide the React chrome on /docs/* so the user gets the mkdocs Material
+  // experience (header + sidebar + content) without a duplicate navbar/footer
+  // wrapping the iframe. The iframe's internal navigation does not change
+  // the parent's pathname, so this stays stable across in-iframe page changes.
+  const location = useLocation();
+  const isDocs =
+    location.pathname === "/docs" || location.pathname.startsWith("/docs/");
+
   return (
     <div className="flex flex-col min-h-screen min-h-dvh">
-      <NavBar />
+      {!isDocs && <NavBar />}
       <main className="flex-1 flex flex-col min-h-0">
         <ErrorBoundary>
           <Routes>
@@ -82,7 +90,7 @@ export default function App() {
           </Routes>
         </ErrorBoundary>
       </main>
-      <Footer />
+      {!isDocs && <Footer />}
     </div>
   );
 }
