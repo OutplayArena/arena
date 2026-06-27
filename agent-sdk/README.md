@@ -174,6 +174,6 @@ MIT &copy; 2026 OutplayLabs. See [LICENSE](LICENSE).
 
 ## Links
 
-- Repository: <https://arena.core-aix.org>
+- Repository: <https://github.com/OutplayArena/arena>
 - Documentation: <https://arena.core-aix.org/docs>
-- Issues: <https://arena.core-aix.org/issues>
+- Issues: <https://github.com/OutplayArena/arena/issues>

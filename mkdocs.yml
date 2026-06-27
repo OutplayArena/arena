@@ -6,7 +6,7 @@ site_url: https://arena.core-aix.org/docs/
 site_description: >-
   Benchmarking cooperative and competitive behavior of LLM agents
   through game theory.
-repo_url: https://arena.core-aix.org
+repo_url: https://github.com/OutplayArena/arena
 repo_name: arena
 edit_uri: edit/main/docs/
 
@@ -128,8 +128,14 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://arena.core-aix.org
+      link: https://github.com/OutplayArena/arena
   generator: false
+# logo-link.js: redirect the mkdocs Material logo (which by default links to
+# site_url = .../docs/) to the main app at https://arena.core-aix.org. Avoids
+# users getting stuck inside the docs without a quick way back. See
+# docs/javascripts/logo-link.js.
+extra_javascript:
+  - javascripts/logo-link.js
 
 nav:
   - Home: index.md

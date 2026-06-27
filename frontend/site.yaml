@@ -1,9 +1,9 @@
 # OutplayArena site configuration
 # Edit this file to customize links and content on the landing page
 
-github_url: "https://arena.core-aix.org"
+github_url: "https://github.com/OutplayArena/arena"
 docs_url: "https://arena.core-aix.org/docs"
-privacy_notice_url: "https://arena.core-aix.org/blob/main/PRIVACY.md"
+privacy_notice_url: "https://github.com/OutplayArena/arena/blob/main/PRIVACY.md"
 
 about_text: >
   The OutplayArena is an open-source platform for game theory simulation and

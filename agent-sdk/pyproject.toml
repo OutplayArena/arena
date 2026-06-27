@@ -47,8 +47,8 @@ dev = [
 [project.urls]
 Homepage = "https://arena.core-aix.org"
 Documentation = "https://arena.core-aix.org/docs"
-Repository = "https://arena.core-aix.org"
-Issues = "https://arena.core-aix.org/issues"
+Repository = "https://github.com/OutplayArena/arena"
+Issues = "https://github.com/OutplayArena/arena/issues"
 
 [build-system]
 requires = ["hatchling"]

@@ -72,7 +72,7 @@ ssh root@<vps-ipv4>
 Clone the repo and run the bootstrap script:
 
 ```bash
-git clone https://github.com/OutplayLabs/arena.git /opt/arena
+git clone https://github.com/OutplayArena/arena.git /opt/arena
 cd /opt/arena
 bash deploy/scripts/bootstrap.sh
 ```
@@ -267,7 +267,7 @@ Worst case (VPS gone, you have to start over on a new one):
 
 1. Buy a new Hetzner CX22
 2. Run `bootstrap.sh` on the new box
-3. Clone the repo: `git clone https://github.com/OutplayLabs/arena.git /opt/arena`
+3. Clone the repo: `git clone https://github.com/OutplayArena/arena.git /opt/arena`
 4. Edit the new `deploy/.env` to match the old one
 5. Start the stack: `docker compose -f deploy/docker-compose.yml up -d --build`
 6. Restore from the Storage Box:
