@@ -49,5 +49,11 @@ jobs:
       - name: Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          # The build step produced artefacts in `agent-sdk/dist/`. The
+          # action's `packages-dir` defaults to `dist/` relative to
+          # `GITHUB_WORKSPACE` (the repo root) and does NOT honour the
+          # workflow's `defaults.run.working-directory`, so the path is
+          # explicit here.
+          packages-dir: agent-sdk/dist
           repository-url: https://test.pypi.org/legacy/
           password: ${{ secrets.PYPI_TESTPYPI_TOKEN }}
