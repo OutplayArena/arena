@@ -1,0 +1,66 @@
+name: Publish Python SDK to PyPI
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: "PyPI repository to publish to"
+        type: choice
+        required: true
+        default: testpypi
+        options:
+          - pypi
+          - testpypi
+
+jobs:
+  publish:
+    name: Build & publish outplayarena-sdk
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agent-sdk
+    environment:
+      # Configure trusted publishing on PyPI for the
+      # 'OutplayArena/arena' repo / 'publish' environment.
+      name: pypi
+      url: https://pypi.org/p/outplayarena-sdk
+    permissions:
+      id-token: write   # required for PyPI trusted publishing (OIDC)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tooling
+        run: python -m pip install --upgrade pip build
+
+      - name: Build sdist + wheel
+        run: python -m build
+
+      - name: Verify built artefacts
+        run: |
+          ls -lh dist/
+          python -m pip install --quiet twine
+          python -m twine check dist/*
+
+      - name: Publish to PyPI
+        if: github.event_name == 'push'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # Trusted publishing: no API token needed; PyPI matches the
+        # 'pypi' environment on the OutplayArena/arena repo.
+
+      - name: Publish to TestPyPI
+        if: github.event_name == 'workflow_dispatch' && inputs.repository == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+      - name: Publish to PyPI (manual)
+        if: github.event_name == 'workflow_dispatch' && inputs.repository == 'pypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
