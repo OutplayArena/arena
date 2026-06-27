@@ -52,20 +52,42 @@ SYNC_URL="${DATABASE_URL/%+asyncpg/}"
 
 ACTION="${1:-upgrade}"
 
-cd "$BACKEND_DIR"
+# Run alembic inside the backend container so we don't have to keep
+# alembic installed on the host (it's only in the backend image).
+# The container's DATABASE_URL is set by docker-compose; we override
+# it here so the migration sees the same sync URL this script computed
+# from the .env.
+run_in_container() {
+    local cmd="$1"
+    cd "$COMPOSE_DIR"
+    if ! docker compose ps --status running backend >/dev/null 2>&1; then
+        # Backend isn't running — start it ephemerally for the upgrade.
+        # The lifespan's _run_alembic_upgrade would also do this, but
+        # only after the API is fully up; running here is faster and
+        # gives a clear "migrations applied" log line.
+        docker compose run --rm \
+            --entrypoint "" \
+            -e DATABASE_URL="$SYNC_URL" \
+            backend python -m alembic "$cmd"
+    else
+        docker compose exec -T \
+            -e DATABASE_URL="$SYNC_URL" \
+            backend python -m alembic "$cmd"
+    fi
+}
 
 case "$ACTION" in
     upgrade|upgrade-head|head)
         echo "[migrate] Applying pending migrations..."
-        DATABASE_URL="$SYNC_URL" alembic upgrade head
+        run_in_container upgrade head
         ;;
     current)
         echo "[migrate] Current Alembic head:"
-        DATABASE_URL="$SYNC_URL" alembic current
+        run_in_container current
         ;;
     history)
         echo "[migrate] Alembic revision history:"
-        DATABASE_URL="$SYNC_URL" alembic history
+        run_in_container history
         ;;
     *)
         echo "Usage: $0 [upgrade|current|history]" >&2
