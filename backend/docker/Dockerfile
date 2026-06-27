@@ -39,6 +39,13 @@ RUN npm run build
 # ──── Stage 3: final image ───────────────────────────────────────────────────
 FROM python:3.12-slim
 WORKDIR /app
+# Pass the SDK version in at build time so setuptools-scm/hatch-vcs can
+# derive a version even though we only COPY the agent-sdk subdir (no
+# .git history is shipped into the image). The release workflow passes
+# --build-arg SDK_VERSION=<tag>; local builds via docker compose use the
+# compose-level `args` block.
+ARG SDK_VERSION=0.0.0+unknown
+ENV SETUPTOOLS_SCM_PRETEND_VERSION_FOR_OUTPLAYARENA_SDK=$SDK_VERSION
 COPY agent-sdk/pyproject.toml agent-sdk/pyproject.toml
 COPY agent-sdk/README.md agent-sdk/README.md
 COPY agent-sdk/src/ agent-sdk/src/
