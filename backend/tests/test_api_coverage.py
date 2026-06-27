@@ -646,8 +646,10 @@ class TestSessionEndpoints:
     def test_fail_session(self, client):
         c, _, broker, _ = client
         created = c.post("/experiment", json=_valid_payload()).json()
+        token = created["player_tokens"]["A"]
         response = c.post(
             f"/session/{created['session_id']}/fail",
+            headers={"Authorization": f"Bearer {token}"},
             json={"error": "manual fail"},
         )
         assert response.status_code == 200
