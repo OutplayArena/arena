@@ -66,7 +66,7 @@ class ColonelBlottoGame(InteractiveGameEngine):
             awaiting=["A", "B"],
             pending_actions={},
             history=[],
-            total_scores={"A": 0, "B": 0},
+            total_scores={"A": 0.0, "B": 0.0},
         )
 
     def state_from_dict(self, d: dict) -> ColonelBlottoState:
@@ -205,22 +205,19 @@ class ColonelBlottoGame(InteractiveGameEngine):
         opponent = "B" if player == "A" else "A"
         fields = self.num_battlefields
 
+        next_state.total_scores[opponent] = round(next_state.total_scores[opponent] + fields, 2)
         next_state.history.append({
             "round": next_state.round_number,
             "allocations": {
                 player: [0] * fields,
-                opponent: [self.total_resources] * fields,
+                opponent: None,  # no allocation submitted; opponent wins by default
             },
-            "scores": {player: 0, opponent: float(fields)},
+            "scores": {player: 0.0, opponent: float(fields)},
             "winner": opponent,
-            "total_scores": {
-                **next_state.total_scores,
-                opponent: next_state.total_scores[opponent] + fields,
-            },
+            "total_scores": dict(next_state.total_scores),
             "forfeit": True,
             "forfeit_by": player,
         })
-        next_state.total_scores[opponent] = round(next_state.total_scores[opponent] + fields, 2)
 
         if next_state.round_number >= self.num_rounds:
             next_state.phase = "complete"

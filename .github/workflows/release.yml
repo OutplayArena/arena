@@ -31,7 +31,7 @@ env:
 
 jobs:
   build:
-    name: Build & push ${{ matrix.image.name }}
+    name: Build & push ${{ matrix.name }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -41,8 +41,6 @@ jobs:
             dockerfile: backend/docker/Dockerfile
           - name: arena-mcp
             dockerfile: backend/docker/Dockerfile.mcp
-          - name: arena-docs
-            dockerfile: docs/Dockerfile
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -91,7 +89,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.image.name }}
+          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.name }}
           tags: |
             type=raw,value=${{ steps.tag.outputs.tag }},enable=${{ startsWith(github.ref, 'refs/tags/v') || inputs.tag != '' }}
             type=raw,value=${{ steps.tag.outputs.semver }},enable=${{ startsWith(github.ref, 'refs/tags/v') || inputs.tag != '' }}
@@ -104,6 +102,11 @@ jobs:
         with:
           context: .
           file: ${{ matrix.dockerfile }}
+          # Pass the SDK version so setuptools-scm / hatch-vcs can resolve a
+          # version during `pip install ./agent-sdk` inside the image (the
+          # .git directory isn't shipped in the build context, so the build
+          # can't derive a version on its own).
+          build-args: SDK_VERSION=${{ steps.tag.outputs.semver }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}

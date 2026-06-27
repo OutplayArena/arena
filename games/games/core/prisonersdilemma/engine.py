@@ -242,10 +242,11 @@ class PDGame(InteractiveGameEngine):
         payoff_opponent = self.T
         state.total_scores[player] = round(state.total_scores[player] + payoff_player, 2)
         state.total_scores[opponent] = round(state.total_scores[opponent] + payoff_opponent, 2)
-        outcome = "DC" if player == "B" else "CD"
+        # "DC" = A defects, B cooperates; "CD" = A cooperates, B defects
+        outcome = "CD" if player == "B" else "DC"
         state.history.append({
             "round":        state.round_number,
-            "actions":      {opponent: "cooperate"},
+            "actions":      {player: "forfeit", opponent: "cooperate"},
             "outcome":      outcome,
             "payoffs":      {player: payoff_player, opponent: payoff_opponent},
             "forfeit":      True,

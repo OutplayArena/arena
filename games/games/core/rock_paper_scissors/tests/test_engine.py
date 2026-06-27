@@ -168,9 +168,10 @@ def test_forfeit_round():
     state = game.initial_state()
     state = game.forfeit_round(state, "A")
     assert state.total_scores["B"] == 1.0
-    assert state.total_scores["A"] == -1.0
+    assert state.total_scores["A"] == 0.0  # forfeiting player is not penalised
     assert state.history[0]["forfeit"] is True
     assert state.history[0]["forfeit_by"] == "A"
+    assert state.history[0]["actions"]["A"] == "forfeit"
 
 
 # ── State serialisation ───────────────────────────────────────────────────────

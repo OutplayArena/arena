@@ -180,11 +180,10 @@ class RPSGame(InteractiveGameEngine):
         opponent = "B" if player == "A" else "A"
         state = deepcopy(state)
         state.total_scores[opponent] = round(state.total_scores[opponent] + 1.0, 2)
-        state.total_scores[player] = round(state.total_scores[player] - 1.0, 2)
         state.history.append({
             "round":        state.round_number,
-            "actions":      {},
-            "scores":       {player: -1.0, opponent: 1.0},
+            "actions":      {player: "forfeit", opponent: None},
+            "scores":       {player: 0.0, opponent: 1.0},
             "winner":       opponent,
             "forfeit":      True,
             "forfeit_by":   player,
