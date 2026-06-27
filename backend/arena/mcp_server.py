@@ -16,11 +16,6 @@ OUTPLAYARENA_BASE_URL = (
     or os.environ.get("ARENA_BASE_URL", "http://127.0.0.1:8000/api")
 )
 
-# Reuse a single httpx.Client across all MCP tool calls (one TCP connection
-# pool for the lifetime of the process instead of a new connection per call).
-_ARENA_CLIENT_TIMEOUT = float(os.environ.get("ARENA_CLIENT_TIMEOUT", "10.0"))
-_http_client = httpx.Client(timeout=_ARENA_CLIENT_TIMEOUT)
-
 # Per-request context: (session_id, player, raw_session_key)
 _session_ctx: ContextVar[tuple[str, str, str]] = ContextVar("session_ctx")
 
@@ -104,7 +99,7 @@ def arena_client() -> ArenaClient:
         base_url=OUTPLAYARENA_BASE_URL,
         session_id=session_id,
         token=session_key,
-        http_client=_http_client,
+        http_client=httpx.Client(timeout=10.0),
     )
 
 
@@ -113,29 +108,7 @@ def player_id() -> str:
     return player
 
 
-# DNS rebinding protection: validate Host and Origin headers on every MCP request.
-# In production, set MCP_ALLOWED_HOSTS=<domain> and MCP_ALLOWED_ORIGINS=https://<domain>.
-# In dev, the defaults allow localhost with any port.
-_mcp_allowed_hosts = [
-    h.strip()
-    for h in os.environ.get("MCP_ALLOWED_HOSTS", "localhost:*,127.0.0.1:*").split(",")
-    if h.strip()
-]
-_mcp_allowed_origins = [
-    o.strip()
-    for o in os.environ.get("MCP_ALLOWED_ORIGINS", "").split(",")
-    if o.strip()
-]
-
-mcp = FastMCP(
-    "arena",
-    stateless_http=True,
-    transport_security=TransportSecuritySettings(
-        enable_dns_rebinding_protection=True,
-        allowed_hosts=_mcp_allowed_hosts,
-        allowed_origins=_mcp_allowed_origins,
-    ),
-)
+mcp = FastMCP("arena", stateless_http=True, transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False))
 
 
 @mcp.tool()
