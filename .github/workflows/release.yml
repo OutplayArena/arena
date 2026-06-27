@@ -1,0 +1,130 @@
+name: Release
+
+# Push a tag like v0.1.0 to publish the OutplayArena images to ghcr.io.
+# The first tag pushed is also tagged `latest`. The tag format is enforced
+# at `on.push.tags`; manual runs (workflow_dispatch) let you specify a tag
+# for re-publishing or one-off builds.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish under (e.g. v0.1.0). Leave empty for the latest reachable semver."
+        required: false
+        default: ""
+      publish_latest:
+        description: "Also tag the images as :latest"
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: write   # so we can create GitHub releases
+  packages: write   # so we can push to ghcr.io
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: outplayarena
+
+jobs:
+  build:
+    name: Build & push ${{ matrix.image.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: arena-backend
+            dockerfile: backend/docker/Dockerfile
+          - name: arena-mcp
+            dockerfile: backend/docker/Dockerfile.mcp
+          - name: arena-docs
+            dockerfile: docs/Dockerfile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ${{ env.REGISTRY }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve tag list
+        id: tag
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          # Tag sources, in order of preference:
+          #   1. workflow_dispatch input 'tag'
+          #   2. the ref name when triggered by a tag push (e.g. v0.1.0)
+          if [ -n "$INPUT_TAG" ]; then
+            TAG="$INPUT_TAG"
+          elif [[ "$REF_NAME" == v* ]]; then
+            TAG="$REF_NAME"
+          else
+            echo "::error::Cannot resolve a version tag from ref '$REF_NAME' or input."
+            exit 1
+          fi
+          # Strip a leading 'v' for semver-style tags.
+          SEMVER="${TAG#v}"
+          MAJOR_MINOR_PATCH="${SEMVER}"
+          MAJOR_MINOR="${SEMVER%.*}"
+          echo "tag=${TAG}"          >> "$GITHUB_OUTPUT"
+          echo "semver=${SEMVER}"    >> "$GITHUB_OUTPUT"
+          echo "mmp=${MAJOR_MINOR_PATCH}" >> "$GITHUB_OUTPUT"
+          echo "mm=${MAJOR_MINOR}"    >> "$GITHUB_OUTPUT"
+          echo "Resolved tag=${TAG} (semver=${SEMVER})"
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.image.name }}
+          tags: |
+            type=raw,value=${{ steps.tag.outputs.tag }},enable=${{ startsWith(github.ref, 'refs/tags/v') || inputs.tag != '' }}
+            type=raw,value=${{ steps.tag.outputs.semver }},enable=${{ startsWith(github.ref, 'refs/tags/v') || inputs.tag != '' }}
+            type=raw,value=${{ steps.tag.outputs.mm }}
+            type=raw,value=${{ steps.tag.outputs.mmp }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') || inputs.publish_latest }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+  release:
+    name: GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') }}
