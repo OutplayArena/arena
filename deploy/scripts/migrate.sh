@@ -31,9 +31,19 @@ if [[ -f "$ENV_FILE" ]]; then
     set +a
 fi
 
+# The .env on this deploy only carries POSTGRES_USER / POSTGRES_PASSWORD /
+# POSTGRES_DB — the backend constructs DATABASE_URL itself in docker-compose.
+# Mirror that here so a manual migration run sees the same URL the API
+# would use at runtime. (asyncpg → sync strip is the only transformation.)
 if [[ -z "${DATABASE_URL:-}" ]]; then
-    echo "[migrate] DATABASE_URL is not set; check $ENV_FILE" >&2
-    exit 1
+    if [[ -n "${POSTGRES_USER:-}" && -n "${POSTGRES_PASSWORD:-}" && -n "${POSTGRES_DB:-}" ]]; then
+        POSTGRES_HOST="${POSTGRES_HOST:-postgres}"
+        POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+        DATABASE_URL="postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
+    else
+        echo "[migrate] DATABASE_URL is not set; check $ENV_FILE" >&2
+        exit 1
+    fi
 fi
 
 # Alembic runs against a synchronous URL. The backend's DATABASE_URL
