@@ -35,8 +35,6 @@ Example::
     )
 """
 
-import importlib.metadata as _importlib_metadata
-
 from outplayarena_sdk._compat import MCPAgent
 from outplayarena_sdk.base import BaseAgent, LLMConfig
 from outplayarena_sdk.client import ArenaClient
@@ -75,13 +73,7 @@ from outplayarena_sdk.agents.games import (
 )
 
 
-try:
-    __version__ = _importlib_metadata.version("outplayarena-sdk")
-except _importlib_metadata.PackageNotFoundError:
-    # Source checkout without ``pip install -e .`` (e.g. contributors running
-    # straight from a git clone). Don't hard-fail import — just mark unknown
-    # so logs and runtime introspection still work.
-    __version__ = "unknown"
+__version__ = "0.2.0"
 
 
 __all__ = [
