@@ -15,8 +15,20 @@
 # Run from the deploy/ directory:
 #   cp .env.production.example .env
 #   $EDITOR .env       # fill in DOMAIN, secrets, OAuth, etc.
-#   docker compose pull
-#   docker compose up -d --build
+#
+# The three arena images (backend, mcp, docs) are pulled from ghcr.io.
+# Override the tag with IMAGE_TAG (defaults to the current release). Set
+# IMAGE_TAG=latest to track the rolling release, or IMAGE_TAG=v0.1.0
+# to pin a specific one. The compose uses both `build:` (so `docker
+# compose build` still works for local dev) and `image:` (so `docker
+# compose pull` fetches from ghcr.io and `docker compose up` runs the
+# pulled image). When the local image and the pulled image share the
+# same tag, compose prefers the local build.
+#
+#   docker compose pull   # fetch the tagged images from ghcr.io
+#   docker compose up -d  # (re)create the services from the pulled images
+#
+# To cut a new release, push a tag like v0.1.0; see .github/workflows/release.yml.
 
 # YAML anchor: cap container logs at 3×10MB (rotated by Docker).
 x-logging: &default-logging
@@ -124,6 +136,7 @@ services:
     build:
       context: ..
       dockerfile: backend/docker/Dockerfile
+    image: ghcr.io/outplayarena/arena-backend:${IMAGE_TAG:-v0.1.0}
     env_file: .env
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-outplayarena}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-outplayarena}
@@ -155,6 +168,7 @@ services:
     build:
       context: ..
       dockerfile: backend/docker/Dockerfile.mcp
+    image: ghcr.io/outplayarena/arena-mcp:${IMAGE_TAG:-v0.1.0}
     env_file: .env
     environment:
       OUTPLAYARENA_BASE_URL: http://backend:8000/api
@@ -177,6 +191,7 @@ services:
     build:
       context: ..
       dockerfile: docs/Dockerfile
+    image: ghcr.io/outplayarena/arena-docs:${IMAGE_TAG:-v0.1.0}
     # Expose the docs directly on a host port as a fallback. Traefik's
     # docs route is also defined (see labels below) but the host port
     # gives us a reliable way to verify the container is serving
