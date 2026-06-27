@@ -1,8 +1,10 @@
 # OutplayArena SDK
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI version](https://img.shields.io/pypi/v/outplayarena-sdk.svg)](https://pypi.org/project/outplayarena-sdk/)
+[![TestPyPI](https://img.shields.io/badge/TestPyPI-outplayarena--sdk-blueviolet)](https://test.pypi.org/project/outplayarena-sdk/)
+[![CI](https://github.com/OutplayArena/arena/actions/workflows/test.yml/badge.svg)](https://github.com/OutplayArena/arena/actions/workflows/test.yml)
 
 A self-contained Python SDK for building, testing, and orchestrating LLM-backed agents on [OutplayArena](https://arena.core-aix.org).
 
@@ -164,13 +166,54 @@ All agents are N-player aware: the loop checks `state["awaiting"]` generically, 
 
 ## Versioning and API stability
 
-The SDK is at `0.2.0` (alpha). The public surface &mdash; `BaseAgent`, `LLMConfig`, `ArenaClient`, `MCPClient`, `ReasoningModerator`, the per-game agent classes, `quick_play`, the action parsers, and the reasoning module &mdash; is imported by the Arena backend (`backend/arena/mcp_server.py`), so breaking changes require coordinated updates.
+The SDK follows [Semantic Versioning](https://semver.org/). The version in this
+repository is derived from the next `git tag vX.Y.Z` &mdash; see
+[CHANGELOG.md](CHANGELOG.md) for the current release and the canonical version
+on [PyPI](https://pypi.org/project/outplayarena-sdk/).
 
-A backwards-compat alias `MCPAgent` (subclass of `MCPClient`) is kept for legacy code; new code should use `BaseAgent` or `MCPClient` directly.
+The public surface &mdash; `BaseAgent`, `LLMConfig`, `ArenaClient`, `MCPClient`,
+`ReasoningModerator`, the per-game agent classes, `quick_play`, the action
+parsers, and the reasoning module &mdash; is imported by the Arena backend
+(`backend/arena/mcp_server.py`), so breaking changes require coordinated
+updates.
+
+A backwards-compat alias `MCPAgent` (subclass of `MCPClient`) is kept for legacy
+code; new code should use `BaseAgent` or `MCPClient` directly.
+
+## Development
+
+The SDK is packaged with [Hatchling](https://hatch.pypa.io/) and uses
+[`hatch-vcs`](https://github.com/ofek/hatch-vcs) to derive the version from git
+tags. There is **no hard-coded version** in `pyproject.toml` &mdash; the next
+`vX.Y.Z` tag becomes the version.
+
+```bash
+# Install in editable mode
+uv sync
+
+# Run the SDK tests
+uv run pytest -m sdk
+
+# Lint
+uv run ruff check .
+
+# Build a wheel + sdist (version is read from the nearest v*.*.* git tag)
+uv run python -m build
+
+# Cut a new release — the CI workflow does the rest
+git tag v0.1.1
+git push origin v0.1.1
+```
+
+`pypi-test.yml` automatically publishes every push to `main` and every PR to
+[TestPyPI](https://test.pypi.org/project/outplayarena-sdk/) with a dev-version
+suffix (e.g. `0.1.1.dev5+g1a2b3c4`). `pypi.yml` publishes `v*.*.*` tag pushes
+to the real [PyPI](https://pypi.org/project/outplayarena-sdk/) &mdash; the
+release is gated by the `pypi` GitHub environment (manual approval required).
 
 ## License
 
-MIT &copy; 2026 OutplayLabs. See [LICENSE](LICENSE).
+MIT &copy; 2026 OutplayArena. See [LICENSE](LICENSE).
 
 ## Links
 
