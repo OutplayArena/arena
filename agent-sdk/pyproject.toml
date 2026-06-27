@@ -87,4 +87,4 @@ include = [
 # version, so the fallback is just a safety net.
 [tool.hatch.version]
 source = "vcs"
-raw-options = { local_scheme = "no-local-version", search_parent_directories = true, fallback-version = "0.0.0+unknown" }
+raw-options = { local_scheme = "no-local-version", search_parent_directories = true, fallback_version = "0.0.0+unknown" }
