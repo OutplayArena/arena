@@ -2,7 +2,7 @@
 
 [![CI](https://arena.core-aix.org/actions/workflows/test.yml/badge.svg?branch=main)](https://arena.core-aix.org/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/OutplayLabs/arena/graph/badge.svg?token=YO25LMDH36)](https://codecov.io/gh/OutplayLabs/arena)
-[![License](https://img.shields.io/badge/license-Apache--2.0%20OR%20GPL--3.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](docs/contributing/)
 [![uv](https://img.shields.io/badge/uv-managed-5C3D8E?logo=astral&logoColor=white)](https://docs.astral.sh/uv/)
 [![ruff](https://img.shields.io/badge/code%20style-ruff-D7FF64?logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
