@@ -68,6 +68,10 @@ export function LeaderboardFilters({
   const showRange = Boolean(
     !gameOnly && dateRange?.min_date && dateRange?.max_date,
   );
+  // When the underlying dataset has no data, both bounds are null and the
+  // date filter is meaningless — disable both pickers so the user can't
+  // pick dates that would match nothing.
+  const datePickerDisabled = !dateRange?.min_date || !dateRange?.max_date;
 
   return (
     <div
@@ -115,6 +119,7 @@ export function LeaderboardFilters({
               label="From"
               testId="leaderboard-filter-from"
               align={align === "center" ? "end" : "start"}
+              disabled={datePickerDisabled}
             />
           </Field>
           <Field label="To">
@@ -126,6 +131,7 @@ export function LeaderboardFilters({
               label="To"
               testId="leaderboard-filter-to"
               align={align === "center" ? "end" : "start"}
+              disabled={datePickerDisabled}
             />
           </Field>
         </>

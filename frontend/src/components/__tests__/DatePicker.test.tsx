@@ -199,4 +199,34 @@ describe("DatePicker", () => {
     const today = formatYMD(new Date());
     expect(onChange).toHaveBeenCalledWith(today);
   });
+
+  it("does not open the popup when disabled", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <DatePicker value="" onChange={() => {}} label="From" testId="dp" disabled />,
+    );
+    const trigger = screen.getByTestId("dp");
+    expect(trigger).toBeDisabled();
+    // Click should be a no-op when the trigger is disabled.
+    await user.click(trigger);
+    expect(screen.queryByTestId("dp-popup")).not.toBeInTheDocument();
+  });
+
+  it("closes the popup if the picker becomes disabled while open", async () => {
+    const user = userEvent.setup();
+    // Render initially enabled, then disable via a rerender.
+    const { rerender } = renderWithProviders(
+      <DatePicker value="" onChange={() => {}} label="From" testId="dp" />,
+    );
+    await user.click(screen.getByTestId("dp"));
+    await waitFor(() => {
+      expect(screen.getByTestId("dp-popup")).toBeInTheDocument();
+    });
+    rerender(
+      <DatePicker value="" onChange={() => {}} label="From" testId="dp" disabled />,
+    );
+    await waitFor(() => {
+      expect(screen.queryByTestId("dp-popup")).not.toBeInTheDocument();
+    });
+  });
 });
