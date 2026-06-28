@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import type { CreateExperimentResponse, GameState, GameResult, GameAgent, GameEntry, ScenarioInfo, MetricDescriptor, LeaderboardResponse, BenchmarkGamesResponse } from "../types";
+import type { CreateExperimentResponse, GameState, GameResult, GameAgent, GameEntry, ScenarioInfo, MetricDescriptor, LeaderboardResponse, BenchmarkGamesResponse, BenchmarkReport, MailboxMessage } from "../types";
 
 const API = "/api";
 
@@ -188,6 +188,20 @@ export const handlers = [
       },
     });
   }),
+
+  http.get(`${API}/session/:sessionId/mailbox/messages`, () =>
+    HttpResponse.json<{ messages: MailboxMessage[] }>({ messages: [] }),
+  ),
+
+  http.get(`${API}/benchmark/report`, () =>
+    HttpResponse.json<BenchmarkReport>({
+      agents: {},
+      ranking: [],
+      population: {},
+      total_matches: 0,
+      date_range: { min_date: null, max_date: null },
+    }),
+  ),
 
   // Fallback leaderboard handlers — test-specific handlers added via server.use()
   // take priority. These exist so that in-flight requests triggered by
