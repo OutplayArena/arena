@@ -109,6 +109,33 @@ describe("LeaderboardPage", () => {
     });
   });
 
+  it("leaves the From/To date fields empty when no data is available (date_range null)", async () => {
+    // Regression test: when the backend has no matches (date_range: { min_date: null,
+    // max_date: null }), the leaderboard should still render the filters but leave
+    // From/To unpopulated. The auto-population useEffect in LeaderboardPage
+    // must bail out via the `!dataMin || !dataMax` guard, the From/To buttons
+    // must show the "any" placeholder, the data-range label must be hidden,
+    // and opening the popup must show at least one enabled day (no constraints).
+    mockLeaderboardEndpoint(EMPTY_RESPONSE);
+    renderWithProviders(<LeaderboardPage />, { initialRoute: "/leaderboard" });
+    await waitFor(() => {
+      expect(screen.getByText(/No data yet/)).toBeInTheDocument();
+    });
+    const fromButton = screen.getByTestId("leaderboard-filter-from");
+    const toButton = screen.getByTestId("leaderboard-filter-to");
+    expect(fromButton).toHaveTextContent("any");
+    expect(toButton).toHaveTextContent("any");
+    expect(screen.queryByTestId("leaderboard-filter-data-range")).not.toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(fromButton);
+    const popup = await screen.findByTestId("leaderboard-filter-from-popup");
+    const dayButtons = Array.from(
+      popup.querySelectorAll<HTMLButtonElement>("button[data-testid^='leaderboard-filter-from-day-']"),
+    );
+    const enabled = dayButtons.find((b) => !b.disabled);
+    expect(enabled).toBeDefined();
+  });
+
   it("shows error state with retry button on failure", async () => {
     server.use(
       http.get("/api/leaderboard", () => new HttpResponse("Internal Server Error", { status: 500 })),
