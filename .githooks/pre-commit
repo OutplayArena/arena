@@ -37,7 +37,10 @@ if [ "$FRONTEND_CHANGED" -gt 0 ]; then
 
   echo ""
   echo "━━━ ESLint ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  npx eslint . 2>&1
+  # --max-warnings 0 so any warning also fails the commit (the previous
+  # setup only failed on errors, which let react-hooks/exhaustive-deps
+  # and react-hooks/set-state-in-effect warnings slip through to CI).
+  npx eslint . --max-warnings 0 2>&1
 
   if [ $? -ne 0 ]; then
     echo ""

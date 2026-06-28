@@ -231,7 +231,7 @@ function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch
       sessionRef.current = null;
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [state.pendingGame, setMatch, stopPlay, endGame]);
+  }, [state.pendingGame, setMatch, stopPlay, endGame, navigate]);
 
   const [dynamicLoadError, setDynamicLoadError] = useState(false);
 

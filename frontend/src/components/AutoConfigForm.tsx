@@ -173,7 +173,7 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
       }
       setFormValues(vals);
     }
-  }, [schema, initialValues, isReplay]);
+  }, [props, schema, initialValues, isReplay]);
 
   useEffect(() => {
     if (initRanRef.current) return;
@@ -189,17 +189,18 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
     }
   }, [isReplay, initialValues]);
 
+  const scenarioId = formValues["scenario"];
+  const systemPrompt = formValues["system_prompt"];
   useEffect(() => {
     if (scenarios.length === 0) return;
-    const scenarioId = formValues["scenario"];
-    if (scenarioId && !formValues["system_prompt"]) {
+    if (scenarioId && !systemPrompt) {
       const matched = scenarios.find((s) => s.id === scenarioId);
       if (matched) {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setFormValues((prev) => ({ ...prev, system_prompt: matched.system_prompt }));
       }
     }
-  }, [scenarios, formValues["scenario"], formValues["system_prompt"]]);
+  }, [scenarios, scenarioId, systemPrompt]);
 
   const handleValueChange = (key: string, value: unknown, fieldType?: string) => {
     let v = value;
