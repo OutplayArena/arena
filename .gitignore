@@ -161,6 +161,7 @@ frontend/node_modules/
 frontend/*.local
 frontend/coverage/
 frontend/.husky/
+frontend/.eslintcache
 backend/static/assets/
 !package.json
 !package-lock.json

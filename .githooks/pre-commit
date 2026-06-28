@@ -13,9 +13,10 @@ fi
 
 # ── Frontend ────────────────────────────────────────────────────────────────
 
-FRONTEND_CHANGED=$(echo "$STAGED" | grep -c '^frontend/src/' || true)
+# Paths relative to frontend/ for ESLint and Vitest
+FRONTEND_FILES=$(echo "$STAGED" | grep '^frontend/src/' | sed 's|^frontend/||')
 
-if [ "$FRONTEND_CHANGED" -gt 0 ]; then
+if [ -n "$FRONTEND_FILES" ]; then
   cd "$ROOT/frontend"
 
   if [ ! -d "node_modules" ]; then
@@ -25,7 +26,7 @@ if [ "$FRONTEND_CHANGED" -gt 0 ]; then
 
   echo ""
   echo "━━━ TypeScript typecheck ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  npx tsc -b --noEmit 2>&1
+  ./node_modules/.bin/tsc -b --noEmit 2>&1
 
   if [ $? -ne 0 ]; then
     echo ""
@@ -49,7 +50,7 @@ if [ "$FRONTEND_CHANGED" -gt 0 ]; then
 
   if [ -n "$ESLINT_FILES" ]; then
     # shellcheck disable=SC2086
-    npx eslint --cache --max-warnings 0 $ESLINT_FILES 2>&1
+    ./node_modules/.bin/eslint --cache --max-warnings 0 $ESLINT_FILES 2>&1
   else
     echo "   (no staged TS/TSX files; skipping ESLint)"
   fi
@@ -64,7 +65,7 @@ if [ "$FRONTEND_CHANGED" -gt 0 ]; then
 
   echo ""
   echo "━━━ Frontend tests ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  npx vitest run 2>&1
+  echo "$FRONTEND_FILES" | xargs ./node_modules/.bin/vitest run --related 2>&1
 
   if [ $? -ne 0 ]; then
     echo ""
@@ -110,7 +111,7 @@ fi
 
 # ── Nothing applicable ──────────────────────────────────────────────────────
 
-if [ "$FRONTEND_CHANGED" -eq 0 ] && [ "$PY_CHANGED" -eq 0 ]; then
+if [ -z "$FRONTEND_FILES" ] && [ "$PY_CHANGED" -eq 0 ]; then
   echo "[pre-commit] No frontend or Python changes. Skipping tests."
 fi
 
