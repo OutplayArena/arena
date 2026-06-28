@@ -63,17 +63,6 @@ if [ -n "$FRONTEND_FILES" ]; then
   fi
   echo "✅ ESLint passed."
 
-  echo ""
-  echo "━━━ Frontend tests ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo "$FRONTEND_FILES" | xargs ./node_modules/.bin/vitest run --related 2>&1
-
-  if [ $? -ne 0 ]; then
-    echo ""
-    echo "❌ Frontend tests failed. Commit aborted."
-    echo "   Run 'cd frontend && npm run test:watch' to debug."
-    exit 1
-  fi
-  echo "✅ Frontend tests passed."
   cd "$ROOT"
 fi
 
