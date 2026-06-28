@@ -56,6 +56,12 @@ export interface DatePickerProps {
   clearable?: boolean;
   /** Alignment of the calendar popover relative to the trigger. */
   align?: "start" | "end";
+  /**
+   * When true, the trigger is non-interactive (greyed out, no popup,
+   * no clear). Use when the picker has no meaningful range to operate
+   * on (e.g. the underlying dataset is empty).
+   */
+  disabled?: boolean;
 }
 
 export function DatePicker({
@@ -68,6 +74,7 @@ export function DatePicker({
   placeholder = "any",
   clearable = true,
   align = "start",
+  disabled = false,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -110,6 +117,13 @@ export function DatePicker({
     };
   }, [open]);
 
+  // If the picker becomes disabled while the popup is open (e.g. the
+  // underlying dataset just emptied), force the popup closed so we
+  // don't strand the user in an un-interactable popover.
+  useEffect(() => {
+    if (disabled && open) setOpen(false);
+  }, [disabled, open]);
+
   const minDateObj = minDate ? parseYMD(minDate) : null;
   const maxDateObj = maxDate ? parseYMD(maxDate) : null;
 
@@ -142,8 +156,14 @@ export function DatePicker({
         data-testid={testId}
         aria-haspopup="dialog"
         aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        className={TRIGGER_CLS}
+        disabled={disabled}
+        onClick={() => { if (!disabled) setOpen((o) => !o); }}
+        className={
+          TRIGGER_CLS +
+          (disabled
+            ? " opacity-50 cursor-not-allowed hover:border-line focus:border-line focus:shadow-none"
+            : "")
+        }
       >
         {value ? (
           <span className="text-ink">{value}</span>
