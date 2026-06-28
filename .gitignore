@@ -171,3 +171,4 @@ backend/static/assets/
 !frontend/package.json
 !frontend/package-lock.json
 minikube-linux-amd64
+.eslintcache
