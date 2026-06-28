@@ -117,12 +117,12 @@ export function DatePicker({
     };
   }, [open]);
 
-  // If the picker becomes disabled while the popup is open (e.g. the
-  // underlying dataset just emptied), force the popup closed so we
-  // don't strand the user in an un-interactable popover.
-  useEffect(() => {
-    if (disabled && open) setOpen(false);
-  }, [disabled, open]);
+  // Derived flag: the popup is only visible when `open` is true AND the
+  // picker is not disabled. Computing this from `open` (rather than
+  // mirroring `open -> false` in a useEffect when `disabled` flips) avoids
+  // a cascading render that the react-hooks/set-state-in-effect rule
+  // forbids, and also keeps `aria-expanded` truthful.
+  const isOpen = open && !disabled;
 
   const minDateObj = minDate ? parseYMD(minDate) : null;
   const maxDateObj = maxDate ? parseYMD(maxDate) : null;
@@ -155,7 +155,7 @@ export function DatePicker({
         id={buttonId}
         data-testid={testId}
         aria-haspopup="dialog"
-        aria-expanded={open}
+        aria-expanded={isOpen}
         disabled={disabled}
         onClick={() => { if (!disabled) setOpen((o) => !o); }}
         className={
@@ -204,7 +204,7 @@ export function DatePicker({
         </svg>
       </button>
 
-      {open && (
+      {isOpen && (
         <div
           role="dialog"
           aria-label={`${label} date picker`}

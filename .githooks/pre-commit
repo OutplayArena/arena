@@ -37,15 +37,27 @@ if [ "$FRONTEND_CHANGED" -gt 0 ]; then
 
   echo ""
   echo "━━━ ESLint ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  # --max-warnings 0 so any warning also fails the commit (the previous
-  # setup only failed on errors, which let react-hooks/exhaustive-deps
-  # and react-hooks/set-state-in-effect warnings slip through to CI).
-  npx eslint . --max-warnings 0 2>&1
+  # Lint only the staged TS/TSX files (instead of the whole tree) so the
+  # hook finishes in seconds rather than ~30s for a 1-file change. The
+  # cache lets re-runs skip unchanged files entirely. --max-warnings 0
+  # makes any warning also fail the commit (the previous setup only
+  # failed on errors, which let react-hooks/exhaustive-deps and
+  # react-hooks/set-state-in-effect warnings slip through to CI). The
+  # `frontend/` prefix is stripped because we're already cd'd into
+  # frontend/ for the typecheck step above.
+  ESLINT_FILES=$(echo "$STAGED" | grep -E '^frontend/src/.*\.(ts|tsx)$' | sed 's|^frontend/||' || true)
+
+  if [ -n "$ESLINT_FILES" ]; then
+    # shellcheck disable=SC2086
+    npx eslint --cache --max-warnings 0 $ESLINT_FILES 2>&1
+  else
+    echo "   (no staged TS/TSX files; skipping ESLint)"
+  fi
 
   if [ $? -ne 0 ]; then
     echo ""
     echo "❌ ESLint failed. Commit aborted."
-    echo "   Run 'cd frontend && npx eslint .' to see errors."
+    echo "   Run 'cd frontend && npx eslint <file>' to see errors."
     exit 1
   fi
   echo "✅ ESLint passed."
