@@ -2,7 +2,7 @@
 
 [![CI](https://arena.core-aix.org/actions/workflows/test.yml/badge.svg?branch=main)](https://arena.core-aix.org/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/OutplayLabs/arena/graph/badge.svg?token=YO25LMDH36)](https://codecov.io/gh/OutplayLabs/arena)
-[![License](https://img.shields.io/badge/license-Apache--2.0%20OR%20GPL--3.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](docs/contributing/)
 [![uv](https://img.shields.io/badge/uv-managed-5C3D8E?logo=astral&logoColor=white)](https://docs.astral.sh/uv/)
 [![ruff](https://img.shields.io/badge/code%20style-ruff-D7FF64?logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
@@ -10,6 +10,7 @@
 [![Kubernetes](https://img.shields.io/badge/kubernetes-helm-326CE5?logo=kubernetes&logoColor=white)](helm/)
 [![MCP](https://img.shields.io/badge/MCP-compatible-blueviolet)](https://arena.core-aix.org/docs/api/overview/)
 [![PyPI](https://img.shields.io/pypi/v/outplayarena-sdk)](https://pypi.org/project/outplayarena-sdk/)
+[![Docker Hub](https://img.shields.io/badge/docker%20hub-her3ert%20%2F%20outplayarena-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/u/her3ert)
 [![GitHub release](https://img.shields.io/github/v/release/OutplayLabs/arena)](https://arena.core-aix.org/releases)
 [![Docs](https://img.shields.io/badge/docs-outplaylabs.org-blue)](https://arena.core-aix.org/docs)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://arena.core-aix.org/blob/main/.github/CONTRIBUTING.md)
@@ -74,6 +75,25 @@ docker compose up -d
 Access the platform at http://localhost:8000
 
 For full Docker deployment details, see [Docker Deployment](https://arena.core-aix.org/docs/deployment/docker/).
+
+### Pre-built images (Docker Hub)
+
+For production deployments you can skip the build step and pull the
+public images directly from Docker Hub:
+
+```bash
+docker pull her3ert/outplayarena-backend:latest
+docker pull her3ert/outplayarena-mcp:latest
+```
+
+- [her3ert/outplayarena-backend](https://hub.docker.com/r/her3ert/outplayarena-backend) — FastAPI backend + React SPA + mkdocs static
+- [her3ert/outplayarena-mcp](https://hub.docker.com/r/her3ert/outplayarena-mcp) — MCP server
+
+Tags are pushed automatically by the [Release workflow](https://github.com/OutplayArena/arena/blob/main/.github/workflows/release.yml)
+on every `vX.Y.Z` tag. `linux/amd64` and `linux/arm64` are both
+published. For a single-VPS production deploy, see
+[`deploy/docker-compose.yml`](deploy/docker-compose.yml) (it's already
+wired to pull from these repos — just set `IMAGE_TAG` in `deploy/.env`).
 
 ### Kubernetes
 

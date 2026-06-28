@@ -4,7 +4,7 @@ dynamic = ["version"]
 description = "Python SDK for building and testing agents on OutplayArena."
 readme = "README.md"
 requires-python = ">=3.12"
-license = { text = "MIT" }
+license = { text = "Apache-2.0" }
 authors = [
     { name = "Ryan Zhang", email = "ryan.zhang@yale.edu" },
     { name = "Herbert Woisetschläger", email = "herbert@woisetschlaeger.fyi" },
@@ -23,7 +23,7 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",

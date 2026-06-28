@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **License: MIT → Apache License 2.0.** The SDK is now distributed under the
+  Apache License 2.0 instead of the MIT License, aligning with the rest of
+  the OutplayArena project. The full Apache 2.0 text is included in
+  `LICENSE`. The `License-` PyPI classifier and the SPDX identifier in
+  `pyproject.toml` have been updated accordingly.
+
 ## [0.1.0] - 2026-06-26
 
 ### Added
