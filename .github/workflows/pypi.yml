@@ -31,13 +31,13 @@ jobs:
       run:
         working-directory: agent-sdk
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # hatch-vcs needs full history to derive the version from the
           # nearest v*.*.* tag (the trigger of this workflow).
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6.3.0
         with:
           python-version: "3.12"
 
