@@ -185,45 +185,36 @@ build_one() {
     echo "  (minikube driver: ${driver} — skipping in-container build, going straight to host build + tar load)"
   fi
 
-  # Fallback: build on the host with whatever container tool is available,
-  # then load the resulting tar into minikube. The tar handoff is necessary
-  # because rootless podman stores images under ~/.local/share/containers/
-  # — a path minikube's image-loader doesn't search, so it can't pick up
-  # freshly-built images by name.
-  local builder=""
-  local builder_args=()
-  # Prefer docker when the daemon is actually reachable. The session check
-  # (docker info) matters because docker is in the user's supplementary
-  # groups only in shells started AFTER `usermod -aG docker` — older
-  # shells (and any child process not re-spawned) still get permission
-  # denied. Without the check, we'd prefer docker and immediately fail.
-  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-    builder=docker
-  elif command -v podman >/dev/null 2>&1; then
-    builder=podman
-    # Workaround for rootless podman's broken newuidmap path on this host
-    # (and several other recent podman + runc combinations): the default
-    # build flow tries to set up a user namespace via newuidmap, which
-    # fails with "newuidmap: Target process is owned by a different user"
-    # when /etc/subuid is configured but the kernel refuses the mapping
-    # for the spawned build process. --userns=host skips the remap and
-    # builds as the calling user. The resulting image is identical
-    # (build-time ownership is irrelevant for the runtime USER directive).
-    builder_args=(--userns=host)
-  else
-    echo "  ERROR: neither docker (with active session) nor podman is available; cannot build $image" >&2
+  # Fallback: build on the host with docker, then load the resulting tar
+  # into minikube. The tar handoff is the portable fix — `minikube image
+  # load <name>` only works for images already known to the minikube
+  # container runtime; images that only exist in the host's docker daemon
+  # need to be exported and re-imported.
+  #
+  # We require docker specifically (no podman fallback). Podman rootless
+  # has recurring stability issues with the user-namespace setup
+  # (newuidmap failures, userns remap bugs) that are out of scope for
+  # this script to work around; docker is the supported builder.
+  local builder="docker"
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "  ERROR: docker is not installed; cannot build $image" >&2
     return 1
   fi
-  echo "  → $builder build ${builder_args[*]:-} -t $image -f $dockerfile ."
-  if ! "$builder" build "${builder_args[@]}" -t "$image" -f "$dockerfile" "$PROJECT_ROOT"; then
-    echo "  ERROR: $builder build failed for $image" >&2
+  if ! docker info >/dev/null 2>&1; then
+    echo "  ERROR: docker daemon is unreachable; cannot build $image" >&2
+    echo "         (the user may not be in the 'docker' group, or the daemon is not running)" >&2
+    return 1
+  fi
+  echo "  → docker build -t $image -f $dockerfile ."
+  if ! docker build -t "$image" -f "$dockerfile" "$PROJECT_ROOT"; then
+    echo "  ERROR: docker build failed for $image" >&2
     return 1
   fi
   local tar_path
   tar_path="$(mktemp -t arena-image-XXXXXX.tar)"
-  echo "  → $builder save $image → $tar_path"
-  if ! "$builder" save "$image" -o "$tar_path"; then
-    echo "  ERROR: $builder save failed for $image" >&2
+  echo "  → docker save $image → $tar_path"
+  if ! docker save "$image" -o "$tar_path"; then
+    echo "  ERROR: docker save failed for $image" >&2
     rm -f "$tar_path"
     return 1
   fi
