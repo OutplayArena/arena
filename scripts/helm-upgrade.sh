@@ -137,7 +137,50 @@ build_one() {
   local image="$1"
   local dockerfile="$2"
   echo "  → building $image from $dockerfile ..."
-  minikube image build -t "$image" -f "$dockerfile" .
+
+  # Fast path: build inside the minikube container runtime. This is the
+  # documented happy path and benefits from minikube's image cache.
+  if minikube image build -t "$image" -f "$dockerfile" "$PROJECT_ROOT"; then
+    return 0
+  fi
+
+  # Fallback: build on the host with whatever container tool is available,
+  # then load the resulting tar into minikube. Useful when minikube's build
+  # context (buildah inside the minikube container) can't reach the upstream
+  # registry to pull base images — e.g. minikube on a podman driver in a
+  # network-isolated environment. Rootless podman also stores images outside
+  # the path minikube's image-loader searches, so the tar handoff is the
+  # most portable fix.
+  echo "  ! minikube image build failed; falling back to host build + tar load"
+  local builder=""
+  if command -v podman >/dev/null 2>&1; then
+    builder=podman
+  elif command -v docker >/dev/null 2>&1; then
+    builder=docker
+  else
+    echo "  ERROR: neither podman nor docker is available; cannot build $image" >&2
+    return 1
+  fi
+  echo "  → $builder build -t $image -f $dockerfile ."
+  if ! "$builder" build -t "$image" -f "$dockerfile" "$PROJECT_ROOT"; then
+    echo "  ERROR: $builder build failed for $image" >&2
+    return 1
+  fi
+  local tar_path
+  tar_path="$(mktemp -t arena-image-XXXXXX.tar)"
+  echo "  → $builder save $image → $tar_path"
+  if ! "$builder" save "$image" -o "$tar_path"; then
+    echo "  ERROR: $builder save failed for $image" >&2
+    rm -f "$tar_path"
+    return 1
+  fi
+  echo "  → minikube image load $tar_path"
+  if ! minikube image load "$tar_path"; then
+    echo "  ERROR: minikube image load failed for $image (tar: $tar_path)" >&2
+    rm -f "$tar_path"
+    return 1
+  fi
+  rm -f "$tar_path"
 }
 
 if [ "$BUILD_IMAGES" -eq 1 ]; then
