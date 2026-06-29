@@ -191,16 +191,31 @@ build_one() {
   # — a path minikube's image-loader doesn't search, so it can't pick up
   # freshly-built images by name.
   local builder=""
-  if command -v podman >/dev/null 2>&1; then
-    builder=podman
-  elif command -v docker >/dev/null 2>&1; then
+  local builder_args=()
+  # Prefer docker when the daemon is actually reachable. The session check
+  # (docker info) matters because docker is in the user's supplementary
+  # groups only in shells started AFTER `usermod -aG docker` — older
+  # shells (and any child process not re-spawned) still get permission
+  # denied. Without the check, we'd prefer docker and immediately fail.
+  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
     builder=docker
+  elif command -v podman >/dev/null 2>&1; then
+    builder=podman
+    # Workaround for rootless podman's broken newuidmap path on this host
+    # (and several other recent podman + runc combinations): the default
+    # build flow tries to set up a user namespace via newuidmap, which
+    # fails with "newuidmap: Target process is owned by a different user"
+    # when /etc/subuid is configured but the kernel refuses the mapping
+    # for the spawned build process. --userns=host skips the remap and
+    # builds as the calling user. The resulting image is identical
+    # (build-time ownership is irrelevant for the runtime USER directive).
+    builder_args=(--userns=host)
   else
-    echo "  ERROR: neither podman nor docker is available; cannot build $image" >&2
+    echo "  ERROR: neither docker (with active session) nor podman is available; cannot build $image" >&2
     return 1
   fi
-  echo "  → $builder build -t $image -f $dockerfile ."
-  if ! "$builder" build -t "$image" -f "$dockerfile" "$PROJECT_ROOT"; then
+  echo "  → $builder build ${builder_args[*]:-} -t $image -f $dockerfile ."
+  if ! "$builder" build "${builder_args[@]}" -t "$image" -f "$dockerfile" "$PROJECT_ROOT"; then
     echo "  ERROR: $builder build failed for $image" >&2
     return 1
   fi
