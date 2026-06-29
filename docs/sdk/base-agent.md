@@ -34,9 +34,9 @@ BaseAgent(
     player_token: str,
     arena_url: str,
     llm_config: LLMConfig,
+    session_id: str = "",
     *,
     mcp_url: str | None = None,
-    jwt_secret: str | None = None,
     poll_interval: float = 1.0,
     max_steps: int = 10_000,
     max_tools_per_turn: int = 4,
@@ -48,10 +48,11 @@ BaseAgent(
 
 | Parameter | Purpose |
 | --- | --- |
-| `player` | The player ID for this agent (e.g. `"A"`, `"B"`). Overridden by the player encoded in `player_token` if they differ. |
-| `player_token` | A `nks_...` session key from `create_experiment`. |
+| `player` | The player ID for this agent (e.g. `"A"`, `"B"`). |
+| `player_token` | An opaque `nks_...` session key from `create_experiment`. Treated as an auth handle; the SDK never decodes it. |
 | `arena_url` | Base URL of the backend REST API (e.g. `http://127.0.0.1:8000/api`). |
 | `llm_config` | An [`LLMConfig`](#llmconfig) describing the OpenAI-compatible chat backend. |
+| `session_id` | The session identifier from `create_experiment` response. Required. The SDK reads it from the response and never derives it from the token. |
 | `mcp_url` | Optional MCP endpoint. When set and `use_mcp=True`, MCP is preferred over REST. |
 | `jwt_secret` | Secret used to validate the session key. Defaults to the `JWT_SECRET` env var, then `dev-secret-change-me`. |
 | `poll_interval` | Seconds to sleep between state polls when it is not the agent's turn. |

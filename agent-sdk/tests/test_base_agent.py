@@ -5,7 +5,6 @@ agent loop can be exercised end-to-end without hitting a real backend.
 """
 from __future__ import annotations
 
-import os
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -29,27 +28,16 @@ def _make_llm_config(**overrides) -> LLMConfig:
     return LLMConfig(**defaults)
 
 
-def _make_session_token(player: str = "A", secret: str | None = None) -> str:
-    """Build a valid nks_... session key the SDK can decode.
+def _make_session_token(player: str = "A") -> str:
+    """Return an opaque session-key string for tests.
 
-    By default uses the same secret the SDK falls back to
-    (os.environ.get("JWT_SECRET", "dev-secret-change-me")) so the test
-    works regardless of the host environment.
+    As of v0.2.0 the SDK treats the session key as an opaque auth handle
+    and never decodes it, so test tokens don't need to be signed. The
+    returned string is a stable, recognisable fake; pair it with
+    ``session_id="test-session-1"`` (the default) when constructing an
+    agent.
     """
-    import base64
-    import hashlib
-    import hmac
-
-    if secret is None:
-        secret = os.environ.get("JWT_SECRET", "dev-secret-change-me")
-
-    session_id = "test-session-1"
-    secret_hash = hashlib.sha256(secret.encode("utf-8")).digest()
-    payload = f"{session_id}:{player}"
-    sig = hmac.new(secret_hash, payload.encode("utf-8"), hashlib.sha256).hexdigest()
-    token = f"{session_id}:{player}:{sig}"
-    encoded = base64.urlsafe_b64encode(token.encode("utf-8")).decode("utf-8").rstrip("=")
-    return f"nks_{encoded}"
+    return f"nks_test_token_for_{player}"
 
 
 class _RecordingAgent(BaseAgent):
@@ -169,20 +157,43 @@ def _make_fake_transport(states: list[dict]) -> MagicMock:
 
 
 class TestConstruction:
-    def test_player_id_extracted_from_token(self):
+    def test_player_comes_from_constructor_arg(self):
+        # As of v0.2.0 the SDK does not decode the session token; the
+        # player is taken verbatim from the constructor argument.
         agent = _RecordingAgent(
-            player="ignored",
+            player="A",
             player_token=_make_session_token("A"),
+            session_id="test-session-1",
             arena_url="http://localhost:8000/api",
             llm_config=_make_llm_config(),
         )
-        # Token says A; player arg is overridden by the token.
         assert agent.player == "A"
+
+    def test_session_id_must_be_provided(self):
+        # As of v0.2.0, session_id is a required constructor arg.
+        with pytest.raises(ValueError, match="session_id is required"):
+            _RecordingAgent(
+                player="A",
+                player_token=_make_session_token("A"),
+                arena_url="http://x",
+                llm_config=_make_llm_config(),
+            )
+
+    def test_player_token_must_be_provided(self):
+        with pytest.raises(ValueError, match="player_token is required"):
+            _RecordingAgent(
+                player="A",
+                player_token="",
+                session_id="test-session-1",
+                arena_url="http://x",
+                llm_config=_make_llm_config(),
+            )
 
     def test_seed_default_is_none(self):
         agent = _RecordingAgent(
             player="A",
             player_token=_make_session_token("A"),
+            session_id="test-session-1",
             arena_url="http://localhost:8000/api",
             llm_config=_make_llm_config(),
         )
@@ -193,6 +204,7 @@ class TestConstruction:
         agent = _RecordingAgent(
             player="A",
             player_token=_make_session_token("A"),
+            session_id="test-session-1",
             arena_url="http://localhost:8000/api",
             llm_config=_make_llm_config(),
             seed=123,
@@ -205,6 +217,7 @@ class TestConstruction:
         agent = _RecordingAgent(
             player="A",
             player_token=_make_session_token("A"),
+            session_id="test-session-1",
             arena_url="http://localhost:8000/api",
             llm_config=_make_llm_config(),
         )
@@ -214,6 +227,7 @@ class TestConstruction:
         agent = _RecordingAgent(
             player="A",
             player_token=_make_session_token("A"),
+            session_id="test-session-1",
             arena_url="http://localhost:8000/api",
             llm_config=_make_llm_config(),
         )
@@ -227,6 +241,7 @@ class TestTerminalDetection:
     def _agent(self):
         return _RecordingAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
 
@@ -252,6 +267,7 @@ class TestRunLoop:
         """End-to-end: terminal state on first poll → on_episode_start + on_episode_end."""
         agent = _RecordingAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
             poll_interval=0,
         )
@@ -279,6 +295,7 @@ class TestRunLoop:
     async def test_hooks_fire_in_order(self):
         agent = _RecordingAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
             poll_interval=0,
         )
@@ -313,6 +330,7 @@ class TestRunLoop:
     async def test_submits_action_when_in_awaiting(self):
         agent = _RecordingAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
             poll_interval=0,
             actions=[[7, 3]],
@@ -336,6 +354,7 @@ class TestRunLoop:
     async def test_skips_submit_when_not_in_awaiting(self):
         agent = _RecordingAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
             poll_interval=0,
         )
@@ -359,6 +378,7 @@ class TestRunLoop:
     async def test_on_error_default_reraises(self):
         agent = _RecordingAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         boom = RuntimeError("backend down")
@@ -374,6 +394,7 @@ class TestRunLoop:
     async def test_on_error_can_swallow(self):
         agent = _RecordingAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
             poll_interval=0,
         )
@@ -406,6 +427,7 @@ class TestToolCallingSubLoop:
     async def test_submits_via_tool_call(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         tool_call = MagicMock()
@@ -435,6 +457,7 @@ class TestToolCallingSubLoop:
     async def test_dispatches_non_submit_tool_calls(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         obs_call = MagicMock()
@@ -466,6 +489,7 @@ class TestToolCallingSubLoop:
     async def test_respects_max_tools_per_turn(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
             max_tools_per_turn=2,
         )
@@ -501,6 +525,7 @@ class TestToolCallingSubLoop:
     async def test_falls_back_when_provider_rejects_tools(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         agent._openai = MagicMock()
@@ -524,6 +549,7 @@ class TestToolCallingSubLoop:
         _decide_with_tools)."""
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         # Make parse_action blow up so the except: pass branch runs.
@@ -562,6 +588,7 @@ class TestHookDefaults:
     def test_default_hooks_are_noops(self):
         agent = _RecordingAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         # Calling them should not raise
@@ -578,6 +605,7 @@ class TestHookDefaults:
     def test_default_on_error_reraises(self):
         agent = _RecordingAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         with pytest.raises(ValueError, match="boom"):
@@ -591,6 +619,7 @@ class TestHookDefaults:
 
         agent = _SwallowAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         # Should not raise.
@@ -605,6 +634,7 @@ class TestSubclassContract:
                 super().__init__(
                     player="A",
                     player_token=_make_session_token(),
+                    session_id="test-session-1",
                     arena_url="http://x",
                     llm_config=_make_llm_config(),
                 )
@@ -621,6 +651,7 @@ class TestSubclassContract:
                 super().__init__(
                     player="A",
                     player_token=_make_session_token(),
+                    session_id="test-session-1",
                     arena_url="http://x",
                     llm_config=_make_llm_config(),
                 )
@@ -636,6 +667,7 @@ class TestSubclassContract:
                 super().__init__(
                     player="A",
                     player_token=_make_session_token(),
+                    session_id="test-session-1",
                     arena_url="http://x",
                     llm_config=_make_llm_config(),
                 )
@@ -648,6 +680,7 @@ class TestTransportProperty:
     def test_transport_uninit_before_ensure_ready(self):
         agent = _RecordingAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         assert agent.transport == "uninitialized"
@@ -655,6 +688,7 @@ class TestTransportProperty:
     def test_transport_rest_after_ensure_ready(self):
         agent = _RecordingAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         # The transport property delegates to self._transport.transport,
@@ -667,6 +701,7 @@ class TestTransportProperty:
     def test_transport_mcp_after_ensure_ready(self):
         agent = _RecordingAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         fake_backend = MagicMock()
@@ -675,24 +710,11 @@ class TestTransportProperty:
         assert agent.transport == "mcp"
 
 
-class TestSessionKeyFallback:
-    def test_invalid_token_keeps_user_provided_player(self):
-        """When the token can't be decoded, fall back to the user-provided player."""
-        agent = _RecordingAgent(
-            player="A",
-            player_token="nks_not-a-valid-key",
-            arena_url="http://x",
-            llm_config=_make_llm_config(),
-        )
-        assert agent.player == "A"
-        # session_id falls back to empty string when the token can't be parsed.
-        assert agent.session_id == ""
-
-
 class TestRunSync:
     def test_run_sync_calls_asyncio_run(self):
         agent = _RecordingAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         # Stub out run to avoid hitting the network.
@@ -710,6 +732,7 @@ class TestMessageSending:
 
         agent = _ChattyAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
             poll_interval=0,
         )
@@ -735,6 +758,7 @@ class TestStateRefreshError:
         """If get_state fails during round-end refresh, keep going with last-known state."""
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
             poll_interval=0,
         )
@@ -767,6 +791,7 @@ class TestFetchObservation:
     async def test_observation_passes_variant_when_no_mcp(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         transport = MagicMock()
@@ -781,6 +806,7 @@ class TestFetchObservation:
     async def test_observation_skips_variant_when_mcp(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         transport = MagicMock()
@@ -797,6 +823,7 @@ class TestDispatchToolCall:
     async def test_dispatch_get_observation(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         transport = MagicMock()
@@ -815,6 +842,7 @@ class TestDispatchToolCall:
     async def test_dispatch_get_game_state(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         state = {"phase": "playing", "round": 1}
@@ -834,6 +862,7 @@ class TestDispatchToolCall:
     async def test_dispatch_get_mailbox(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         transport = MagicMock()
@@ -852,6 +881,7 @@ class TestDispatchToolCall:
     async def test_dispatch_send_message(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         transport = MagicMock()
@@ -871,6 +901,7 @@ class TestDispatchToolCall:
     async def test_dispatch_unknown_tool(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         transport = MagicMock()
@@ -890,6 +921,7 @@ class TestComposeSystemPrompt:
     def test_basic_prompt(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         prompt = agent._compose_system_prompt()
@@ -902,6 +934,7 @@ class TestComposeSystemPrompt:
         cfg = _make_llm_config(reasoning_effort="medium")
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=cfg,
         )
         prompt = agent._compose_system_prompt()
@@ -914,6 +947,7 @@ class TestEnsureReady:
     async def test_ensure_ready_creates_rest_transport(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://localhost:8000/api",
             llm_config=_make_llm_config(),
             use_mcp=False,
@@ -927,6 +961,7 @@ class TestEnsureReady:
     async def test_ensure_ready_falls_back_when_mcp_fails(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://localhost:8000/api",
             llm_config=_make_llm_config(),
             use_mcp=True,
@@ -948,6 +983,7 @@ class TestEnsureReady:
     async def test_ensure_ready_idempotent(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://localhost:8000/api",
             llm_config=_make_llm_config(),
             use_mcp=False,
@@ -963,6 +999,7 @@ class TestTeardown:
     async def test_teardown_disconnects_mcp(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         mock_mcp = MagicMock()
@@ -976,6 +1013,7 @@ class TestTeardown:
     async def test_teardown_handles_disconnect_error(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         mock_mcp = MagicMock()
@@ -989,6 +1027,7 @@ class TestTeardown:
     async def test_teardown_noop_when_no_mcp(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         agent._mcp_client = None
@@ -1002,6 +1041,7 @@ class TestSleep:
     async def test_sleep_with_zero_poll_interval(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
             poll_interval=0,
         )
@@ -1016,6 +1056,7 @@ class TestSleep:
     async def test_sleep_with_positive_poll_interval(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
             poll_interval=0.01,
         )
@@ -1034,6 +1075,7 @@ class TestLLMCallVariations:
         cfg = _make_llm_config(extra_body={"custom": "param"})
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=cfg,
         )
         agent._openai = MagicMock()
@@ -1052,6 +1094,7 @@ class TestLLMCallVariations:
         cfg = _make_llm_config(extra_body={"custom": "param"})
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=cfg,
         )
         agent._openai = MagicMock()
@@ -1074,6 +1117,7 @@ class TestBudgetExhausted:
     async def test_budget_exhausted_falls_back_to_plain_text(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
             max_tools_per_turn=1,
         )
@@ -1104,6 +1148,7 @@ class TestBudgetExhausted:
     async def test_budget_exhausted_with_plain_failure(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
             arena_url="http://x", llm_config=_make_llm_config(),
             max_tools_per_turn=1,
         )

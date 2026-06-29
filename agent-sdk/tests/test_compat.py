@@ -1,32 +1,23 @@
 """Tests for the MCPAgent backward-compat shim."""
-import os
 
 
 from outplayarena_sdk._compat import MCPAgent
 
 
-def _make_session_token(player: str = "A", secret: str | None = None) -> str:
-    """Build a valid nks_... session key the SDK can decode."""
-    import base64
-    import hashlib
-    import hmac
+def _make_session_token(player: str = "A") -> str:
+    """Return an opaque session-key string for tests.
 
-    if secret is None:
-        secret = os.environ.get("JWT_SECRET", "dev-secret-change-me")
-    session_id = "test-session-1"
-    secret_hash = hashlib.sha256(secret.encode("utf-8")).digest()
-    payload = f"{session_id}:{player}"
-    sig = hmac.new(secret_hash, payload.encode("utf-8"), hashlib.sha256).hexdigest()
-    token = f"{session_id}:{player}:{sig}"
-    encoded = base64.urlsafe_b64encode(token.encode("utf-8")).decode("utf-8").rstrip("=")
-    return f"nks_{encoded}"
+    As of v0.2.0 the SDK does not decode session tokens; tests can pass
+    any opaque ``nks_``-prefixed string.
+    """
+    return f"nks_test_token_for_{player}"
 
 
 class _FakeMCPAgent(MCPAgent):
     """MCPAgent that stubs out the network layer for unit testing."""
 
     def __init__(self, tool_response, player: str = "A"):
-        super().__init__("http://fake-mcp:9999", _make_session_token(player=player))
+        super().__init__("http://fake-mcp:9999", _make_session_token(player=player), player=player)
         self._connected = True
         self._session = object()
         self._loop = None
@@ -39,19 +30,21 @@ class _FakeMCPAgent(MCPAgent):
 
 
 class TestPlayerProperty:
-    def test_player_extracted_from_session_key(self):
-        agent = MCPAgent.__new__(MCPAgent)
-        agent.session_key = _make_session_token(player="A")
+    def test_player_set_via_constructor(self):
+        # As of v0.2.0 the player is passed explicitly, not decoded from
+        # the token.
+        agent = MCPAgent("http://x", "nks_test_token_for_A", player="A")
         assert agent.player == "A"
 
-    def test_player_b_extracted(self):
-        agent = MCPAgent.__new__(MCPAgent)
-        agent.session_key = _make_session_token(player="B")
+    def test_player_b_via_constructor(self):
+        agent = MCPAgent("http://x", "nks_test_token_for_B", player="B")
         assert agent.player == "B"
 
-    def test_invalid_session_key_returns_empty(self):
-        agent = MCPAgent.__new__(MCPAgent)
-        agent.session_key = "not-a-valid-key"
+    def test_player_default_is_empty(self):
+        # Backward-compat: omitting the player leaves it empty (the
+        # backend identifies the player from the token's HMAC, so the
+        # SDK doesn't need to know).
+        agent = MCPAgent("http://x", "nks_test_token_for_X")
         assert agent.player == ""
 
 
@@ -66,7 +59,7 @@ class TestGetObservation:
 
         class _CapturingAgent(MCPAgent):
             def __init__(self):
-                super().__init__("http://fake", _make_session_token())
+                super().__init__("http://fake", _make_session_token(), player="A")
                 self._connected = True
                 self._session = object()
                 self._loop = None
@@ -100,7 +93,7 @@ class TestSubmitAction:
 
         class _CapturingAgent(MCPAgent):
             def __init__(self):
-                super().__init__("http://fake", _make_session_token())
+                super().__init__("http://fake", _make_session_token(), player="A")
                 self._connected = True
                 self._session = object()
                 self._loop = None

@@ -38,7 +38,7 @@ from typing import Any
 
 from openai import OpenAI
 
-from outplayarena_sdk.client import ArenaClient, validate_session_key
+from outplayarena_sdk.client import ArenaClient
 from outplayarena_sdk.mcp_client import MCPClient
 from outplayarena_sdk.parsers import _safe_json_loads
 from outplayarena_sdk.reasoning import ReasoningModerator
@@ -110,9 +110,9 @@ class BaseAgent:
         player_token: str,
         arena_url: str,
         llm_config: LLMConfig,
+        session_id: str = "",
         *,
         mcp_url: str | None = None,
-        jwt_secret: str | None = None,
         poll_interval: float = 1.0,
         max_steps: int = 10_000,
         max_tools_per_turn: int = 4,
@@ -120,6 +120,18 @@ class BaseAgent:
         verbose: bool = False,
         seed: int | None = None,
     ):
+        if not session_id:
+            raise ValueError(
+                "session_id is required: pass the value returned by "
+                "ArenaClient.create_experiment()['session_id']. The SDK "
+                "treats the player_token as an opaque auth handle and never "
+                "derives session_id from it."
+            )
+        if not player_token:
+            raise ValueError(
+                "player_token is required: pass the value returned by "
+                "ArenaClient.create_experiment()['player_tokens'][player]."
+            )
         self.player = player
         self.token = player_token
         self.arena_url = arena_url
@@ -130,32 +142,16 @@ class BaseAgent:
         self.max_tools_per_turn = max_tools_per_turn
         self.use_mcp = use_mcp
         self.verbose = verbose
-        self._session_id: str | None = None
+        self._session_id: str | None = session_id
         self._config: dict[str, Any] | None = None
         self._seed_resolver = SeedResolver(override=seed)
         self._last_state: dict[str, Any] | None = None
         self._transport: AsyncBackend | None = None
         self._mcp_client: MCPClient | None = None
         self._mcp_connected = False
-        self._jwt_secret = jwt_secret
         self._openai: OpenAI | None = None
         self._reasoning: ReasoningModerator | None = None
         self._stopped = False
-
-        # Validate the player token early so the user gets a clear error
-        # before the loop starts.
-        try:
-            sid, player_from_token = validate_session_key(
-                player_token,
-                jwt_secret or _default_jwt_secret(),
-            )
-        except ValueError:
-            sid, player_from_token = "", player
-        self._session_id = sid
-        if player_from_token and player_from_token != player:
-            # The user can override the player arg, but if the token says
-            # otherwise we silently prefer the token (which is authoritative).
-            self.player = player_from_token
 
     # ── Lazy properties ───────────────────────────────────────────────────
 
@@ -553,11 +549,6 @@ class BaseAgent:
 
 
 # ── helpers ────────────────────────────────────────────────────────────────
-
-
-def _default_jwt_secret() -> str:
-    import os
-    return os.environ.get("JWT_SECRET", "dev-secret-change-me")
 
 
 def _tool_call_message_to_assistant(message: Any, tool_call: Any) -> dict[str, Any]:

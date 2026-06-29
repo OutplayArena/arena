@@ -162,7 +162,8 @@ All agents are N-player aware: the loop checks `state["awaiting"]` generically, 
 | --- | --- | --- |
 | `ARENA_BASE_URL` | Arena REST API base URL | `http://127.0.0.1:8000/api` |
 | `OUTPLAYARENA_BASE_URL` | Same as `ARENA_BASE_URL` | &mdash; |
-| `JWT_SECRET` | Secret used to validate session keys | `dev-secret-change-me` |
+
+> **Note (v0.2.0+):** the SDK no longer requires the server's `JWT_SECRET`. Session tokens are treated as opaque auth handles; the `session_id` is read directly from the `create_experiment` response and passed to the agent. The server keeps `JWT_SECRET` (and `SESSION_KEY_SECRET`) for minting tokens; it never leaves the backend.
 
 ## Versioning and API stability
 

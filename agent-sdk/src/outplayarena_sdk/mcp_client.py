@@ -51,10 +51,12 @@ class MCPClient:
         self,
         mcp_url: str,
         session_key: str,
+        player: str = "",
         timeout: float = 30.0,
     ):
         self.mcp_url = mcp_url.rstrip("/")
         self.session_key = session_key
+        self.player = player
         self.timeout = timeout
         self._session: ClientSession | None = None
         self._exit_stack: AsyncExitStack | None = None
