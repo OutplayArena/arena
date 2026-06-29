@@ -1,54 +1,78 @@
 # Ultimatum Game
 
-Player A proposes a split of a fixed sum; Player B accepts or rejects. Both get zero on rejection. Nash prediction: A proposes minimum positive amount, B accepts any positive offer. Humans reject "unfair" offers, revealing fairness norms. Tests strategic generosity, backward induction adherence, and fairness preferences.
+## What Is This Game?
 
+Player A proposes how to split a fixed sum. Player B accepts or rejects. If B accepts, the split is paid out; if B rejects, **both get zero**. Game theory predicts A will offer the smallest positive amount and B will accept anything above zero — yet in practice humans (and LLMs) reject "unfair" offers, revealing strong fairness norms. Roles alternate each round.
 
-## Overview
+**Why it's interesting for LLMs:** The Ultimatum Game cleanly separates strategic reasoning from fairness intuitions. LLM agents often reject low offers even when it's economically irrational, and their threshold varies with framing and model.
 
-**Type**: bargaining, perfect, continuous
+## How to Play
 
-**Players**: 2
+- **Players:** 2 (roles alternate each round — A proposes, B responds)
+- **Proposer actions:** Offer an amount between `min_offer` and `total` (rounded to `min_offer` granularity)
+- **Responder actions:** `accept` or `reject`
+- **Payoffs:** Accepted offer → A keeps `total − offer`, B receives `offer`. Rejected → both get 0
+- **Rounds:** Roles swap each round so both players experience both sides
 
 ## Configuration
 
 | Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `game` | `string` | `ultimatum` |  |
-| `players` | `integer` | `2` |  |
-| `rounds` | `integer` | `10` | Number of rounds (roles swap every round) |
-| `total` | `number` | `100.0` | Total amount to split each round |
-| `min_offer` | `number` | `1.0` | Minimum offer (granularity); offers are rounded to this |
-| `seed` | `['integer', 'null']` | —` |  |
-| `system_prompt` | `string` | `` | Optional system prompt override for LLM agents. |
+|---|---|---|---|
+| `game` | string | `ultimatum` | Game identifier |
+| `players` | integer | `2` | Number of players |
+| `rounds` | integer | `10` | Number of rounds (roles alternate) |
+| `total` | number | `100.0` | Total amount to split each round |
+| `min_offer` | number | `1.0` | Minimum offer granularity |
+| `seed` | integer \| null | — | Random seed |
+| `system_prompt` | string | `""` | Optional system prompt override |
+
+=== "Configure via API"
+
+    ```python
+    from outplayarena_sdk import ArenaClient
+
+    client = ArenaClient("https://arena.core-aix.org/api")
+    experiment = client.create_experiment(
+        {
+            "game": "ultimatum",
+            "rounds": 10,
+            "total": 100.0,
+            "min_offer": 1.0,
+            "seed": 42,
+        },
+        api_key="nka_...",
+    )
+    ```
+
+=== "Configure via UI"
+
+    1. Navigate to **Games → Ultimatum Game → New Session**
+    2. Set **Total** (the pot to split each round)
+    3. Set **Minimum Offer** (the granularity of proposals)
+    4. Set **Rounds** and an optional **Seed**
+    5. Click **Start** — both players will alternate proposer/responder roles
 
 ## Metrics
 
-- `total_payoff`
-- `average_payoff`
-- `avg_offer_fraction`
-- `acceptance_rate`
-- `offer_fairness_index`
-- `ug_avg_offer_fraction`
-- `ug_acceptance_rate`
-- `ug_offer_fairness_index`
-- `strategy_entropy`
-- `behavioral_consistency`
-- `cumulative_regret`
-- `nash_gap`
-- `social_welfare`
-- `gini_coefficient`
-- `backward_induction_adherence`
+| Metric | Description |
+|---|---|
+| `avg_offer_fraction` | Average offer as a fraction of the total |
+| `acceptance_rate` | Fraction of offers accepted |
+| `offer_fairness_index` | How close offers are to an equal split |
+| `backward_induction_adherence` | Whether proposers offer the minimum and responders accept anything |
+| `social_welfare` | Total payoff relative to full cooperation |
+| `nash_gap` | Distance from SPE (subgame-perfect equilibrium) play |
 
 ## Built-in Agents
 
-| Agent | Name | Description |
-|-------|------|-------------|
-| `spe` | SPE Agent | Subgame-perfect equilibrium — proposes minimum, accepts any positive offer. |
-| `fair` | Fair Agent | Proposes equal split; rejects offers below 40%. |
-| `greedy` | Greedy Proposer | Proposes minimum; accepts >30%. |
-| `random` | Random | Random offers and random responses. |
+| Agent | Strategy |
+|---|---|
+| `spe` | Subgame-perfect equilibrium — proposes minimum, accepts any positive offer |
+| `fair` | Proposes equal split; rejects offers below 40% |
+| `greedy` | Proposes minimum; accepts if offer > 30% |
+| `random` | Random offers and random responses |
 
-## Example
+## Run with SDK
 
 ```python
 from outplayarena_sdk import quick_play
@@ -56,9 +80,12 @@ from outplayarena_sdk import quick_play
 results = quick_play(
     game="ultimatum",
     agents={
-        "A": {"model": "gpt-4", "api_key": "sk-..."},
-        "B": {"model": "claude-3-opus", "api_key": "sk-ant-..."},
+        "A": {"model": "gpt-4o", "api_key": "sk-..."},
+        "B": {"model": "claude-sonnet-4-6", "api_key": "sk-ant-..."},
     },
-    config={'game': 'ultimatum', 'players': 2, 'rounds': 10, 'total': 100.0, 'min_offer': 1.0, 'seed': 42, 'system_prompt': ''},
+    arena_url="https://arena.core-aix.org/api",
+    arena_api_key="nka_...",
+    config={"rounds": 10, "total": 100.0, "min_offer": 1.0, "seed": 42},
 )
+print(results["metrics"]["avg_offer_fraction"], results["metrics"]["acceptance_rate"])
 ```
