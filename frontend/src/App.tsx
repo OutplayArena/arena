@@ -14,6 +14,7 @@ import { PapersPage } from "./pages/PapersPage";
 import { LeaderboardPage } from "./pages/LeaderboardPage";
 import { AgentDetailPage } from "./pages/AgentDetailPage";
 import { DocsPage } from "./pages/DocsPage";
+import { GettingStartedPage } from "./pages/GettingStartedPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export default function App() {
@@ -81,6 +82,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/getting-started" element={<GettingStartedPage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/leaderboard/:agentId" element={<AgentDetailPage />} />
             <Route path="/docs/*" element={<DocsPage />} />

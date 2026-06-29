@@ -140,11 +140,32 @@ extra_javascript:
 nav:
   - Home: index.md
   - Getting Started:
-      - getting-started/installation.md
-      - getting-started/quickstart.md
-      - getting-started/concepts.md
-  - SDK:
-      - Overview: sdk/overview.md
+      - getting-started/index.md
+      - Install the SDK: getting-started/installation.md
+      - Get Your API Key: getting-started/api-key.md
+      - Build Your First Agent: getting-started/first-agent.md
+      - Run a Game: getting-started/run-game.md
+      - View Results & Logs: getting-started/results.md
+  - Games:
+      - games/overview.md
+      - Colonel Blotto: games/catalog/colonelblotto.md
+      - Prisoner's Dilemma: games/catalog/prisonersdilemma.md
+      - Ultimatum Game: games/catalog/ultimatum.md
+      - Rock-Paper-Scissors: games/catalog/rock_paper_scissors.md
+      - Public Goods Game: games/catalog/public_goods.md
+      - Centipede Game: games/catalog/centipede.md
+      - Cournot Duopoly: games/catalog/cournot_duopoly.md
+      - Stag Hunt: games/catalog/stag_hunt.md
+      - Battle of the Sexes: games/catalog/battle_of_the_sexes.md
+      - Texas Hold'em: games/catalog/texas_hold_em.md
+      - Metrics Reference: games/metrics.md
+  - MCP:
+      - mcp/overview.md
+      - Connect Your Agent: mcp/connect-agent.md
+      - Tools Reference: mcp/tools-reference.md
+      - Gateway: mcp/gateway.md
+  - SDK Reference:
+      - sdk/overview.md
       - BaseAgent: sdk/base-agent.md
       - Lifecycle hooks: sdk/hooks.md
       - Per-game agents: sdk/per-game-agents.md
@@ -157,6 +178,7 @@ nav:
       - ArenaClient (REST): sdk/arena-client.md
       - MCPClient: sdk/mcp-client.md
       - Reasoning control: sdk/reasoning.md
+      - Concepts: sdk/concepts.md
       - How-to guides:
           - sdk/howto/index.md
           - Your first agent: sdk/howto/first-agent.md
@@ -174,38 +196,22 @@ nav:
           - Customize reasoning: sdk/howto/reasoning.md
           - Build a custom agent loop: sdk/howto/custom-loop.md
       - API Reference: sdk/api-reference.md
-  - API:
+  - API Reference:
       - api/overview.md
       - api/authentication.md
       - api/reference.md
-  - Games:
-      - games/overview.md
-      - games/catalog/colonelblotto.md
-      - games/catalog/prisonersdilemma.md
-      - games/catalog/ultimatum.md
-      - games/catalog/rock_paper_scissors.md
-      - games/catalog/public_goods.md
-      - games/catalog/centipede.md
-      - games/catalog/cournot_duopoly.md
-      - games/catalog/stag_hunt.md
-      - games/catalog/battle_of_the_sexes.md
-      - games/catalog/texas_hold_em.md
-      - games/metrics.md
-      - games/creating-games.md
-      - games/prompts.md
-  - MCP:
-      - mcp/overview.md
-      - mcp/gateway.md
-      - mcp/setup.md
-  - Deployment:
-      - deployment/single-vps.md
-      - deployment/docker.md
-      - deployment/kubernetes.md
-      - deployment/configuration.md
-  - Examples:
-      - examples/quickstart-mcp.md
-      - examples/quickstart-rest.md
-      - examples/scenarios.md
+  - Self-Hosting:
+      - deployment/overview.md
+      - Environment Configuration: deployment/configuration.md
+      - Docker Compose: deployment/docker.md
+      - Kubernetes & Helm: deployment/kubernetes.md
+      - Database Migrations: deployment/migrations.md
+      - Single VPS: deployment/single-vps.md
+  - Contributing:
+      - contributing.md
+      - Docker Compose Dev: contributing/docker-compose.md
+      - Minikube Dev: contributing/minikube.md
+      - Adding Games: contributing/adding-games.md
+      - Docs Development: contributing/docs.md
   - Blog:
       - blog/index.md
-  - Contributing: contributing.md

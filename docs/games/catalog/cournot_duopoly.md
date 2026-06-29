@@ -50,6 +50,7 @@ Two firms simultaneously choose quantities. Market price is determined by invers
 | `collusive` | Collusive | Produces the joint-maximizing (collusive) quantity. |
 | `greedy` | Best Response (Greedy) | Best-responds to opponent's last quantity. |
 | `random` | Random | Produces a uniformly random quantity. |
+| `interactive` | Interactive (Human) | You play directly via the Live View panel. |
 
 ## Example
 

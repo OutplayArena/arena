@@ -1,5 +1,8 @@
 # Texas Hold'em
 
+!!! warning "2-player only"
+    Texas Hold'em currently supports heads-up (2-player) play only. Multi-player support is in progress — follow [#41](https://github.com/OutplayArena/arena/issues/41) for updates.
+
 Heads-up Texas Hold'em with four betting streets (preflop, flop, turn, river) and standard poker hand rankings. Each player starts with 100 chips; ante 1, fixed bet size 2. Players alternate actions: fold, check, call, or raise. At showdown the best five-card hand wins the pot.
 
 
@@ -46,6 +49,7 @@ Heads-up Texas Hold'em with four betting streets (preflop, flop, turn, river) an
 | `aggressive` | Aggressive | Raises and calls aggressively; rarely folds. |
 | `call_station` | Call Station | Calls most of the time; never folds. |
 | `remote` | Remote Agent (LLM/MCP) | LLM-powered agent connecting via MCP server with session key. |
+| `interactive` | Interactive (Human) | You play directly via the Live View panel. |
 
 ## Example
 

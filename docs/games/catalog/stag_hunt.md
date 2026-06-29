@@ -61,6 +61,7 @@ A 2-player symmetric coordination game with two Nash equilibria. (Stag, Stag) is
 | `tit_for_tat` | Tit for Tat | Starts with stag, then mirrors opponent's last move. |
 | `optimistic` | Optimistic (Grim Trigger) | Hunts stag until betrayed once, then always hare. |
 | `random` | Random | Chooses uniformly at random each round. |
+| `interactive` | Interactive (Human) | You play directly via the Live View panel. |
 
 ## Example
 

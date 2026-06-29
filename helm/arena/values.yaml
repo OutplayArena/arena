@@ -47,7 +47,11 @@ oauth:
 
 backend:
   image:
-    repository: arena-backend
+    # Default points at the Docker Hub canonical name (matches the production
+    # images published by .github/workflows/release.yml). helm-upgrade.sh
+    # passes --set backend.image.repository=arena-backend in --build mode to
+    # override this to the locally-built tag.
+    repository: her3ert/outplayarena-backend
     tag: latest
     pullPolicy: IfNotPresent
   replicas: 1
@@ -72,7 +76,8 @@ backend:
 
 mcpServer:
   image:
-    repository: arena-mcp
+    # See backend.image.repository note above.
+    repository: her3ert/outplayarena-mcp
     tag: latest
     pullPolicy: IfNotPresent
   port: 9999
@@ -88,11 +93,15 @@ mcpServer:
 
 migrations:
   image:
-    repository: arena-backend
+    # Migrations reuse the backend image. helm-upgrade.sh overrides the
+    # repository to arena-backend in --build mode (same as backend).
+    repository: her3ert/outplayarena-backend
     tag: latest
     pullPolicy: IfNotPresent
 
 docs:
+  # The docs image is NOT published to a registry — it's built locally from
+  # docs/Dockerfile by helm-upgrade.sh in both --build and --pull modes.
   image:
     repository: arena-docs
     tag: latest
@@ -107,6 +116,15 @@ docs:
       memory: 64Mi
 
 traefik:
+  # When true, the chart renders the Traefik IngressRoute + Middleware
+  # resources (helm/arena/templates/traefik/* and the per-component
+  # ingressroute.yaml files). The CRDs (traefik.io/v1alpha1) must be
+  # installed in the cluster — typically by running the script with
+  # --with-traefik so it installs the Traefik controller chart, which
+  # brings the CRDs with it. Off by default; the recommended way to
+  # expose local services is `kubectl port-forward` via
+  # scripts/dev-tunnel.sh.
+  enabled: false
   host: agent-arena.local
   certResolver: ""
   middleware:

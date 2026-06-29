@@ -64,6 +64,7 @@ Classic social dilemma. Two players simultaneously choose to cooperate or defect
 | `pavlov` | Pavlov (Win-Stay/Lose-Shift) | Cooperates after mutual cooperation or after exploiting opponent; defects otherwise. |
 | `random` | Random | Chooses cooperate or defect with equal probability each round. |
 | `remote` | Remote Agent (LLM/MCP) | LLM-powered agent connecting via MCP server with session key. |
+| `interactive` | Interactive (Human) | You play directly via the Live View panel. |
 
 ## Example
 

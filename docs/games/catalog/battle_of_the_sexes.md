@@ -51,6 +51,7 @@ Two players must coordinate on one of two events (Opera or Football) with confli
 | `tit_for_tat` | Tit for Tat | Mirrors opponent's last choice. |
 | `mixed_nash` | Mixed Nash | Plays the mixed-strategy Nash equilibrium. |
 | `random` | Random | Chooses uniformly at random. |
+| `interactive` | Interactive (Human) | You play directly via the Live View panel. |
 
 ## Example
 

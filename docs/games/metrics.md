@@ -39,6 +39,11 @@ These metrics are computed for every game:
 - `cp_backward_induction_adherence`
 - `cp_cooperation_index`
 - `backward_induction_adherence`
+- `cooperation_rate`
+- `tit_for_tat_adherence`
+- `forgiveness_index`
+- `conditional_cooperation`
+- `multilateral_cooperation_index`
 
 ### Colonel Blotto
 
@@ -84,6 +89,10 @@ These metrics are computed for every game:
 - `pgg_contribution_efficiency`
 - `pgg_price_of_anarchy`
 - `multilateral_cooperation_index`
+- `cooperation_rate`
+- `tit_for_tat_adherence`
+- `forgiveness_index`
+- `conditional_cooperation`
 
 ### Rock-Paper-Scissors
 

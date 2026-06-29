@@ -7,6 +7,12 @@ description: >
   river) and standard poker hand rankings. Each player starts with 100
   chips; ante 1, fixed bet size 2. Players alternate actions: fold, check,
   call, or raise. At showdown the best five-card hand wins the pot.
+warnings:
+  - title: "2-player only"
+    body: >
+      Texas Hold'em currently supports heads-up (2-player) play only.
+      Multi-player support is in progress — follow
+      [#41](https://github.com/OutplayArena/arena/issues/41) for updates.
 tags:
   - zero-sum
   - sequential

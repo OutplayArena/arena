@@ -1,13 +1,13 @@
 # Public Goods Game
 
-N players (3–6) simultaneously choose how much to contribute to a shared pool. The pool is multiplied by a factor r and split equally among all players. When r < N, free-riding dominates at Nash equilibrium, but full contribution maximizes social welfare. Supports an optional punishment variant where players can pay to sanction low contributors after each round.
+N players (3–10) simultaneously choose how much to contribute to a shared pool. The pool is multiplied by a factor r and split equally among all players. When r < N, free-riding dominates at Nash equilibrium, but full contribution maximizes social welfare. Supports an optional punishment variant where players can pay to sanction low contributors after each round.
 
 
 ## Overview
 
 **Type**: social_dilemma, simultaneous, continuous
 
-**Players**: 3–6
+**Players**: 3–10
 
 ## Configuration
 
@@ -38,10 +38,15 @@ N players (3–6) simultaneously choose how much to contribute to a shared pool.
 - `strategy_entropy`
 - `behavioral_consistency`
 - `cumulative_regret`
+- `nash_gap`
 - `social_welfare`
 - `pareto_efficiency`
 - `gini_coefficient`
 - `multilateral_cooperation_index`
+- `cooperation_rate`
+- `tit_for_tat_adherence`
+- `forgiveness_index`
+- `conditional_cooperation`
 
 ## Built-in Agents
 
@@ -53,6 +58,7 @@ N players (3–6) simultaneously choose how much to contribute to a shared pool.
 | `linear_decay` | Linear Decay | Starts at full contribution and decays to zero. |
 | `conditional_cooperator` | Conditional Cooperator | Matches the average contribution of others. |
 | `random` | Random | Contributes a uniformly random amount each round. |
+| `interactive` | Interactive (Human) | You play directly via the Live View panel. |
 
 ## Example
 

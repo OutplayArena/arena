@@ -47,6 +47,7 @@ Player A proposes a split of a fixed sum; Player B accepts or rejects. Both get 
 | `fair` | Fair Agent | Proposes equal split; rejects offers below 40%. |
 | `greedy` | Greedy Proposer | Proposes minimum; accepts >30%. |
 | `random` | Random | Random offers and random responses. |
+| `interactive` | Interactive (Human) | You play directly via the Live View panel. |
 
 ## Example
 

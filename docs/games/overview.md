@@ -11,7 +11,7 @@ OutplayArena includes a catalog of game theory scenarios spanning the cooperativ
 | [Colonel Blotto](catalog/colonelblotto.md) | 2 | discrete_allocation | zero_sum | simultaneous |
 | [Cournot Duopoly](catalog/cournot_duopoly.md) | 2 | continuous | competitive_with_collusion | simultaneous |
 | [Prisoner's Dilemma](catalog/prisonersdilemma.md) | 2 | binary_choice | mixed_motive | simultaneous |
-| [Public Goods Game](catalog/public_goods.md) | 3–6 | continuous | social_dilemma | simultaneous |
+| [Public Goods Game](catalog/public_goods.md) | 3–10 | continuous | social_dilemma | simultaneous |
 | [Rock-Paper-Scissors](catalog/rock_paper_scissors.md) | 2 | discrete_choice | zero_sum | simultaneous |
 | [Stag Hunt](catalog/stag_hunt.md) | 2 | binary_choice | coordination | simultaneous |
 | [Texas Hold'em](catalog/texas_hold_em.md) | 2 | discrete_choice | zero_sum | sequential |

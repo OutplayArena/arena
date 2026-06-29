@@ -42,6 +42,7 @@ Resource allocation game. Two players allocate fixed resources across battlefiel
 | `random` | Random | Assigns random troop allocations each round. |
 | `greedy` | Greedy | Copies opponent's last move +1, normalized to budget. |
 | `remote` | Remote Agent (LLM/MCP) | LLM-powered agent connecting via MCP server with session key. |
+| `interactive` | Interactive (Human) | You play directly via the Live View panel. |
 
 ## Example
 

@@ -34,9 +34,16 @@ A sequential game where two players alternately choose to TAKE (end the game) or
 - `cp_cooperation_index`
 - `backward_induction_adherence`
 - `strategy_entropy`
+- `behavioral_consistency`
 - `cumulative_regret`
 - `social_welfare`
+- `pareto_efficiency`
 - `gini_coefficient`
+- `cooperation_rate`
+- `tit_for_tat_adherence`
+- `forgiveness_index`
+- `conditional_cooperation`
+- `multilateral_cooperation_index`
 
 ## Built-in Agents
 
@@ -47,6 +54,7 @@ A sequential game where two players alternately choose to TAKE (end the game) or
 | `last_step_take` | Last Step Take | Passes until the last opportunity, then takes. |
 | `tit_for_tat` | Tit for Tat | Passes if opponent passed last time, takes otherwise. |
 | `random` | Random | Chooses randomly between take and pass. |
+| `interactive` | Interactive (Human) | You play directly via the Live View panel. |
 
 ## Example
 

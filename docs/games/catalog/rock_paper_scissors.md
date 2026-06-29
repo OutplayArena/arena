@@ -44,6 +44,7 @@ Classic simultaneous zero-sum game. Two players each choose rock, paper, or scis
 | `copycat` | Copycat | Copies the opponent's last move. Plays randomly on round 1. |
 | `counter` | Counter | Plays the move that beats the opponent's last move. Plays randomly on round 1. |
 | `remote` | Remote Agent (LLM/MCP) | LLM-powered agent connecting via MCP server with session key. |
+| `interactive` | Interactive (Human) | You play directly via the Live View panel. |
 
 ## Example
 
