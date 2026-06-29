@@ -7,6 +7,7 @@ dev-dependencies = [
     "pytest-asyncio>=0.24",
     "pytest-cov>=5.0",
     "fakeredis>=2.30",
+    "ruff>=0.9",
 ]
 # regex 2026.6.28 was published to PyPI with only macOS wheels (a known
 # CalVer publishing-pipeline bug in the `regex` package: see

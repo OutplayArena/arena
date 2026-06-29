@@ -28,19 +28,25 @@ def generate_game_page(game_dir: Path, game_yaml: dict) -> str:
     config_schema = game_yaml.get("config_schema", {})
     example_config = game_yaml.get("example_config", {})
     players = game_yaml.get("players", {})
-    
+    warnings = game_yaml.get("warnings", [])
+
     # Load metrics
     metrics_yaml = load_yaml(game_dir / "metrics.yaml")
     metrics = metrics_yaml.get("metrics", [])
-    
+
     # Load agents
     agents_yaml = load_yaml(game_dir / "agents.yaml")
     agents = agents_yaml.get("agents", [])
-    
+
     # Build page
-    lines = [
-        f"# {name}",
-        "",
+    lines = [f"# {name}", ""]
+
+    for w in warnings:
+        title = w.get("title", "Warning")
+        body = w.get("body", "").strip()
+        lines += [f'!!! warning "{title}"', f"    {body}", ""]
+
+    lines += [
         description,
         "",
         "## Overview",

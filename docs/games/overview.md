@@ -1,46 +1,54 @@
-# Games
+# Games Overview
 
-OutplayArena includes 10 game theory scenarios spanning the cooperative-competitive spectrum. Each game page explains how to play, lists all configuration parameters, and shows how to configure the game via the API or the UI side-by-side.
+OutplayArena includes a catalog of game theory scenarios spanning the cooperative-competitive spectrum.
 
 ## Game Catalog
 
-| Game | Players | Strategic Tension |
-|---|---|---|
-| [Colonel Blotto](catalog/colonelblotto.md) | 2 | Zero-sum resource allocation across battlefields |
-| [Prisoner's Dilemma](catalog/prisonersdilemma.md) | 2 | Cooperation vs. defection under individual incentive |
-| [Ultimatum Game](catalog/ultimatum.md) | 2 | Fairness in sequential bargaining |
-| [Rock-Paper-Scissors](catalog/rock_paper_scissors.md) | 2 | Unexploitable mixed strategies |
-| [Public Goods Game](catalog/public_goods.md) | 3–6 | Free-riding vs. collective contribution |
-| [Centipede Game](catalog/centipede.md) | 2 | Backward induction vs. sustained cooperation |
-| [Cournot Duopoly](catalog/cournot_duopoly.md) | 2 | Competitive quantity-setting vs. collusion |
-| [Stag Hunt](catalog/stag_hunt.md) | 2 | Trust and equilibrium selection |
-| [Battle of the Sexes](catalog/battle_of_the_sexes.md) | 2 | Asymmetric coordination with conflicting preferences |
-| [Texas Hold'em](catalog/texas_hold_em.md) | 2 | Incomplete-information sequential poker |
+| Game | Players | Action Space | Payoff Structure | Information |
+|------|---------|--------------|------------------|-------------|
+| [Battle of the Sexes](catalog/battle_of_the_sexes.md) | 2 | binary_choice | asymmetric_coordination | simultaneous |
+| [Centipede Game](catalog/centipede.md) | 2 | binary_choice | sequential_cooperation | perfect |
+| [Colonel Blotto](catalog/colonelblotto.md) | 2 | discrete_allocation | zero_sum | simultaneous |
+| [Cournot Duopoly](catalog/cournot_duopoly.md) | 2 | continuous | competitive_with_collusion | simultaneous |
+| [Prisoner's Dilemma](catalog/prisonersdilemma.md) | 2 | binary_choice | mixed_motive | simultaneous |
+| [Public Goods Game](catalog/public_goods.md) | 3–10 | continuous | social_dilemma | simultaneous |
+| [Rock-Paper-Scissors](catalog/rock_paper_scissors.md) | 2 | discrete_choice | zero_sum | simultaneous |
+| [Stag Hunt](catalog/stag_hunt.md) | 2 | binary_choice | coordination | simultaneous |
+| [Texas Hold'em](catalog/texas_hold_em.md) | 2 | discrete_choice | zero_sum | sequential |
+| [Ultimatum Game](catalog/ultimatum.md) | 2 | continuous | bargaining | perfect |
 
-## Which Game Should I Pick?
+## Ontology Taxonomy
 
-**To study cooperation and trust:** Prisoner's Dilemma, Stag Hunt, Public Goods Game, Centipede Game
+### By Payoff Structure
 
-**To study fairness and bargaining:** Ultimatum Game
+**Asymmetric Coordination**:
+- Battle of the Sexes
 
-**To study zero-sum strategic reasoning:** Colonel Blotto, Rock-Paper-Scissors, Texas Hold'em
+**Bargaining**:
+- Ultimatum Game
 
-**To study coordination:** Battle of the Sexes, Stag Hunt
+**Competitive With Collusion**:
+- Cournot Duopoly
 
-**To study collusion vs. competition:** Cournot Duopoly
+**Coordination**:
+- Stag Hunt
 
-## Configuration Pattern
+**Mixed Motive**:
+- Prisoner's Dilemma
 
-All games follow the same API pattern:
+**Sequential Cooperation**:
+- Centipede Game
 
-```python
-from outplayarena_sdk import ArenaClient
+**Social Dilemma**:
+- Public Goods Game
 
-client = ArenaClient("https://arena.core-aix.org/api")
-experiment = client.create_experiment(
-    {"game": "<game-name>", "rounds": 10, ...},
-    api_key="nka_...",
-)
-```
+**Zero Sum**:
+- Colonel Blotto
+- Rock-Paper-Scissors
+- Texas Hold'em
 
-The `game` field is the game's identifier string (shown in each game's configuration table). All other parameters are game-specific — see individual game pages for the full parameter reference.
+## Next Steps
+
+- Browse individual game pages for details
+- Learn about [metrics](metrics.md) tracked across games
+- Read about [creating new games](creating-games.md)
