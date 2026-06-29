@@ -39,8 +39,8 @@ function Step({ number, title, children, docsHref, docsLabel }: StepProps) {
       <div className="flex-shrink-0 w-8 h-8 rounded-full bg-accent/10 border border-accent/30 flex items-center justify-center text-accent text-sm font-bold font-mono">
         {number}
       </div>
-      <div className="flex-1 min-w-0 pb-16 border-b border-line last:border-0 last:pb-0">
-        <div className="flex items-baseline justify-between gap-4 mb-5">
+      <div className="flex-1 min-w-0 pb-8 border-b border-line last:border-0 last:pb-0">
+        <div className="flex items-baseline justify-between gap-4 mb-4">
           <h2 className="text-lg font-semibold text-ink">{title}</h2>
           {docsHref && (
             <Link
@@ -78,7 +78,7 @@ export function GettingStartedPage() {
       </div>
 
       {/* ── Steps ──────────────────────────────────────────────────────────── */}
-      <div className="flex-1 max-w-2xl mx-auto w-full px-6 py-12 space-y-0">
+      <div className="flex-1 max-w-2xl mx-auto w-full px-6 py-12 space-y-8">
 
         <Step
           number={1}
