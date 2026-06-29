@@ -1,3 +1,4 @@
+{{- if .Values.traefik.enabled }}
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
@@ -17,3 +18,4 @@ spec:
         - kind: Service
           name: {{ include "arena.fullname" . }}-mcp
           port: {{ .Values.mcpServer.port }}
+{{- end }}

@@ -1,3 +1,4 @@
+{{- if .Values.traefik.enabled }}
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
@@ -23,4 +24,5 @@ spec:
   {{- else }}
     secretName: {{ .Values.traefik.tlsSecret | default (printf "%s-tls" (include "arena.fullname" .)) }}
   {{- end }}
+{{- end }}
 {{- end }}

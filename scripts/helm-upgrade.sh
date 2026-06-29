@@ -249,9 +249,22 @@ if [ "$INSTALL_TRAEFIK" -eq 1 ]; then
     helm -n "$TRAEFIK_NS" install traefik traefik/traefik --create-namespace
   fi
   kubectl -n "$TRAEFIK_NS" rollout status deploy/traefik --timeout=180s
+  # The Traefik helm chart installs the traefik.io CRDs, so the
+  # IngressRoute/Middleware resources in the arena chart can render.
+  HELM_TRAEFIK_OVERRIDES=("--set" "traefik.enabled=true")
   echo
 else
   echo "[2/4] Skipping Traefik (pass --with-traefik to install it)"
+  # Auto-detect: if Traefik is already present from a previous --with-traefik
+  # run, keep the IngressRoute/Middleware resources so they don't get torn
+  # down on this re-apply. If Traefik is absent, leave traefik.enabled at
+  # its values.yaml default (false) and skip the resources.
+  if helm -n "$TRAEFIK_NS" list -q 2>/dev/null | grep -q "^traefik$"; then
+    echo "  (Traefik is already installed; keeping IngressRoute/Middleware resources)"
+    HELM_TRAEFIK_OVERRIDES=("--set" "traefik.enabled=true")
+  else
+    HELM_TRAEFIK_OVERRIDES=()
+  fi
   echo
 fi
 
@@ -268,7 +281,8 @@ helm upgrade "$RELEASE" helm/arena \
   --set oauth.jwtSecret="${JWT_SECRET}" \
   --set oauth.callbackBaseUrl="${OAUTH_CALLBACK_BASE_URL:-http://localhost:${BACKEND_PORT}}" \
   --set mcpServer.publicBaseUrl="${MCP_PUBLIC_BASE_URL:-http://localhost:${MCP_PORT}}" \
-  "${HELM_IMAGE_OVERRIDES[@]}"
+  "${HELM_IMAGE_OVERRIDES[@]}" \
+  "${HELM_TRAEFIK_OVERRIDES[@]}"
 echo
 
 # ── 4. Wait for migrations to finish and main pods to be ready ──────

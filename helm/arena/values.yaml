@@ -116,6 +116,15 @@ docs:
       memory: 64Mi
 
 traefik:
+  # When true, the chart renders the Traefik IngressRoute + Middleware
+  # resources (helm/arena/templates/traefik/* and the per-component
+  # ingressroute.yaml files). The CRDs (traefik.io/v1alpha1) must be
+  # installed in the cluster — typically by running the script with
+  # --with-traefik so it installs the Traefik controller chart, which
+  # brings the CRDs with it. Off by default; the recommended way to
+  # expose local services is `kubectl port-forward` via
+  # scripts/dev-tunnel.sh.
+  enabled: false
   host: agent-arena.local
   certResolver: ""
   middleware:
