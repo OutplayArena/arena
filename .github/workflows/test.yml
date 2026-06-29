@@ -2,12 +2,27 @@ name: Test Suite
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, dev]
   pull_request:
-    branches: [main, master]
+    branches: [main, master, dev]
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+
   frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     name: Frontend (TypeScript)
     runs-on: ubuntu-latest
     defaults:
@@ -22,9 +37,29 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      - uses: actions/cache@v4
+        id: nm-cache
+        with:
+          path: frontend/node_modules
+          key: node-modules-${{ hashFiles('frontend/package-lock.json') }}
+
       - run: npm ci
-      - run: npm run lint
-      - run: npm test
+        if: steps.nm-cache.outputs.cache-hit != 'true'
+
+      - uses: actions/cache@v4
+        with:
+          path: frontend/.eslintcache
+          key: eslint-${{ hashFiles('frontend/eslint.config.js', 'frontend/package-lock.json') }}
+          restore-keys: eslint-
+
+      - name: Typecheck
+        run: npx tsc -b --noEmit
+
+      - name: Lint
+        run: npm run lint -- --cache
+
+      - name: Test
+        run: npm test
 
   backend:
     name: Backend (Python)

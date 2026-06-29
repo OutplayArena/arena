@@ -23,5 +23,7 @@ export default defineConfig({
     setupFiles: [path.resolve(__dirname, "src/test-setup.ts")],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
     css: { modules: { classNameStrategy: "non-scoped" } },
+    pool: "threads",
+    forceExit: true,
   },
 });

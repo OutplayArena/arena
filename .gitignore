@@ -161,6 +161,7 @@ frontend/node_modules/
 frontend/*.local
 frontend/coverage/
 frontend/.husky/
+frontend/.eslintcache
 backend/static/assets/
 !package.json
 !package-lock.json
@@ -171,3 +172,4 @@ backend/static/assets/
 !frontend/package.json
 !frontend/package-lock.json
 minikube-linux-amd64
+.eslintcache

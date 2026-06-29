@@ -5,7 +5,7 @@ import { server } from "./mocks/server";
 import { __resetGameNamesCache } from "./hooks/useGameNames";
 
 beforeAll(() => {
-  server.listen({ onUnhandledRequest: "bypass" });
+  server.listen({ onUnhandledRequest: "error" });
 
   vi.stubGlobal("matchMedia", vi.fn((query: string) => ({
     matches: false,

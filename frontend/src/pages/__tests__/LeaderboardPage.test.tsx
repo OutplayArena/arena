@@ -109,6 +109,25 @@ describe("LeaderboardPage", () => {
     });
   });
 
+  it("leaves the From/To date fields empty and disabled when no data is available (date_range null)", async () => {
+    // Regression test: when the backend has no matches (date_range: { min_date: null,
+    // max_date: null }), the leaderboard should still render the filters but leave
+    // From/To unpopulated and disabled — picking a date that matches nothing is
+    // pointless, so the pickers should be non-interactive.
+    mockLeaderboardEndpoint(EMPTY_RESPONSE);
+    renderWithProviders(<LeaderboardPage />, { initialRoute: "/leaderboard" });
+    await waitFor(() => {
+      expect(screen.getByText(/No data yet/)).toBeInTheDocument();
+    });
+    const fromButton = screen.getByTestId("leaderboard-filter-from");
+    const toButton = screen.getByTestId("leaderboard-filter-to");
+    expect(fromButton).toHaveTextContent("any");
+    expect(toButton).toHaveTextContent("any");
+    expect(fromButton).toBeDisabled();
+    expect(toButton).toBeDisabled();
+    expect(screen.queryByTestId("leaderboard-filter-data-range")).not.toBeInTheDocument();
+  });
+
   it("shows error state with retry button on failure", async () => {
     server.use(
       http.get("/api/leaderboard", () => new HttpResponse("Internal Server Error", { status: 500 })),

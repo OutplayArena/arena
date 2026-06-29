@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import type { CreateExperimentResponse, GameState, GameResult, GameAgent, GameEntry, ScenarioInfo, MetricDescriptor } from "../types";
+import type { CreateExperimentResponse, GameState, GameResult, GameAgent, GameEntry, ScenarioInfo, MetricDescriptor, LeaderboardResponse, BenchmarkGamesResponse, BenchmarkReport, MailboxMessage } from "../types";
 
 const API = "/api";
 
@@ -188,4 +188,38 @@ export const handlers = [
       },
     });
   }),
+
+  http.get(`${API}/session/:sessionId/mailbox/messages`, () =>
+    HttpResponse.json<{ messages: MailboxMessage[] }>({ messages: [] }),
+  ),
+
+  http.get(`${API}/benchmark/report`, () =>
+    HttpResponse.json<BenchmarkReport>({
+      agents: {},
+      ranking: [],
+      population: {},
+      total_matches: 0,
+      date_range: { min_date: null, max_date: null },
+    }),
+  ),
+
+  // Fallback leaderboard handlers — test-specific handlers added via server.use()
+  // take priority. These exist so that in-flight requests triggered by
+  // LeaderboardPage's date auto-populate effect still resolve after a test's
+  // own handlers are removed by server.resetHandlers(), preventing open handles
+  // from keeping the worker process alive.
+  http.get(`${API}/leaderboard`, () =>
+    HttpResponse.json<LeaderboardResponse>({
+      agents: [],
+      total: 0,
+      page: 1,
+      page_size: 50,
+      total_matches: 0,
+      date_range: { min_date: null, max_date: null },
+    }),
+  ),
+
+  http.get(`${API}/benchmark/games`, () =>
+    HttpResponse.json<BenchmarkGamesResponse>({ games: [] }),
+  ),
 ];
