@@ -1,11 +1,6 @@
 """Tests for all 10 per-game :class:`BaseAgent` subclasses."""
 from __future__ import annotations
 
-import base64
-import hashlib
-import hmac
-import os
-
 
 from outplayarena_sdk.agents.games import (
     BattleOfTheSexesAgent,
@@ -23,20 +18,15 @@ from outplayarena_sdk.base import LLMConfig
 
 
 def _token(player: str = "A") -> str:
-    secret = os.environ.get("JWT_SECRET", "dev-secret-change-me")
-    session_id = "test-session-1"
-    h = hashlib.sha256(secret.encode("utf-8")).digest()
-    payload = f"{session_id}:{player}"
-    sig = hmac.new(h, payload.encode("utf-8"), hashlib.sha256).hexdigest()
-    token = f"{session_id}:{player}:{sig}"
-    encoded = base64.urlsafe_b64encode(token.encode("utf-8")).decode("utf-8").rstrip("=")
-    return f"nks_{encoded}"
+    """Return an opaque session-key string for tests (v0.2.0+)."""
+    return f"nks_test_token_for_{player}"
 
 
 def _agent(cls, **kwargs):
     return cls(
         player="A",
         player_token=_token(),
+        session_id="test-session-1",
         arena_url="http://x",
         llm_config=LLMConfig(model="gpt-4o", api_key="k"),
         **kwargs,

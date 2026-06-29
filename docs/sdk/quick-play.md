@@ -29,7 +29,6 @@ def quick_play(
     arena_api_key: str | None = None,
     config: dict[str, Any] | None = None,
     seed: int = 42,
-    jwt_secret: str | None = None,
     mcp_url: str | None = None,
     poll_interval: float = 1.0,
     max_tools_per_turn: int = 4,
@@ -46,7 +45,6 @@ def quick_play(
 | `arena_api_key` | API key for experiment creation (the `OUTPLAYARENA_API_KEY`). |
 | `config` | Game-specific config dict. Defaults to `{"game": game, "seed": seed}` if not provided. |
 | `seed` | Seed for the experiment. The same seed is passed to both agents so they see the same `agent.rng` stream. |
-| `jwt_secret` | Optional JWT secret. Falls back to the `JWT_SECRET` env var. |
 | `mcp_url` | Optional MCP endpoint. Defaults to the `mcp_url` from `create_experiment` if not provided. |
 | `poll_interval` | Per-agent poll interval. |
 | `max_tools_per_turn` | Per-turn tool-call budget for each agent. |

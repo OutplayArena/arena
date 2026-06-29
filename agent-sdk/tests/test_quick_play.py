@@ -123,6 +123,64 @@ class TestQuickPlayAsync:
             call_kwargs = mock_agent_cls.call_args.kwargs
             assert call_kwargs["mcp_url"] == "http://explicit-mcp:9998"
 
+    @pytest.mark.asyncio
+    async def test_session_id_passed_from_create_response(self):
+        """As of v0.2.0 the agent must receive the session_id from the
+        create_experiment response (the SDK no longer derives it from
+        the token)."""
+        from outplayarena_sdk.quick_play import _quick_play_async
+
+        with patch("outplayarena_sdk.quick_play.ArenaClient") as MockClient, \
+             patch("outplayarena_sdk.quick_play.get_agent_class") as mock_get:
+            mock_rest = MagicMock()
+            mock_rest.create_experiment.return_value = _fake_create_experiment()
+            MockClient.return_value = mock_rest
+
+            agent = MagicMock()
+            agent.run = AsyncMock(return_value={"winner": "A"})
+            mock_agent_cls = MagicMock(return_value=agent)
+            mock_get.return_value = mock_agent_cls
+
+            await _quick_play_async(
+                game="ultimatum",
+                agents={
+                    "A": {"model": "gpt-4", "api_key": "sk-test"},
+                    "B": {"model": "claude", "api_key": "sk-ant-test"},
+                },
+            )
+
+            assert mock_agent_cls.call_count == 2
+            for call in mock_agent_cls.call_args_list:
+                assert call.kwargs["session_id"] == "sess-1"
+
+    @pytest.mark.asyncio
+    async def test_no_jwt_secret_kwarg_on_agent_or_helper(self):
+        """Regression guard: the SDK must not accept a jwt_secret kwarg
+        (it was a shared HMAC secret in v0.1.x; the server keeps it, the
+        client does not)."""
+        import inspect
+        from outplayarena_sdk.quick_play import _quick_play_async
+
+        with patch("outplayarena_sdk.quick_play.ArenaClient") as MockClient, \
+             patch("outplayarena_sdk.quick_play.get_agent_class") as mock_get:
+            mock_rest = MagicMock()
+            mock_rest.create_experiment.return_value = _fake_create_experiment()
+            MockClient.return_value = mock_rest
+
+            agent = MagicMock()
+            agent.run = AsyncMock(return_value={"winner": "A"})
+            mock_agent_cls = MagicMock(return_value=agent)
+            mock_get.return_value = mock_agent_cls
+
+            await _quick_play_async(
+                game="ultimatum",
+                agents={"A": {"model": "gpt-4", "api_key": "sk-test"}},
+            )
+
+            call_kwargs = mock_agent_cls.call_args.kwargs
+            assert "jwt_secret" not in call_kwargs
+            assert "jwt_secret" not in inspect.signature(_quick_play_async).parameters
+
 
 class TestSyncWrapper:
     def test_quick_play_calls_asyncio_run(self):

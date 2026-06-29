@@ -14,6 +14,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `LICENSE`. The `License-` PyPI classifier and the SPDX identifier in
   `pyproject.toml` have been updated accordingly.
 
+## [0.2.0] - 2026-06-29
+
+### Security
+- **The SDK no longer requires (or accepts) the backend's `JWT_SECRET`.**
+  The shared HMAC secret used to sign `nks_…` session keys now stays on the
+  backend; the SDK treats the session key as an opaque auth handle and
+  reads `session_id` directly from the `create_experiment` response. This
+  was a real foot-gun: any client (test script, notebook, CI job) that
+  held the secret could forge session keys for any `(session_id, player)`
+  pair. The server's `JWT_SECRET` and `SESSION_KEY_SECRET` env vars are
+  unchanged and are still required by the backend.
+
+### Breaking
+- **`BaseAgent.__init__` now requires `session_id` as a keyword-or-positional
+  argument** (it used to be derived by decoding the token). Constructors
+  that previously relied on decode (e.g. `BaseAgent(player="A",
+  player_token="nks_…", …)`) must now also pass `session_id="…"` taken
+  from `ArenaClient.create_experiment()["session_id"]`.
+- **`BaseAgent.__init__` no longer accepts `jwt_secret=`.** Passing it
+  raises `TypeError`. There is no fallback to the `JWT_SECRET` env var.
+- **`quick_play` no longer accepts `jwt_secret=`.** Same rationale.
+- **`MCPAgent.player` no longer decodes the token.** Pass the player
+  explicitly: `MCPAgent(url, key, player="A")`. The decoded fallback
+  in the legacy shim is removed.
+- **`validate_session_key()` and `_default_jwt_secret()` are removed**
+  from the public SDK surface. Any third-party code that imported them
+  will get `ImportError`.
+- **`JWT_SECRET` env var lookup is gone.** The env var, if set, is now
+  ignored (was only used by the SDK; the backend reads it independently).
+- **Per-game agents and the per-game test fixtures no longer sign fake
+  tokens.** Test tokens are now opaque `nks_…` strings paired with an
+  explicit `session_id="test-session-1"`.
+
+### Migration
+1. Replace any call that builds an agent with the `session_id` it needs.
+   The `session_id` is already in `create_experiment`'s response.
+2. Drop any `jwt_secret=…` kwarg.
+3. If you were using `MCPAgent`'s `.player` property, pass `player="…"`
+   to the constructor instead.
+4. There is no migration path for the `validate_session_key` /
+   `_default_jwt_secret` helpers — they did secret-handling that no
+   client should do.
+
+## [0.1.0] - 2026-06-26
+
 ## [0.1.0] - 2026-06-26
 
 ### Added

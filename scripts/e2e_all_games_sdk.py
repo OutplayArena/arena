@@ -7,7 +7,8 @@ via OpenCode Zen. 2 rounds per game, no thinking for either model.
 Uses the SDK's per-game agents (quick_play) which handle action format
 parsing correctly for every game, including texas_hold_em.
 
-Environment:
+Environment (v0.2.0+: no JWT_SECRET needed; the SDK treats session
+tokens as opaque and reads session_id from the create response):
     OUTPLAYARENA_BASE_URL  Backend REST API (default http://127.0.0.1:8000/api)
     OUTPLAYARENA_API_KEY   Bearer token (Arena account API key)
     OPENCODE_GO_API_KEY         OpenCode Zen API key
@@ -29,14 +30,11 @@ OPENCODE_API_KEY = (
     os.environ.get("OPENCODE_GO_API_KEY")
     or os.environ.get("OPENCODE_API_KEY", "")
 )
-JWT_SECRET = os.environ.get("JWT_SECRET", "")
 
 if not ARENA_API_KEY:
     sys.exit("ERROR: OUTPLAYARENA_API_KEY env var is required")
 if not OPENCODE_API_KEY:
     sys.exit("ERROR: OPENCODE_GO_API_KEY (or OPENCODE_API_KEY) env var is required")
-if not JWT_SECRET:
-    sys.exit("ERROR: JWT_SECRET env var is required (must match backend's)")
 
 GLM_MODEL = "glm-5.1"
 DEEPSEEK_MODEL = "deepseek-v4-pro"
@@ -91,7 +89,6 @@ async def run_one(game: str, num_players: int, game_config: dict[str, Any]) -> d
             arena_api_key=ARENA_API_KEY,
             config=config,
             mcp_url="",  # Force REST (the SDK's MCP transport is flaky in this env)
-            jwt_secret=JWT_SECRET,
             poll_interval=1.0,
             max_tools_per_turn=4,
             verbose=False,  # Set to True to see LLM tool-call traces

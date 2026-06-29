@@ -47,7 +47,6 @@ async def _quick_play_async(
     arena_api_key: str | None = None,
     config: dict[str, Any] | None = None,
     seed: int = 42,
-    jwt_secret: str | None = None,
     mcp_url: str | None = None,
     poll_interval: float = 1.0,
     max_tools_per_turn: int = 4,
@@ -64,6 +63,7 @@ async def _quick_play_async(
         api_key=arena_api_key,
     )
     player_tokens = created["player_tokens"]
+    session_id = created["session_id"]
 
     if mcp_url is None and "mcp_url" in created:
         mcp_url = created["mcp_url"]
@@ -83,10 +83,10 @@ async def _quick_play_async(
         instances.append(agent_cls(
             player=player,
             player_token=player_tokens[player],
+            session_id=session_id,
             arena_url=arena_url,
             llm_config=llm_cfg,
             mcp_url=mcp_url,
-            jwt_secret=jwt_secret,
             poll_interval=poll_interval,
             max_tools_per_turn=max_tools_per_turn,
             verbose=verbose,
@@ -116,7 +116,6 @@ def quick_play(
     arena_api_key: str | None = None,
     config: dict[str, Any] | None = None,
     seed: int = 42,
-    jwt_secret: str | None = None,
     mcp_url: str | None = None,
     poll_interval: float = 1.0,
     max_tools_per_turn: int = 4,
@@ -134,7 +133,6 @@ def quick_play(
             arena_api_key=arena_api_key,
             config=config,
             seed=seed,
-            jwt_secret=jwt_secret,
             mcp_url=mcp_url,
             poll_interval=poll_interval,
             max_tools_per_turn=max_tools_per_turn,

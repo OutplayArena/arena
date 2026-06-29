@@ -1,43 +1,8 @@
 from __future__ import annotations
 
-import hashlib
-import hmac
-import base64
 from typing import Any
 
 import httpx
-
-
-SESSION_KEY_PREFIX = "nks_"
-
-
-def validate_session_key(key: str, secret: str) -> tuple[str, str]:
-    if not key or not key.startswith(SESSION_KEY_PREFIX):
-        raise ValueError("invalid session key")
-
-    encoded = key[len(SESSION_KEY_PREFIX):]
-    padding = 4 - (len(encoded) % 4)
-    if padding != 4:
-        encoded += "=" * padding
-    try:
-        token = base64.urlsafe_b64decode(encoded).decode("utf-8")
-    except (ValueError, UnicodeDecodeError):
-        raise ValueError("invalid session key")
-
-    parts = token.split(":")
-    if len(parts) != 3:
-        raise ValueError("invalid session key")
-    session_id, player, sig = parts
-
-    payload = f"{session_id}:{player}"
-    secret_hash = hashlib.sha256(secret.encode("utf-8")).digest()
-    expected = hmac.new(secret_hash, payload.encode("utf-8"), hashlib.sha256).hexdigest()
-
-    import secrets as _secrets
-    if not _secrets.compare_digest(sig, expected):
-        raise ValueError("invalid session key")
-
-    return session_id, player
 
 
 class ArenaClient:
