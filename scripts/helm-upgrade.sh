@@ -133,25 +133,63 @@ echo "==============================================================="
 echo
 
 # ── 1. Image management (build OR pull OR skip) ────────────────────
+
+# Return the active minikube driver ("docker", "podman", "kvm", etc.) or
+# "none" if minikube is missing/stopped, or "unknown" if detection fails.
+# Used by build_one to decide whether the in-container build fast path is
+# likely to reach upstream registries.
+_minikube_driver() {
+  if ! command -v minikube >/dev/null 2>&1; then
+    echo "none"
+    return
+  fi
+  # JSON output is machine-readable and ANSI-free (the table output embeds
+  # colour codes which complicate parsing). If the field is empty or
+  # literal "null" (minikube not started), treat it as "none" so we skip
+  # the fast path.
+  local driver
+  driver=$(minikube profile list -o json 2>/dev/null \
+    | grep -oE '"Driver"[[:space:]]*:[[:space:]]*"[^"]*"' \
+    | head -1 \
+    | sed -E 's/.*"Driver"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')
+  if [ -n "$driver" ] && [ "$driver" != "null" ]; then
+    echo "$driver"
+  else
+    echo "none"
+  fi
+}
+
 build_one() {
   local image="$1"
   local dockerfile="$2"
   echo "  → building $image from $dockerfile ..."
 
-  # Fast path: build inside the minikube container runtime. This is the
-  # documented happy path and benefits from minikube's image cache.
-  if minikube image build -t "$image" -f "$dockerfile" "$PROJECT_ROOT"; then
-    return 0
+  local driver
+  driver=$(_minikube_driver)
+  if [ "$driver" = "docker" ]; then
+    # Fast path: in-container build with the docker driver has working
+    # network (buildkit inside the minikube container shares the host's
+    # network namespace via the docker daemon), so the upstream registry
+    # is reachable. This is also where minikube's image cache lives.
+    if minikube image build -t "$image" -f "$dockerfile" "$PROJECT_ROOT"; then
+      return 0
+    fi
+    echo "  ! minikube image build (driver=docker) failed; falling back to host build + tar load"
+  else
+    # Skip the fast path for non-docker drivers. podman/kvm/qemu/parallels/
+    # hyperkit run the minikube container/VM with an isolated network
+    # namespace; buildah inside it can't reach upstream registries like
+    # Docker Hub from a typical NAT'd setup, so the build hangs for ~90s
+    # on registry timeouts before failing. Going straight to the host
+    # build + tar load avoids the wait.
+    echo "  (minikube driver: ${driver} — skipping in-container build, going straight to host build + tar load)"
   fi
 
   # Fallback: build on the host with whatever container tool is available,
-  # then load the resulting tar into minikube. Useful when minikube's build
-  # context (buildah inside the minikube container) can't reach the upstream
-  # registry to pull base images — e.g. minikube on a podman driver in a
-  # network-isolated environment. Rootless podman also stores images outside
-  # the path minikube's image-loader searches, so the tar handoff is the
-  # most portable fix.
-  echo "  ! minikube image build failed; falling back to host build + tar load"
+  # then load the resulting tar into minikube. The tar handoff is necessary
+  # because rootless podman stores images under ~/.local/share/containers/
+  # — a path minikube's image-loader doesn't search, so it can't pick up
+  # freshly-built images by name.
   local builder=""
   if command -v podman >/dev/null 2>&1; then
     builder=podman
