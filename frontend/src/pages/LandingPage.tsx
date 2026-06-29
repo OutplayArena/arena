@@ -165,7 +165,7 @@ export function LandingPage() {
           {/* CTA row */}
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
-              to="/dashboard"
+              to="/getting-started"
               className="inline-flex items-center justify-center h-10 px-6 rounded-[var(--radius-button)] bg-accent text-white font-semibold text-sm transition-all duration-150 hover:opacity-90 hover:-translate-y-px active:translate-y-0"
             >
               Get Started
