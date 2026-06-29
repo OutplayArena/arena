@@ -71,9 +71,9 @@ export const Footer = memo(function Footer() {
         <div className="flex items-center gap-2">
           <span
             className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--radius-chip)] border border-line text-xs font-mono text-muted"
-            title="SPDX-License-Identifier: Apache-2.0 OR GPL-3.0-or-later"
+            title="SPDX-License-Identifier: Apache-2.0"
           >
-            Apache 2.0 / GPL-3.0
+            Apache 2.0
           </span>
           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--radius-chip)] border border-line text-xs font-mono text-muted">
             Open science, made with ❤️
