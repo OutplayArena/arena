@@ -173,7 +173,17 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
       }
       setFormValues(vals);
     }
-  }, [props, schema, initialValues, isReplay]);
+  },
+  // 'props' is intentionally excluded from the deps: it's derived from
+  // `schema` in the render body and resolveProps() returns a fresh object
+  // on every render, so depending on it would re-run this effect on every
+  // render and cause an infinite loop with setFormValues(). The original
+  // PR #76 lint fix added 'props' to the deps as a "correctness fix", but
+  // that change was itself the bug — it OOM'd the AutoConfigForm test
+  // files in CI (the worker sat at 100% memory for 2h53m before the
+  // runner killed it with ERR_WORKER_OUT_OF_MEMORY). Reverted.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [schema, initialValues, isReplay]);
 
   useEffect(() => {
     if (initRanRef.current) return;
