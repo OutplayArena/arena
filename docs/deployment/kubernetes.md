@@ -1,95 +1,99 @@
-# Kubernetes Deployment
+# Kubernetes & Helm
 
-Deploy OutplayArena on Kubernetes using the Helm chart for production deployments.
+Deploy OutplayArena on Kubernetes using the included Helm chart. The chart deploys all components with production-grade configuration: HPA for the backend, StatefulSets for the database and Redis, and RBAC for MCP pod management.
 
 ## Prerequisites
 
-- Kubernetes cluster (1.24+)
-- Helm 3
-- Traefik Ingress Controller (with CRDs)
-- Container registry for images
-- PostgreSQL-compatible storage class
+- Kubernetes 1.24+
+- Helm 3.9+
+- Traefik Ingress Controller with CRDs installed
+- A container registry (or use Docker Hub images directly)
+- A storage class supporting `ReadWriteOnce` volumes
 
-## Quick Start
+## Quick Deploy
 
 ```bash
-# Add Helm repo (or use local chart)
-# helm repo add arena https://...
-
-# Configure values
+# Copy and customize values
 cp helm/arena/values.yaml my-values.yaml
-# Edit my-values.yaml
+$EDITOR my-values.yaml
 
 # Deploy
-helm upgrade --install arena helm/arena \
+helm upgrade --install arena helm/arena/ \
   --namespace arena --create-namespace \
   -f my-values.yaml
 
-# Wait for deployment
+# Wait for rollout
 kubectl -n arena rollout status deployment/arena-backend
-
-# Port-forward for local access
-kubectl -n arena port-forward svc/arena-backend 8000:8000
 ```
 
-## Architecture
+## What the Chart Deploys
 
-```
-┌─────────────────────────────────────────┐
-│           Traefik Ingress Controller    │
-└──────────────────┬──────────────────────┘
-                   │
-    ┌──────────────┴──────────────┐
-    │                             │
-┌───▼──────────┐          ┌──────▼───────┐
-│   Backend    │          │  MCP Servers │
-│  Deployment  │          │   (Jobs)     │
-│  (1-10 pods) │          │              │
-└──────┬───────┘          └──────────────┘
-       │
-┌──────▼───────┐
-│  PostgreSQL  │
-│  StatefulSet │
-│  (10Gi PVC)  │
-└──────────────┘
-```
+| Resource | Type | Description |
+|---|---|---|
+| `arena-backend` | Deployment + HPA | FastAPI backend, scales 1–10 replicas |
+| `arena-db` | StatefulSet + PVC | PostgreSQL 16 with 10 Gi persistent storage |
+| `arena-redis` | StatefulSet + PVC | Redis 7 with 2 Gi persistent storage |
+| `arena-mcp-server` | Deployment | Always-on MCP server (2 replicas by default) |
+| `arena-migrations` | Job | Runs Alembic migrations on deploy |
+| `arena-docs` | Deployment | MkDocs documentation site |
+| Traefik IngressRoutes | CRD | Routing rules for backend and MCP |
+| RBAC | Role + RoleBinding | Permissions for MCP pod/job management |
+| Secrets | Secret | OAuth credentials, JWT secret, DB password |
 
-## Configuration
-
-### values.yaml
+## Key values.yaml Options
 
 ```yaml
-# Backend configuration
+# Image configuration
 backend:
   image:
-    repository: your-registry/arena-backend
-    tag: latest
+    repository: her3ert/outplayarena-backend
+    tag: v0.1.0
     pullPolicy: Always
-  replicas: 2
+  replicas: 1
   resources:
     requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
       cpu: 500m
       memory: 512Mi
-    limits:
-      cpu: 2000m
-      memory: 2Gi
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilization: 70
+    targetMemoryUtilization: 80
 
-# Database configuration
-database:
-  storageClassName: standard
-  storage: 10Gi
-  createPV: false  # Set true for persistent PV
-
-# MCP server configuration
 mcpServer:
   image:
-    repository: your-registry/arena-mcp
-    tag: latest
-  maxConcurrentJobs: 50
-  jobTTL: 300
-  publicBaseUrl: "https://api.agent-arena.local"
+    repository: her3ert/outplayarena-mcp
+    tag: v0.1.0
+  replicas: 2
+  port: 9999
+  resources:
+    requests:
+      cpu: 100m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
 
-# OAuth configuration
+database:
+  image: postgres:16-alpine
+  storage: 10Gi
+  storageClassName: standard   # set to your cluster's storage class
+
+redis:
+  image: redis:7-alpine
+  storage: 2Gi
+  storageClassName: standard
+
+# Traefik host routing
+traefik:
+  host: arena.example.com
+  certResolver: letsencrypt    # optional, if Traefik manages TLS
+
+# OAuth and secrets
 oauth:
   github:
     clientId: ""
@@ -97,58 +101,28 @@ oauth:
   google:
     clientId: ""
     clientSecret: ""
-  jwtSecret: "your-jwt-secret"
-  callbackBaseUrl: "https://agent-arena.local"
-
-# Traefik configuration
-traefik:
-  host: "agent-arena.local"
-  apiHost: "api.agent-arena.local"
-  certResolver: "letsencrypt"  # Optional
+  jwtSecret: ""                # openssl rand -hex 32
+  callbackBaseUrl: "https://arena.example.com"
 ```
 
-### Secrets
+## Deployment Workflow
 
-Secrets are managed via Helm values or external secret manager:
+The chart uses a Kubernetes Job (`arena-migrations`) as an init step before the backend starts. The backend deployment waits for the migration Job to complete before becoming available. On updates:
+
+1. `helm upgrade` triggers a new migration Job
+2. Migrations run against the existing database
+3. Backend deployment rolls out with the new image
+
+Check migration status:
 
 ```bash
-# Generate JWT secret
-openssl rand -hex 32
-
-# Create secret manually
-kubectl -n arena create secret generic arena-secrets \
-  --from-literal=jwt-secret=your-jwt-secret \
-  --from-literal=github-client-id=... \
-  --from-literal=github-client-secret=...
+kubectl -n arena get jobs
+kubectl -n arena logs job/arena-migrations
 ```
 
-## Building and Pushing Images
+## Using an External Database
 
-### Backend
-
-```bash
-cd backend/docker
-docker build -t your-registry/arena-backend:latest .
-docker push your-registry/arena-backend:latest
-```
-
-### MCP
-
-```bash
-cd backend/docker
-docker build -f Dockerfile.mcp -t your-registry/arena-mcp:latest .
-docker push your-registry/arena-mcp:latest
-```
-
-## Database
-
-### Initial Setup
-
-The Helm chart deploys PostgreSQL as a StatefulSet with a PersistentVolumeClaim.
-
-### External Database
-
-To use an external PostgreSQL:
+To use a managed PostgreSQL (RDS, Cloud SQL, etc.) instead of the in-cluster StatefulSet:
 
 ```yaml
 database:
@@ -157,70 +131,31 @@ database:
 backend:
   env:
     - name: DATABASE_URL
-      value: "postgresql+asyncpg://user:pass@external-db:5432/outplayarena"
+      value: "postgresql+asyncpg://user:pass@your-managed-db:5432/outplayarena"
 ```
 
-### Migrations
+## Secrets Management
 
-Migrations run as a Kubernetes Job on deployment:
+The chart creates a Kubernetes Secret from `values.yaml`. For production, pass secrets via `--set` flags at deploy time (not stored in values files):
 
 ```bash
-# Check migration status
-kubectl -n arena get jobs
-kubectl -n arena logs job/arena-migrations
-
-# Run migrations manually
-kubectl -n arena exec -it deployment/arena-backend -- \
-  alembic -c /app/alembic.ini upgrade head
+helm upgrade --install arena helm/arena/ \
+  --namespace arena \
+  -f my-values.yaml \
+  --set oauth.jwtSecret="$(openssl rand -hex 32)" \
+  --set oauth.github.clientId="$GITHUB_CLIENT_ID" \
+  --set oauth.github.clientSecret="$GITHUB_CLIENT_SECRET"
 ```
 
-### Backup
+Or use an external secrets manager (Vault, AWS Secrets Manager, External Secrets Operator) and patch the Secret separately.
 
-```bash
-# Backup database
-kubectl -n arena exec -it statefulset/arena-db -- \
-  pg_dump -U outplayarena outplayarena > backup.sql
+## MCP on Kubernetes
 
-# Restore database
-cat backup.sql | kubectl -n arena exec -i statefulset/arena-db -- \
-  psql -U outplayarena outplayarena
-```
+The backend spawns MCP sessions as Kubernetes Jobs via the RBAC Role granted by the chart. Each game session creates a short-lived MCP Job that is cleaned up after `MCP_JOB_TTL` seconds.
 
-## Scaling
-
-### Backend
-
-The Helm chart includes HorizontalPodAutoscaler:
+The backend needs the following RBAC permissions (included in the chart):
 
 ```yaml
-backend:
-  hpa:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 10
-    targetCPUUtilization: 70
-    targetMemoryUtilization: 80
-```
-
-### Database
-
-Database is a StatefulSet (single instance). For production:
-- Use managed PostgreSQL (RDS, Cloud SQL, etc.)
-- Configure read replicas
-- Set up automated backups
-
-## MCP Gateway
-
-### RBAC
-
-The backend needs permissions to create MCP resources:
-
-```yaml
-# helm/arena/templates/mcp-server/rbac.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: arena-mcp-manager
 rules:
   - apiGroups: ["batch"]
     resources: ["jobs"]
@@ -233,138 +168,48 @@ rules:
     verbs: ["create", "delete", "get", "list"]
 ```
 
-### Ingress
+## Scaling
 
-Each MCP pod gets its own Ingress:
-
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: mcp-abc123
-  annotations:
-    traefik.ingress.kubernetes.io/router.middlewares: arena-strip-mcp-prefix@kubernetescrd
-spec:
-  rules:
-    - host: api.agent-arena.local
-      http:
-        paths:
-          - path: /mcp/mcp-abc123
-            pathType: Prefix
-            backend:
-              service:
-                name: mcp-abc123
-                port:
-                  number: 8000
-```
+The backend HPA scales between `minReplicas` and `maxReplicas` based on CPU and memory usage. PostgreSQL is a single-instance StatefulSet — for high-traffic production deployments, use a managed PostgreSQL with read replicas.
 
 ## Monitoring
-
-### Health Checks
 
 ```bash
 # Check backend health
 kubectl -n arena exec -it deployment/arena-backend -- \
   curl http://localhost:8000/api/health
 
-# Check database
-kubectl -n arena exec -it statefulset/arena-db -- \
-  pg_isready -U arena
-```
-
-### Logs
-
-```bash
-# Backend logs
+# Stream backend logs
 kubectl -n arena logs deployment/arena-backend -f
 
-# Database logs
-kubectl -n arena logs statefulset/arena-db -f
+# List MCP jobs
+kubectl -n arena get jobs -l app=mcp-server
 
-# MCP pod logs
-kubectl -n arena logs pod/mcp-abc123
+# Check resource usage
+kubectl -n arena top pods
 ```
 
-### Metrics
-
-Expose metrics for Prometheus:
-
-```yaml
-backend:
-  serviceMonitor:
-    enabled: true
-```
-
-## Updating
+## Updates and Rollbacks
 
 ```bash
-# Update Helm chart
-helm upgrade arena helm/arena \
-  --namespace arena \
-  -f my-values.yaml
+# Update image tag in values and upgrade
+helm upgrade arena helm/arena/ -n arena -f my-values.yaml
 
-# Rollback if needed
-helm rollback arena 1
-
-# Check rollout status
+# Check rollout
 kubectl -n arena rollout status deployment/arena-backend
+
+# Rollback to previous release if needed
+helm rollback arena 1 -n arena
 ```
 
 ## Production Checklist
 
-- [ ] Use external PostgreSQL (RDS, Cloud SQL)
-- [ ] Configure TLS certificates
-- [ ] Set up automated backups
-- [ ] Configure resource limits
-- [ ] Enable monitoring and alerting
-- [ ] Set up CI/CD pipeline
-- [ ] Configure OAuth providers
-- [ ] Set strong JWT secret
-- [ ] Review security settings
-- [ ] Test disaster recovery
-- [ ] Configure Cloudflare Pages for documentation
-
-## Troubleshooting
-
-### Pods Not Starting
-
-```bash
-# Check events
-kubectl -n arena describe pod <pod-name>
-
-# Check logs
-kubectl -n arena logs <pod-name>
-
-# Check PVC
-kubectl -n arena get pvc
-```
-
-### Database Connection Issues
-
-```bash
-# Test connectivity
-kubectl -n arena exec -it deployment/arena-backend -- \
-  python -c "import asyncpg; asyncpg.connect('...')"
-
-# Check database service
-kubectl -n arena get svc arena-db
-```
-
-### MCP Pods Stuck
-
-```bash
-# List MCP pods
-kubectl -n arena get pods -l app=mcp-server
-
-# Delete stuck pods
-kubectl -n arena delete pod mcp-abc123
-
-# Check backend logs
-kubectl -n arena logs deployment/arena-backend | grep mcp
-```
-
-## Next Steps
-
-- [Docker Deployment](docker.md) — Local development
-- [Configuration Reference](configuration.md) — All environment variables
-- [MCP Setup](../mcp/setup.md) — MCP server configuration
+- [ ] Use external managed PostgreSQL (not the in-cluster StatefulSet)
+- [ ] Configure TLS (via Traefik certResolver or external cert manager)
+- [ ] Set up automated database backups
+- [ ] Configure HPA with appropriate resource limits
+- [ ] Use external secrets management (not values.yaml)
+- [ ] Set `CORS_ALLOW_ORIGINS` to your specific domain
+- [ ] Set strong `JWT_SECRET` (64+ hex chars)
+- [ ] Review RBAC permissions — scope to the `arena` namespace
+- [ ] Enable Kubernetes audit logging
