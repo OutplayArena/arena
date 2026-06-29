@@ -40,7 +40,7 @@ function Step({ number, title, children, docsHref, docsLabel }: StepProps) {
         {number}
       </div>
       <div className="flex-1 min-w-0 pb-16 border-b border-line last:border-0 last:pb-0">
-        <div className="flex items-baseline justify-between gap-4 mb-3">
+        <div className="flex items-baseline justify-between gap-4 mb-5">
           <h2 className="text-lg font-semibold text-ink">{title}</h2>
           {docsHref && (
             <Link
