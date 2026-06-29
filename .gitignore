@@ -3,6 +3,7 @@ results/
 .opencode/
 .claude/
 *.db
+.eslintcache
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

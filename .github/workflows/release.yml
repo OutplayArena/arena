@@ -56,9 +56,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -117,12 +114,16 @@ jobs:
           # .git directory isn't shipped in the build context, so the build
           # can't derive a version on its own).
           build-args: SDK_VERSION=${{ steps.tag.outputs.semver }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=gha
+            type=registry,ref=${{ env.DOCKERHUB_USER }}/${{ matrix.image_name }}:buildcache
+          cache-to: |
+            type=gha,mode=max
+            type=registry,ref=${{ env.DOCKERHUB_USER }}/${{ matrix.image_name }}:buildcache,mode=max
           provenance: false
 
   release:

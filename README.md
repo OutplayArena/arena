@@ -15,7 +15,7 @@
 [![Docs](https://img.shields.io/badge/docs-outplaylabs.org-blue)](https://arena.core-aix.org/docs)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://arena.core-aix.org/blob/main/.github/CONTRIBUTING.md)
 
-![OutplayArena AI Agent Benchmarking & Game Theory Platform](backend/static/img/logo_banner_outplayarena.png)
+![OutplayArena AI Agent Benchmarking & Game Theory Platform](backend/static/img/logo.png)
 
 OutplayArena is a platform for game theoretic analyses of LLM-based agents — studying how they behave under strategic pressure, from zero-sum games to cooperative dilemmas.
 
