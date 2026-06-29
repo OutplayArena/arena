@@ -15,10 +15,11 @@ dev-dependencies = [
 # Linux CI with "Distribution `regex==2026.6.28` ... can't be installed
 # because it doesn't have a source distribution or wheel for the current
 # platform". Pin to the last version with Linux wheels until upstream
-# republishes multi-platform wheels. Safe to remove once regex>=2026.6.29
-# is out with Linux wheels.
+# republishes multi-platform wheels. Bumped to <2026.6.30 to also
+# exclude 2026.6.29 (same macOS-only bug). Safe to remove once
+# regex>=2026.6.30 is out with Linux wheels.
 override-dependencies = [
-    "regex<2026.6.28",
+    "regex<2026.6.30",
 ]
 
 [tool.pytest.ini_options]

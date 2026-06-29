@@ -21,13 +21,13 @@ jobs:
       run:
         working-directory: agent-sdk
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # hatch-vcs walks the git log to derive the version, so the
           # checkout needs full history (not the default shallow clone).
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6.3.0
         with:
           python-version: "3.12"
 
