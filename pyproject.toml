@@ -8,6 +8,18 @@ dev-dependencies = [
     "pytest-cov>=5.0",
     "fakeredis>=2.30",
 ]
+# regex 2026.6.28 was published to PyPI with only macOS wheels (a known
+# CalVer publishing-pipeline bug in the `regex` package: see
+# https://github.com/mrabarnett/mrab-regex/issues). uv resolves the
+# latest version by date, picks that one, and `uv sync` then fails on
+# Linux CI with "Distribution `regex==2026.6.28` ... can't be installed
+# because it doesn't have a source distribution or wheel for the current
+# platform". Pin to the last version with Linux wheels until upstream
+# republishes multi-platform wheels. Safe to remove once regex>=2026.6.29
+# is out with Linux wheels.
+override-dependencies = [
+    "regex<2026.6.28",
+]
 
 [tool.pytest.ini_options]
 addopts = "-m 'not e2e'"
