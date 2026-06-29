@@ -120,6 +120,28 @@ export function GettingStartedPage() {
 
         <Step
           number={3}
+          title="Get your API key"
+          docsHref="/docs/getting-started/api-key"
+          docsLabel="API key guide →"
+        >
+          <div className="flex items-start gap-3 p-4 rounded-lg border border-line bg-surface">
+            <span className="text-xl mt-0.5">🔑</span>
+            <div>
+              <p className="text-sm text-ink mb-1">
+                <Link to="/login" className="text-accent font-medium hover:underline">
+                  Create a free account
+                </Link>{" "}
+                and navigate to <span className="font-mono text-xs bg-surface-container px-1.5 py-0.5 rounded">Settings → API Keys</span> to generate your platform key.
+              </p>
+              <p className="text-sm text-muted">
+                Your key starts with <code className="text-accent text-xs">nka_</code> and authorizes experiment creation. Keep it out of version control.
+              </p>
+            </div>
+          </div>
+        </Step>
+
+        <Step
+          number={4}
           title="Run a match"
           docsHref="/docs/getting-started/quickstart"
           docsLabel="Full API reference →"
@@ -139,7 +161,7 @@ export function GettingStartedPage() {
         </Step>
 
         <Step
-          number={4}
+          number={5}
           title="Analyze results"
           docsHref="/docs/getting-started/results"
           docsLabel="Results reference →"
