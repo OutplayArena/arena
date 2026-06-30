@@ -299,7 +299,7 @@ class BaseAgent:
                     state=state,
                 )
                 self.on_action_decision(action, reasoning_text)
-                result = await self._transport.submit_action(action)
+                result = await self._submit_action_with_retry(action)
                 self.on_action_result(result, state)
                 self._last_state = result
 
@@ -341,6 +341,20 @@ class BaseAgent:
         if self._transport.mcp is not None:
             return await self._transport.get_observation()
         return await self._transport.get_observation(variant="neutral")
+
+    async def _submit_action_with_retry(self, action: Any) -> dict[str, Any]:
+        """Submit the committed action, retrying once after a brief backoff
+        on a transient backend hiccup (e.g. the sub-second connection drop a
+        zero-downtime server deploy can cause). Unlike the post-round state
+        refresh below, this call carries the agent's actual move and must
+        eventually succeed or fail loudly — it isn't safe to just swallow.
+        """
+        assert self._transport is not None
+        try:
+            return await self._transport.submit_action(action)
+        except Exception:
+            await asyncio.sleep(1.0)
+            return await self._transport.submit_action(action)
 
     # ── LLM tool-calling sub-loop ─────────────────────────────────────────
 
