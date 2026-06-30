@@ -21,13 +21,33 @@ import pytest  # noqa: E402
 import arena.main  # noqa: E402
 importlib.reload(arena.main)
 
-from arena.main import app  # noqa: E402
+from arena.main import app, get_broker  # noqa: E402
 from arena.db import get_db  # noqa: E402
 from arena.auth.dependencies import require_user  # noqa: E402
 from arena.models.user import User  # noqa: E402
 from arena.models.wandb_credential import WandbCredential  # noqa: E402
 from arena.integrations.wandb_logger import encrypt_api_key  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
+
+
+class FakeBroker:
+    """Avoids touching a real Redis connection — create_experiment publishes
+    a session_created event after every successful call."""
+
+    def __init__(self):
+        self.published: list[tuple[str, dict]] = []
+
+    async def publish(self, channel, message):
+        self.published.append((channel, message))
+
+    async def cache_get(self, key):
+        return None
+
+    async def cache_set(self, key, value, ttl=None):
+        pass
+
+    async def enqueue(self, queue, message):
+        pass
 
 
 _FAKE_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000099")
@@ -96,12 +116,17 @@ def client(db):
     async def _db():
         yield db
 
+    async def _broker():
+        yield FakeBroker()
+
     app.dependency_overrides[get_db] = _db
     app.dependency_overrides[require_user] = lambda: _FAKE_USER
+    app.dependency_overrides[get_broker] = _broker
     with TestClient(app, raise_server_exceptions=True) as c:
         yield c
     app.dependency_overrides.pop(get_db, None)
     app.dependency_overrides.pop(require_user, None)
+    app.dependency_overrides.pop(get_broker, None)
 
 
 # ── BaseLogger ────────────────────────────────────────────────────────────────
