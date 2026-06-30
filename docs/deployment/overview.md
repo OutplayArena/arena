@@ -6,7 +6,7 @@ Run OutplayArena on your own infrastructure. Choose the deployment method that m
 
 === "Docker Compose (recommended for most)"
 
-    The simplest way to run OutplayArena. One command brings up the full stack: backend, PostgreSQL, Redis, and Traefik reverse proxy with automatic TLS.
+    The simplest way to run OutplayArena. One command brings up the full stack: backend, PostgreSQL, Redis, and Traefik reverse proxy with automatic TLS. Production runs it as a single-node Docker Swarm stack so releases roll out with zero downtime — see [Continuous deployment](single-vps.md#continuous-deployment).
 
     **Best for:** Small teams, single-server deployments, quick setup.
 
@@ -41,7 +41,7 @@ All deployment methods run the same components:
 | **PostgreSQL 16** | Sessions, users, API keys, game history |
 | **Redis 7** | Pub/Sub for real-time game state updates |
 | **Traefik** | Reverse proxy with Let's Encrypt TLS |
-| **MCP Server** | Per-session MCP containers (spawned on demand by the backend) |
+| **MCP Server** | Always-on MCP server process (Kubernetes runs it as a multi-replica Deployment) |
 
 ## Before You Start
 

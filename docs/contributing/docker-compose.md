@@ -3,6 +3,9 @@
 This track runs PostgreSQL and Redis in Docker containers while the backend and frontend run directly on your machine. It's the fastest way to get started with development.
 
 !!! note
+    This uses `backend/docker/docker-compose.yml` with plain `docker compose` — separate from the production stack at `deploy/docker-compose.yml`, which runs as a Docker Swarm service for zero-downtime releases (see [Single VPS](../deployment/single-vps.md)). Local dev doesn't need Swarm; `docker compose` is all you need here.
+
+!!! note
     MCP container spawning is not available in this mode (it requires a Docker-in-Docker or Kubernetes setup). Use REST transport for local agent development. For full MCP development, use the [Minikube track](minikube.md).
 
 ## Prerequisites

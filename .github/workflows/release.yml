@@ -13,6 +13,13 @@ name: Release
 # `dev` cannot publish an image. Secrets (DOCKERHUB_USERNAME, DOCKERHUB_TOKEN)
 # live in that env, not as repo-wide secrets, so they're never in scope
 # for any other workflow.
+#
+# On a tag push (not workflow_dispatch), the `deploy` job also rolls
+# arena.core-aix.org's production Swarm stack to the new images over SSH
+# (see deploy/scripts/swarm-deploy.sh) — zero-downtime via Swarm's
+# healthcheck-gated rolling update. SSH secrets (DEPLOY_HOST, DEPLOY_USER,
+# DEPLOY_SSH_KEY) live in the separate `production-deploy` environment,
+# same tag-only branch policy as `docker-hub-ci`.
 
 on:
   push:
@@ -142,3 +149,25 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') }}
+
+  deploy:
+    name: Deploy to production
+    needs: build
+    runs-on: ubuntu-latest
+    # Only an actual tag push rolls production — never workflow_dispatch
+    # (manual/ad-hoc rebuilds, e.g. re-publishing a tag or testing
+    # publish_latest, shouldn't silently push to prod).
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment: production-deploy
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Roll arena.core-aix.org to ${{ github.ref_name }}
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          script: /opt/arena/deploy/scripts/swarm-deploy.sh ${{ github.ref_name }}

@@ -134,17 +134,22 @@ backup secrets.
 
 ## 7. Start the stack
 
+Production runs as a single-node **Docker Swarm** stack (not plain `docker
+compose`) so that releases can be rolled out with zero downtime — see
+[Continuous deployment](#continuous-deployment) below. Turn this host into a
+1-node swarm once, then deploy the stack:
+
 ```bash
 cd /opt/arena/deploy
-docker compose pull
-docker compose up -d --build
+docker swarm init
+docker stack deploy -c docker-compose.yml arena --with-registry-auth
 ```
 
-The first build takes a few minutes (it builds the docs image with mkdocs
-material). Watch the progress:
+The first pull/start takes a minute or two. Watch the progress:
 
 ```bash
-docker compose logs -f --tail=100
+docker stack ps arena
+docker service logs -f arena_backend
 ```
 
 Once everything is up, verify with the healthcheck:
@@ -173,6 +178,39 @@ Open in a browser:
 - **Docs:** https://`${DOMAIN}`/docs (the React SPA's iframe-rendered docs)
 - **MCP:** https://`${DOMAIN}`/mcp/ (the SDK connects here)
 - **Traefik dashboard:** https://traefik.`${DOMAIN}`/ (basic auth)
+
+### Continuous deployment
+
+Every `v*.*.*` tag pushed to the repo builds and publishes the `backend`/`mcp`
+images (`.github/workflows/release.yml`'s `build` job, unchanged), then a
+`deploy` job SSHes into this box and runs `deploy/scripts/swarm-deploy.sh
+<tag>`, which:
+
+1. Applies pending Alembic migrations against the *new* image, before
+   touching the running service.
+2. Rolls `arena_backend`, then `arena_mcp`, one at a time via `docker
+   service update` — Swarm only stops the old task once the new one passes
+   its healthcheck (`update_config: { order: start-first, failure_action:
+   rollback }` in `deploy/docker-compose.yml`), so the rollout doesn't drop
+   connections the way a `docker compose up -d` hard restart would.
+3. Persists the new tag into `.env` and runs `healthcheck.sh` to confirm
+   the rollout actually succeeded.
+
+Plain merges to `main` build and deploy nothing — only a version tag does
+(same trigger `release.yml` already used for Docker Hub/PyPI publishing).
+
+This requires a one-time setup the first time you wire up CD: generate a
+dedicated SSH keypair for GitHub Actions, add its public half to
+`/home/arena/.ssh/authorized_keys` on this box, and add `DEPLOY_HOST`,
+`DEPLOY_USER=arena`, `DEPLOY_SSH_KEY` as secrets in the repo's
+`production-deploy` GitHub environment (same tag-only deployment-branch
+policy as the existing `docker-hub-ci` environment).
+
+To roll a release manually instead of waiting on CI:
+
+```bash
+sudo /opt/arena/deploy/scripts/swarm-deploy.sh v0.3.0
+```
 
 ## 8. Set up backups to a Hetzner Storage Box (optional but recommended)
 
@@ -240,15 +278,23 @@ The script keeps 7 daily, 4 weekly, 6 monthly snapshots.
 ## 9. Day-to-day
 
 ```bash
+# Service status
+docker service ls
+docker stack ps arena
+
 # Logs (any service)
-docker compose -f /opt/arena/deploy/docker-compose.yml logs -f --tail=100 backend
-docker compose -f /opt/arena/deploy/docker-compose.yml logs -f --tail=100 mcp
+docker service logs -f --tail=100 arena_backend
+docker service logs -f --tail=100 arena_mcp
 
-# Restart a service
-docker compose -f /opt/arena/deploy/docker-compose.yml restart backend
+# Restart a service (re-runs its current image, same rolling-update behavior)
+docker service update --force arena_backend
 
-# Update to the latest code
-sudo /opt/arena/deploy/scripts/update.sh
+# Roll to a specific release (normally done automatically by CI — see
+# "Continuous deployment" above)
+sudo /opt/arena/deploy/scripts/swarm-deploy.sh v0.3.0
+
+# Re-apply the full compose file (e.g. after editing docker-compose.yml or .env)
+docker stack deploy -c /opt/arena/deploy/docker-compose.yml arena --with-registry-auth
 
 # Healthcheck (run from anywhere)
 DOMAIN=arena.example.com /opt/arena/deploy/scripts/healthcheck.sh
@@ -261,6 +307,10 @@ sudo /opt/arena/deploy/scripts/restore.sh            # interactive
 sudo /opt/arena/deploy/scripts/restore.sh latest    # latest snapshot
 ```
 
+`deploy/scripts/update.sh` (the old `git pull && docker compose up -d` hard
+restart) still works as a fallback/manual-recovery path but is no longer the
+routine update mechanism — see [Continuous deployment](#continuous-deployment).
+
 ## 10. Disaster recovery
 
 Worst case (VPS gone, you have to start over on a new one):
@@ -269,7 +319,7 @@ Worst case (VPS gone, you have to start over on a new one):
 2. Run `bootstrap.sh` on the new box
 3. Clone the repo: `git clone https://github.com/OutplayArena/arena.git /opt/arena`
 4. Edit the new `deploy/.env` to match the old one
-5. Start the stack: `docker compose -f deploy/docker-compose.yml up -d --build`
+5. Start the stack: `docker swarm init && docker stack deploy -c deploy/docker-compose.yml arena --with-registry-auth`
 6. Restore from the Storage Box:
    ```bash
    sudo /opt/arena/deploy/scripts/restore.sh latest
@@ -300,7 +350,7 @@ htop
 
 ## 12. Troubleshooting
 
-### `docker compose up` fails with "port 80/443 is already in use"
+### `docker stack deploy` fails with "port 80/443 is already in use"
 
 Something else is bound to those ports. Check:
 
@@ -314,15 +364,29 @@ ports in `deploy/docker-compose.yml`.
 ### Let's Encrypt certificate issuance fails
 
 - Check that DNS resolves correctly: `dig +short <DOMAIN}` from anywhere
-- Check the Traefik logs: `docker compose logs traefik`
+- Check the Traefik logs: `docker service logs arena_traefik`
 - Common cause: the ACME rate limit (5 certs per week per domain). Wait or
   use a different subdomain for testing.
 
 ### Backend can't connect to Postgres
 
-- Check the container is healthy: `docker compose ps`
+- Check the service is healthy: `docker service ps arena_backend`
 - Check the password matches between `.env` and the running container
-- Check logs: `docker compose logs backend | grep -i 'postgres\|asyncpg'`
+- Check logs: `docker service logs arena_backend | grep -i 'postgres\|asyncpg'`
+
+### A `docker service update` rolled back unexpectedly
+
+Swarm auto-rolls back when the new task fails its healthcheck
+(`failure_action: rollback`). Check why the new image didn't come up
+healthy:
+
+```bash
+docker service ps arena_backend --no-trunc   # shows the failed task's error
+docker service logs arena_backend --since 10m
+```
+
+Common causes: a migration that doesn't apply cleanly, a missing/changed env
+var the new release expects, or the image itself crash-looping.
 
 ### Restore is stuck on a huge database
 
