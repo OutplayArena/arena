@@ -371,5 +371,9 @@ export function deleteAccount(): Promise<{ deleted: boolean }> {
   return request<{ deleted: boolean }>("/api/settings/account", { method: "DELETE" });
 }
 
+export function acceptPrivacy(): Promise<{ privacy_accepted: boolean }> {
+  return request<{ privacy_accepted: boolean }>("/api/settings/accept-privacy", { method: "POST" });
+}
+
 
 

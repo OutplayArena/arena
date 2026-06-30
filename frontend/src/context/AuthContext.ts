@@ -10,6 +10,7 @@ export interface AuthState {
   sessionExpired: boolean;
   login: () => void;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthState | null>(null);

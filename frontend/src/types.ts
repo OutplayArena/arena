@@ -3,6 +3,7 @@ export interface UserInfo {
   email: string;
   name: string;
   avatar_url: string | null;
+  privacy_accepted: boolean;
 }
 
 export interface ProvidersResponse {
