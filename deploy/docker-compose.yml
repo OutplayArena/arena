@@ -171,15 +171,15 @@ services:
       OAUTH_ALLOWED_BASES: https://${DOMAIN}
       MCP_ENDPOINT: https://${DOMAIN}/mcp
       CORS_ALLOW_ORIGINS: https://${DOMAIN}
-    # Swarm ignores depends_on conditions (no service-dependency support);
-    # left for documentation and for `docker compose` local-dev parity.
-    # Backend's restart_policy below handles the brief crash-loop until
-    # postgres/redis report healthy on first stack bring-up.
+    # `docker stack deploy` parses Compose files with Swarm's own (more
+    # limited) interpreter, which rejects the long-form `depends_on:
+    # { condition: ... }` map syntax — only a plain list is valid here.
+    # Swarm doesn't act on depends_on either way (no service-health
+    # gating); restart_policy below handles the brief crash-loop until
+    # postgres/redis are ready on first stack bring-up.
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - postgres
+      - redis
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=3)"]
       interval: 10s
