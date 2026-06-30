@@ -41,7 +41,7 @@ docker compose -f "$COMPOSE_FILE" build --pull
 #    here would silently deploy with every ${DOMAIN}/${POSTGRES_PASSWORD}/etc.
 #    blank.
 log "stack-deploy"
-"$STACK_DIR/deploy/scripts/stack-deploy.sh"
+bash "$STACK_DIR/deploy/scripts/stack-deploy.sh"
 
 # 4. Wait for healthchecks, then prune dangling images
 log "Waiting 30s for services to settle"

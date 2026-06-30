@@ -170,4 +170,10 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script_stop: true
-          script: /opt/arena/deploy/scripts/swarm-deploy.sh ${{ github.ref_name }}
+          # Invoke via `bash`, not a direct path, so this never depends on
+          # the executable bit surviving a git checkout (core.fileMode is
+          # disabled in local dev clones for WSL reasons — see
+          # deploy/scripts/ commit history — so it's not safe to assume +x
+          # round-trips cleanly into every checkout this could ever run
+          # against).
+          script: bash /opt/arena/deploy/scripts/swarm-deploy.sh ${{ github.ref_name }}

@@ -34,7 +34,7 @@ log() { echo "[swarm-deploy $(date -u +%FT%TZ)] $*"; }
 cd "$COMPOSE_DIR"
 
 log "Applying migrations against her3ert/outplayarena-backend:${TAG}"
-MIGRATE_IMAGE="her3ert/outplayarena-backend:${TAG}" "$COMPOSE_DIR/scripts/migrate.sh" upgrade
+MIGRATE_IMAGE="her3ert/outplayarena-backend:${TAG}" bash "$COMPOSE_DIR/scripts/migrate.sh" upgrade
 
 log "Rolling arena_backend -> ${TAG}"
 docker service update --image "her3ert/outplayarena-backend:${TAG}" --with-registry-auth arena_backend
@@ -46,6 +46,6 @@ log "Persisting IMAGE_TAG=${TAG} in .env"
 sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${TAG}/" "$ENV_FILE"
 
 log "Running healthcheck.sh"
-DOMAIN="${DOMAIN:-arena.core-aix.org}" "$COMPOSE_DIR/scripts/healthcheck.sh"
+DOMAIN="${DOMAIN:-arena.core-aix.org}" bash "$COMPOSE_DIR/scripts/healthcheck.sh"
 
 log "Done — ${TAG} is live."
