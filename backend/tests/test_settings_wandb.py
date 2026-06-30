@@ -238,3 +238,149 @@ def test_inline_api_key_in_wandb_block_is_rejected(client):
     assert resp.status_code == 400
     detail = resp.json()["detail"].lower()
     assert "api_key" in detail or "settings" in detail
+
+
+# ── /settings/wandb-key/entities ────────────────────────────────────────────────
+
+class _FakeViewer:
+    def __init__(self, entity, teams):
+        self.entity = entity
+        self.teams = teams
+
+
+class _FakeWandbApi:
+    def __init__(self, api_key=None):
+        self.api_key = api_key
+
+    @property
+    def viewer(self):
+        return _FakeViewer(entity="alice", teams=["alice", "lab-team", "another-team"])
+
+
+def test_entities_endpoint_success(client, db, monkeypatch):
+    db._creds[_FAKE_USER_ID] = WandbCredential(
+        user_id=_FAKE_USER_ID, encrypted_api_key=encrypt_api_key("real-key")
+    )
+    monkeypatch.setattr("wandb.Api", _FakeWandbApi)
+
+    resp = client.get("/settings/wandb-key/entities")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["personal_entity"] == "alice"
+    # Personal entity de-duplicated, order preserved
+    assert data["entities"] == ["alice", "lab-team", "another-team"]
+    assert "real-key" not in resp.text
+
+
+def test_entities_endpoint_decrypt_failure_returns_500(client, db):
+    db._creds[_FAKE_USER_ID] = WandbCredential(
+        user_id=_FAKE_USER_ID, encrypted_api_key="not-valid-base64!!"
+    )
+    resp = client.get("/settings/wandb-key/entities")
+    assert resp.status_code == 500
+
+
+def test_entities_endpoint_wandb_api_failure_returns_502(client, db, monkeypatch):
+    db._creds[_FAKE_USER_ID] = WandbCredential(
+        user_id=_FAKE_USER_ID, encrypted_api_key=encrypt_api_key("real-key")
+    )
+
+    class ExplodingApi:
+        def __init__(self, api_key=None):
+            raise ConnectionError("simulated network failure")
+
+    monkeypatch.setattr("wandb.Api", ExplodingApi)
+
+    resp = client.get("/settings/wandb-key/entities")
+    assert resp.status_code == 502
+    assert "real-key" not in resp.text
+
+
+# ── create_experiment W&B wiring ─────────────────────────────────────────────────
+
+class _NoOpWandbLogger:
+    """Records construction args without touching the network."""
+    instances: list = []
+
+    def __init__(self, wandb_config, game_config, encrypted_api_key, agents=None):
+        self.wandb_config = wandb_config
+        self.game_config = game_config
+        self.encrypted_api_key = encrypted_api_key
+        self.agents = agents
+        _NoOpWandbLogger.instances.append(self)
+
+    def start(self):
+        return self
+
+
+@pytest.fixture(autouse=True)
+def _reset_wandb_logger_instances():
+    _NoOpWandbLogger.instances = []
+    yield
+
+
+def _experiment_payload(**overrides):
+    payload = {
+        "game": "prisonersdilemma",
+        "rounds": 1,
+        "players": 2,
+        "agents": {"A": "agent-a", "B": "agent-b"},
+    }
+    payload.update(overrides)
+    return payload
+
+
+def test_create_experiment_with_wandb_logging_resolves_stored_key(client, db, monkeypatch):
+    db._creds[_FAKE_USER_ID] = WandbCredential(
+        user_id=_FAKE_USER_ID, encrypted_api_key=encrypt_api_key("real-wandb-key")
+    )
+    monkeypatch.setattr("arena.session.WandbGameLogger", _NoOpWandbLogger)
+
+    resp = client.post("/experiment", json=_experiment_payload(
+        wandb_logging=True, wandb_project="my-proj", wandb_entity="my-team",
+    ))
+
+    assert resp.status_code == 200
+    assert len(_NoOpWandbLogger.instances) == 1
+    logged = _NoOpWandbLogger.instances[0]
+    assert logged.wandb_config.project == "my-proj"
+    assert logged.wandb_config.entity == "my-team"
+    assert logged.agents == {"A": "agent-a", "B": "agent-b"}
+    # Real key never appears in the response
+    assert "real-wandb-key" not in resp.text
+
+
+def test_create_experiment_wandb_logging_without_stored_key_still_succeeds(client, monkeypatch):
+    """No credential configured — experiment must still run, just without W&B."""
+    monkeypatch.setattr("arena.session.WandbGameLogger", _NoOpWandbLogger)
+
+    resp = client.post("/experiment", json=_experiment_payload(wandb_logging=True))
+
+    assert resp.status_code == 200
+    assert len(_NoOpWandbLogger.instances) == 0
+
+
+def test_create_experiment_wandb_logging_with_broken_key_still_succeeds(client, db, monkeypatch):
+    """A corrupted stored credential must not fail the experiment."""
+    db._creds[_FAKE_USER_ID] = WandbCredential(
+        user_id=_FAKE_USER_ID, encrypted_api_key="not-valid-base64!!"
+    )
+    monkeypatch.setattr("arena.session.WandbGameLogger", _NoOpWandbLogger)
+
+    resp = client.post("/experiment", json=_experiment_payload(wandb_logging=True))
+
+    assert resp.status_code == 200
+    assert len(_NoOpWandbLogger.instances) == 0
+
+
+def test_create_experiment_without_wandb_logging_flag_skips_wandb_entirely(client, db, monkeypatch):
+    """Even with a stored key, omitting wandb_logging must not start a logger."""
+    db._creds[_FAKE_USER_ID] = WandbCredential(
+        user_id=_FAKE_USER_ID, encrypted_api_key=encrypt_api_key("real-wandb-key")
+    )
+    monkeypatch.setattr("arena.session.WandbGameLogger", _NoOpWandbLogger)
+
+    resp = client.post("/experiment", json=_experiment_payload())
+
+    assert resp.status_code == 200
+    assert len(_NoOpWandbLogger.instances) == 0

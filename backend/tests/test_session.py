@@ -92,6 +92,49 @@ def test_create_session_with_wandb_starts_logger(monkeypatch):
     assert "wandb-secret" not in session.wandb_logger.encrypted_api_key
 
 
+def test_create_session_passes_agents_to_wandb_logger(monkeypatch):
+    captured = {}
+
+    class FakeLogger:
+        def __init__(self, wandb_config, game_config, encrypted_api_key, agents=None):
+            captured["agents"] = agents
+
+        def start(self):
+            return self
+
+    monkeypatch.setenv("OUTPLAYARENA_WANDB_ENCRYPTION_KEY", "0" * 64)
+    monkeypatch.setattr("arena.session.WandbGameLogger", FakeLogger)
+    runtime_config = ExperimentRuntimeConfig(
+        wandb=WandbConfig(api_key="wandb-secret", project="arena-runs")
+    )
+
+    GameSession.create(make_config(), runtime_config=runtime_config, agents={"A": "gpt-4o", "B": "claude"})
+
+    assert captured["agents"] == {"A": "gpt-4o", "B": "claude"}
+
+
+def test_create_session_wandb_start_failure_does_not_raise(monkeypatch):
+    """A broken/unreachable W&B key must never prevent the game from starting."""
+
+    class ExplodingLogger:
+        def __init__(self, wandb_config, game_config, encrypted_api_key, agents=None):
+            pass
+
+        def start(self):
+            raise RuntimeError("simulated wandb.init() failure")
+
+    monkeypatch.setenv("OUTPLAYARENA_WANDB_ENCRYPTION_KEY", "0" * 64)
+    monkeypatch.setattr("arena.session.WandbGameLogger", ExplodingLogger)
+    runtime_config = ExperimentRuntimeConfig(
+        wandb=WandbConfig(api_key="wandb-secret", project="arena-runs")
+    )
+
+    session = GameSession.create(make_config(), runtime_config=runtime_config)
+
+    assert session.wandb_logger is None
+    assert session.status == "ready"
+
+
 def test_public_state_reads_from_game_state():
     config = make_config(rounds=3)
     session = GameSession.create(config)
