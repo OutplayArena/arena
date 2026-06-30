@@ -62,10 +62,11 @@ def test_create_session_with_wandb_starts_logger(monkeypatch):
     started = []
 
     class FakeLogger:
-        def __init__(self, wandb_config, game_config, encrypted_api_key):
+        def __init__(self, wandb_config, game_config, encrypted_api_key, agents=None):
             self.wandb_config = wandb_config
             self.game_config = game_config
             self.encrypted_api_key = encrypted_api_key
+            self.agents = agents
 
         def start(self):
             started.append(self)

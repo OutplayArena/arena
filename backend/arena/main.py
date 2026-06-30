@@ -1,6 +1,7 @@
 # ruff: noqa: E402
 import asyncio
 import json
+import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -22,7 +23,7 @@ from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from arena.db import get_db, async_session as _async_session_factory
-from arena.experiment_config import split_runtime_config
+from arena.experiment_config import split_runtime_config, ExperimentRuntimeConfig
 from arena.game_registry import GameRegistry, GameRegistryError
 from arena.manifest import build_agent_manifest
 from arena.messaging import RedisBroker, StatePersister, MessageLogger
@@ -32,6 +33,8 @@ from arena.session import GameSession, _serialize_state
 from arena.models.session import SessionModel
 from arena.models.api_key import ApiKey
 from arena.models.message_log import MessageLog
+from arena.models.wandb_credential import WandbCredential
+from arena.integrations.wandb_logger import encrypt_api_key, decrypt_api_key, WandbConfigError
 from arena.auth.oauth import github_login, github_callback, google_login, google_callback, _callback_base_for
 from arena.auth.jwt import create_access_token
 from arena.auth.dependencies import get_current_user, get_local_or_optional_user, require_user
@@ -47,6 +50,8 @@ if not _SITE_YAML.is_file():
 SITE_YAML = _SITE_YAML
 STATIC_ROOT = Path(__file__).resolve().parent.parent / "static"
 GAME_REGISTRY = GameRegistry()
+
+_logger_main = logging.getLogger(__name__)
 
 _broker: RedisBroker | None = None
 _persister: StatePersister | None = None
@@ -437,17 +442,22 @@ async def create_experiment(
     _: None = require_agent_api(),
 ):
     """Create a new experiment session for a game."""
+    # Reject any inline api_key in the wandb block — keys must come from the
+    # user's stored credential, never from the request payload.
+    if "api_key" in (request.get("wandb") or {}):
+        raise HTTPException(
+            status_code=400,
+            detail="wandb.api_key must not be sent in the request — configure your W&B key in Settings",
+        )
+
     try:
-        config = config_from_request(request)
+        game_payload, wandb_fields = split_runtime_config(request)
+        config = GAME_REGISTRY.config_from_request(game_payload)
         game = GAME_REGISTRY.game_from_config(config)
     except (ValueError, GameRegistryError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    interactive = request.get("interactive", False)
-    locked = not interactive
-
-    session = GameSession.create(config, game=game, locked=locked)
-
+    # Resolve agents before session creation so the W&B run can log them.
     agents = request.get("agents")
     if not isinstance(agents, dict):
         agent_a = request.get("agent_a")
@@ -459,6 +469,48 @@ async def create_experiment(
             agents["B"] = str(agent_b)
     if not agents:
         agents = None
+
+    # Build runtime config: if the caller asked for W&B logging, resolve the
+    # stored encrypted key.  Missing or broken key warns but never fails the
+    # experiment — the game still runs, just without W&B logging.
+    runtime_config: ExperimentRuntimeConfig = ExperimentRuntimeConfig()
+    if wandb_fields.enabled:
+        cred_result = await db.execute(
+            select(WandbCredential).where(WandbCredential.user_id == user.id)
+        )
+        cred = cred_result.scalar_one_or_none()
+        if cred is None:
+            _logger_main.warning(
+                "User %s requested wandb_logging but has no W&B key configured "
+                "(add one in Settings) — continuing without W&B logging.",
+                user.id,
+            )
+        else:
+            try:
+                decrypted = decrypt_api_key(cred.encrypted_api_key)
+                runtime_config = ExperimentRuntimeConfig(
+                    wandb=wandb_fields.to_wandb_config(decrypted)
+                )
+            except WandbConfigError:
+                _logger_main.warning(
+                    "Could not decrypt W&B key for user %s — "
+                    "continuing without W&B logging.",
+                    user.id,
+                    exc_info=True,
+                )
+            finally:
+                decrypted = None  # type: ignore[assignment]
+
+    interactive = request.get("interactive", False)
+    locked = not interactive
+
+    session = GameSession.create(
+        config,
+        game=game,
+        locked=locked,
+        runtime_config=runtime_config,
+        agents=agents,
+    )
 
     await session.save_new(
         db,
@@ -1201,6 +1253,124 @@ async def enable_key(
     row.is_active = True
     await db.commit()
     return {"enabled": key_id}
+
+
+# ── W&B Settings ────────────────────────────────────────────────────────
+
+
+class WandbKeyUpsert(BaseModel):
+    api_key: str
+
+
+@app.get(f"{API_PREFIX}/settings/wandb-key")
+async def get_wandb_key_status(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Return whether the current user has a W&B API key configured.
+
+    The key itself is never returned — only its presence and last-updated
+    timestamp are exposed.
+    """
+    result = await db.execute(
+        select(WandbCredential).where(WandbCredential.user_id == user.id)
+    )
+    row = result.scalar_one_or_none()
+    if row is None:
+        return {"configured": False, "updated_at": None}
+    return {
+        "configured": True,
+        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+    }
+
+
+@app.put(f"{API_PREFIX}/settings/wandb-key", status_code=200)
+async def upsert_wandb_key(
+    payload: WandbKeyUpsert,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Store (or replace) the current user's W&B API key, encrypted at rest.
+
+    The plaintext key is never persisted or returned — it is encrypted with
+    AES-256-GCM before being written to the database.
+    """
+    try:
+        encrypted = encrypt_api_key(payload.api_key)
+    except WandbConfigError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    result = await db.execute(
+        select(WandbCredential).where(WandbCredential.user_id == user.id)
+    )
+    row = result.scalar_one_or_none()
+    if row is None:
+        row = WandbCredential(user_id=user.id, encrypted_api_key=encrypted)
+        db.add(row)
+    else:
+        row.encrypted_api_key = encrypted
+
+    await db.commit()
+    return {"configured": True}
+
+
+@app.delete(f"{API_PREFIX}/settings/wandb-key", status_code=200)
+async def delete_wandb_key(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Remove the current user's stored W&B API key."""
+    result = await db.execute(
+        select(WandbCredential).where(WandbCredential.user_id == user.id)
+    )
+    row = result.scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="no W&B key configured")
+    await db.delete(row)
+    await db.commit()
+    return {"configured": False}
+
+
+@app.get(f"{API_PREFIX}/settings/wandb-key/entities")
+async def get_wandb_entities(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Return the W&B entities (personal + teams) for the stored API key.
+
+    Used to populate the entity dropdown on the logging config surface.
+    The API key is never included in the response — it is decrypted
+    transiently, used for a single W&B API call, then discarded.
+    """
+    result = await db.execute(
+        select(WandbCredential).where(WandbCredential.user_id == user.id)
+    )
+    row = result.scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="no W&B key configured")
+
+    api_key = None
+    try:
+        api_key = decrypt_api_key(row.encrypted_api_key)
+        import wandb as _wandb
+        api = _wandb.Api(api_key=api_key)
+        viewer = api.viewer
+        personal_entity: str = viewer.entity
+        teams: list[str] = viewer.teams
+        entities = [personal_entity] + [t for t in teams if t != personal_entity]
+        return {"personal_entity": personal_entity, "entities": entities}
+    except WandbConfigError as exc:
+        raise HTTPException(status_code=500, detail="could not decrypt W&B credentials") from exc
+    except Exception:
+        _logger_main.warning(
+            "Could not fetch W&B entities for user %s — key may be invalid or W&B unreachable",
+            user.id,
+        )
+        raise HTTPException(status_code=502, detail="could not verify W&B credentials")
+    finally:
+        # Ensure the decrypted key never lingers in memory.
+        api_key = None
+        del api_key
 
 
 # ── OAuth ──────────────────────────────────────────────────────────────

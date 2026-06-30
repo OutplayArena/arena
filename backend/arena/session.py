@@ -52,21 +52,40 @@ class GameSession:
     wandb_finished: bool = False
 
     @classmethod
-    def create(cls, config, game=None, locked: bool = False, runtime_config=None) -> "GameSession":
+    def create(
+        cls,
+        config,
+        game=None,
+        locked: bool = False,
+        runtime_config=None,
+        agents: dict[str, str] | None = None,
+    ) -> "GameSession":
+        import logging as _logging
+        _log = _logging.getLogger(__name__)
+
         if game is None:
             game = GameRegistry().game_from_config(config)
         if runtime_config is None:
             runtime_config = ExperimentRuntimeConfig()
-        # Start optional W&B logging before exposing player tokens.
+
+        wandb_logger = None
         if runtime_config.wandb:
-            encrypted_key = encrypt_api_key(runtime_config.wandb.api_key)
-            wandb_logger = WandbGameLogger(
-                wandb_config=runtime_config.wandb,
-                game_config=config,
-                encrypted_api_key=encrypted_key,
-            ).start()
-        else:
-            wandb_logger = None
+            try:
+                encrypted_key = encrypt_api_key(runtime_config.wandb.api_key)
+                wandb_logger = WandbGameLogger(
+                    wandb_config=runtime_config.wandb,
+                    game_config=config,
+                    encrypted_api_key=encrypted_key,
+                    agents=agents,
+                ).start()
+            except Exception:
+                _log.warning(
+                    "W&B logging failed to start (bad key or W&B unreachable) — "
+                    "continuing without W&B logging.",
+                    exc_info=True,
+                )
+                wandb_logger = None
+
         session_id = str(uuid.uuid4())
         player_tokens = {
             player: derive_session_key(session_id, player)
@@ -82,6 +101,7 @@ class GameSession:
             player_tokens=player_tokens,
             status="ready",
             locked=locked,
+            agents=agents,
             runtime_config=runtime_config,
             wandb_logger=wandb_logger,
         )

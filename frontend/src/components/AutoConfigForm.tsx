@@ -3,6 +3,8 @@ import { createExperiment, getGameAgents, getGameScenarios } from "../api";
 import { copyToClipboard } from "./utils";
 import { randomAgentName } from "./names";
 import { useApp } from "../hooks/useApp";
+import { useWandbLoggingConfig } from "../hooks/useWandbLoggingConfig";
+import { WandbLoggingSection } from "./WandbLoggingSection";
 import type { GameAgent, ScenarioInfo } from "../types";
 
 const inputClass =
@@ -110,6 +112,7 @@ function getInputType(prop: SchemaProp): string {
 
 export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initialValues }: AutoConfigFormProps) {
   const { state, startGame } = useApp();
+  const wandbLogging = useWandbLoggingConfig();
   const [agents, setAgents] = useState<GameAgent[]>([]);
   const [scenarios, setScenarios] = useState<ScenarioInfo[]>([]);
   const initRanRef = useRef(false);
@@ -243,6 +246,7 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
     config.agents = agentsDict;
     config.players = players.length;
     config.interactive = players.some((p) => p.agentId === "interactive");
+    Object.assign(config, wandbLogging.toConfigFields());
     return config;
   };
 
@@ -573,6 +577,8 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
             {renderField(key, prop)}
           </label>
         ))}
+
+        <WandbLoggingSection {...wandbLogging} disabled={running || isReplay} />
 
         {showRunButton && (
           <button

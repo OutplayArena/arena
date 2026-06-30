@@ -4,6 +4,7 @@ import { GameHeader } from "./GameHeader";
 import { TabBar } from "./TabBar";
 import { AutoConfigForm } from "./AutoConfigForm";
 import { AutoHistoryView } from "./AutoHistoryView";
+import { GameInstructionsPanel } from "./GameInstructionsPanel";
 import { loadLiveView, loadConfigForm, loadHistoryView, loadPlayView } from "../games/registry";
 import type { GameMetadata, Match, MailboxMessage } from "../types";
 import { useApp } from "../hooks/useApp";
@@ -59,6 +60,7 @@ function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch
   const initialTab = (replayMatch || state.pendingGame) ? (hasLiveView ? "live" : "history") : "config";
   const [activeTab, setActiveTab] = useState(initialTab);
   const [showKeyModal, setShowKeyModal] = useState(false);
+  const [instructionsCollapsed, setInstructionsCollapsed] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const keyModalShownRef = useRef(false);
   const [prevReplayMatch, setPrevReplayMatch] = useState(replayMatch);
@@ -464,7 +466,8 @@ function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch
         </div>
       )}
 
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 flex flex-row min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 min-w-0">
         {activeTab === "config" && (
           <div className="flex-1 overflow-y-auto overflow-x-visible">
             {customUIMod.config ? (
@@ -580,6 +583,12 @@ function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch
             )}
           </div>
         )}
+        </div>
+        <GameInstructionsPanel
+          gameSlug={game.slug || game.name}
+          collapsed={instructionsCollapsed}
+          onToggle={() => setInstructionsCollapsed((c) => !c)}
+        />
       </div>
     </div>
   );
