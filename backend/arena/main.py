@@ -192,9 +192,9 @@ async def _load_registries_from_db() -> None:
             loaded_count = 0
             for row in result.scalars().all():
                 state = row.state_json
-                if isinstance(state, (str, bytes, bytearray)):
-                    state = json.loads(state)
                 try:
+                    if isinstance(state, (str, bytes, bytearray)):
+                        state = json.loads(state)
                     reg = AgentRegistry.from_dict(state)
                 except Exception as exc:
                     logger.warning(

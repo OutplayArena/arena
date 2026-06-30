@@ -392,7 +392,7 @@ class TestRunLoop:
         ]
         transport = _make_fake_transport(states)
         transport.submit_action = AsyncMock(
-            side_effect=[ConnectionError("connection reset"), {"status": "ok"}]
+            side_effect=[ConnectionError("connection reset"), {"status": "ok", "retried": True}]
         )
         agent._transport = transport
         agent._openai = MagicMock()
@@ -400,10 +400,17 @@ class TestRunLoop:
             return_value=_mock_response(content="[7,3]")
         )
 
+        captured_results = []
+        agent.on_action_result = lambda result, state: captured_results.append(result)
+
         with patch("outplayarena_sdk.base.asyncio.sleep", new=AsyncMock()):
             await agent.run()
 
         assert transport.submit_action.call_count == 2
+        # The retried (successful) result reaches on_action_result, not the
+        # failed first attempt — confirms the retry's return value is what
+        # actually gets used, not just that a retry was attempted.
+        assert captured_results == [{"status": "ok", "retried": True}]
 
     @pytest.mark.asyncio
     async def test_submit_action_raises_after_retry_exhausted(self):
