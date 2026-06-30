@@ -86,6 +86,7 @@ services:
       - --entrypoints.websecure.http.tls=true
       - --entrypoints.traefik.address=:8080
       - --api.insecure=true
+      - --ping=true
       - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}
       - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
       - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
@@ -100,7 +101,12 @@ services:
       - "127.0.0.1:8080:8080"
     logging: *default-logging
     healthcheck:
-      test: ["CMD", "traefik", "healthcheck"]
+      # --ping=true above only makes the daemon serve /ping. The
+      # `traefik healthcheck` subcommand is a separate, fresh process
+      # invocation — it doesn't inherit the running daemon's config and
+      # needs --ping passed to itself too, or it fails with "please
+      # enable `ping` to use health check" even though /ping is live.
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 30s
       timeout: 5s
       retries: 3
