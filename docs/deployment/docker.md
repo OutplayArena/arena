@@ -72,8 +72,16 @@ reads the same file but honors the `deploy:` keys that make rolling updates
 work):
 
 ```bash
-docker stack deploy -c docker-compose.yml arena --with-registry-auth
+./scripts/stack-deploy.sh
 ```
+
+!!! warning
+    Don't run a bare `docker stack deploy -c docker-compose.yml arena --with-registry-auth`
+    here. Unlike `docker compose`, `docker stack deploy` does **not** auto-read
+    `.env` from the working directory for `${VAR}` interpolation — there's no
+    `--env-file` flag either. Run it directly and every `${DOMAIN}`,
+    `${POSTGRES_PASSWORD}`, etc. silently resolves to an empty string.
+    `scripts/stack-deploy.sh` exports `.env` into the shell first, then deploys.
 
 Watch it come up:
 

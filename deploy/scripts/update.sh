@@ -34,9 +34,14 @@ git pull --ff-only
 log "docker compose build --pull"
 docker compose -f "$COMPOSE_FILE" build --pull
 
-# 3. Re-apply the stack definition (picks up docker-compose.yml/.env changes)
-log "docker stack deploy"
-docker stack deploy -c "$COMPOSE_FILE" arena --with-registry-auth
+# 3. Re-apply the stack definition (picks up docker-compose.yml/.env changes).
+#    Goes through stack-deploy.sh, not a bare `docker stack deploy` — unlike
+#    `docker compose`, the stack-deploy parser does NOT auto-read .env from
+#    the working directory for ${VAR} interpolation, so calling it directly
+#    here would silently deploy with every ${DOMAIN}/${POSTGRES_PASSWORD}/etc.
+#    blank.
+log "stack-deploy"
+"$STACK_DIR/deploy/scripts/stack-deploy.sh"
 
 # 4. Wait for healthchecks, then prune dangling images
 log "Waiting 30s for services to settle"

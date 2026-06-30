@@ -17,6 +17,7 @@ deploy/
     ├── backup.sh                  # nightly restic backup to Hetzner Storage Box
     ├── restore.sh                 # interactive restore from a snapshot
     ├── swarm-deploy.sh            # migrate + zero-downtime rolling update (used by CI on every release tag)
+    ├── stack-deploy.sh            # `docker stack deploy` with .env correctly exported first
     ├── migrate.sh                 # apply/inspect Alembic migrations
     ├── update.sh                  # git pull + rebuild + hard restart (fallback/manual recovery only)
     └── healthcheck.sh             # HTTP smoke tests
@@ -36,7 +37,7 @@ chmod 600 .env
 
 # 3. Deploy
 docker swarm init
-docker stack deploy -c docker-compose.yml arena --with-registry-auth
+./scripts/stack-deploy.sh
 
 # 4. Verify
 ./scripts/healthcheck.sh
