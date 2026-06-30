@@ -83,7 +83,38 @@ logging.basicConfig(level=logging.INFO, handlers=[logging.StreamHandler()])
 logging.getLogger().handlers[0].setFormatter(JsonFormatter())
 ```
 
-## Pattern 3: metrics client (W&B, MLflow, custom)
+## Pattern 3: W&B logging
+
+### Option A — built-in platform logging (recommended)
+
+The platform has native W&B support that requires no agent code changes.
+
+1. Add your W&B API key in the **Settings** page (profile dropdown → Settings → Weights & Biases). The key is encrypted at rest and never leaves the server in plaintext.
+2. When starting a game from the UI, check **"Log results to Weights & Biases"** and choose your entity, project, and run name (all have sensible defaults).
+3. Via the API, pass `wandb_logging=true` in the experiment payload:
+
+```python
+from outplayarena_sdk import quick_play
+
+results = quick_play(
+    game="colonelblotto",
+    agents={"A": ..., "B": ...},
+    config={"game": "colonelblotto", "rounds": 10},
+    # W&B fields — api_key is resolved server-side from your stored key.
+    wandb_logging=True,
+    wandb_project="my-arena-runs",   # optional, defaults to "outplayarena"
+    wandb_entity="my-team",          # optional, defaults to your personal entity
+    wandb_run_name="blotto-vs-gpt",  # optional, defaults to session id
+)
+```
+
+The platform logs the full game config (including agent names), per-round scores, and terminal results automatically. If your W&B key isn't configured yet, the experiment runs without logging — no failure.
+
+See [Deployment → Configuration](../../deployment/configuration.md#integrations) for server-side setup (`OUTPLAYARENA_WANDB_ENCRYPTION_KEY`).
+
+### Option B — custom SDK hook (bring your own run)
+
+Use this when you want full control over the W&B run (custom metrics, nested charts, sweep integration, etc.):
 
 ```python
 from outplayarena_sdk import ColonelBlottoAgent

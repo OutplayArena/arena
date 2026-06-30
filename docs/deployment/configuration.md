@@ -83,6 +83,27 @@ OAuth is required for user login. Configure at least one provider.
 3. Add `https://your-domain.com/api/auth/google/callback` as an Authorized redirect URI
 4. Copy **Client ID** and **Client Secret** to `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
 
+## Integrations
+
+### Weights & Biases
+
+The platform has built-in W&B support. Once configured, users can enable logging per-experiment from the game config screen — no code required.
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `OUTPLAYARENA_WANDB_ENCRYPTION_KEY` | No | — | AES-256-GCM key (64 hex chars) used to encrypt W&B API keys at rest. Generate with `openssl rand -hex 32`. Leave unset to disable the integration. |
+
+How it works:
+
+1. Set `OUTPLAYARENA_WANDB_ENCRYPTION_KEY` in your `.env`.
+2. Users open **Settings → Weights & Biases** and paste their W&B API key (found at [wandb.ai/authorize](https://wandb.ai/authorize)).
+3. The platform encrypts the key before storing it — the plaintext is never persisted or returned by the API.
+4. When starting a game, users check **"Log results to Weights & Biases"** and optionally set entity, project name, and run name. If they leave fields blank the platform uses sensible defaults (`project=outplayarena`, `run_name=<session-id>`).
+5. At the end of each round and on game completion, results (scores, metrics, full game config, agent names) are streamed to the user's W&B project. If the key is missing or invalid the experiment still runs — W&B logging is skipped with a server-side warning.
+
+!!! note "Key rotation"
+    To rotate the encryption key, update `OUTPLAYARENA_WANDB_ENCRYPTION_KEY` and ask users to re-enter their W&B key in Settings. Existing encrypted keys in the database will be invalid until re-saved with the new key.
+
 ## Security
 
 | Variable | Required | Default | Description |
@@ -107,6 +128,9 @@ openssl rand -hex 32
 
 # POSTGRES_PASSWORD / REDIS_PASSWORD (32+ chars)
 openssl rand -hex 16
+
+# OUTPLAYARENA_WANDB_ENCRYPTION_KEY (32 bytes = 64 hex chars)
+openssl rand -hex 32
 
 # TRAEFIK_DASHBOARD_AUTH
 htpasswd -nb admin your_password_here
