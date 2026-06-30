@@ -2,7 +2,15 @@
 
 `BaseAgent` exposes ten lifecycle hooks. All are no-ops by default; override the ones you need to log, trace, or instrument your agent.
 
-This guide shows the patterns most teams use, from the simplest `print` to a full W&B / OpenTelemetry integration.
+## Recommended: built-in Weights & Biases logging
+
+The recommended way to track experiment results is the platform's built-in W&B integration — no agent code required. Add your W&B key in **Settings → Weights & Biases**, then check "Log results to Weights & Biases" when starting a game. The platform automatically logs the full game config, agent names, per-round scores, and terminal results to your W&B project.
+
+See [Pattern 3 — W&B logging → Option A](#pattern-3-wb-logging) below for API usage, and [Deployment → Configuration → Integrations](../../deployment/configuration.md#integrations) for server-side setup.
+
+---
+
+This guide also covers lower-level patterns for teams that want full control over what gets logged.
 
 ## Pattern 1: `print` debugging
 
