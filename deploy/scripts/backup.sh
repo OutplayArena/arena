@@ -21,9 +21,9 @@
 # deterministic; no retention math, no restic needed.
 #
 # Cron wiring (the user runs `crontab -e` once on the VPS):
-#   0  3 *   *   *   /opt/arena/deploy/scripts/backup.sh daily   >> /var/log/arena/backup.log 2>&1
-#   59 23 *   *   0   /opt/arena/deploy/scripts/backup.sh weekly  >> /var/log/arena/backup.log 2>&1
-#   59 23 28  *   *   /opt/arena/deploy/scripts/backup.sh monthly >> /var/log/arena/backup.log 2>&1
+#   0  3 *   *   *   bash /opt/arena/deploy/scripts/backup.sh daily   >> /var/log/arena/backup.log 2>&1
+#   59 23 *   *   0   bash /opt/arena/deploy/scripts/backup.sh weekly  >> /var/log/arena/backup.log 2>&1
+#   59 23 28  *   *   bash /opt/arena/deploy/scripts/backup.sh monthly >> /var/log/arena/backup.log 2>&1
 
 set -euo pipefail
 

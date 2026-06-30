@@ -280,7 +280,7 @@ sudo crontab -e
 Add:
 
 ```cron
-0 3 * * * /opt/arena/deploy/scripts/backup.sh >> /var/log/arena/backup.log 2>&1
+0 3 * * * bash /opt/arena/deploy/scripts/backup.sh >> /var/log/arena/backup.log 2>&1
 ```
 
 The script keeps 7 daily, 4 weekly, 6 monthly snapshots.
