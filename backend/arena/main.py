@@ -311,6 +311,7 @@ class UserResponse(BaseModel):
     email: str
     name: str
     avatar_url: str | None
+    privacy_accepted: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -1626,15 +1627,20 @@ async def auth_google_callback(request: Request, db: AsyncSession = Depends(get_
     return RedirectResponse(url=f"{_callback_base_for(request)}/?token={token}")
 
 
-@app.get(f"{API_PREFIX}/auth/me", response_model=UserResponse)
-async def auth_me(user: User = Depends(get_current_user)):
-    """Get the currently authenticated user profile."""
+def _user_response(user: User) -> UserResponse:
     return UserResponse(
         id=str(user.id),
         email=user.email,
         name=user.name,
         avatar_url=user.avatar_url,
+        privacy_accepted=user.privacy_accepted_at is not None,
     )
+
+
+@app.get(f"{API_PREFIX}/auth/me", response_model=UserResponse)
+async def auth_me(user: User = Depends(get_current_user)):
+    """Get the currently authenticated user profile."""
+    return _user_response(user)
 
 
 @app.get(f"{API_PREFIX}/auth/user", response_model=UserResponse)
@@ -1645,12 +1651,26 @@ async def auth_user(
     """Get the authenticated user profile (supports local auth)."""
     if user is None:
         raise HTTPException(status_code=401, detail="authentication required")
-    return UserResponse(
-        id=str(user.id),
-        email=user.email,
-        name=user.name,
-        avatar_url=user.avatar_url,
-    )
+    return _user_response(user)
+
+
+@app.post(f"{API_PREFIX}/settings/accept-privacy", status_code=200)
+async def accept_privacy(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Record that the current user has accepted the privacy notice.
+
+    Called once from the first-login modal.  Idempotent — safe to call
+    again without resetting the original acceptance timestamp.
+    """
+    if user.privacy_accepted_at is None:
+        result = await db.execute(select(User).where(User.id == user.id))
+        row = result.scalar_one_or_none()
+        if row is not None:
+            row.privacy_accepted_at = datetime.now(timezone.utc)
+            await db.commit()
+    return {"privacy_accepted": True}
 
 
 # ── Benchmark report ────────────────────────────────────────────────────

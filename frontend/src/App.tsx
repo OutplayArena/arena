@@ -17,6 +17,7 @@ import { AgentDetailPage } from "./pages/AgentDetailPage";
 import { DocsPage } from "./pages/DocsPage";
 import { GettingStartedPage } from "./pages/GettingStartedPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { PrivacyGate } from "./components/PrivacyGate";
 
 export default function App() {
   // Hide the React chrome on /docs/* so the user gets the mkdocs Material
@@ -29,6 +30,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col min-h-screen min-h-dvh">
+      <PrivacyGate />
       {!isDocs && <NavBar />}
       <main className="flex-1 flex flex-col min-h-0">
         <ErrorBoundary>
