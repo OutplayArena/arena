@@ -1277,10 +1277,16 @@ async def get_wandb_key_status(
     )
     row = result.scalar_one_or_none()
     if row is None:
-        return {"configured": False, "updated_at": None}
+        return {"configured": False, "updated_at": None, "key_fingerprint": None}
+    # Expose the last 8 characters of the base64url-encoded ciphertext as a
+    # visual fingerprint — safe (derived from random nonce + ciphertext,
+    # reveals nothing about the plaintext), stable for a given stored key,
+    # and changes when the user replaces their key.
+    fingerprint = row.encrypted_api_key[-8:] if row.encrypted_api_key else None
     return {
         "configured": True,
         "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+        "key_fingerprint": fingerprint,
     }
 
 
