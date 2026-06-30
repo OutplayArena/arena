@@ -105,7 +105,7 @@ export function SettingsPage() {
       )}
 
       {/* W&B integration */}
-      <div className="rounded-[var(--radius-card)] border border-line bg-surface overflow-hidden mb-6">
+      <div className="w-full rounded-[var(--radius-card)] border border-line bg-surface overflow-hidden mb-6">
 
         {/* Header — always visible, click to collapse */}
         <button
