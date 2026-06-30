@@ -375,6 +375,75 @@ class TestRunLoop:
         transport.submit_action.assert_not_called()
 
     @pytest.mark.asyncio
+    async def test_submit_action_retries_once_on_transient_failure(self):
+        """A single transient submit_action failure (e.g. the brief
+        connection drop a zero-downtime deploy can cause) is retried once
+        rather than aborting the match."""
+        agent = _RecordingAgent(
+            player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
+            arena_url="http://x", llm_config=_make_llm_config(),
+            poll_interval=0,
+            actions=[[7, 3]],
+        )
+        states = [
+            {"phase": "playing", "awaiting": ["A"], "round": 1, "config": {"seed": 1}},
+            {"phase": "complete", "awaiting": [], "round": 1, "config": {"seed": 1}},
+        ]
+        transport = _make_fake_transport(states)
+        transport.submit_action = AsyncMock(
+            side_effect=[ConnectionError("connection reset"), {"status": "ok", "retried": True}]
+        )
+        agent._transport = transport
+        agent._openai = MagicMock()
+        agent._openai.chat.completions.create = MagicMock(
+            return_value=_mock_response(content="[7,3]")
+        )
+
+        captured_results = []
+        agent.on_action_result = lambda result, state: captured_results.append(result)
+
+        with patch("outplayarena_sdk.base.asyncio.sleep", new=AsyncMock()):
+            await agent.run()
+
+        assert transport.submit_action.call_count == 2
+        # The retried (successful) result reaches on_action_result, not the
+        # failed first attempt — confirms the retry's return value is what
+        # actually gets used, not just that a retry was attempted.
+        assert captured_results == [{"status": "ok", "retried": True}]
+
+    @pytest.mark.asyncio
+    async def test_submit_action_raises_after_retry_exhausted(self):
+        """If submit_action keeps failing, the second failure is not
+        swallowed &mdash; it must surface as a real error, not silently
+        drop the agent's move."""
+        agent = _RecordingAgent(
+            player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
+            arena_url="http://x", llm_config=_make_llm_config(),
+            poll_interval=0,
+            actions=[[7, 3]],
+        )
+        states = [
+            {"phase": "playing", "awaiting": ["A"], "round": 1, "config": {"seed": 1}},
+        ]
+        transport = _make_fake_transport(states)
+        transport.submit_action = AsyncMock(
+            side_effect=ConnectionError("connection reset")
+        )
+        agent._transport = transport
+        agent._openai = MagicMock()
+        agent._openai.chat.completions.create = MagicMock(
+            return_value=_mock_response(content="[7,3]")
+        )
+
+        with patch("outplayarena_sdk.base.asyncio.sleep", new=AsyncMock()):
+            with pytest.raises(ConnectionError, match="connection reset"):
+                await agent.run()
+
+        assert transport.submit_action.call_count == 2
+
+    @pytest.mark.asyncio
     async def test_on_error_default_reraises(self):
         agent = _RecordingAgent(
             player="A", player_token=_make_session_token(),
