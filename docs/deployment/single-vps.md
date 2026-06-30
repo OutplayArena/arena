@@ -142,8 +142,17 @@ compose`) so that releases can be rolled out with zero downtime — see
 ```bash
 cd /opt/arena/deploy
 docker swarm init
-docker stack deploy -c docker-compose.yml arena --with-registry-auth
+./scripts/stack-deploy.sh
 ```
+
+!!! warning
+    Always deploy via `scripts/stack-deploy.sh`, not a bare `docker stack
+    deploy -c docker-compose.yml arena --with-registry-auth`. Unlike `docker
+    compose`, `docker stack deploy` does **not** auto-read `.env` from the
+    working directory for `${VAR}` interpolation (there's no `--env-file`
+    flag for it either) — run it directly and every `${DOMAIN}`,
+    `${POSTGRES_PASSWORD}`, etc. silently resolves to an empty string.
+    `stack-deploy.sh` exports `.env` into the shell first, then deploys.
 
 The first pull/start takes a minute or two. Watch the progress:
 
@@ -294,7 +303,7 @@ docker service update --force arena_backend
 sudo /opt/arena/deploy/scripts/swarm-deploy.sh v0.3.0
 
 # Re-apply the full compose file (e.g. after editing docker-compose.yml or .env)
-docker stack deploy -c /opt/arena/deploy/docker-compose.yml arena --with-registry-auth
+/opt/arena/deploy/scripts/stack-deploy.sh
 
 # Healthcheck (run from anywhere)
 DOMAIN=arena.example.com /opt/arena/deploy/scripts/healthcheck.sh
@@ -319,7 +328,7 @@ Worst case (VPS gone, you have to start over on a new one):
 2. Run `bootstrap.sh` on the new box
 3. Clone the repo: `git clone https://github.com/OutplayArena/arena.git /opt/arena`
 4. Edit the new `deploy/.env` to match the old one
-5. Start the stack: `docker swarm init && docker stack deploy -c deploy/docker-compose.yml arena --with-registry-auth`
+5. Start the stack: `docker swarm init && deploy/scripts/stack-deploy.sh`
 6. Restore from the Storage Box:
    ```bash
    sudo /opt/arena/deploy/scripts/restore.sh latest
@@ -373,6 +382,18 @@ ports in `deploy/docker-compose.yml`.
 - Check the service is healthy: `docker service ps arena_backend`
 - Check the password matches between `.env` and the running container
 - Check logs: `docker service logs arena_backend | grep -i 'postgres\|asyncpg'`
+
+### Postgres fails with "you must specify POSTGRES_PASSWORD"
+
+You ran `docker stack deploy` directly instead of `scripts/stack-deploy.sh`.
+`docker stack deploy` doesn't auto-read `.env` from the working directory
+for `${VAR}` interpolation the way `docker compose` does — every `${VAR}` in
+`docker-compose.yml` silently resolves to an empty string if you invoke it
+bare. Postgres is the one service that fails loudly about it (refuses to
+start with an empty password); other services with blank `${VAR}`s
+(`DOMAIN`, `REDIS_PASSWORD`, etc.) may come up "successfully" misconfigured
+instead. Always deploy via `scripts/stack-deploy.sh`, which exports `.env`
+first.
 
 ### A `docker service update` rolled back unexpectedly
 

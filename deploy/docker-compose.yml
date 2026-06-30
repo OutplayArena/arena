@@ -24,7 +24,13 @@
 #   cp .env.production.example .env
 #   $EDITOR .env       # fill in DOMAIN, secrets, OAuth, etc.
 #   docker swarm init  # one-time, turns this host into a 1-node swarm
-#   docker stack deploy -c docker-compose.yml arena --with-registry-auth
+#   ./scripts/stack-deploy.sh
+#
+# Use scripts/stack-deploy.sh, not a bare `docker stack deploy` — unlike
+# `docker compose`, `docker stack deploy` does NOT auto-read .env from the
+# working directory for ${VAR} interpolation (no --env-file flag either).
+# Run it bare and every ${DOMAIN}/${POSTGRES_PASSWORD}/etc. below silently
+# resolves to an empty string. stack-deploy.sh exports .env first, then runs it.
 #
 # The two arena images (backend, mcp) are pulled from Docker Hub
 # (her3ert/outplayarena-*). Override the tag with IMAGE_TAG (defaults to
@@ -187,9 +193,9 @@ services:
       retries: 3
       start_period: 15s
     logging: *default-logging
+    stop_grace_period: 30s   # let in-flight API requests finish before SIGKILL
     deploy:
       replicas: 1
-      stop_grace_period: 30s   # let in-flight API requests finish before SIGKILL
       update_config:
         order: start-first   # new task must pass its healthcheck before the old one stops
         parallelism: 1
@@ -233,12 +239,12 @@ services:
       retries: 3
       start_period: 15s
     logging: *default-logging
+    # In-flight MCP connections (multi-turn LLM matches) on the old task
+    # aren't migrated — they're cut when it stops. Give them a generous
+    # grace window to finish their current turn before that happens.
+    stop_grace_period: 60s
     deploy:
       replicas: 1
-      # In-flight MCP connections (multi-turn LLM matches) on the old task
-      # aren't migrated — they're cut when it stops. Give them a generous
-      # grace window to finish their current turn before that happens.
-      stop_grace_period: 60s
       update_config:
         order: start-first
         parallelism: 1
