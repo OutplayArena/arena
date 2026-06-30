@@ -138,8 +138,10 @@ export function SettingsPage() {
           </span>
         </button>
 
-        {/* Collapsible body */}
-        {open && (
+        {/* Collapsible body — kept in the DOM so its intrinsic width always
+            anchors the card; height collapses via the CSS grid-rows trick. */}
+        <div className={`grid transition-[grid-template-rows] duration-200 ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+          <div className="overflow-hidden">
           <div className="border-t border-line/60 p-5 space-y-4">
             <p className="text-xs text-muted leading-relaxed">
               Log experiment results to your own W&amp;B account. Your API key is encrypted
@@ -212,7 +214,8 @@ export function SettingsPage() {
               </div>
             )}
           </div>
-        )}
+          </div>
+        </div>
       </div>
     </div>
   );
