@@ -277,3 +277,13 @@ volumes:
   postgres_data:
   redis_data:
   traefik_acme:
+
+# Swarm's implicit default network isn't attachable to standalone `docker
+# run` containers. migrate.sh runs alembic in exactly one of those
+# (`docker run --network arena_default ...`, so it can reach postgres
+# without being a stack service itself) — without this, that fails with
+# "network arena_default not manually attachable".
+networks:
+  default:
+    driver: overlay
+    attachable: true

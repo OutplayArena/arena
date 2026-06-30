@@ -29,12 +29,17 @@ COMPOSE_DIR="$STACK_DIR/deploy"
 ENV_FILE="$COMPOSE_DIR/.env"
 BACKEND_DIR="$STACK_DIR/backend"
 
-# Load DATABASE_URL from the same .env the backend uses.
+# Load DATABASE_URL from the same .env the backend uses. `source`-ing it
+# directly would run it as bash, not parse it as plain KEY=VALUE — any
+# literal `$` in a value (e.g. TRAEFIK_DASHBOARD_AUTH's htpasswd hash,
+# `$apr1$.../...`) would get expanded as a shell variable reference instead
+# of kept as-is. Read it line by line and export verbatim instead (same
+# fix as stack-deploy.sh).
 if [[ -f "$ENV_FILE" ]]; then
-    set -a
-    # shellcheck disable=SC1090
-    source "$ENV_FILE"
-    set +a
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        [[ "$line" =~ ^[[:space:]]*(#.*)?$ ]] && continue
+        export "$line"
+    done < "$ENV_FILE"
 fi
 
 # The .env on this deploy only carries POSTGRES_USER / POSTGRES_PASSWORD /
