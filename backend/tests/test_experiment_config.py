@@ -1,6 +1,11 @@
 import pytest
 
-from arena.experiment_config import WandbConfig, WandbRequestFields, split_runtime_config
+from arena.experiment_config import (
+    ExperimentRuntimeConfig,
+    WandbConfig,
+    WandbRequestFields,
+    split_runtime_config,
+)
 
 
 def test_wandb_config_serializes_without_plaintext_api_key():
@@ -91,3 +96,43 @@ def test_wandb_config_rejects_missing_api_key():
 def test_wandb_config_rejects_missing_project():
     with pytest.raises(ValueError, match="project"):
         WandbConfig(api_key="secret", project="")
+
+
+def test_wandb_config_rejects_non_string_entity():
+    with pytest.raises(ValueError, match="entity"):
+        WandbConfig(api_key="secret", project="p", entity=123)
+
+
+def test_wandb_config_rejects_non_string_run_name():
+    with pytest.raises(ValueError, match="run_name"):
+        WandbConfig(api_key="secret", project="p", run_name=123)
+
+
+def test_wandb_config_rejects_non_string_tags():
+    with pytest.raises(ValueError, match="tags"):
+        WandbConfig(api_key="secret", project="p", tags=["ok", 123])
+
+
+def test_experiment_runtime_config_to_safe_dict_with_wandb():
+    config = ExperimentRuntimeConfig(
+        wandb=WandbConfig(api_key="secret", project="p", entity="e")
+    )
+    safe = config.to_safe_dict()
+    assert safe["wandb"]["project"] == "p"
+    assert safe["wandb"]["api_key"] == "[redacted]"
+    assert "secret" not in str(safe)
+
+
+def test_wandb_request_fields_rejects_non_string_project():
+    with pytest.raises(ValueError, match="wandb_project"):
+        WandbRequestFields.from_payload({"wandb_logging": True, "wandb_project": 123})
+
+
+def test_wandb_request_fields_rejects_non_string_run_name():
+    with pytest.raises(ValueError, match="wandb_run_name"):
+        WandbRequestFields.from_payload({"wandb_logging": True, "wandb_run_name": 123})
+
+
+def test_wandb_request_fields_rejects_non_string_entity_via_split_runtime_config():
+    with pytest.raises(ValueError, match="wandb_entity"):
+        split_runtime_config({"wandb_logging": True, "wandb_entity": 123})
