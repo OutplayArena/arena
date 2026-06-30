@@ -194,7 +194,7 @@ export function getGameSkill(name: string): Promise<{ game: string; title: strin
 
 // ── W&B Settings ──────────────────────────────────────────────────────
 
-export function getWandbKeyStatus(): Promise<{ configured: boolean; updated_at: string | null }> {
+export function getWandbKeyStatus(): Promise<{ configured: boolean; updated_at: string | null; key_fingerprint: string | null }> {
   return request("/api/settings/wandb-key");
 }
 

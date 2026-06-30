@@ -13,18 +13,42 @@ function SpinIcon() {
   );
 }
 
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
 export function SettingsPage() {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [keyFingerprint, setKeyFingerprint] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [open, setOpen] = useState(true);
 
   useEffect(() => {
     getWandbKeyStatus()
-      .then((s) => { setConfigured(s.configured); setUpdatedAt(s.updated_at); })
+      .then((s) => {
+        setConfigured(s.configured);
+        setUpdatedAt(s.updated_at);
+        setKeyFingerprint(s.key_fingerprint);
+      })
       .catch(() => setConfigured(false));
   }, []);
 
@@ -36,8 +60,11 @@ export function SettingsPage() {
     setSaved(false);
     try {
       await saveWandbKey(apiKey.trim());
-      setConfigured(true);
-      setUpdatedAt(new Date().toISOString());
+      // Re-fetch status to get the new fingerprint.
+      const s = await getWandbKeyStatus();
+      setConfigured(s.configured);
+      setUpdatedAt(s.updated_at);
+      setKeyFingerprint(s.key_fingerprint);
       setApiKey("");
       setSaved(true);
     } catch (err) {
@@ -54,6 +81,7 @@ export function SettingsPage() {
       await deleteWandbKey();
       setConfigured(false);
       setUpdatedAt(null);
+      setKeyFingerprint(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -78,8 +106,15 @@ export function SettingsPage() {
 
       {/* W&B integration */}
       <div className="rounded-[var(--radius-card)] border border-line bg-surface overflow-hidden mb-6">
-        <div className="px-5 py-4 border-b border-line/60 bg-surface-soft flex items-center gap-3">
+
+        {/* Header — always visible, click to collapse */}
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="w-full px-5 py-4 flex items-center gap-3 bg-surface-soft hover:bg-surface-container transition-colors text-left"
+        >
           <span className="text-sm font-bold text-ink">Weights &amp; Biases</span>
+
           {configured === true && (
             <span className="text-[11px] font-semibold px-2 py-0.5 rounded-[var(--radius-chip)] text-success bg-success/10">
               Connected
@@ -90,80 +125,94 @@ export function SettingsPage() {
               Not configured
             </span>
           )}
-        </div>
 
-        <div className="p-5 space-y-4">
-          <p className="text-xs text-muted leading-relaxed">
-            Log experiment results to your own W&amp;B account. Your API key is encrypted
-            at rest and never returned by the platform — it is only used when transmitting
-            results at the end of a game.
-          </p>
+          {/* Fingerprint — right-aligned, monospace, subtle */}
+          {configured && keyFingerprint && (
+            <span className="ml-auto mr-2 font-mono text-[11px] text-quiet tracking-wide select-all">
+              …{keyFingerprint}
+            </span>
+          )}
 
-          {configured && updatedAt && (
-            <p className="text-[11px] text-quiet">
-              Last updated: {new Date(updatedAt).toLocaleString()}
+          <span className={`${configured && keyFingerprint ? "" : "ml-auto"} text-muted shrink-0`}>
+            <ChevronIcon open={open} />
+          </span>
+        </button>
+
+        {/* Collapsible body */}
+        {open && (
+          <div className="border-t border-line/60 p-5 space-y-4">
+            <p className="text-xs text-muted leading-relaxed">
+              Log experiment results to your own W&amp;B account. Your API key is encrypted
+              at rest and never returned by the platform — it is only used when transmitting
+              results at the end of a game.
             </p>
-          )}
 
-          {saved && (
-            <div className="px-3 py-2 rounded-[var(--radius-chip)] border border-success/20 bg-success/5 text-xs text-success">
-              Key saved — logging is now enabled for new experiments.
-            </div>
-          )}
+            {configured && updatedAt && (
+              <p className="text-[11px] text-quiet">
+                Last updated: {new Date(updatedAt).toLocaleString()}
+              </p>
+            )}
 
-          <form onSubmit={handleSave} className="space-y-3">
-            <label className="block text-xs font-semibold text-ink">
-              {configured ? "Replace API key" : "API key"}
-            </label>
-            <div className="flex gap-2.5">
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className={`${inputClass} flex-1`}
-                placeholder="Paste your W&B API key…"
-                autoComplete="off"
-              />
-              <button
-                type="submit"
-                disabled={saving || !apiKey.trim()}
-                className="h-9 px-4 bg-accent text-white rounded-[var(--radius-button)] font-medium text-sm transition-opacity hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
-              >
-                {saving && <SpinIcon />}
-                {configured ? "Replace" : "Save"}
-              </button>
-            </div>
-            <p className="text-[11px] text-quiet">
-              Find your key at{" "}
-              <a
-                href="https://wandb.ai/authorize"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-accent hover:underline"
-              >
-                wandb.ai/authorize
-              </a>
-            </p>
-          </form>
+            {saved && (
+              <div className="px-3 py-2 rounded-[var(--radius-chip)] border border-success/20 bg-success/5 text-xs text-success">
+                Key saved — logging is now enabled for new experiments.
+              </div>
+            )}
 
-          {configured && (
-            <div className="pt-2 border-t border-line/40">
-              <button
-                type="button"
-                onClick={handleRemove}
-                disabled={removing}
-                className="flex items-center gap-1.5 text-xs text-muted hover:text-danger transition-colors disabled:opacity-50"
-              >
-                {removing ? <SpinIcon /> : (
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                )}
-                Remove key
-              </button>
-            </div>
-          )}
-        </div>
+            <form onSubmit={handleSave} className="space-y-3">
+              <label className="block text-xs font-semibold text-ink">
+                {configured ? "Replace API key" : "API key"}
+              </label>
+              <div className="flex gap-2.5">
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  className={`${inputClass} flex-1`}
+                  placeholder="Paste your W&B API key…"
+                  autoComplete="off"
+                />
+                <button
+                  type="submit"
+                  disabled={saving || !apiKey.trim()}
+                  className="h-9 px-4 bg-accent text-white rounded-[var(--radius-button)] font-medium text-sm transition-opacity hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+                >
+                  {saving && <SpinIcon />}
+                  {configured ? "Replace" : "Save"}
+                </button>
+              </div>
+              <p className="text-[11px] text-quiet">
+                Find your key at{" "}
+                <a
+                  href="https://wandb.ai/authorize"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-accent hover:underline"
+                >
+                  wandb.ai/authorize
+                </a>
+              </p>
+            </form>
+
+            {configured && (
+              <div className="pt-2 border-t border-line/40">
+                <button
+                  type="button"
+                  onClick={handleRemove}
+                  disabled={removing}
+                  className="flex items-center gap-1.5 text-xs text-muted hover:text-danger transition-colors disabled:opacity-50"
+                >
+                  {removing ? <SpinIcon /> : (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  )}
+                  Remove key
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

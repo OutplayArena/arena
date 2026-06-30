@@ -162,6 +162,7 @@ def test_wandb_key_not_configured_by_default(client):
     data = resp.json()
     assert data["configured"] is False
     assert data["updated_at"] is None
+    assert data["key_fingerprint"] is None
 
 
 def test_save_wandb_key(client, db):
@@ -184,6 +185,10 @@ def test_get_status_after_save(client, db):
     # The key must NEVER appear in any response field.
     assert "secret" not in resp.text
     assert "api_key" not in data
+    # Fingerprint — last 8 chars of the encrypted blob, never the plaintext.
+    assert data["key_fingerprint"] is not None
+    assert len(data["key_fingerprint"]) == 8
+    assert "secret" not in data["key_fingerprint"]
 
 
 def test_delete_wandb_key(client, db):
