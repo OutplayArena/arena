@@ -122,7 +122,8 @@ Fill in the required values:
 |---|---|
 | `DOMAIN` | The FQDN you pointed at the VPS in step 2 (e.g. `arena.example.com`) |
 | `ACME_EMAIL` | Email for Let's Encrypt registration / expiry notices |
-| `POSTGRES_PASSWORD` | Long random string (≥32 chars). `openssl rand -base64 32` |
+| `POSTGRES_PASSWORD` | Long random string (≥32 chars). `openssl rand -hex 32` — **use hex, not base64**: this value gets interpolated unescaped into `DATABASE_URL` (a connection-string URL), and base64's `/+=` characters break URL parsing |
+| `REDIS_PASSWORD` | Same as above — `openssl rand -hex 32`, hex only (interpolated unescaped into `REDIS_URL`) |
 | `JWT_SECRET` | Long random hex. `openssl rand -hex 32` |
 | `TRAEFIK_DASHBOARD_AUTH` | Basic-auth user:hash for the Traefik dashboard. Generate with `htpasswd -nb admin 'your-password'` and paste the whole output (including the `$apr1$…` part) |
 | `GITHUB_CLIENT_ID` / `_SECRET` | Optional. Register at https://github.com/settings/developers with callback `https://${DOMAIN}/api/auth/github/callback` |
