@@ -6,7 +6,7 @@ OutplayArena uses **Alembic** with **SQLAlchemy** for database schema management
 
 | Deployment method | How migrations run |
 |---|---|
-| **Docker Compose** | Automatic — a one-shot `migrations` service runs on every `docker compose up` |
+| **Docker Compose / Single VPS** | Automatic — the `backend` container applies pending migrations in its FastAPI `lifespan()` on every boot (idempotent). CI also pre-applies them against the *new* image before rolling the service — see below. |
 | **Kubernetes** | Automatic — a `migrations` Kubernetes Job runs before the backend deployment |
 | **Local development** | Manual — run `uv run alembic upgrade head` after cloning or pulling |
 
@@ -29,27 +29,31 @@ uv run alembic -c backend/alembic.ini downgrade -1
 uv run alembic -c backend/alembic.ini downgrade abc123
 ```
 
-## Production (Docker Compose)
+## Production (Docker Compose / Single VPS)
 
-The `migrations` service in the production compose file runs automatically:
+Production runs as a single-node Docker Swarm stack (`docker stack deploy`,
+not plain `docker compose` — see [Docker Compose](docker.md)). There's no
+compose project to `exec`/`run` against, so migrations run two ways:
 
-```bash
-docker compose up -d           # migrations run before backend starts
-docker compose logs migrations # check migration output
-```
+1. **On every backend boot** — the `backend` container's FastAPI `lifespan()`
+   applies pending migrations automatically (idempotent, fatal on failure).
+2. **Pre-applied by CI before a rollout** — `deploy/scripts/swarm-deploy.sh`
+   runs migrations against the *new* image in a throwaway container, before
+   touching the running `backend`/`mcp` services. This avoids a window where
+   the old and new task (briefly running side by side during the
+   healthcheck-gated rolling update) disagree on schema.
 
-To run migrations manually in the running container:
-
-```bash
-docker compose exec backend alembic -c /app/alembic.ini upgrade head
-```
-
-Using the migration script:
+To run migrations manually, use `deploy/scripts/migrate.sh` — it runs
+Alembic in a throwaway `docker run` container on the stack's overlay network:
 
 ```bash
 ./deploy/scripts/migrate.sh              # upgrade head
 ./deploy/scripts/migrate.sh current      # show current version
 ./deploy/scripts/migrate.sh history      # list all versions
+
+# Apply migrations against a specific release tag's image, e.g. before
+# rolling the service to it (this is what swarm-deploy.sh does):
+MIGRATE_IMAGE=her3ert/outplayarena-backend:v0.3.0 ./deploy/scripts/migrate.sh upgrade
 ```
 
 ## Kubernetes
@@ -74,11 +78,12 @@ kubectl -n arena exec -it deployment/arena-backend -- \
     Run a database backup before any migration, especially downgrade operations.
 
 ```bash
-# Docker Compose backup
+# Docker Compose / Single VPS backup
 ./deploy/scripts/backup.sh
 
 # Manual backup
-docker compose exec db pg_dump -U outplayarena outplayarena > backup_$(date +%Y%m%d).sql
+docker exec "$(docker ps -q -f name=arena_postgres)" \
+  pg_dump -U outplayarena outplayarena > backup_$(date +%Y%m%d).sql
 ```
 
 ## Migration Files

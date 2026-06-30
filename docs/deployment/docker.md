@@ -1,10 +1,22 @@
 # Docker Compose
 
-Deploy OutplayArena using Docker Compose for single-server production deployments. The production compose file pulls pre-built images from Docker Hub and configures Traefik with automatic TLS.
+Deploy OutplayArena to a single server using the production Compose file at
+`deploy/docker-compose.yml`. It pulls pre-built images from Docker Hub and
+configures Traefik with automatic TLS.
+
+This file's `deploy:` keys mean production actually runs it as a **single-node
+Docker Swarm stack**, not via plain `docker compose up`. That's what gets you
+zero-downtime releases: Swarm only stops the old container for a service once
+the new one has passed its healthcheck. `docker compose` itself ignores
+`deploy:` entirely, so a plain `docker compose up -d` on this file would
+still work, but every update becomes a hard restart that drops connections —
+not what you want for a server with live users. See [Single VPS](single-vps.md)
+for the fully worked example (Hetzner-specific, but the Swarm steps apply to
+any single server).
 
 ## Prerequisites
 
-- Docker Engine 24+, Docker Compose v2
+- Docker Engine 24+ (includes Swarm mode — no extra install)
 - A domain pointed at your server (A record in DNS)
 - Ports 80 and 443 open on your server
 
@@ -36,8 +48,6 @@ Required variables to fill in:
 | `REDIS_PASSWORD` | `openssl rand -hex 16` |
 | `JWT_SECRET` | `openssl rand -hex 32` |
 | `TRAEFIK_DASHBOARD_AUTH` | `htpasswd -nb admin <password>` |
-| `CORS_ALLOW_ORIGINS` | `https://your-domain.com` |
-| `OAUTH_ALLOWED_BASES` | `https://your-domain.com` |
 
 See [Environment Configuration](configuration.md) for all variables.
 
@@ -49,33 +59,40 @@ Without OAuth, the platform has no user login. To enable it:
 2. Add the client ID/secret to `.env`
 3. Set the callback URL in your OAuth provider to `https://your-domain.com/api/auth/github/callback` or `/api/auth/google/callback`
 
-### 4. Start the Stack
+### 4. Initialize the Swarm and Start the Stack
+
+One-time, turns this host into a single-node Swarm:
 
 ```bash
-docker compose pull           # pull latest images from Docker Hub
-docker compose up -d          # start all services
-docker compose logs -f        # watch logs
+docker swarm init
 ```
 
-### 5. Run Migrations
-
-Migrations run automatically on startup via the `migrations` service. To check they succeeded:
+Then deploy the stack (`docker stack deploy`, not `docker compose up` — it
+reads the same file but honors the `deploy:` keys that make rolling updates
+work):
 
 ```bash
-docker compose logs migrations
+docker stack deploy -c docker-compose.yml arena --with-registry-auth
 ```
 
-To run migrations manually:
+Watch it come up:
 
 ```bash
-docker compose exec backend alembic -c /app/alembic.ini upgrade head
+docker stack ps arena
+docker service logs -f arena_backend
 ```
+
+### 5. Migrations
+
+The backend applies pending Alembic migrations itself on startup (its FastAPI
+`lifespan()`, idempotent). To run them ahead of time or check on them, see
+[Database Migrations](migrations.md).
 
 ### 6. Verify
 
 ```bash
-# Check all services are running
-docker compose ps
+# Check all services are running (should all show 1/1)
+docker service ls
 
 # Check backend health
 curl https://your-domain.com/api/health
@@ -85,46 +102,50 @@ curl https://your-domain.com/api/health
 
 ```
 Internet → Traefik (:80/:443)
-              └── your-domain.com → Backend (:8000)
-                                        ├── PostgreSQL (:5432, internal)
-                                        ├── Redis (:6379, internal)
-                                        └── MCP containers (spawned on demand)
+              ├── your-domain.com         → backend (:8000)
+              └── your-domain.com/mcp/    → mcp (:8001)
+                       │
+                       ├── PostgreSQL (:5432, internal)
+                       └── Redis (:6379, internal)
 ```
 
 ## Services
 
-The production compose file runs:
-
 | Service | Image | Description |
 |---|---|---|
-| `traefik` | `traefik:v3.7` | Reverse proxy with Let's Encrypt TLS |
-| `db` | `postgres:16-alpine` | PostgreSQL database |
+| `traefik` | `traefik:v3.7` | Reverse proxy with Let's Encrypt TLS, swarm-mode Docker provider |
+| `postgres` | `postgres:16-alpine` | PostgreSQL database |
 | `redis` | `redis:7-alpine` | Redis pub/sub and cache |
-| `migrations` | `her3ert/outplayarena-backend:TAG` | One-shot Alembic migration runner |
-| `backend` | `her3ert/outplayarena-backend:TAG` | FastAPI backend + React frontend |
-| `mcp` | `her3ert/outplayarena-mcp:TAG` | MCP server (always-on mode) |
+| `backend` | `her3ert/outplayarena-backend:TAG` | FastAPI backend + React frontend (runs migrations on boot) |
+| `mcp` | `her3ert/outplayarena-mcp:TAG` | Single long-running MCP server |
 
 ## Updating
 
-```bash
-# Edit IMAGE_TAG in .env to the new release, then:
-docker compose pull
-docker compose up -d
+Routine updates happen automatically: pushing a `v*.*.*` tag builds new
+images and rolls them out via CI — see
+[Single VPS — Continuous deployment](single-vps.md#continuous-deployment).
 
-# Migrations run automatically on restart
+To roll a release manually instead of waiting on CI:
+
+```bash
+sudo ./scripts/swarm-deploy.sh v0.3.0
 ```
+
+That migrates, then does a healthcheck-gated rolling update of `backend` and
+`mcp` one at a time — no `docker compose up -d` hard restart.
 
 ## Backup and Restore
 
 ```bash
-# Backup database
+# Scheduled/manual backup
 ./scripts/backup.sh
 
-# Manual backup
-docker compose exec db pg_dump -U outplayarena outplayarena > backup.sql
+# Manual Postgres dump
+docker exec "$(docker ps -q -f name=arena_postgres)" \
+  pg_dump -U outplayarena outplayarena > backup.sql
 
-# Restore from backup
-cat backup.sql | docker compose exec -T db psql -U outplayarena outplayarena
+# Restore
+./scripts/restore.sh latest
 ```
 
 ## Traefik Dashboard
@@ -141,23 +162,17 @@ Then open `http://localhost:8080` and log in with the credentials from `TRAEFIK_
 
 **Backend won't start:**
 ```bash
-docker compose logs backend
+docker service logs arena_backend
+docker service ps arena_backend --no-trunc   # shows the failing task's error
 ```
 
-**Migrations fail:**
-```bash
-docker compose logs migrations
-# Run manually:
-docker compose exec backend alembic -c /app/alembic.ini upgrade head
-```
+**Migrations fail:** see [Database Migrations](migrations.md).
 
 **TLS certificate not issued:**
 - Verify port 80 is open (Let's Encrypt HTTP challenge uses port 80)
-- Check Traefik logs: `docker compose logs traefik`
+- Check Traefik logs: `docker service logs arena_traefik`
 - Ensure DNS is pointing to the server before starting
 
-**MCP containers not starting:**
-```bash
-docker compose logs backend | grep mcp
-# Ensure Docker socket is accessible from the backend container
-```
+**A `docker service update` rolled back unexpectedly:** Swarm auto-rolls back
+when the new task fails its healthcheck. Check `docker service ps
+arena_backend --no-trunc` for the failure reason.

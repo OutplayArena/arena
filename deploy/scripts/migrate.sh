@@ -15,6 +15,12 @@
 #
 # Reads the same DATABASE_URL as the backend (loaded from
 # /opt/arena/deploy/.env so it matches what the API uses).
+#
+# Runs alembic in a throwaway `docker run` container on the stack's overlay
+# network (Swarm, not plain `docker compose` — there's no compose project to
+# exec/run against). Pass MIGRATE_IMAGE to target a specific image instead of
+# whatever IMAGE_TAG is currently set in .env, e.g. to apply migrations
+# against a new release *before* rolling the service (see swarm-deploy.sh).
 
 set -euo pipefail
 
@@ -52,28 +58,17 @@ SYNC_URL="${DATABASE_URL/%+asyncpg/}"
 
 ACTION="${1:-upgrade}"
 
-# Run alembic inside the backend container so we don't have to keep
-# alembic installed on the host (it's only in the backend image).
-# The container's DATABASE_URL is set by docker-compose; we override
-# it here so the migration sees the same sync URL this script computed
-# from the .env.
+# Production runs as a single-node Swarm stack (`docker stack deploy`), not
+# plain `docker compose` — there's no compose project to `exec`/`run`
+# against. Run alembic in a throwaway container on the stack's overlay
+# network instead; this also lets swarm-deploy.sh point MIGRATE_IMAGE at
+# the *new* tag and apply migrations before rolling the running service.
+IMAGE="${MIGRATE_IMAGE:-her3ert/outplayarena-backend:${IMAGE_TAG:-latest}}"
+NETWORK="${MIGRATE_NETWORK:-arena_default}"
 run_in_container() {
-    local cmd="$1"
-    cd "$COMPOSE_DIR"
-    if ! docker compose ps --status running backend >/dev/null 2>&1; then
-        # Backend isn't running — start it ephemerally for the upgrade.
-        # The lifespan's _run_alembic_upgrade would also do this, but
-        # only after the API is fully up; running here is faster and
-        # gives a clear "migrations applied" log line.
-        docker compose run --rm \
-            --entrypoint "" \
-            -e DATABASE_URL="$SYNC_URL" \
-            backend python -m alembic "$cmd"
-    else
-        docker compose exec -T \
-            -e DATABASE_URL="$SYNC_URL" \
-            backend python -m alembic "$cmd"
-    fi
+    docker run --rm --network "$NETWORK" \
+        -e DATABASE_URL="$SYNC_URL" \
+        "$IMAGE" python -m alembic "$@"
 }
 
 case "$ACTION" in
