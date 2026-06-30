@@ -95,7 +95,7 @@ OAuth is required for user login. Configure at least one provider.
 |---|---|---|---|
 | `DOMAIN` | Yes (prod) | — | Your public domain (e.g. `arena.example.com`) |
 | `ACME_EMAIL` | Yes (prod) | — | Email for Let's Encrypt registration |
-| `IMAGE_TAG` | Yes (prod) | `v0.1.0` | Docker image tag to pull from Docker Hub |
+| `IMAGE_TAG` | Yes (prod) | `v0.2.1` | Docker image tag to pull from Docker Hub |
 | `DOCKER_API_VERSION` | No | `1.55` | Docker daemon API version (set to output of `docker version`) |
 | `BACKUP_DIR` | No | — | Directory for database backup rotation (leave empty to disable) |
 
@@ -132,7 +132,7 @@ htpasswd -nb admin your_password_here
     ```bash
     DOMAIN=arena.example.com
     ACME_EMAIL=ops@example.com
-    IMAGE_TAG=v0.1.0
+    IMAGE_TAG=v0.2.1
     POSTGRES_USER=outplayarena
     POSTGRES_PASSWORD=<openssl rand -hex 16>
     POSTGRES_DB=outplayarena
@@ -153,7 +153,7 @@ htpasswd -nb admin your_password_here
     MCP_RUNTIME=k8s
     MCP_BACKEND_URL=http://arena-backend:8000/api
     MCP_NAMESPACE=arena
-    MCP_IMAGE=her3ert/outplayarena-mcp:v0.1.0
+    MCP_IMAGE=her3ert/outplayarena-mcp:v0.2.1
     MCP_PUBLIC_BASE_URL=https://arena.example.com
     JWT_SECRET=<openssl rand -hex 32>
     CORS_ALLOW_ORIGINS=https://arena.example.com

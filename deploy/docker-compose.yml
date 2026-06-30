@@ -39,7 +39,7 @@
 # ignored) and `image:` (so `docker stack deploy`/`docker compose pull`
 # fetch from Docker Hub).
 #
-# To cut a new release, push a tag like v0.1.0; .github/workflows/release.yml
+# To cut a new release, push a tag like v0.3.0; .github/workflows/release.yml
 # builds+pushes the images and then rolls this stack via
 # deploy/scripts/swarm-deploy.sh over SSH. To roll manually:
 #
@@ -72,10 +72,13 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_acme:/letsencrypt
     command:
-      - --providers.docker=true
-      - --providers.docker.swarmMode=true
-      - --providers.docker.exposedbydefault=false
-      - --providers.docker.network=arena_default
+      # Traefik v3 split swarm-mode routing out of the Docker provider into
+      # a dedicated Swarm provider — `--providers.docker.swarmMode=true` was
+      # removed (fails fast with "incompatible deprecated install
+      # configuration option found"). Use --providers.swarm.* instead.
+      - --providers.swarm=true
+      - --providers.swarm.exposedbydefault=false
+      - --providers.swarm.network=arena_default
       - --entrypoints.web.address=:80
       - --entrypoints.web.http.redirections.entryPoint.to=websecure
       - --entrypoints.web.http.redirections.entryPoint.scheme=https
@@ -166,7 +169,7 @@ services:
     build:
       context: ..
       dockerfile: backend/docker/Dockerfile
-    image: her3ert/outplayarena-backend:${IMAGE_TAG:-v0.1.0}
+    image: her3ert/outplayarena-backend:${IMAGE_TAG:-v0.2.1}
     env_file: .env
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-outplayarena}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-outplayarena}
@@ -222,7 +225,7 @@ services:
     build:
       context: ..
       dockerfile: backend/docker/Dockerfile.mcp
-    image: her3ert/outplayarena-mcp:${IMAGE_TAG:-v0.1.0}
+    image: her3ert/outplayarena-mcp:${IMAGE_TAG:-v0.2.1}
     env_file: .env
     environment:
       OUTPLAYARENA_BASE_URL: http://backend:8000/api
