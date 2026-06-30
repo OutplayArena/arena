@@ -340,4 +340,36 @@ export function getAgentHistory(agentId: string, game?: string): Promise<RatingH
   return request<RatingHistoryResponse>(`/api/leaderboard/agents/${agentId}/history${qs}`);
 }
 
+// ── GDPR ──────────────────────────────────────────────────────────────
+
+/**
+ * Fetch the authenticated user's full data export as a JSON blob and
+ * trigger a browser file download.  The raw key/token values are never
+ * included — the backend redacts them before responding.
+ */
+export async function downloadUserData(): Promise<void> {
+  const resp = await fetch("/api/settings/data-export", {
+    credentials: "include",
+  });
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => resp.statusText);
+    throw new ApiError(text, resp.status);
+  }
+  const blob = await resp.blob();
+  const disposition = resp.headers.get("Content-Disposition") ?? "";
+  const match = disposition.match(/filename="([^"]+)"/);
+  const filename = match?.[1] ?? "outplayarena-export.json";
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export function deleteAccount(): Promise<{ deleted: boolean }> {
+  return request<{ deleted: boolean }>("/api/settings/account", { method: "DELETE" });
+}
+
+
 

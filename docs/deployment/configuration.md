@@ -83,6 +83,43 @@ OAuth is required for user login. Configure at least one provider.
 3. Add `https://your-domain.com/api/auth/google/callback` as an Authorized redirect URI
 4. Copy **Client ID** and **Client Secret** to `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
 
+## GDPR & Data Retention
+
+OutplayArena is designed to comply with the EU General Data Protection Regulation (GDPR).
+
+### User rights
+
+Users can exercise their rights directly from the **Settings** page (profile dropdown → Settings):
+
+| Right | How to invoke |
+|---|---|
+| **Access / Data portability** (Art. 15, 20) | Settings → Danger Zone → **Export my data** — downloads a full JSON archive of their account, game sessions, API keys (metadata only), and message history. Sensitive credentials are redacted. |
+| **Erasure** (Art. 17) | Settings → Danger Zone → **Delete my account** — permanently erases all their data (account, sessions, API keys, W&B credential, message logs). |
+
+### Automatic inactivity purge
+
+Accounts inactive for **90 days** (no login) are automatically deleted on the server. The retention window is configurable:
+
+| Variable | Default | Description |
+|---|---|---|
+| `GDPR_INACTIVITY_DAYS` | `90` | Days of inactivity before automatic account deletion |
+
+The purge runs once immediately on backend startup, then every 24 hours. Set `GDPR_INACTIVITY_DAYS=0` to disable automatic purge (not recommended).
+
+!!! warning "No grace-period emails"
+    The current implementation deletes accounts without prior notice once the inactivity window expires. If your deployment requires a warning email before deletion, implement a pre-purge notification step in `_gdpr_purge_loop` (`backend/arena/main.py`).
+
+### Sensitive data handling
+
+| Data type | At-rest treatment | Ever returned by API |
+|---|---|---|
+| Platform API keys | SHA-256 hashed (one-way) | Never — only prefix shown |
+| W&B API key | AES-256-GCM encrypted | Never — only fingerprint shown |
+| Player session tokens | Stored as hash | Never in data export |
+| Game configs, results | Plaintext in DB | Yes, included in data export |
+
+---
+
 ## Integrations
 
 ### Weights & Biases

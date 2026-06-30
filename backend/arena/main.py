@@ -4,6 +4,7 @@ import json
 import logging
 import os
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, AsyncIterator
 from uuid import uuid4
@@ -15,7 +16,7 @@ load_dotenv()
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
@@ -85,7 +86,9 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     _logger = MessageLogger(_broker, _async_session_factory)
     await _logger.start()
     await _load_registries_from_db()
+    _gdpr_task = asyncio.create_task(_gdpr_purge_loop())
     yield
+    _gdpr_task.cancel()
     if _logger is not None:
         await _logger.stop()
         _logger = None
@@ -178,6 +181,39 @@ app.add_middleware(
 # UUID with a link to a prefilled GitHub issue. See arena.error_handler.
 from arena.error_handler import register_error_handlers  # noqa: E402
 register_error_handlers(app)
+
+
+async def _gdpr_purge_loop() -> None:
+    """Background task: purge accounts inactive for _INACTIVITY_PURGE_DAYS days.
+
+    Runs once immediately on startup (so a reboot after a long downtime
+    still applies the purge), then every 24 hours.  Uses its own DB
+    session — never interferes with request-scoped sessions.
+    """
+    _log = logging.getLogger("arena.gdpr.purge")
+    while True:
+        try:
+            cutoff = datetime.now(timezone.utc) - timedelta(days=_INACTIVITY_PURGE_DAYS)
+            async with _async_session_factory() as db:
+                result = await db.execute(
+                    select(User).where(User.last_login_at < cutoff)
+                )
+                inactive = result.scalars().all()
+                for u in inactive:
+                    try:
+                        await _delete_user_data(db, u.id)
+                        _log.info(
+                            "GDPR auto-purge: deleted user %s (last login %s)",
+                            u.id,
+                            u.last_login_at,
+                        )
+                    except Exception:
+                        _log.warning("Failed to purge user %s", u.id, exc_info=True)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            _log.warning("GDPR purge loop error", exc_info=True)
+        await asyncio.sleep(24 * 3600)
 
 
 async def _load_registries_from_db() -> None:
@@ -1377,6 +1413,168 @@ async def get_wandb_entities(
         # Ensure the decrypted key never lingers in memory.
         api_key = None
         del api_key
+
+
+# ── GDPR: data export, account deletion ─────────────────────────────────
+
+_GDPR_LOG = logging.getLogger("arena.gdpr")
+
+# How long a user may be inactive before their account is automatically
+# purged (GDPR data-minimisation principle).
+_INACTIVITY_PURGE_DAYS = int(os.environ.get("GDPR_INACTIVITY_DAYS", "90"))
+
+
+async def _delete_user_data(db: AsyncSession, user_id: Any) -> None:
+    """Delete all data belonging to user_id in the correct cascade order.
+
+    1. MessageLog rows have no FK cascade — delete them first.
+    2. ApiKey / WandbCredential rows point at the user — delete them.
+    3. SessionModel rows (cascades MailboxMessage via DB ON DELETE CASCADE).
+    4. User row itself.
+    """
+    from sqlalchemy import delete as _del
+
+    # 1. Message logs linked through sessions (no ORM cascade)
+    session_ids_q = select(SessionModel.id).where(SessionModel.user_id == user_id)
+    await db.execute(_del(MessageLog).where(MessageLog.session_id.in_(session_ids_q)))
+
+    # 2. Platform API keys
+    await db.execute(_del(ApiKey).where(ApiKey.user_id == user_id))
+
+    # 3. W&B credential
+    await db.execute(_del(WandbCredential).where(WandbCredential.user_id == user_id))
+
+    # 4. Sessions (cascades MailboxMessage)
+    await db.execute(_del(SessionModel).where(SessionModel.user_id == user_id))
+
+    # 5. User record
+    await db.execute(_del(User).where(User.id == user_id))
+
+    await db.commit()
+
+
+@app.get(f"{API_PREFIX}/settings/data-export")
+async def export_user_data(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Return a complete JSON dump of all data stored for the current user.
+
+    Sensitive credentials are never included in plaintext:
+    - Platform API keys: only prefix / metadata, never the key hash.
+    - W&B API key: only whether one is configured + its fingerprint, never
+      the encrypted blob.
+    - Player tokens: omitted entirely (session bearer credentials, equivalent
+      to passwords).
+    """
+    # User profile
+    profile = {
+        "id": str(user.id),
+        "email": user.email,
+        "name": user.name,
+        "provider": user.provider,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
+        "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
+    }
+
+    # Platform API keys — never key_hash
+    keys_result = await db.execute(
+        select(ApiKey).where(ApiKey.user_id == user.id).order_by(ApiKey.created_at)
+    )
+    api_keys = [
+        {
+            "id": str(row.id),
+            "key_prefix": row.key_prefix,
+            "name": row.name,
+            "is_active": row.is_active,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+            "last_used_at": row.last_used_at.isoformat() if row.last_used_at else None,
+        }
+        for row in keys_result.scalars().all()
+    ]
+
+    # W&B integration — never the encrypted key blob
+    cred_result = await db.execute(
+        select(WandbCredential).where(WandbCredential.user_id == user.id)
+    )
+    cred = cred_result.scalar_one_or_none()
+    wandb_integration = {
+        "configured": cred is not None,
+        "key_fingerprint": cred.encrypted_api_key[-8:] if cred else None,
+        "updated_at": cred.updated_at.isoformat() if cred and cred.updated_at else None,
+    }
+
+    # Game sessions — omit player_tokens_json (bearer credentials)
+    sessions_result = await db.execute(
+        select(SessionModel).where(SessionModel.user_id == user.id).order_by(SessionModel.created_at)
+    )
+    sessions = [
+        {
+            "id": row.id,
+            "status": row.status,
+            "locked": row.locked,
+            "config": row.config_json,
+            "agents": row.agents_json,
+            "state": row.state_json,
+            "error_message": row.error_message,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+            "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+        }
+        for row in sessions_result.scalars().all()
+    ]
+
+    # Per-session message logs
+    if sessions:
+        session_ids = [s["id"] for s in sessions]
+        logs_result = await db.execute(
+            select(MessageLog)
+            .where(MessageLog.session_id.in_(session_ids))
+            .order_by(MessageLog.session_id, MessageLog.round_number)
+        )
+        message_logs = [
+            {
+                "session_id": row.session_id,
+                "player": row.player,
+                "round_number": row.round_number,
+                "agent_id": row.agent_id,
+                "payload": row.payload,
+                "created_at": row.created_at.isoformat() if row.created_at else None,
+            }
+            for row in logs_result.scalars().all()
+        ]
+    else:
+        message_logs = []
+
+    payload = {
+        "export_date": datetime.now(timezone.utc).isoformat(),
+        "platform": "OutplayArena",
+        "user": profile,
+        "api_keys": api_keys,
+        "wandb_integration": wandb_integration,
+        "sessions": sessions,
+        "message_logs": message_logs,
+    }
+
+    filename = f"outplayarena-export-{datetime.now(timezone.utc).strftime('%Y%m%d')}.json"
+    return JSONResponse(
+        content=payload,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.delete(f"{API_PREFIX}/settings/account", status_code=200)
+async def delete_account(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Permanently delete the current user's account and all associated data.
+
+    Cascade order: MessageLog → ApiKey → WandbCredential → SessionModel
+    (which cascades MailboxMessage) → User.  Irreversible.
+    """
+    await _delete_user_data(db, user.id)
+    _GDPR_LOG.info("Account deleted by user %s (%s)", user.id, user.email)
+    return {"deleted": True}
 
 
 # ── OAuth ──────────────────────────────────────────────────────────────
