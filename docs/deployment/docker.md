@@ -43,7 +43,7 @@ Required variables to fill in:
 |---|---|
 | `DOMAIN` | Your public domain (e.g. `arena.example.com`) |
 | `ACME_EMAIL` | Email for Let's Encrypt |
-| `IMAGE_TAG` | Release tag (e.g. `v0.1.0`) |
+| `IMAGE_TAG` | Release tag (e.g. `v0.2.1`) |
 | `POSTGRES_PASSWORD` | `openssl rand -hex 16` |
 | `REDIS_PASSWORD` | `openssl rand -hex 16` |
 | `JWT_SECRET` | `openssl rand -hex 32` |

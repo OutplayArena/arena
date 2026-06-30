@@ -53,4 +53,4 @@ All deployment methods run the same components:
 
 Find available release tags at [hub.docker.com/r/her3ert/outplayarena-backend](https://hub.docker.com/r/her3ert/outplayarena-backend/tags).
 
-Pin to a specific release (e.g. `v0.1.0`) for stability. Use `latest` to track the rolling release.
+Pin to a specific release (e.g. `v0.2.1`) for stability. Use `latest` to track the rolling release.
