@@ -8,6 +8,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { GamePlayPage } from "./pages/GamePlayPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { KeysPage } from "./pages/KeysPage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { GamesPage } from "./pages/GamesPage";
 import { PapersPage } from "./pages/PapersPage";
@@ -71,6 +72,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <HistoryPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <SettingsPage />
                 </ProtectedRoute>
               }
             />

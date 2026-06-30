@@ -188,6 +188,31 @@ export function getGameScenarios(name: string): Promise<{ scenarios: ScenarioInf
   return request<{ scenarios: ScenarioInfo[] }>(`/api/games/${name}/scenarios`);
 }
 
+export function getGameSkill(name: string): Promise<{ game: string; title: string; sections: Record<string, string> }> {
+  return request(`/api/games/${name}/skill`);
+}
+
+// ── W&B Settings ──────────────────────────────────────────────────────
+
+export function getWandbKeyStatus(): Promise<{ configured: boolean; updated_at: string | null }> {
+  return request("/api/settings/wandb-key");
+}
+
+export function saveWandbKey(apiKey: string): Promise<{ configured: boolean }> {
+  return request("/api/settings/wandb-key", {
+    method: "PUT",
+    body: JSON.stringify({ api_key: apiKey }),
+  });
+}
+
+export function deleteWandbKey(): Promise<{ configured: boolean }> {
+  return request("/api/settings/wandb-key", { method: "DELETE" });
+}
+
+export function getWandbEntities(): Promise<{ personal_entity: string; entities: string[] }> {
+  return request("/api/settings/wandb-key/entities");
+}
+
 export function connectSessionStream(
   sessionId: string,
   onStateChange: (state: GameState) => void,

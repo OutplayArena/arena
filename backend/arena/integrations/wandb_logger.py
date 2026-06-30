@@ -7,6 +7,8 @@ import wandb
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
+from arena.integrations.base_logger import BaseLogger
+
 
 ENCRYPTION_KEY_ENV = "OUTPLAYARENA_WANDB_ENCRYPTION_KEY"
 
@@ -60,11 +62,18 @@ def decrypt_api_key(encrypted: str, key: bytes | None = None) -> str:
         raise WandbConfigError("could not decrypt wandb api key") from exc
 
 
-class WandbGameLogger:
-    def __init__(self, wandb_config, game_config, encrypted_api_key: str):
+class WandbGameLogger(BaseLogger):
+    def __init__(
+        self,
+        wandb_config,
+        game_config,
+        encrypted_api_key: str,
+        agents: dict[str, str] | None = None,
+    ):
         self.wandb_config = wandb_config
         self.game_config = game_config
         self.encrypted_api_key = encrypted_api_key
+        self.agents = agents
         self._run = None
 
     # Start a W&B run using the decrypted session-scoped API key.
@@ -76,7 +85,7 @@ class WandbGameLogger:
                 entity=self.wandb_config.entity,
                 name=self.wandb_config.run_name,
                 tags=list(self.wandb_config.tags or []),
-                config=self._game_config_dict(),
+                config=self._full_config_dict(),
                 settings=wandb.Settings(_api_key=api_key),
             )
         finally:
@@ -105,3 +114,9 @@ class WandbGameLogger:
         if hasattr(self.game_config, "to_dict"):
             return self.game_config.to_dict()
         return self.game_config
+
+    def _full_config_dict(self) -> dict[str, Any]:
+        cfg = self._game_config_dict()
+        if not isinstance(cfg, dict):
+            cfg = {"config": cfg}
+        return {**cfg, "agents": self.agents or {}}
