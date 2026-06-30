@@ -47,7 +47,11 @@ export function GameInstructionsPanel({ gameSlug, collapsed, onToggle }: GameIns
         type="button"
         onClick={onToggle}
         title={collapsed ? "Show instructions" : "Hide instructions"}
-        className="w-full flex items-center gap-2 px-2 py-3 text-muted hover:text-ink hover:bg-surface-container transition-colors text-xs font-semibold border-b border-line/50"
+        className={`w-full flex items-center text-muted hover:text-ink hover:bg-surface-container transition-colors text-xs font-semibold border-b border-line/50 ${
+          collapsed
+            ? "flex-col justify-start gap-2 px-1 py-3"
+            : "flex-row gap-2 px-2 py-3"
+        }`}
       >
         <svg
           width="12"
@@ -62,7 +66,9 @@ export function GameInstructionsPanel({ gameSlug, collapsed, onToggle }: GameIns
         >
           <polyline points="15 18 9 12 15 6" />
         </svg>
-        {!collapsed && <span className="truncate">Instructions</span>}
+        <span className={collapsed ? "[writing-mode:vertical-rl] rotate-180" : "truncate"}>
+          Instructions
+        </span>
       </button>
 
       {/* Content */}
