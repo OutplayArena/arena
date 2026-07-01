@@ -167,8 +167,8 @@ def client(db):
     app.dependency_overrides[get_db] = _db
     app.dependency_overrides[require_user] = lambda: _FAKE_USER
     app.dependency_overrides[get_current_user] = lambda: _FAKE_USER
-    with TestClient(app, raise_server_exceptions=True) as c:
-        yield c
+    c = TestClient(app, raise_server_exceptions=True)
+    yield c
     app.dependency_overrides.pop(get_db, None)
     app.dependency_overrides.pop(require_user, None)
     app.dependency_overrides.pop(get_current_user, None)

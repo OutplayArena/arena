@@ -19,6 +19,7 @@ class SessionModel(Base):
     user_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
     agents_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     messages_json: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=list)
+    wandb_run_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="ready")
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     locked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

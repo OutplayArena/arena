@@ -72,6 +72,10 @@ def test_create_session_with_wandb_starts_logger(monkeypatch):
             started.append(self)
             return self
 
+        @property
+        def run_meta(self):
+            return {"run_id": "fake-run", "run_name": "test", "entity": "e", "project": "p", "url": "u"}
+
     monkeypatch.setenv(
         "OUTPLAYARENA_WANDB_ENCRYPTION_KEY",
         "0" * 64,
@@ -101,6 +105,10 @@ def test_create_session_passes_agents_to_wandb_logger(monkeypatch):
 
         def start(self):
             return self
+
+        @property
+        def run_meta(self):
+            return None
 
     monkeypatch.setenv("OUTPLAYARENA_WANDB_ENCRYPTION_KEY", "0" * 64)
     monkeypatch.setattr("arena.session.WandbGameLogger", FakeLogger)

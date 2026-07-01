@@ -122,8 +122,10 @@ def client(db):
     app.dependency_overrides[get_db] = _db
     app.dependency_overrides[require_user] = lambda: _FAKE_USER
     app.dependency_overrides[get_broker] = _broker
-    with TestClient(app, raise_server_exceptions=True) as c:
-        yield c
+    # Use TestClient without context manager so the lifespan (and its Alembic
+    # upgrade + Redis connection) doesn't run — matching test_api_coverage.py's pattern.
+    c = TestClient(app, raise_server_exceptions=True)
+    yield c
     app.dependency_overrides.pop(get_db, None)
     app.dependency_overrides.pop(require_user, None)
     app.dependency_overrides.pop(get_broker, None)
@@ -336,6 +338,16 @@ class _NoOpWandbLogger:
 
     def start(self):
         return self
+
+    @property
+    def run_meta(self):
+        return {
+            "run_id": "fake-run-id",
+            "run_name": "fake-run",
+            "entity": self.wandb_config.entity,
+            "project": self.wandb_config.project,
+            "url": "https://wandb.ai/fake",
+        }
 
 
 @pytest.fixture(autouse=True)
