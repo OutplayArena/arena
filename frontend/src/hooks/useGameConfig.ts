@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createExperiment, getGameAgents } from "../api";
 import { randomAgentName } from "../components/names";
 import { useApp } from "./useApp";
+import { useWandbLoggingConfig } from "./useWandbLoggingConfig";
 import type { GameAgent } from "../types";
 import type { PlayerSetupValue } from "../components/LobbyConfigShell";
 
@@ -48,6 +49,7 @@ export function useGameConfig({
   const [remoteKeys, setRemoteKeys] = useState<Record<string, string> | null>(null);
   const [status, setStatus] = useState("");
   const [running, setRunning] = useState(false);
+  const wandbLogging = useWandbLoggingConfig();
 
   const effectiveLocked = locked || state.sessionLocked;
   const effectiveStatus = sessionStatus || state.sessionStatus;
@@ -117,6 +119,7 @@ export function useGameConfig({
       agents: agentsDict,
       interactive: isInteractive,
       ...extra,
+      ...wandbLogging.toConfigFields(),
     };
 
     try {
@@ -168,5 +171,6 @@ export function useGameConfig({
     handleStartGame,
     minPlayers,
     maxPlayers,
+    wandbLogging,
   };
 }

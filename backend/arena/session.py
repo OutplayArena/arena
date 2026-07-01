@@ -5,10 +5,9 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from arena.experiment_config import ExperimentRuntimeConfig
+from arena._version import ARENA_VERSION
 from arena.game_engine import GameEngine
 from arena.game_registry import GameRegistry
-from arena.integrations.wandb_logger import WandbGameLogger, encrypt_api_key
 from arena.metrics.contracts import Match, Move
 from arena.models.session import SessionModel
 from arena.auth.session_key import derive_session_key, validate_session_key
@@ -47,26 +46,19 @@ class GameSession:
     locked: bool = False
     agents: dict[str, str] | None = None
     messages: list[dict] | None = None
-    runtime_config: ExperimentRuntimeConfig | None = None
-    wandb_logger: WandbGameLogger | None = None
-    wandb_finished: bool = False
+    wandb_run_meta: dict | None = None
 
     @classmethod
-    def create(cls, config, game=None, locked: bool = False, runtime_config=None) -> "GameSession":
+    def create(
+        cls,
+        config,
+        game=None,
+        locked: bool = False,
+        agents: dict[str, str] | None = None,
+    ) -> "GameSession":
         if game is None:
             game = GameRegistry().game_from_config(config)
-        if runtime_config is None:
-            runtime_config = ExperimentRuntimeConfig()
-        # Start optional W&B logging before exposing player tokens.
-        if runtime_config.wandb:
-            encrypted_key = encrypt_api_key(runtime_config.wandb.api_key)
-            wandb_logger = WandbGameLogger(
-                wandb_config=runtime_config.wandb,
-                game_config=config,
-                encrypted_api_key=encrypted_key,
-            ).start()
-        else:
-            wandb_logger = None
+
         session_id = str(uuid.uuid4())
         player_tokens = {
             player: derive_session_key(session_id, player)
@@ -82,8 +74,7 @@ class GameSession:
             player_tokens=player_tokens,
             status="ready",
             locked=locked,
-            runtime_config=runtime_config,
-            wandb_logger=wandb_logger,
+            agents=agents,
         )
 
     @classmethod
@@ -106,9 +97,16 @@ class GameSession:
             locked=row.locked,
             agents=row.agents_json,
             messages=row.messages_json,
+            wandb_run_meta=row.wandb_run_json,
         )
 
-    async def save_new(self, db: AsyncSession, user_id: str | None = None, agents: dict[str, str] | None = None) -> None:
+    async def save_new(
+        self,
+        db: AsyncSession,
+        user_id: str | None = None,
+        agents: dict[str, str] | None = None,
+        wandb_config_json: dict | None = None,
+    ) -> None:
         row = SessionModel(
             id=self.session_id,
             config_json=self.config.to_dict(),
@@ -121,6 +119,7 @@ class GameSession:
             error_message=self.error_message,
             locked=self.locked,
             messages_json=self.messages or [],
+            wandb_config_json=wandb_config_json,
         )
         db.add(row)
         await db.commit()
@@ -145,16 +144,18 @@ class GameSession:
             config_hash=self.config_hash,
         )
         result["messages"] = self.messages or []
+        if self.wandb_run_meta:
+            result["wandb_run"] = self.wandb_run_meta
         return result
 
     def add_message(self, sender: str, content: str, recipient: str = "all") -> dict:
         """Add a mailbox message to the session."""
         if self.messages is None:
             self.messages = []
-        
+
         state_dict = _serialize_state(self.state)
         round_number = state_dict.get("round_number", 0)
-        
+
         msg = {
             "id": str(uuid.uuid4()),
             "sender": sender,
@@ -166,14 +167,8 @@ class GameSession:
         return msg
 
     def submit_action(self, player, allocation):
-        before_history_len = len(self.state.history)
         self.state = self.game.apply_action(self.state, player, allocation)
         self._update_status_from_state()
-        after_history_len = len(self.state.history)
-        if after_history_len > before_history_len:
-            self._log_latest_round_to_wandb()
-            if self.game.is_terminal(self.state):
-                self._log_terminal_to_wandb()
 
     def _update_status_from_state(self):
         state_dict = _serialize_state(self.state)
@@ -210,7 +205,13 @@ class GameSession:
         history = state_dict.get("history", [])
         config_dict = self.config.to_dict() if hasattr(self.config, "to_dict") else {}
         game_type = config_dict.get("game", "unknown")
-        player_ids = list(self.config.player_ids()) if hasattr(self.config, "player_ids") else ["A", "B"]
+        role_ids = list(self.config.player_ids()) if hasattr(self.config, "player_ids") else ["A", "B"]
+
+        # Resolve role labels ("A", "B") to actual model/agent names from
+        # agents_json so the leaderboard tracks real identifiers, not generic roles.
+        # Falls back to the role ID when agents_json is absent or incomplete.
+        agents = self.agents or {}
+        agent_names = {role: (agents.get(role) or role) for role in role_ids}
 
         moves = []
         for entry in history:
@@ -218,12 +219,12 @@ class GameSession:
             actions = entry.get("allocations") or entry.get("actions", {})
             scores = entry.get("payoffs") or entry.get("scores", {})
 
-            for player in player_ids:
-                action = actions.get(player)
-                payoff = float(scores.get(player, 0))
+            for role in role_ids:
+                action = actions.get(role)
+                payoff = float(scores.get(role, 0))
                 if action is not None:
                     moves.append(Move(
-                        agent_id=player,
+                        agent_id=agent_names[role],
                         round_number=round_num,
                         action=action,
                         payoff=payoff,
@@ -232,18 +233,22 @@ class GameSession:
         return Match(
             match_id=self.session_id,
             game_type=game_type,
-            agent_ids=player_ids,
+            agent_ids=list(agent_names.values()),
             moves=moves,
             config=config_dict,
         )
 
     def creation_response(self):
-        return {
+        resp = {
             "session_id": self.session_id,
+            "arena_version": ARENA_VERSION,
             "config_hash": self.config_hash,
             "config": self.config.to_dict() if hasattr(self.config, "to_dict") else {},
             "player_tokens": dict(self.player_tokens),
         }
+        if self.wandb_run_meta:
+            resp["wandb_run"] = self.wandb_run_meta
+        return resp
 
     def player_for_token(self, token):
         try:
@@ -272,45 +277,38 @@ class GameSession:
         else:
             self.submit_action(player, allocation)
 
-    def _log_latest_round_to_wandb(self):
-        if self.wandb_logger is None:
-            return
-        if not self.state.history:
-            return
+    def build_wandb_round_payloads(self) -> list[tuple[dict[str, Any], int]]:
+        """Return (payload, step) for each resolved round in the session history."""
+        payloads = []
+        history = self.state.history if hasattr(self.state, "history") else _serialize_state(self.state).get("history", [])
+        for entry in history:
+            step = entry.get("round") or entry.get("hand") or 0
+            payload: dict[str, Any] = {
+                "round": step,
+                "winner": entry.get("winner"),
+            }
+            scores = entry.get("scores", {})
+            total_scores = entry.get("total_scores", {})
+            for player in scores:
+                payload[f"scores/{player}"] = scores[player]
+                payload[f"total_scores/{player}"] = total_scores.get(player, 0)
+            allocations = entry.get("allocations", {})
+            for player, allocation in allocations.items():
+                if isinstance(allocation, list):
+                    total = sum(allocation)
+                    concentration = 0 if total == 0 else max(allocation) / total
+                    payload[f"allocation_concentration/{player}"] = concentration
+            payloads.append((payload, step))
+        return payloads
 
-        latest = self.state.history[-1]
-        step = latest["round"]
-
-        payload = {
-            "round": latest["round"],
-            "winner": latest["winner"],
-        }
-
-        scores = latest.get("scores", {})
-        total_scores = latest.get("total_scores", {})
-        for player in scores:
-            payload[f"scores/{player}"] = scores[player]
-            payload[f"total_scores/{player}"] = total_scores.get(player, 0)
-
-        allocations = latest.get("allocations", {})
-        for player, allocation in allocations.items():
-            if isinstance(allocation, list):
-                total = sum(allocation)
-                concentration = 0 if total == 0 else max(allocation) / total
-                payload[f"allocation_concentration/{player}"] = concentration
-
-        self.wandb_logger.log_round(payload, step=step)
-
-    def _log_terminal_to_wandb(self):
-        if self.wandb_logger is None or self.wandb_finished:
-            return
-
+    def build_wandb_terminal_payload(self) -> dict[str, Any]:
+        """Return the flat W&B payload for terminal/summary metrics."""
         evaluator = MatchEvaluator(get_global_registry())
         results = self.results(evaluator=evaluator)
         metrics = results.get("metrics", {})
         total_scores = results.get("total_scores", {})
 
-        payload: dict[str, object] = {
+        payload: dict[str, Any] = {
             "final/winner": results.get("winner"),
         }
 
@@ -347,6 +345,4 @@ class GameSession:
             if isinstance(value, (int, float)):
                 payload[f"rich/pairwise/{key}"] = value
 
-        self.wandb_logger.log_terminal(payload)
-        self.wandb_logger.finish()
-        self.wandb_finished = True
+        return payload
