@@ -184,3 +184,31 @@ def test_wandb_game_logger_finish_closes_run(monkeypatch):
 
     assert fake_run.finished is True
     assert logger._run is None
+
+
+def test_wandb_game_logger_log_terminal_noops_before_start(monkeypatch):
+    logger = make_logger(monkeypatch)
+
+    logger.log_terminal({"final/winner": "A"})  # _run is None → should not raise
+
+    assert logger._run is None
+
+
+def test_wandb_game_logger_run_meta_returns_none_before_start(monkeypatch):
+    logger = make_logger(monkeypatch)
+
+    assert logger.run_meta is None
+
+
+def test_wandb_game_logger_full_config_dict_wraps_non_dict_config(monkeypatch):
+    """When game_config is not a dict (and has no to_dict), it is wrapped."""
+    raw_key = secrets.token_bytes(32)
+    monkeypatch.setenv(ENCRYPTION_KEY_ENV, raw_key.hex())
+    encrypted = encrypt_api_key("wandb-secret", key=raw_key)
+    config = WandbConfig(api_key="wandb-secret", project="p")
+    logger = WandbGameLogger(config, game_config="raw-string", encrypted_api_key=encrypted)
+
+    full = logger._full_config_dict()
+
+    assert full["config"] == "raw-string"
+    assert "agents" in full
