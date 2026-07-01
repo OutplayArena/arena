@@ -317,6 +317,7 @@ export function getLeaderboard(params?: {
   agent_ids?: string;
   date_from?: string;
   date_to?: string;
+  scope?: "personal" | "public" | "all";
 }): Promise<LeaderboardResponse> {
   const searchParams = new URLSearchParams();
   if (params?.game) searchParams.set("game", params.game);
@@ -327,8 +328,19 @@ export function getLeaderboard(params?: {
   if (params?.agent_ids) searchParams.set("agent_ids", params.agent_ids);
   if (params?.date_from) searchParams.set("date_from", params.date_from);
   if (params?.date_to) searchParams.set("date_to", params.date_to);
+  if (params?.scope) searchParams.set("scope", params.scope);
   const qs = searchParams.toString();
   return request<LeaderboardResponse>(`/api/leaderboard${qs ? `?${qs}` : ""}`);
+}
+
+export function setSessionVisibility(
+  sessionId: string,
+  isPublic: boolean,
+): Promise<{ session_id: string; is_public: boolean }> {
+  return request(`/api/sessions/${sessionId}/visibility`, {
+    method: "PATCH",
+    body: JSON.stringify({ is_public: isPublic }),
+  });
 }
 
 export function getAgentDetail(agentId: string): Promise<AgentDetailResponse> {

@@ -4,6 +4,8 @@ export interface UserInfo {
   name: string;
   avatar_url: string | null;
   privacy_accepted: boolean;
+  /** Public display handle: GitHub @login or Google first name. Never email. */
+  username: string | null;
 }
 
 export interface ProvidersResponse {
@@ -175,6 +177,8 @@ export interface SessionSummary {
   seed?: number | null;
   status: string;
   locked: boolean;
+  /** Whether this session contributes to the public leaderboard. */
+  is_public: boolean;
 }
 
 export interface SessionsResponse {
@@ -281,6 +285,12 @@ export interface BenchmarkGamesResponse {
 
 export interface LeaderboardEntry {
   agent_id: string;
+  /** The model/agent name without the @username suffix. */
+  display_name: string;
+  /** Public handle of the owner (GitHub @login or Google first name). Null for personal scope. */
+  owner_username: string | null;
+  /** True when this entry belongs to the currently logged-in user. */
+  is_own: boolean;
   elo: number;
   alpha_rank: number | null;
   matches_played: number;
@@ -292,10 +302,11 @@ export interface LeaderboardResponse {
   total: number;
   page: number;
   page_size: number;
-  total_matches: number;
+  total_matches?: number;
   /** Inclusive [min_date, max_date] of recorded match activity, in YYYY-MM-DD. */
-  date_range: { min_date: string | null; max_date: string | null };
+  date_range?: { min_date: string | null; max_date: string | null };
   note?: string;
+  scope?: "personal" | "public" | "all";
 }
 
 export interface AgentGameEntry {
