@@ -175,6 +175,13 @@ export interface SessionSummary {
   num_battlefields?: number;
   resources?: number;
   seed?: number | null;
+  /**
+   * Full config exactly as it was submitted when the session was created.
+   * The Config tab on the play page uses this to show the parameters that
+   * were used to run a current/completed/failed game (read-only).  The
+   * flattened fields above are kept for convenience in list/history views.
+   */
+  config?: Record<string, unknown>;
   status: string;
   locked: boolean;
   /** Whether this session contributes to the public leaderboard. */

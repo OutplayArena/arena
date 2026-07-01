@@ -1,0 +1,5 @@
+# Restrict all well-behaved crawlers from indexing the app until launch.
+# We host a public preview behind https://arena.core-aix.org but we do not
+# want it to be discoverable through search engines yet.
+User-agent: *
+Disallow: /

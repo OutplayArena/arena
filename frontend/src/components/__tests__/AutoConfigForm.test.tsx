@@ -86,6 +86,131 @@ describe("AutoConfigForm — locked/replay mode", () => {
       expect(screen.queryByText("Run Experiment")).not.toBeInTheDocument();
     });
   });
+
+  it("pre-populates fields from initialValues when locked", async () => {
+    renderWithProviders(
+      <AutoConfigForm
+        gameSlug="colonelblotto"
+        schema={createMockSchema()}
+        locked={true}
+        initialValues={{
+          rounds: 7,
+          num_battlefields: 3,
+          total_resources: 50,
+          seed: 123,
+        }}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("7")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("3")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("50")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("123")).toBeInTheDocument();
+    });
+  });
+
+  it("pre-populates fields when session is completed", async () => {
+    renderWithProviders(
+      <AutoConfigForm
+        gameSlug="colonelblotto"
+        schema={createMockSchema()}
+        locked={false}
+        sessionStatus="completed"
+        initialValues={{
+          rounds: 4,
+          num_battlefields: 8,
+          total_resources: 25,
+          seed: 999,
+        }}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("4")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("8")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("25")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("999")).toBeInTheDocument();
+    });
+  });
+
+  it("reconstructs the agent dropdown from saved display names of remote LLM agents", async () => {
+    // Reproduces the bug where the player dropdowns reset to the
+    // default ("🙋 You" for A, "Remote" for B) instead of reflecting the
+    // actually-played agents when those agents were external LLM model
+    // names (e.g. "deepseek-v4-pro") that don't appear in the game's
+    // built-in agent list.  The fix falls back to the "remote" dropdown
+    // option (the slot reserved for arbitrary LLM/MCP agents).
+    renderWithProviders(
+      <AutoConfigForm
+        gameSlug="colonelblotto"
+        schema={createMockSchema()}
+        locked={true}
+        sessionStatus="completed"
+        initialValues={{
+          rounds: 3,
+          num_battlefields: 5,
+          total_resources: 100,
+          seed: 42,
+          agent_a: "deepseek-v4-pro",
+          agent_b: "glm-5.1",
+        }}
+      />,
+    );
+    await waitFor(() => {
+      // First two comboboxes are the Player A and Player B agent dropdowns;
+      // the others are the wandb select / scenario / mode / system_prompt
+      // controls that depend on the test schema.  Wait for the agent
+      // dropdowns specifically to land on "remote".
+      const selects = screen.getAllByRole("combobox") as HTMLSelectElement[];
+      expect(selects[0]?.value).toBe("remote");
+      expect(selects[1]?.value).toBe("remote");
+    });
+    expect(screen.getByDisplayValue("deepseek-v4-pro")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("glm-5.1")).toBeInTheDocument();
+  });
+
+  it("reconstructs a built-in bot agent id when the saved display name matches the label", async () => {
+    renderWithProviders(
+      <AutoConfigForm
+        gameSlug="colonelblotto"
+        schema={createMockSchema()}
+        locked={true}
+        sessionStatus="completed"
+        initialValues={{
+          rounds: 5,
+          agent_a: "Uniform Distribution",
+          agent_b: "Greedy",
+        }}
+      />,
+    );
+    await waitFor(() => {
+      const selects = screen.getAllByRole("combobox") as HTMLSelectElement[];
+      expect(selects[0]?.value).toBe("uniform");
+      expect(selects[1]?.value).toBe("greedy");
+    });
+  });
+
+  it("reconstructs the human-player agent id when the saved name is 'You'", async () => {
+    renderWithProviders(
+      <AutoConfigForm
+        gameSlug="colonelblotto"
+        schema={createMockSchema()}
+        locked={true}
+        sessionStatus="completed"
+        initialValues={{
+          rounds: 5,
+          agent_a: "You",
+          agent_b: "Remote B",
+        }}
+      />,
+    );
+    await waitFor(() => {
+      const selects = screen.getAllByRole("combobox") as HTMLSelectElement[];
+      expect(selects[0]?.value).toBe("interactive");
+      expect(selects[1]?.value).toBe("remote");
+    });
+  });
 });
 
 describe("AutoConfigForm — submission", () => {

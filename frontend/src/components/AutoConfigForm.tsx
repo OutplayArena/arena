@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createExperiment, getGameAgents, getGameScenarios } from "../api";
 import { copyToClipboard } from "./utils";
 import { randomAgentName } from "./names";
+import { resolveAgentId } from "./playerAgentResolver";
 import { useApp } from "../hooks/useApp";
 import { useWandbLoggingConfig } from "../hooks/useWandbLoggingConfig";
 import { WandbLoggingSection } from "./WandbLoggingSection";
@@ -154,6 +155,12 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
 
   useEffect(() => {
     if (isReplay && initialValues) {
+      // Wait for the available-agent list to load so we can reconstruct
+      // each player's dropdown id from the saved display name.  Without
+      // this gate, setPlayers would resolve against an empty list and
+      // fall back to the default ("interactive" / "remote") instead of
+      // the actual agent (e.g. "uniform", "deepseek-v4-pro").
+      if (agents.length === 0) return;
       const vals: Record<string, unknown> = {};
       for (const [key, prop] of Object.entries(props)) {
         if (!isConst(prop)) {
@@ -163,11 +170,17 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormValues(vals);
       setPlayers((prev) =>
-        prev.map((p) => ({
-          ...p,
-          name: (initialValues[`agent_${p.id.toLowerCase()}`] as string) ?? p.name,
-          agentId: (initialValues[`agent_${p.id.toLowerCase()}_id`] as string) ?? p.agentId,
-        }))
+        prev.map((p) => {
+          const savedName = initialValues[`agent_${p.id.toLowerCase()}`] as string | undefined;
+          const explicitId = initialValues[`agent_${p.id.toLowerCase()}_id`] as string | undefined;
+          return {
+            ...p,
+            name: savedName ?? p.name,
+            // Prefer the explicit id when the caller provided it, otherwise
+            // reconstruct from the saved display name.
+            agentId: explicitId ?? resolveAgentId(savedName, agents) ?? p.agentId,
+          };
+        })
       );
     } else if (!isReplay) {
       const vals: Record<string, unknown> = {};
@@ -186,21 +199,27 @@ export function AutoConfigForm({ gameSlug, schema, locked, sessionStatus, initia
   // files in CI (the worker sat at 100% memory for 2h53m before the
   // runner killed it with ERR_WORKER_OUT_OF_MEMORY). Reverted.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [schema, initialValues, isReplay]);
+  [schema, initialValues, isReplay, agents]);
 
   useEffect(() => {
     if (initRanRef.current) return;
     if (isReplay && initialValues) {
+      if (agents.length === 0) return;
       initRanRef.current = true;
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setPlayers((prev) =>
-        prev.map((p) => ({
-          ...p,
-          name: (initialValues[`agent_${p.id.toLowerCase()}`] as string) ?? p.name,
-        }))
+        prev.map((p) => {
+          const savedName = initialValues[`agent_${p.id.toLowerCase()}`] as string | undefined;
+          const explicitId = initialValues[`agent_${p.id.toLowerCase()}_id`] as string | undefined;
+          return {
+            ...p,
+            name: savedName ?? p.name,
+            agentId: explicitId ?? resolveAgentId(savedName, agents) ?? p.agentId,
+          };
+        })
       );
     }
-  }, [isReplay, initialValues]);
+  }, [isReplay, initialValues, agents]);
 
   const scenarioId = formValues["scenario"];
   const systemPrompt = formValues["system_prompt"];

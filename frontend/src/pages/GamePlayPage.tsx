@@ -22,6 +22,7 @@ export function GamePlayPage() {
     num_battlefields: number;
     resources: number;
     seed?: number | null;
+    config?: Record<string, unknown>;
     created_at: string | null;
   } | null>(null);
 
@@ -50,6 +51,7 @@ export function GamePlayPage() {
             num_battlefields: summary.num_battlefields || 5,
             resources: summary.resources || 100,
             seed: summary.seed ?? null,
+            config: summary.config,
             created_at: summary.created_at,
           });
 

@@ -31,6 +31,7 @@ interface GamePlayViewProps {
     num_battlefields: number;
     resources: number;
     seed?: number | null;
+    config?: Record<string, unknown>;
   } | null;
   createdAt?: string | null;
 }
@@ -385,14 +386,26 @@ function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch
     scoresRef.current = s;
   }, []);
 
-  const initialValues = sessionConfig ? {
-    rounds: sessionConfig.rounds,
-    num_battlefields: sessionConfig.num_battlefields,
-    total_resources: sessionConfig.resources,
-    seed: sessionConfig.seed ?? undefined,
-    agent_a: sessionConfig.agent_a,
-    agent_b: sessionConfig.agent_b,
-  } : undefined;
+  // Build the seed of values that the Config tab uses to show the parameters
+  // the game was actually run with (for running/completed/failed sessions).
+  // 1) Start with the raw config as persisted in the DB so every game's
+  //    custom ConfigForm can read any field it needs (e.g. Colonel Blotto
+  //    exposes `budget`/`battlefields` here).
+  // 2) Overlay the flattened convenience fields already returned by the
+  //    summary endpoint, so auto-generated forms that expect
+  //    `num_battlefields` / `total_resources` (instead of
+  //    `len(battlefields)` / `budget[0]`) pick up the right values.
+  const initialValues: Record<string, unknown> | undefined = sessionConfig
+    ? {
+        ...(sessionConfig.config ?? {}),
+        rounds: sessionConfig.rounds,
+        num_battlefields: sessionConfig.num_battlefields,
+        total_resources: sessionConfig.resources,
+        seed: sessionConfig.seed ?? undefined,
+        agent_a: sessionConfig.agent_a,
+        agent_b: sessionConfig.agent_b,
+      }
+    : undefined;
 
   const schema = (game.config_schema as Record<string, unknown>) ?? {};
 

@@ -1160,6 +1160,12 @@ def _session_summary(row: SessionModel) -> dict[str, Any]:
         "num_battlefields": len(battlefields) if isinstance(battlefields, list) else 0,
         "resources": budget[0] if isinstance(budget, list) and len(budget) > 0 else 100,
         "seed": config.get("seed"),
+        # Full config as it was submitted to create the session.  The config
+        # tab on the play page uses this to display the exact parameters that
+        # were used to run a current/completed/failed game (rendered locked
+        # and read-only).  The flattened convenience fields above are kept
+        # for backward compatibility with existing list/history views.
+        "config": config,
         "status": row.status,
         "locked": row.locked,
         "is_public": row.is_public if hasattr(row, "is_public") else False,
