@@ -376,6 +376,35 @@ class TestBuildPersonalRegistry:
         reg = await _build_personal_registry(_UID)
         assert reg.match_history == []
 
+    @pytest.mark.asyncio
+    async def test_unknown_game_type_skipped(self, monkeypatch):
+        """Matches with game_type 'unknown' are skipped (line 410 continue)."""
+        sess_row = _stub_session_row("s-unk")
+        db_session = _FakeDbSession([_FakeDbResult([sess_row])])
+        monkeypatch.setattr(arena.main, "_async_session_factory", _FakeDbSessionFactory([db_session]))
+        monkeypatch.setattr(
+            arena.main.GameSession, "from_db_row",
+            staticmethod(lambda row: _StubGameSession(_StubMatch("m-unk", game_type="unknown"))),
+        )
+
+        reg = await _build_personal_registry(_UID)
+        assert "m-unk" not in reg.match_history
+
+    @pytest.mark.asyncio
+    async def test_duplicate_match_not_double_counted(self, monkeypatch):
+        """Matches already in the registry are skipped (line 412 continue)."""
+        sess_rows = [_stub_session_row("s1"), _stub_session_row("s2")]
+        db_session = _FakeDbSession([_FakeDbResult(sess_rows)])
+        monkeypatch.setattr(arena.main, "_async_session_factory", _FakeDbSessionFactory([db_session]))
+        # Both rows map to the same match_id → second should be skipped
+        monkeypatch.setattr(
+            arena.main.GameSession, "from_db_row",
+            staticmethod(lambda row: _StubGameSession(_StubMatch("m-dup"))),
+        )
+
+        reg = await _build_personal_registry(_UID)
+        assert reg.match_history.count("m-dup") == 1
+
 
 # ── _restore_wandb_logger early return paths ──────────────────────────────────
 
@@ -543,6 +572,45 @@ class TestLeaderboardScope:
         data = res.json()
         assert data["scope"] == "personal"
 
+    def test_all_scope_with_single_agent_personal_uses_else_branch(self, _authed_client, monkeypatch):
+        """scope=all with <2 personal agents takes the else (no α-Rank) path."""
+        # Personal registry with only 1 agent → len(personal_target) < 2 branch
+        personal_reg = AgentRegistry()
+        _seed(personal_reg, ["solo-model", "dummy"])  # needs 2 to record but we filter one out
+        # Build a minimal reg that has only 1 known elo entry
+        solo_reg = AgentRegistry()
+        solo_reg.record_match(_make_match(["solo-model", "dummy"], "m-solo"), {"solo-model": 1.0, "dummy": 0.0})
+        # Manually keep only solo-model by clearing dummy's elo
+        del solo_reg.elo_ratings["dummy"]
+
+        async def _fake_personal(user_id):
+            return solo_reg
+
+        # Empty public registry
+        monkeypatch.setattr(arena.main, "_build_personal_registry", _fake_personal)
+
+        res = _authed_client.get("/leaderboard?scope=all")
+        assert res.status_code == 200
+        assert res.json()["scope"] == "all"
+
+    def test_all_scope_single_public_agent_uses_else_branch(self, _authed_client, monkeypatch):
+        """scope=all with <2 public agents takes the else path for pop_pub."""
+        # Empty personal registry (0 agents)
+        async def _fake_personal(user_id):
+            return AgentRegistry()
+
+        monkeypatch.setattr(arena.main, "_build_personal_registry", _fake_personal)
+
+        # Global registry with exactly 1 public agent
+        pub_reg = arena.metrics.get_global_registry()
+        pub_reg.record_match(_make_match(["gpt-4o@alice", "claude@alice"], "m-pub"), {"gpt-4o@alice": 1.0, "claude@alice": 0.0})
+        # Remove one so only 1 remains after current_user filtering (if any)
+        del pub_reg.elo_ratings["claude@alice"]
+
+        res = _authed_client.get("/leaderboard?scope=all")
+        assert res.status_code == 200
+        assert res.json()["scope"] == "all"
+
 
 # ── set_session_visibility ────────────────────────────────────────────────────
 
@@ -627,3 +695,50 @@ class TestSetSessionVisibility:
             self._teardown()
 
         assert res.status_code == 404
+
+    def test_anonymous_user_targets_null_user_id_clause(self, monkeypatch):
+        """Anonymous PATCH uses the user_id IS NULL WHERE clause (line 1326)."""
+        row = _SessionRow("sess-anon-1", user_id=None, is_public=False)
+        db = VisibilityFakeDb(row)
+
+        async def _get_db():
+            yield db
+
+        async def _broker():
+            yield FakeBroker()
+
+        async def _noop_rebuild():
+            pass
+
+        monkeypatch.setattr(arena.main, "_rebuild_leaderboard_registries", _noop_rebuild)
+        app.dependency_overrides[get_db] = _get_db
+        app.dependency_overrides[get_broker] = _broker
+        app.dependency_overrides[get_local_or_optional_user] = lambda: None
+        client = TestClient(app, raise_server_exceptions=True)
+
+        try:
+            res = client.patch("/sessions/sess-anon-1/visibility", json={"is_public": True})
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_broker, None)
+            app.dependency_overrides.pop(get_local_or_optional_user, None)
+
+        assert res.status_code == 200
+
+    def test_rebuild_error_is_swallowed(self, monkeypatch):
+        """A failing registry rebuild doesn't propagate as HTTP 500 (lines 1338-1339)."""
+        row = _SessionRow("sess-vis-err", user_id=_UID, is_public=False)
+        client, _ = self._make_client(row)
+
+        async def _boom():
+            raise RuntimeError("redis down")
+
+        monkeypatch.setattr(arena.main, "_rebuild_leaderboard_registries", _boom)
+
+        try:
+            res = client.patch("/sessions/sess-vis-err/visibility", json={"is_public": True})
+        finally:
+            self._teardown()
+
+        # The rebuild error is caught and logged; the endpoint still returns 200.
+        assert res.status_code == 200
