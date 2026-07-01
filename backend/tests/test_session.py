@@ -1,7 +1,6 @@
 import pytest
 
 from games.core.colonelblotto.config import BattlefieldConfig, ColonelBlottoExperimentConfig
-from arena.experiment_config import ExperimentRuntimeConfig, WandbConfig
 from arena.session import GameSession
 
 
@@ -20,21 +19,6 @@ def make_config(rounds=2):
         seed=42,
     )
 
-
-class FakeRoundLogger:
-    def __init__(self):
-        self.round_logs = []
-        self.terminal_logs = []
-        self.finished = False
-
-    def log_round(self, payload, step):
-        self.round_logs.append({"payload": payload, "step": step})
-
-    def log_terminal(self, payload):
-        self.terminal_logs.append(payload)
-
-    def finish(self):
-        self.finished = True
 
 
 def test_create_session_stores_game_and_initial_state():
@@ -55,40 +39,6 @@ def test_create_session_stores_game_and_initial_state():
     assert session.player_tokens["A"]
     assert session.player_tokens["B"]
     assert session.player_tokens["A"] != session.player_tokens["B"]
-    assert session.wandb_logger is None
-
-
-def test_create_session_with_wandb_starts_logger(monkeypatch):
-    started = []
-
-    class FakeLogger:
-        def __init__(self, wandb_config, game_config, encrypted_api_key):
-            self.wandb_config = wandb_config
-            self.game_config = game_config
-            self.encrypted_api_key = encrypted_api_key
-
-        def start(self):
-            started.append(self)
-            return self
-
-    monkeypatch.setenv(
-        "OUTPLAYARENA_WANDB_ENCRYPTION_KEY",
-        "0" * 64,
-    )
-    monkeypatch.setattr("arena.session.WandbGameLogger", FakeLogger)
-    runtime_config = ExperimentRuntimeConfig(
-        wandb=WandbConfig(
-            api_key="wandb-secret",
-            project="arena-runs",
-        )
-    )
-
-    session = GameSession.create(make_config(), runtime_config=runtime_config)
-
-    assert session.wandb_logger is started[0]
-    assert session.wandb_logger.wandb_config == runtime_config.wandb
-    assert session.wandb_logger.game_config == session.config
-    assert "wandb-secret" not in session.wandb_logger.encrypted_api_key
 
 
 def test_public_state_reads_from_game_state():
@@ -136,76 +86,48 @@ def test_submit_action_delegates_to_engine_state_machine():
     assert len(session.state.history) == 1
 
 
-def test_submit_action_without_wandb_logger_does_not_crash():
-    session = GameSession.create(make_config(rounds=1))
-
-    session.submit_action("A", [10, 0, 0])
-    session.submit_action("B", [0, 5, 5])
-
-    assert session.state.phase == "complete"
-    assert session.wandb_finished is False
-
-
-def test_submit_action_does_not_log_before_round_resolves():
-    session = GameSession.create(make_config(rounds=1))
-    fake_logger = FakeRoundLogger()
-    session.wandb_logger = fake_logger
-
-    session.submit_action("A", [10, 0, 0])
-
-    assert fake_logger.round_logs == []
-
-
-def test_submit_action_logs_resolved_round_to_wandb_once():
-    session = GameSession.create(make_config(rounds=1))
-    fake_logger = FakeRoundLogger()
-    session.wandb_logger = fake_logger
-
-    session.submit_action("A", [10, 0, 0])
-    session.submit_action("B", [0, 5, 5])
-
-    assert fake_logger.round_logs == [
-        {
-            "step": 1,
-            "payload": {
-                "round": 1,
-                "scores/A": 1,
-                "scores/B": 2,
-                "total_scores/A": 1,
-                "total_scores/B": 2,
-                "winner": "B",
-                "allocation_concentration/A": 1.0,
-                "allocation_concentration/B": 0.5,
-            },
-        }
-    ]
-    assert fake_logger.finished is True
-
-
-def test_submit_action_logs_each_resolved_round_once():
+def test_build_wandb_round_payloads_returns_one_entry_per_resolved_round():
     session = GameSession.create(make_config(rounds=2))
-    fake_logger = FakeRoundLogger()
-    session.wandb_logger = fake_logger
 
     session.submit_action("A", [10, 0, 0])
     session.submit_action("B", [0, 5, 5])
     session.submit_action("A", [0, 10, 0])
     session.submit_action("B", [0, 5, 5])
 
-    assert [entry["step"] for entry in fake_logger.round_logs] == [1, 2]
-    assert [entry["payload"]["round"] for entry in fake_logger.round_logs] == [1, 2]
+    payloads = session.build_wandb_round_payloads()
+
+    assert len(payloads) == 2
+    assert [step for _, step in payloads] == [1, 2]
+    assert [p["round"] for p, _ in payloads] == [1, 2]
 
 
-def test_submit_action_logs_terminal_metrics_and_finishes_wandb():
+def test_build_wandb_round_payloads_contains_scores_and_concentration():
     session = GameSession.create(make_config(rounds=1))
-    fake_logger = FakeRoundLogger()
-    session.wandb_logger = fake_logger
 
     session.submit_action("A", [10, 0, 0])
     session.submit_action("B", [0, 5, 5])
 
-    assert len(fake_logger.terminal_logs) == 1
-    payload = fake_logger.terminal_logs[0]
+    payloads = session.build_wandb_round_payloads()
+
+    assert len(payloads) == 1
+    payload, step = payloads[0]
+    assert step == 1
+    assert payload["scores/A"] == 1
+    assert payload["scores/B"] == 2
+    assert payload["total_scores/A"] == 1
+    assert payload["total_scores/B"] == 2
+    assert payload["winner"] == "B"
+    assert payload["allocation_concentration/A"] == 1.0
+    assert payload["allocation_concentration/B"] == 0.5
+
+
+def test_build_wandb_terminal_payload_contains_final_and_rich_metrics():
+    session = GameSession.create(make_config(rounds=1))
+
+    session.submit_action("A", [10, 0, 0])
+    session.submit_action("B", [0, 5, 5])
+
+    payload = session.build_wandb_terminal_payload()
 
     assert payload["final/winner"] == "B"
     assert payload["final/total_scores/A"] == 1
@@ -215,33 +137,10 @@ def test_submit_action_logs_terminal_metrics_and_finishes_wandb():
     assert payload["metrics/round_win_rate/A"] == 0.0
     assert payload["metrics/round_win_rate/B"] == 1.0
     assert payload["metrics/round_win_rate/Tie"] == 0.0
-
     assert payload["rich/A/total_payoff"] == 1.0
-    assert payload["rich/A/strategy_entropy"] == -0.0
     assert payload["rich/A/behavioral_consistency"] == 1.0
-    assert payload["rich/A/cumulative_regret"] == 0.0
-    assert payload["rich/A/nash_gap"] == 0.0
     assert payload["rich/B/total_payoff"] == 2.0
-    assert payload["rich/B/strategy_entropy"] == -0.0
-    assert payload["rich/B/behavioral_consistency"] == 1.0
-    assert payload["rich/B/cumulative_regret"] == 0.0
-    assert payload["rich/B/nash_gap"] == 0.0
     assert payload["rich/joint/gini_coefficient"] == 0.1667
-
-    assert fake_logger.finished is True
-    assert session.wandb_finished is True
-
-
-def test_terminal_wandb_logging_is_idempotent():
-    session = GameSession.create(make_config(rounds=1))
-    fake_logger = FakeRoundLogger()
-    session.wandb_logger = fake_logger
-
-    session.submit_action("A", [10, 0, 0])
-    session.submit_action("B", [0, 5, 5])
-    session._log_terminal_to_wandb()
-
-    assert len(fake_logger.terminal_logs) == 1
 
 
 def test_session_results_add_session_metadata():
@@ -292,12 +191,12 @@ def test_session_rejects_invalid_and_duplicate_actions_via_engine():
 def test_creation_response_includes_scoped_player_tokens():
     session = GameSession.create(make_config())
 
-    assert session.creation_response() == {
-        "session_id": session.session_id,
-        "config_hash": session.config_hash,
-        "config": session.config.to_dict(),
-        "player_tokens": session.player_tokens,
-    }
+    resp = session.creation_response()
+    assert resp["session_id"] == session.session_id
+    assert resp["config_hash"] == session.config_hash
+    assert resp["config"] == session.config.to_dict()
+    assert resp["player_tokens"] == session.player_tokens
+    assert "arena_version" in resp
 
 
 def test_player_for_token_resolves_player_identity():

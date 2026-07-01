@@ -140,6 +140,14 @@ export const NavBar = memo(function NavBar() {
                 </div>
                 <div className="border-t border-line mx-0 my-1" />
                 <NavLink
+                  to="/settings"
+                  onClick={() => setMenuOpen(false)}
+                  className="block px-3 py-2 text-xs text-ink hover:bg-surface-container transition-colors no-underline"
+                  role="menuitem"
+                >
+                  Settings
+                </NavLink>
+                <NavLink
                   to="/keys"
                   onClick={() => setMenuOpen(false)}
                   className="block px-3 py-2 text-xs text-ink hover:bg-surface-container transition-colors no-underline"

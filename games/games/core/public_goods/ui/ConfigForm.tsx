@@ -17,7 +17,7 @@ export default function PublicGoodsConfigForm({ gameSlug, locked, sessionStatus,
   const seedRef = useRef<HTMLInputElement>(null);
 
   const { players, setPlayers, agents, remoteKeys,
-    status, running, isReplay, formDisabled, handleStartGame } =
+    status, running, isReplay, formDisabled, handleStartGame, wandbLogging } =
     useGameConfig({ gameSlug, locked, sessionStatus, initialValues,
       defaultAgents: ["interactive", "remote"],
       minPlayers: 3, maxPlayers: 10 });
@@ -38,6 +38,7 @@ export default function PublicGoodsConfigForm({ gameSlug, locked, sessionStatus,
       onStartGame={onSubmit}
       disabled={formDisabled} running={running}
       isReplay={isReplay} locked={locked} status={status}
+      wandbLogging={wandbLogging}
       minPlayers={3} maxPlayers={10}
     >
       <label className="grid gap-1 text-[10px] font-extrabold text-muted uppercase tracking-wider">

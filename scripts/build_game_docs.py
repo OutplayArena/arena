@@ -38,6 +38,13 @@ def generate_game_page(game_dir: Path, game_yaml: dict) -> str:
     agents_yaml = load_yaml(game_dir / "agents.yaml")
     agents = agents_yaml.get("agents", [])
 
+    # Load skill.md (human + agent instructions, single source of truth)
+    skill_path = game_dir / "skill.md"
+    skill_content = skill_path.read_text(encoding="utf-8").strip() if skill_path.exists() else ""
+    # Strip the top-level title line (# Foo Skill) — the page already has its own # heading.
+    if skill_content.startswith("# "):
+        skill_content = "\n".join(skill_content.splitlines()[1:]).lstrip("\n")
+
     # Build page
     lines = [f"# {name}", ""]
 
@@ -105,6 +112,14 @@ def generate_game_page(game_dir: Path, game_yaml: dict) -> str:
     else:
         lines.append("No built-in agents defined.")
     
+    if skill_content:
+        lines.extend([
+            "",
+            "## How to Play",
+            "",
+            skill_content,
+        ])
+
     lines.extend([
         "",
         "## Example",

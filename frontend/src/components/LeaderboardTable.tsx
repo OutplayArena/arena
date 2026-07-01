@@ -10,19 +10,37 @@ function splitAgentId(agentId: string): { model: string; provider: string } {
   return { model: agentId, provider: "Unknown" };
 }
 
-function AgentName({ agentId }: { agentId: string }) {
+function AgentName({ agentId, displayName }: { agentId: string; displayName?: string }) {
   const navigate = useNavigate();
-  const { model, provider } = splitAgentId(agentId);
+  const { model, provider } = splitAgentId(displayName || agentId);
   return (
     <button
       type="button"
       onClick={() => navigate(`/leaderboard/${encodeURIComponent(agentId)}`)}
-      className="text-left font-mono text-xs text-accent hover:text-accent/80 hover:underline transition-colors"
+      className="text-left font-mono text-xs text-accent hover:text-accent/80 hover:underline transition-colors truncate max-w-[180px]"
     >
       <span className="font-semibold">{model}</span>
-      <span className="text-muted ml-1.5">({provider})</span>
+      {provider !== "Unknown" && (
+        <span className="text-muted ml-1.5">({provider})</span>
+      )}
     </button>
   );
+}
+
+function OwnerCell({ ownerUsername, isOwn }: { ownerUsername?: string | null; isOwn?: boolean }) {
+  if (isOwn) {
+    return (
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded-[var(--radius-chip)] bg-accent/10 text-[10px] font-semibold text-accent">
+        You
+      </span>
+    );
+  }
+  if (ownerUsername) {
+    return (
+      <span className="text-xs font-mono text-muted">{ownerUsername}</span>
+    );
+  }
+  return <span className="text-xs text-quiet">—</span>;
 }
 
 function RankBadge({ rank }: { rank: number }) {
@@ -44,9 +62,10 @@ export function LeaderboardTable({
   emptyAction,
   className = "",
   loadingRows = 5,
+  showOwnerColumn = false,
 }: LeaderboardTableProps) {
   const metricKeys = detectMetricKeys(rows);
-  const baseColumns = ["#", "Agent", "Games", "Elo", "α-Rank"];
+  const baseColumns = ["#", "Agent", ...(showOwnerColumn ? ["Owner"] : []), "Games", "Elo", "α-Rank"];
   const allColumns = [...baseColumns, ...metricKeys.map((k) => METRIC_LABELS[k] || k)];
 
   if (loading) {
@@ -116,7 +135,14 @@ export function LeaderboardTable({
           {rows.map((row, i) => (
             <tr key={row.agentId} className={`border-b border-line/50 last:border-0 ${i % 2 === 1 ? "bg-surface-soft/50" : ""} hover:bg-surface-soft/80 transition-colors`}>
               <td className="px-5 py-3.5"><RankBadge rank={i + 1} /></td>
-              <td className="px-5 py-3.5"><AgentName agentId={row.agentId} /></td>
+              <td className="px-5 py-3.5">
+                <AgentName agentId={row.agentId} displayName={row.displayName} />
+              </td>
+              {showOwnerColumn && (
+                <td className="px-5 py-3.5">
+                  <OwnerCell ownerUsername={row.ownerUsername} isOwn={row.isOwn} />
+                </td>
+              )}
               <td className="px-5 py-3.5">
                 <span className="text-xs font-mono text-ink">{row.matches_played}</span>
               </td>

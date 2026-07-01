@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { getLeaderboard } from "../api";
+import { useAuth } from "../hooks/useAuth";
 import { LeaderboardFilters, type LeaderboardFiltersValue } from "../components/LeaderboardFilters";
 import { LeaderboardTable } from "../components/LeaderboardTable";
 import type { LeaderboardTableRow } from "../components/leaderboardShared";
@@ -102,6 +103,7 @@ function Pagination({
 export function LeaderboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const game = searchParams.get("game") || "";
   const sortBy = searchParams.get("sort_by") || "alpha_rank";
@@ -109,6 +111,12 @@ export function LeaderboardPage() {
   const page = parseInt(searchParams.get("page") || "1", 10);
   const dateFrom = searchParams.get("date_from") || "";
   const dateTo = searchParams.get("date_to") || "";
+
+  // scope: "personal" (my results) | "public" (others' public) | "all" (both)
+  // Logged-in users default to personal; anonymous users always get public.
+  const [scope, setScope] = useState<"personal" | "public" | "all">(
+    user ? "personal" : "public"
+  );
 
   const [data, setData] = useState<LeaderboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -128,6 +136,7 @@ export function LeaderboardPage() {
       page_size: PAGE_SIZE,
       date_from: dateFrom || undefined,
       date_to: dateTo || undefined,
+      scope: user ? scope : undefined,
     })
       .then((res) => {
         if (cancelled) return;
@@ -137,7 +146,7 @@ export function LeaderboardPage() {
       .catch((e) => { if (!cancelled) setError(e.message ?? "Unknown error"); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [game, sortBy, sortDir, page, dateFrom, dateTo, retry]);
+  }, [game, sortBy, sortDir, page, dateFrom, dateTo, retry, scope, user]);
 
   // Auto-populate the URL with the data's min/max dates so the date pickers
   // default to the first / last match date on first load. Runs exactly once,
@@ -189,6 +198,9 @@ export function LeaderboardPage() {
 
   const rows: LeaderboardTableRow[] = (data?.agents || []).map((a) => ({
     agentId: a.agent_id,
+    displayName: a.display_name,
+    ownerUsername: a.owner_username,
+    isOwn: a.is_own,
     matches_played: a.matches_played,
     elo: a.elo,
     alpha_rank: a.alpha_rank,
@@ -213,11 +225,33 @@ export function LeaderboardPage() {
   return (
     <div className="flex-1 flex flex-col">
       <div className="max-w-6xl mx-auto w-full px-6 py-10">
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-ink tracking-tight">Leaderboard</h1>
-          <p className="text-sm text-muted mt-1">
-            Agent rankings computed via Elo and α-Rank with per-game breakdowns.
-          </p>
+        <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-ink tracking-tight">Leaderboard</h1>
+            <p className="text-sm text-muted mt-1">
+              Agent rankings computed via Elo and α-Rank with per-game breakdowns.
+            </p>
+          </div>
+
+          {/* Scope toggle — only shown to logged-in users */}
+          {user && (
+            <div className="flex items-center gap-1 rounded-[var(--radius-chip)] border border-line bg-surface-soft p-0.5 shrink-0">
+              {(["personal", "public", "all"] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setScope(s)}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-[var(--radius-chip)] transition-colors ${
+                    scope === s
+                      ? "bg-accent text-white shadow-sm"
+                      : "text-muted hover:text-ink"
+                  }`}
+                >
+                  {s === "personal" ? "My results" : s === "public" ? "Public results" : "All"}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Filters bar */}
@@ -264,6 +298,7 @@ export function LeaderboardPage() {
           error={error}
           note={data?.note}
           loadingRows={8}
+          showOwnerColumn={!!user && scope !== "personal"}
           onRetry={() => { setLoading(true); setError(null); setRetry((r) => r + 1); }}
           emptyAction={
             <button

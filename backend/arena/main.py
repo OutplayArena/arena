@@ -1,8 +1,10 @@
 # ruff: noqa: E402
 import asyncio
 import json
+import logging
 import os
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, AsyncIterator
 from uuid import uuid4
@@ -14,24 +16,28 @@ load_dotenv()
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from arena._version import ARENA_VERSION
 from arena.db import get_db, async_session as _async_session_factory
 from arena.experiment_config import split_runtime_config
 from arena.game_registry import GameRegistry, GameRegistryError
 from arena.manifest import build_agent_manifest
 from arena.messaging import RedisBroker, StatePersister, MessageLogger
 from arena.messaging.broker import MessageBroker
-from arena.metrics import AgentRegistry, get_global_registry, set_global_registry, set_registry, get_all_registries, get_game_registry, MatchEvaluator, save_registry
+from arena.metrics import AgentRegistry, get_global_registry, set_global_registry, get_all_registries, get_game_registry, MatchEvaluator, save_registry
 from arena.session import GameSession, _serialize_state
 from arena.models.session import SessionModel
 from arena.models.api_key import ApiKey
 from arena.models.message_log import MessageLog
+from arena.models.wandb_credential import WandbCredential
+from arena.integrations.wandb_logger import encrypt_api_key, decrypt_api_key, WandbConfigError, WandbGameLogger
+from arena.experiment_config import WandbConfig
 from arena.auth.oauth import github_login, github_callback, google_login, google_callback, _callback_base_for
 from arena.auth.jwt import create_access_token
 from arena.auth.dependencies import get_current_user, get_local_or_optional_user, require_user
@@ -47,6 +53,8 @@ if not _SITE_YAML.is_file():
 SITE_YAML = _SITE_YAML
 STATIC_ROOT = Path(__file__).resolve().parent.parent / "static"
 GAME_REGISTRY = GameRegistry()
+
+_logger_main = logging.getLogger(__name__)
 
 _broker: RedisBroker | None = None
 _persister: StatePersister | None = None
@@ -80,7 +88,9 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     _logger = MessageLogger(_broker, _async_session_factory)
     await _logger.start()
     await _load_registries_from_db()
+    _gdpr_task = asyncio.create_task(_gdpr_purge_loop())
     yield
+    _gdpr_task.cancel()
     if _logger is not None:
         await _logger.stop()
         _logger = None
@@ -175,89 +185,238 @@ from arena.error_handler import register_error_handlers  # noqa: E402
 register_error_handlers(app)
 
 
-async def _load_registries_from_db() -> None:
-    """Load persisted AgentRegistry state from the agent_registry_states
-    table, then replay any completed sessions whose match_id is not yet in
-    the registries (backfill for sessions that completed against an older
-    backend version that didn't record per-game state)."""
-    import json
-    import logging
-    logger = logging.getLogger("arena.leaderboard")
-    try:
-        async with _async_session_factory() as db:
-            from arena.models.agent_registry import AgentRegistryState
-            from sqlalchemy import select
-            result = await db.execute(select(AgentRegistryState))
-            loaded_global = False
-            loaded_count = 0
-            for row in result.scalars().all():
-                state = row.state_json
-                try:
-                    if isinstance(state, (str, bytes, bytearray)):
-                        state = json.loads(state)
-                    reg = AgentRegistry.from_dict(state)
-                except Exception as exc:
-                    logger.warning(
-                        "Skipping malformed agent_registry_states row key=%r: %s",
-                        row.key, exc,
-                    )
-                    continue
-                if row.key == "global" or row.key == "overall":
-                    set_global_registry(reg)
-                    loaded_global = True
-                else:
-                    set_registry(reg, row.key)
-                loaded_count += 1
-            if not loaded_global:
-                set_global_registry(AgentRegistry())
-            logger.info("Loaded %d agent registry rows from DB (global=%s)",
-                        loaded_count, loaded_global)
-    except Exception as exc:
-        logger.warning("Failed to load agent registries from DB on startup: %s", exc)
+async def _gdpr_purge_loop() -> None:
+    """Background task: purge accounts inactive for _INACTIVITY_PURGE_DAYS days.
 
-    # Backfill: any completed session whose match_id is not yet in the
-    # in-memory registries gets replayed through get_results() so its
-    # per-game metrics, Elo snapshots, and aggregated values are recorded.
+    Runs once immediately on startup (so a reboot after a long downtime
+    still applies the purge), then every 24 hours.  Uses its own DB
+    session — never interferes with request-scoped sessions.
+    """
+    _log = logging.getLogger("arena.gdpr.purge")
+    while True:
+        try:
+            cutoff = datetime.now(timezone.utc) - timedelta(days=_INACTIVITY_PURGE_DAYS)
+            async with _async_session_factory() as db:
+                result = await db.execute(
+                    select(User).where(User.last_login_at < cutoff)
+                )
+                inactive = result.scalars().all()
+                for u in inactive:
+                    try:
+                        await _delete_user_data(db, u.id)
+                        _log.info(
+                            "GDPR auto-purge: deleted user %s (last login %s)",
+                            u.id,
+                            u.last_login_at,
+                        )
+                    except Exception:
+                        _log.warning("Failed to purge user %s", u.id, exc_info=True)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            _log.warning("GDPR purge loop error", exc_info=True)
+        await asyncio.sleep(24 * 3600)
+
+
+async def _log_session_to_wandb(session: "GameSession", row: Any, db: AsyncSession) -> None:
+    """Log a completed session to W&B in one stateless call.
+
+    Fetches the user's encrypted key from the DB, creates a run, logs all
+    rounds and terminal metrics, finishes the run, and persists the run_meta.
+    Never raises — W&B failures are logged as warnings so they never block
+    the game response.
+    """
     try:
-        from arena.models.session import SessionModel
-        async with _async_session_factory() as db:
-            from sqlalchemy import select
-            result = await db.execute(
-                select(SessionModel).where(SessionModel.status.in_(("complete", "completed")))
+        cred_result = await db.execute(
+            select(WandbCredential).where(WandbCredential.user_id == row.user_id)
+        )
+        cred = cred_result.scalar_one_or_none()
+        if cred is None:
+            _logger_main.warning(
+                "W&B logging requested for session %s but user has no stored key",
+                session.session_id,
             )
-            sessions = result.scalars().all()
-        backfilled = 0
-        for sess_row in sessions:
+            return
+
+        wcfg = row.wandb_config_json
+        wandb_cfg = WandbConfig(
+            api_key="[fetched-below]",
+            project=wcfg.get("project", "outplayarena"),
+            entity=wcfg.get("entity"),
+            run_name=wcfg.get("run_name"),
+            tags=wcfg.get("tags"),
+        )
+        logger = WandbGameLogger(
+            wandb_config=wandb_cfg,
+            game_config=session.config,
+            encrypted_api_key=cred.encrypted_api_key,
+            agents=session.agents,
+        )
+        round_payloads = session.build_wandb_round_payloads()
+        terminal_payload = session.build_wandb_terminal_payload()
+        run_meta = logger.log_complete_session(round_payloads, terminal_payload)
+        if run_meta:
+            row.wandb_run_json = run_meta
+            await db.commit()
+            _logger_main.info(
+                "W&B run %s logged for session %s",
+                run_meta.get("run_id"),
+                session.session_id,
+            )
+    except Exception:
+        _logger_main.warning(
+            "W&B logging failed for session %s — game result unaffected",
+            session.session_id,
+            exc_info=True,
+        )
+
+
+def _public_agent_id(model_name: str, username: str | None) -> str:
+    """Return a namespaced agent ID for the global public registry.
+
+    Format: ``model@username`` (e.g. ``gpt-4o@herbertw``).
+    The ``@username`` suffix is what the leaderboard uses to attribute results
+    to a specific user without exposing anything beyond their public handle.
+    Falls back to bare model_name when username is unavailable.
+    """
+    return f"{model_name}@{username}" if username else model_name
+
+
+def _namespace_match(match: Any, username: str | None) -> Any:
+    """Return a copy of match with agent_ids and move agent_ids namespaced."""
+    from arena.metrics.contracts import Match, Move
+    namespaced_ids = [_public_agent_id(a, username) for a in match.agent_ids]
+    id_map = dict(zip(match.agent_ids, namespaced_ids))
+    new_moves = [
+        Move(
+            agent_id=id_map.get(m.agent_id, m.agent_id),
+            round_number=m.round_number,
+            action=m.action,
+            payoff=m.payoff,
+        )
+        for m in match.moves
+    ]
+    return Match(
+        match_id=match.match_id,
+        game_type=match.game_type,
+        agent_ids=namespaced_ids,
+        moves=new_moves,
+        config=match.config,
+    )
+
+
+async def _rebuild_leaderboard_registries() -> None:
+    """Clear all in-memory registries and rebuild from only is_public=True sessions.
+
+    Agent IDs in the public registry are namespaced as ``model@username`` so
+    different users' runs of the same model appear as distinct leaderboard
+    entries with attribution.  Called on startup and whenever a session's
+    visibility changes.
+    """
+    import numpy as np
+    import logging
+    log = logging.getLogger("arena.leaderboard")
+
+    for reg in get_all_registries().values():
+        reg.clear()
+
+    count = 0
+    try:
+        async with _async_session_factory() as db:
+            result = await db.execute(
+                select(SessionModel, User)
+                .outerjoin(User, SessionModel.user_id == User.id)
+                .where(SessionModel.status.in_(("complete", "completed")))
+                .where(SessionModel.is_public.is_(True))
+            )
+            rows = result.all()
+
+        for sess_row, user_row in rows:
             try:
+                username = user_row.username if user_row else None
                 session = GameSession.from_db_row(sess_row)
-                evaluator = MatchEvaluator(get_global_registry())
-                _ = session.results(evaluator=evaluator)
                 match = session.to_match()
                 game_type = match.game_type
-                if game_type and game_type != "unknown":
-                    import numpy as np
-                    game_registry = get_game_registry(game_type)
-                    if match.match_id in game_registry.match_history:
-                        continue
-                    avg_payoffs = {
-                        a: float(np.mean(match.payoffs(a))) if match.payoffs(a) else 0.0
-                        for a in match.agent_ids
-                    }
-                    ts = sess_row.created_at.isoformat() if sess_row.created_at else None
-                    game_registry.record_match(match, avg_payoffs, timestamp=ts)
-                    backfilled += 1
+                if not game_type or game_type == "unknown":
+                    continue
+                namespaced = _namespace_match(match, username)
+                game_registry = get_game_registry(game_type)
+                if namespaced.match_id in game_registry.match_history:
+                    continue
+                avg_payoffs = {
+                    a: float(np.mean(namespaced.payoffs(a))) if namespaced.payoffs(a) else 0.0
+                    for a in namespaced.agent_ids
+                }
+                ts = sess_row.created_at.isoformat() if sess_row.created_at else None
+                game_registry.record_match(namespaced, avg_payoffs, timestamp=ts)
+                count += 1
             except Exception:
                 continue
-        if backfilled:
-            async with _async_session_factory() as db:
-                for key, reg in get_all_registries().items():
-                    try:
-                        await save_registry(reg, db, key)
-                    except Exception:
-                        pass
-        logger.info("Backfilled %d completed sessions into leaderboard registries", backfilled)
+
+        async with _async_session_factory() as db:
+            for key, reg in get_all_registries().items():
+                try:
+                    await save_registry(reg, db, key)
+                except Exception:
+                    pass
+        log.info("Leaderboard rebuilt from %d public sessions", count)
+    except Exception:
+        log.warning("Leaderboard rebuild error", exc_info=True)
+
+
+async def _build_personal_registry(user_id: Any) -> "AgentRegistry":
+    """Compute a fresh per-user registry from all of the user's completed sessions.
+
+    Uses bare model names (no @username suffix) since all entries belong to
+    the same user.  Not cached — computed on demand per leaderboard request.
+    """
+    import numpy as np
+    reg = AgentRegistry()
+    try:
+        async with _async_session_factory() as db:
+            result = await db.execute(
+                select(SessionModel).where(
+                    SessionModel.user_id == user_id,
+                    SessionModel.status.in_(("complete", "completed")),
+                )
+            )
+            rows = result.scalars().all()
+
+        for sess_row in rows:
+            try:
+                session = GameSession.from_db_row(sess_row)
+                match = session.to_match()
+                if not match.game_type or match.game_type == "unknown":
+                    continue
+                if match.match_id in reg.match_history:
+                    continue
+                avg_payoffs = {
+                    a: float(np.mean(match.payoffs(a))) if match.payoffs(a) else 0.0
+                    for a in match.agent_ids
+                }
+                ts = sess_row.created_at.isoformat() if sess_row.created_at else None
+                reg.record_match(match, avg_payoffs, timestamp=ts)
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return reg
+
+
+async def _load_registries_from_db() -> None:
+    """Build the public leaderboard registries from all is_public=True sessions.
+
+    The old agent_registry_states cache is no longer used as a primary source
+    because it may contain state derived from sessions that were later marked
+    private.  We always rebuild from the session table on startup, with agent
+    IDs namespaced as model@username for attribution.
+    """
+    set_global_registry(AgentRegistry())
+    try:
+        await _rebuild_leaderboard_registries()
     except Exception as exc:
-        logger.warning("Leaderboard backfill failed: %s", exc)
+        import logging
+        logging.getLogger("arena.leaderboard").warning("Leaderboard rebuild failed: %s", exc)
 
 
 class ActionRequest(BaseModel):
@@ -270,6 +429,8 @@ class UserResponse(BaseModel):
     email: str
     name: str
     avatar_url: str | None
+    privacy_accepted: bool = False
+    username: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -349,6 +510,12 @@ async def get_broker() -> AsyncIterator[MessageBroker]:
 def health():
     """Health check endpoint."""
     return {"status": "ok"}
+
+
+@app.get(f"{API_PREFIX}/version")
+def get_version():
+    """Return the running arena platform version."""
+    return {"version": ARENA_VERSION}
 
 
 @app.get(f"{API_PREFIX}/games")
@@ -437,17 +604,22 @@ async def create_experiment(
     _: None = require_agent_api(),
 ):
     """Create a new experiment session for a game."""
+    # Reject any inline api_key in the wandb block — keys must come from the
+    # user's stored credential, never from the request payload.
+    if "api_key" in (request.get("wandb") or {}):
+        raise HTTPException(
+            status_code=400,
+            detail="wandb.api_key must not be sent in the request — configure your W&B key in Settings",
+        )
+
     try:
-        config = config_from_request(request)
+        game_payload, wandb_fields = split_runtime_config(request)
+        config = GAME_REGISTRY.config_from_request(game_payload)
         game = GAME_REGISTRY.game_from_config(config)
     except (ValueError, GameRegistryError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    interactive = request.get("interactive", False)
-    locked = not interactive
-
-    session = GameSession.create(config, game=game, locked=locked)
-
+    # Resolve agents.
     agents = request.get("agents")
     if not isinstance(agents, dict):
         agent_a = request.get("agent_a")
@@ -460,13 +632,55 @@ async def create_experiment(
     if not agents:
         agents = None
 
+    # If the caller asked for W&B logging, verify the user has a stored
+    # credential and persist the config for end-of-game logging.  The key is
+    # never decrypted here — it is fetched fresh from the DB when the game
+    # completes and the logger runs in a single stateless call.
+    wandb_config_json: dict | None = None
+    if wandb_fields.enabled:
+        cred_check = await db.execute(
+            select(WandbCredential).where(WandbCredential.user_id == user.id)
+        )
+        if cred_check.scalar_one_or_none() is None:
+            _logger_main.warning(
+                "User %s requested wandb_logging but has no W&B key configured "
+                "(add one in Settings) — continuing without W&B logging.",
+                user.id,
+            )
+        else:
+            wandb_config_json = {
+                "project": wandb_fields.project,
+                "entity": wandb_fields.entity,
+                "run_name": wandb_fields.run_name,
+                "tags": wandb_fields.tags,
+            }
+
+    interactive = request.get("interactive", False)
+    locked = not interactive
+
+    session = GameSession.create(
+        config,
+        game=game,
+        locked=locked,
+        agents=agents,
+    )
+
     await session.save_new(
         db,
         user_id=str(user.id),
         agents=agents,
+        wandb_config_json=wandb_config_json,
     )
 
     response = session.creation_response()
+
+    _logger_main.info(
+        "Session %s created (arena v%s, game=%s, user=%s)",
+        session.session_id,
+        response["arena_version"],
+        response.get("config", {}).get("game", "unknown"),
+        user.id,
+    )
 
     if MCP_ENDPOINT:
         response["mcp_url"] = MCP_ENDPOINT
@@ -565,6 +779,11 @@ async def submit_action(
     row.player_tokens_json = session.player_tokens
     await db.commit()
 
+    # Stateless W&B logging: when the game completes, open a run, log all
+    # rounds + terminal metrics in one shot, finish, store run_meta in DB.
+    if session.status == "completed" and row.wandb_config_json and row.user_id:
+        await _log_session_to_wandb(session, row, db)
+
     player = session.player_for_token(token)
     public = session.public_state()
     round_number = public.get("round", 0) or state_dict.get("round_number", 0)
@@ -594,6 +813,7 @@ async def submit_action(
         "player": player,
         "status": session.status,
     })
+
     return public
 
 
@@ -788,24 +1008,35 @@ async def get_results(session_id: str, db: AsyncSession = Depends(get_db)):
         result = session.results(evaluator=evaluator)
         result = sanitize_for_json(result)
 
-        # Also record in per-game registry with agent metrics
+        # Only record in the public leaderboard registry when the session is
+        # explicitly marked public by its owner.
+        sess_row_result = await db.execute(
+            select(SessionModel).where(SessionModel.id == session_id)
+        )
+        sess = sess_row_result.scalar_one_or_none()
+
         match = session.to_match()
         game_type = match.game_type
-        if game_type and game_type != "unknown":
+        if game_type and game_type != "unknown" and sess and getattr(sess, "is_public", False):
             import numpy as np
+            # Look up owner username for attribution in the public registry.
+            username: str | None = None
+            if sess.user_id:
+                user_row_result = await db.execute(
+                    select(User).where(User.id == sess.user_id)
+                )
+                user_row = user_row_result.scalar_one_or_none()
+                username = user_row.username if user_row else None
+            namespaced = _namespace_match(match, username)
             game_registry = get_game_registry(game_type)
             avg_payoffs = {
-                a: float(np.mean(match.payoffs(a))) if match.payoffs(a) else 0.0
-                for a in match.agent_ids
+                a: float(np.mean(namespaced.payoffs(a))) if namespaced.payoffs(a) else 0.0
+                for a in namespaced.agent_ids
             }
             rich = result.get("rich_metrics", {})
             agent_metrics = rich.get("agents", None)
-            session_row = await db.execute(
-                select(SessionModel).where(SessionModel.id == session_id)
-            )
-            sess = session_row.scalar_one_or_none()
-            ts = sess.created_at.isoformat() if sess and sess.created_at else None
-            game_registry.record_match(match, avg_payoffs, agent_metrics=agent_metrics, timestamp=ts)
+            ts = sess.created_at.isoformat() if sess.created_at else None
+            game_registry.record_match(namespaced, avg_payoffs, agent_metrics=agent_metrics, timestamp=ts)
 
         try:
             for key, reg in get_all_registries().items():
@@ -929,8 +1160,15 @@ def _session_summary(row: SessionModel) -> dict[str, Any]:
         "num_battlefields": len(battlefields) if isinstance(battlefields, list) else 0,
         "resources": budget[0] if isinstance(budget, list) and len(budget) > 0 else 100,
         "seed": config.get("seed"),
+        # Full config as it was submitted to create the session.  The config
+        # tab on the play page uses this to display the exact parameters that
+        # were used to run a current/completed/failed game (rendered locked
+        # and read-only).  The flattened convenience fields above are kept
+        # for backward compatibility with existing list/history views.
+        "config": config,
         "status": row.status,
         "locked": row.locked,
+        "is_public": row.is_public if hasattr(row, "is_public") else False,
     }
 
 
@@ -1027,6 +1265,44 @@ async def delete_session(
     await db.delete(row)
     await db.commit()
     return {"deleted": session_id}
+
+
+class VisibilityUpdate(BaseModel):
+    is_public: bool
+
+
+@app.patch(f"{API_PREFIX}/sessions/{{session_id}}/visibility")
+async def set_session_visibility(
+    session_id: str,
+    payload: VisibilityUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_local_or_optional_user),
+):
+    """Toggle whether a completed session appears on the public leaderboard.
+
+    Only the owning user may change visibility.  Triggers a full registry
+    rebuild so the leaderboard immediately reflects the new state.
+    """
+    stmt = select(SessionModel).where(SessionModel.id == session_id)
+    if user:
+        stmt = stmt.where(SessionModel.user_id == user.id)
+    else:
+        stmt = stmt.where(SessionModel.user_id.is_(None))
+    result = await db.execute(stmt)
+    row = result.scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="session not found")
+
+    row.is_public = payload.is_public
+    await db.commit()
+
+    # Rebuild the global public registry to reflect the visibility change.
+    try:
+        await _rebuild_leaderboard_registries()
+    except Exception:
+        _logger_main.warning("Leaderboard rebuild failed after visibility change", exc_info=True)
+
+    return {"session_id": session_id, "is_public": row.is_public}
 
 
 @app.get(f"{API_PREFIX}/dashboard")
@@ -1203,6 +1479,292 @@ async def enable_key(
     return {"enabled": key_id}
 
 
+# ── W&B Settings ────────────────────────────────────────────────────────
+
+
+class WandbKeyUpsert(BaseModel):
+    api_key: str
+
+
+@app.get(f"{API_PREFIX}/settings/wandb-key")
+async def get_wandb_key_status(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Return whether the current user has a W&B API key configured.
+
+    The key itself is never returned — only its presence and last-updated
+    timestamp are exposed.
+    """
+    result = await db.execute(
+        select(WandbCredential).where(WandbCredential.user_id == user.id)
+    )
+    row = result.scalar_one_or_none()
+    if row is None:
+        return {"configured": False, "updated_at": None, "key_fingerprint": None}
+    # Expose the last 8 characters of the base64url-encoded ciphertext as a
+    # visual fingerprint — safe (derived from random nonce + ciphertext,
+    # reveals nothing about the plaintext), stable for a given stored key,
+    # and changes when the user replaces their key.
+    fingerprint = row.encrypted_api_key[-8:] if row.encrypted_api_key else None
+    return {
+        "configured": True,
+        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+        "key_fingerprint": fingerprint,
+    }
+
+
+@app.put(f"{API_PREFIX}/settings/wandb-key", status_code=200)
+async def upsert_wandb_key(
+    payload: WandbKeyUpsert,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Store (or replace) the current user's W&B API key, encrypted at rest.
+
+    The plaintext key is never persisted or returned — it is encrypted with
+    AES-256-GCM before being written to the database.
+    """
+    try:
+        encrypted = encrypt_api_key(payload.api_key)
+    except WandbConfigError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    result = await db.execute(
+        select(WandbCredential).where(WandbCredential.user_id == user.id)
+    )
+    row = result.scalar_one_or_none()
+    if row is None:
+        row = WandbCredential(user_id=user.id, encrypted_api_key=encrypted)
+        db.add(row)
+    else:
+        row.encrypted_api_key = encrypted
+
+    await db.commit()
+    return {"configured": True}
+
+
+@app.delete(f"{API_PREFIX}/settings/wandb-key", status_code=200)
+async def delete_wandb_key(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Remove the current user's stored W&B API key."""
+    result = await db.execute(
+        select(WandbCredential).where(WandbCredential.user_id == user.id)
+    )
+    row = result.scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="no W&B key configured")
+    await db.delete(row)
+    await db.commit()
+    return {"configured": False}
+
+
+@app.get(f"{API_PREFIX}/settings/wandb-key/entities")
+async def get_wandb_entities(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Return the W&B entities (personal + teams) for the stored API key.
+
+    Used to populate the entity dropdown on the logging config surface.
+    The API key is never included in the response — it is decrypted
+    transiently, used for a single W&B API call, then discarded.
+    """
+    result = await db.execute(
+        select(WandbCredential).where(WandbCredential.user_id == user.id)
+    )
+    row = result.scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="no W&B key configured")
+
+    api_key = None
+    try:
+        api_key = decrypt_api_key(row.encrypted_api_key)
+        import wandb as _wandb
+        api = _wandb.Api(api_key=api_key)
+        viewer = api.viewer
+        personal_entity: str = viewer.entity
+        teams: list[str] = viewer.teams
+        entities = [personal_entity] + [t for t in teams if t != personal_entity]
+        return {"personal_entity": personal_entity, "entities": entities}
+    except WandbConfigError as exc:
+        raise HTTPException(status_code=500, detail="could not decrypt W&B credentials") from exc
+    except Exception:
+        _logger_main.warning(
+            "Could not fetch W&B entities for user %s — key may be invalid or W&B unreachable",
+            user.id,
+        )
+        raise HTTPException(status_code=502, detail="could not verify W&B credentials")
+    finally:
+        # Ensure the decrypted key never lingers in memory.
+        api_key = None
+        del api_key
+
+
+# ── GDPR: data export, account deletion ─────────────────────────────────
+
+_GDPR_LOG = logging.getLogger("arena.gdpr")
+
+# How long a user may be inactive before their account is automatically
+# purged (GDPR data-minimisation principle).
+_INACTIVITY_PURGE_DAYS = int(os.environ.get("GDPR_INACTIVITY_DAYS", "90"))
+
+
+async def _delete_user_data(db: AsyncSession, user_id: Any) -> None:
+    """Delete all data belonging to user_id in the correct cascade order.
+
+    1. MessageLog rows have no FK cascade — delete them first.
+    2. ApiKey / WandbCredential rows point at the user — delete them.
+    3. SessionModel rows (cascades MailboxMessage via DB ON DELETE CASCADE).
+    4. User row itself.
+    """
+    from sqlalchemy import delete as _del
+
+    # 1. Message logs linked through sessions (no ORM cascade)
+    session_ids_q = select(SessionModel.id).where(SessionModel.user_id == user_id)
+    await db.execute(_del(MessageLog).where(MessageLog.session_id.in_(session_ids_q)))
+
+    # 2. Platform API keys
+    await db.execute(_del(ApiKey).where(ApiKey.user_id == user_id))
+
+    # 3. W&B credential
+    await db.execute(_del(WandbCredential).where(WandbCredential.user_id == user_id))
+
+    # 4. Sessions (cascades MailboxMessage)
+    await db.execute(_del(SessionModel).where(SessionModel.user_id == user_id))
+
+    # 5. User record
+    await db.execute(_del(User).where(User.id == user_id))
+
+    await db.commit()
+
+
+@app.get(f"{API_PREFIX}/settings/data-export")
+async def export_user_data(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Return a complete JSON dump of all data stored for the current user.
+
+    Sensitive credentials are never included in plaintext:
+    - Platform API keys: only prefix / metadata, never the key hash.
+    - W&B API key: only whether one is configured + its fingerprint, never
+      the encrypted blob.
+    - Player tokens: omitted entirely (session bearer credentials, equivalent
+      to passwords).
+    """
+    # User profile
+    profile = {
+        "id": str(user.id),
+        "email": user.email,
+        "name": user.name,
+        "provider": user.provider,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
+        "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
+    }
+
+    # Platform API keys — never key_hash
+    keys_result = await db.execute(
+        select(ApiKey).where(ApiKey.user_id == user.id).order_by(ApiKey.created_at)
+    )
+    api_keys = [
+        {
+            "id": str(row.id),
+            "key_prefix": row.key_prefix,
+            "name": row.name,
+            "is_active": row.is_active,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+            "last_used_at": row.last_used_at.isoformat() if row.last_used_at else None,
+        }
+        for row in keys_result.scalars().all()
+    ]
+
+    # W&B integration — never the encrypted key blob
+    cred_result = await db.execute(
+        select(WandbCredential).where(WandbCredential.user_id == user.id)
+    )
+    cred = cred_result.scalar_one_or_none()
+    wandb_integration = {
+        "configured": cred is not None,
+        "key_fingerprint": cred.encrypted_api_key[-8:] if cred else None,
+        "updated_at": cred.updated_at.isoformat() if cred and cred.updated_at else None,
+    }
+
+    # Game sessions — omit player_tokens_json (bearer credentials)
+    sessions_result = await db.execute(
+        select(SessionModel).where(SessionModel.user_id == user.id).order_by(SessionModel.created_at)
+    )
+    sessions = [
+        {
+            "id": row.id,
+            "status": row.status,
+            "locked": row.locked,
+            "config": row.config_json,
+            "agents": row.agents_json,
+            "state": row.state_json,
+            "error_message": row.error_message,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+            "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+        }
+        for row in sessions_result.scalars().all()
+    ]
+
+    # Per-session message logs
+    if sessions:
+        session_ids = [s["id"] for s in sessions]
+        logs_result = await db.execute(
+            select(MessageLog)
+            .where(MessageLog.session_id.in_(session_ids))
+            .order_by(MessageLog.session_id, MessageLog.round_number)
+        )
+        message_logs = [
+            {
+                "session_id": row.session_id,
+                "player": row.player,
+                "round_number": row.round_number,
+                "agent_id": row.agent_id,
+                "payload": row.payload,
+                "created_at": row.created_at.isoformat() if row.created_at else None,
+            }
+            for row in logs_result.scalars().all()
+        ]
+    else:
+        message_logs = []
+
+    payload = {
+        "export_date": datetime.now(timezone.utc).isoformat(),
+        "platform": "OutplayArena",
+        "user": profile,
+        "api_keys": api_keys,
+        "wandb_integration": wandb_integration,
+        "sessions": sessions,
+        "message_logs": message_logs,
+    }
+
+    filename = f"outplayarena-export-{datetime.now(timezone.utc).strftime('%Y%m%d')}.json"
+    return JSONResponse(
+        content=payload,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.delete(f"{API_PREFIX}/settings/account", status_code=200)
+async def delete_account(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Permanently delete the current user's account and all associated data.
+
+    Cascade order: MessageLog → ApiKey → WandbCredential → SessionModel
+    (which cascades MailboxMessage) → User.  Irreversible.
+    """
+    await _delete_user_data(db, user.id)
+    _GDPR_LOG.info("Account deleted by user %s (%s)", user.id, user.email)
+    return {"deleted": True}
+
+
 # ── OAuth ──────────────────────────────────────────────────────────────
 
 def _provider_configured(client_id: str | None, client_secret: str | None) -> bool:
@@ -1252,15 +1814,21 @@ async def auth_google_callback(request: Request, db: AsyncSession = Depends(get_
     return RedirectResponse(url=f"{_callback_base_for(request)}/?token={token}")
 
 
-@app.get(f"{API_PREFIX}/auth/me", response_model=UserResponse)
-async def auth_me(user: User = Depends(get_current_user)):
-    """Get the currently authenticated user profile."""
+def _user_response(user: User) -> UserResponse:
     return UserResponse(
         id=str(user.id),
         email=user.email,
         name=user.name,
         avatar_url=user.avatar_url,
+        privacy_accepted=user.privacy_accepted_at is not None,
+        username=user.username,
     )
+
+
+@app.get(f"{API_PREFIX}/auth/me", response_model=UserResponse)
+async def auth_me(user: User = Depends(get_current_user)):
+    """Get the currently authenticated user profile."""
+    return _user_response(user)
 
 
 @app.get(f"{API_PREFIX}/auth/user", response_model=UserResponse)
@@ -1271,12 +1839,26 @@ async def auth_user(
     """Get the authenticated user profile (supports local auth)."""
     if user is None:
         raise HTTPException(status_code=401, detail="authentication required")
-    return UserResponse(
-        id=str(user.id),
-        email=user.email,
-        name=user.name,
-        avatar_url=user.avatar_url,
-    )
+    return _user_response(user)
+
+
+@app.post(f"{API_PREFIX}/settings/accept-privacy", status_code=200)
+async def accept_privacy(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Record that the current user has accepted the privacy notice.
+
+    Called once from the first-login modal.  Idempotent — safe to call
+    again without resetting the original acceptance timestamp.
+    """
+    if user.privacy_accepted_at is None:
+        result = await db.execute(select(User).where(User.id == user.id))
+        row = result.scalar_one_or_none()
+        if row is not None:
+            row.privacy_accepted_at = datetime.now(timezone.utc)
+            await db.commit()
+    return {"privacy_accepted": True}
 
 
 # ── Benchmark report ────────────────────────────────────────────────────
@@ -1492,6 +2074,80 @@ def _build_leaderboard_entries(
     }
 
 
+def _leaderboard_agent_entry(agent_id: str, registry: AgentRegistry, pop: dict, agg: dict,
+                              current_username: str | None, is_personal: bool) -> dict:
+    """Build a single leaderboard agent entry, adding display name and attribution.
+
+    Public registry agent IDs are ``model@username`` (e.g. ``gpt-4o@herbertw``).
+    Personal registry agent IDs are bare model names (e.g. ``gpt-4o``).
+    """
+    if "@" in agent_id:
+        display_name, owner_username = agent_id.rsplit("@", 1)
+    else:
+        display_name = agent_id
+        owner_username = current_username if is_personal else None
+
+    is_own = is_personal or (owner_username is not None and owner_username == current_username)
+
+    return {
+        "agent_id": agent_id,
+        "display_name": display_name,
+        "owner_username": owner_username,
+        "is_own": is_own,
+        "elo": pop.get("elo_ratings", {}).get(agent_id),
+        "alpha_rank": pop.get("alpha_rank_scores", {}).get(agent_id),
+        "matches_played": registry.matches_played.get(agent_id, 0),
+        "metrics": agg.get(agent_id, {}),
+    }
+
+
+def _build_leaderboard_response(
+    registry: AgentRegistry,
+    target: list[str],
+    sort_by: str,
+    sort_dir: str,
+    page: int,
+    page_size: int,
+    current_username: str | None = None,
+    is_personal: bool = False,
+) -> dict:
+    date_range = _registry_date_range(registry)
+    if len(target) < 2:
+        entries = [
+            _leaderboard_agent_entry(a, registry,
+                                     {"elo_ratings": registry.elo_ratings,
+                                      "alpha_rank_scores": {}},
+                                     registry.aggregated_metrics([a]),
+                                     current_username, is_personal)
+            for a in target
+        ]
+        return {
+            "agents": entries, "total": len(entries),
+            "page": page, "page_size": page_size,
+            "total_matches": len(registry.match_history),
+            "date_range": date_range,
+            "note": "Need at least 2 agents for α-Rank computation.",
+        }
+
+    evaluator = MatchEvaluator(registry)
+    pop = evaluator.population_report(target)
+    agg = registry.aggregated_metrics(target)
+
+    entries = [
+        _leaderboard_agent_entry(a, registry, pop, agg, current_username, is_personal)
+        for a in target
+    ]
+    reverse = sort_dir.lower() != "asc"
+    entries.sort(key=lambda e: _safe_sort_key(e, sort_by), reverse=reverse)
+    total = len(entries)
+    return {
+        "agents": entries[(page - 1) * page_size: page * page_size],
+        "total": total, "page": page, "page_size": page_size,
+        "total_matches": len(registry.match_history),
+        "date_range": date_range,
+    }
+
+
 @app.get(f"{API_PREFIX}/leaderboard")
 async def get_leaderboard(
     game: str | None = Query(default=None, description="Game type filter (e.g. colonelblotto)"),
@@ -1502,46 +2158,119 @@ async def get_leaderboard(
     agent_ids: str | None = Query(default=None, description="Comma-separated agent IDs to filter"),
     date_from: str | None = Query(default=None, description="ISO date: only include agents active after this"),
     date_to: str | None = Query(default=None, description="ISO date: only include agents active before this"),
+    scope: str = Query(default="public", description="personal | public | all (ignored for anonymous users)"),
     db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_local_or_optional_user),
 ):
-    """Paginated, sortable leaderboard. Returns agents sorted by the chosen metric."""
-    if game:
-        registry = get_game_registry(game)
-    else:
-        registry = get_global_registry()
+    """Paginated, sortable leaderboard with privacy scoping.
 
-    known = list(registry.elo_ratings.keys())
-    if agent_ids:
-        requested = [a.strip() for a in agent_ids.split(",") if a.strip()]
-        target = [a for a in requested if a in known]
-    else:
-        target = known
+    - Anonymous / scope=public: only sessions explicitly marked public,
+      agents attributed as model@username.
+    - Logged-in / scope=personal (recommended default for UI): the user's
+      own sessions (public + private), bare model names, no attribution.
+    - Logged-in / scope=all: personal entries (is_own=True) + other users'
+      public entries (is_own=False, attributed with owner_username).
+    """
+    effective_scope = "public"
+    if user:
+        effective_scope = scope if scope in ("personal", "public", "all") else "personal"
 
-    # Time-range filter on agent activity. Agents with no snapshots are
-    # excluded when a date filter is set — they have no recorded activity.
-    if date_from or date_to:
-        filtered = []
-        for a in target:
-            snaps = registry.elo_snapshots.get(a, [])
-            if not snaps:
-                continue
-            day_min = min(t[:10] for t, _ in snaps)
-            day_max = max(t[:10] for t, _ in snaps)
-            if date_from and day_max < date_from:
-                continue
-            if date_to and day_min > date_to:
-                continue
-            filtered.append(a)
-        target = filtered
+    current_username = user.username if user else None
 
-    if sort_by not in _SORTABLE_KEYS:
-        sort_by = "alpha_rank"
+    def _get_registry(is_personal: bool) -> AgentRegistry:
+        if game:
+            return get_game_registry(game) if not is_personal else get_game_registry(game)
+        return get_global_registry()
 
-    result = _build_leaderboard_entries(
-        registry, target,
-        sort_by=sort_by, sort_dir=sort_dir,
-        page=page, page_size=page_size,
+    def _filtered_target(registry: AgentRegistry) -> list[str]:
+        known = list(registry.elo_ratings.keys())
+        if agent_ids:
+            requested = [a.strip() for a in agent_ids.split(",") if a.strip()]
+            target = [a for a in requested if a in known]
+        else:
+            target = known
+        if date_from or date_to:
+            filtered = []
+            for a in target:
+                snaps = registry.elo_snapshots.get(a, [])
+                if not snaps:
+                    continue
+                day_min = min(t[:10] for t, _ in snaps)
+                day_max = max(t[:10] for t, _ in snaps)
+                if date_from and day_max < date_from:
+                    continue
+                if date_to and day_min > date_to:
+                    continue
+                filtered.append(a)
+            return filtered
+        return target
+
+    actual_sort = sort_by if sort_by in _SORTABLE_KEYS else "alpha_rank"
+
+    if effective_scope == "personal" and user:
+        personal_reg = await _build_personal_registry(user.id)
+        target = _filtered_target(personal_reg)
+        result = _build_leaderboard_response(
+            personal_reg, target, actual_sort, sort_dir, page, page_size,
+            current_username=current_username, is_personal=True,
+        )
+        result["scope"] = "personal"
+        return sanitize_for_json(result)
+
+    if effective_scope == "all" and user:
+        # Personal half: user's own sessions including private ones
+        personal_reg = await _build_personal_registry(user.id)
+        personal_target = _filtered_target(personal_reg)
+        personal_entries: list[dict] = []
+        if len(personal_target) >= 2:
+            evaluator = MatchEvaluator(personal_reg)
+            pop = evaluator.population_report(personal_target)
+            agg = personal_reg.aggregated_metrics(personal_target)
+        else:
+            pop = {"elo_ratings": personal_reg.elo_ratings, "alpha_rank_scores": {}}
+            agg = personal_reg.aggregated_metrics(personal_target)
+        for a in personal_target:
+            personal_entries.append(_leaderboard_agent_entry(
+                a, personal_reg, pop, agg, current_username, is_personal=True))
+
+        # Public half: other users' public sessions, exclude current user's public entries
+        pub_reg = get_game_registry(game) if game else get_global_registry()
+        pub_target = [
+            a for a in _filtered_target(pub_reg)
+            if not (current_username and a.endswith(f"@{current_username}"))
+        ]
+        public_entries: list[dict] = []
+        if pub_target:
+            if len(pub_target) >= 2:
+                evaluator = MatchEvaluator(pub_reg)
+                pop_pub = evaluator.population_report(pub_target)
+            else:
+                pop_pub = {"elo_ratings": pub_reg.elo_ratings, "alpha_rank_scores": {}}
+            agg_pub = pub_reg.aggregated_metrics(pub_target)
+            for a in pub_target:
+                public_entries.append(_leaderboard_agent_entry(
+                    a, pub_reg, pop_pub, agg_pub, current_username, is_personal=False))
+
+        all_entries = personal_entries + public_entries
+        reverse = sort_dir.lower() != "asc"
+        all_entries.sort(key=lambda e: _safe_sort_key(e, actual_sort), reverse=reverse)
+        total = len(all_entries)
+        start = (page - 1) * page_size
+        result = {
+            "agents": all_entries[start: start + page_size],
+            "total": total, "page": page, "page_size": page_size,
+            "scope": "all",
+        }
+        return sanitize_for_json(result)
+
+    # Default / public scope
+    registry = get_game_registry(game) if game else get_global_registry()
+    target = _filtered_target(registry)
+    result = _build_leaderboard_response(
+        registry, target, actual_sort, sort_dir, page, page_size,
+        current_username=current_username, is_personal=False,
     )
+    result["scope"] = "public"
     return sanitize_for_json(result)
 
 

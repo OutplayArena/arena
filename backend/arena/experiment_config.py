@@ -35,6 +35,12 @@ class WandbConfig:
 
 @dataclass(frozen=True)
 class ExperimentRuntimeConfig:
+    """Platform-level runtime options extracted from the experiment request.
+
+    wandb: fully-resolved WandbConfig (api_key populated server-side from the
+    user's stored encrypted credential, never passed in the request).
+    """
+
     wandb: WandbConfig | None = None
 
     # Return runtime metadata safe enough for logs, responses, and tests.
@@ -44,31 +50,66 @@ class ExperimentRuntimeConfig:
         }
 
 
-# Split platform runtime config from game-specific experiment config.
-def split_runtime_config(payload: dict[str, Any]) -> tuple[dict[str, Any], ExperimentRuntimeConfig]:
-    game_payload = dict(payload)
-    wandb_data = game_payload.pop("wandb", None)
-    wandb = _wandb_from_dict(wandb_data) if wandb_data is not None else None
-    return game_payload, ExperimentRuntimeConfig(wandb=wandb)
+# Flat W&B fields accepted on the experiment-creation request.
+# api_key is intentionally absent — it is always resolved server-side from
+# the user's stored encrypted credential (WandbCredential table).
+_WANDB_REQUEST_FIELDS = frozenset(
+    {"wandb_logging", "wandb_project", "wandb_entity", "wandb_run_name", "wandb_tags"}
+)
 
 
-def _wandb_from_dict(data: Any) -> WandbConfig:
-    if not isinstance(data, dict):
-        raise ValueError("wandb config must be an object")
+def split_runtime_config(
+    payload: dict[str, Any],
+) -> tuple[dict[str, Any], "WandbRequestFields"]:
+    """Strip W&B logging fields out of the raw request payload.
 
-    allowed_keys = {"api_key", "project", "entity", "run_name", "tags"}
-    extra_keys = set(data) - allowed_keys
-    if extra_keys:
-        extra = ", ".join(sorted(extra_keys))
-        raise ValueError(f"unknown wandb config fields: {extra}")
+    Returns (game_payload, wandb_fields) where game_payload is safe to pass
+    to GAME_REGISTRY.config_from_request and wandb_fields carries the caller's
+    W&B preferences (no api_key — resolved later from the credential store).
+    """
+    game_payload = {k: v for k, v in payload.items() if k not in _WANDB_REQUEST_FIELDS}
+    return game_payload, WandbRequestFields.from_payload(payload)
 
-    try:
+
+@dataclass(frozen=True)
+class WandbRequestFields:
+    """Parsed W&B preferences from the raw request — api_key is never here."""
+
+    enabled: bool = False
+    project: str = "outplayarena"
+    entity: str | None = None
+    run_name: str | None = None
+    tags: list[str] | None = None
+
+    @classmethod
+    def from_payload(cls, payload: dict[str, Any]) -> "WandbRequestFields":
+        enabled = bool(payload.get("wandb_logging", False))
+        if not enabled:
+            return cls()
+
+        project = payload.get("wandb_project") or "outplayarena"
+        entity = payload.get("wandb_entity") or None
+        run_name = payload.get("wandb_run_name") or None
+        raw_tags = payload.get("wandb_tags")
+        tags = list(raw_tags) if isinstance(raw_tags, (list, tuple)) else None
+
+        if not isinstance(project, str):
+            raise ValueError("wandb_project must be a string")
+        if entity is not None and not isinstance(entity, str):
+            raise ValueError("wandb_entity must be a string")
+        if run_name is not None and not isinstance(run_name, str):
+            raise ValueError("wandb_run_name must be a string")
+        if tags is not None and not all(isinstance(t, str) for t in tags):
+            raise ValueError("wandb_tags must be a list of strings")
+
+        return cls(enabled=True, project=project, entity=entity, run_name=run_name, tags=tags)
+
+    def to_wandb_config(self, api_key: str) -> WandbConfig:
+        """Build a WandbConfig from the stored (decrypted) api_key + these fields."""
         return WandbConfig(
-            api_key=data["api_key"],
-            project=data["project"],
-            entity=data.get("entity"),
-            run_name=data.get("run_name"),
-            tags=list(data.get("tags") or []),
+            api_key=api_key,
+            project=self.project,
+            entity=self.entity,
+            run_name=self.run_name,
+            tags=self.tags,
         )
-    except KeyError as exc:
-        raise ValueError(f"wandb config missing required field: {exc.args[0]}") from exc

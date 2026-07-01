@@ -83,6 +83,67 @@ OAuth is required for user login. Configure at least one provider.
 3. Add `https://your-domain.com/api/auth/google/callback` as an Authorized redirect URI
 4. Copy **Client ID** and **Client Secret** to `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
 
+## GDPR & Data Retention
+
+OutplayArena is designed to comply with the EU General Data Protection Regulation (GDPR).
+
+### User rights
+
+Users can exercise their rights directly from the **Settings** page (profile dropdown → Settings):
+
+| Right | How to invoke |
+|---|---|
+| **Access / Data portability** (Art. 15, 20) | Settings → Danger Zone → **Export my data** — downloads a full JSON archive of their account, game sessions, API keys (metadata only), and message history. Sensitive credentials are redacted. |
+| **Erasure** (Art. 17) | Settings → Danger Zone → **Delete my account** — permanently erases all their data (account, sessions, API keys, W&B credential, message logs). |
+
+### Automatic inactivity purge
+
+Accounts inactive for **90 days** (no login) are automatically deleted on the server. The retention window is configurable:
+
+| Variable | Default | Description |
+|---|---|---|
+| `GDPR_INACTIVITY_DAYS` | `90` | Days of inactivity before automatic account deletion |
+
+The purge runs once immediately on backend startup, then every 24 hours. Set `GDPR_INACTIVITY_DAYS=0` to disable automatic purge (not recommended).
+
+!!! warning "No grace-period emails"
+    The current implementation deletes accounts without prior notice once the inactivity window expires. If your deployment requires a warning email before deletion, implement a pre-purge notification step in `_gdpr_purge_loop` (`backend/arena/main.py`).
+
+### Sensitive data handling
+
+| Data type | At-rest treatment | Ever returned by API |
+|---|---|---|
+| Platform API keys | SHA-256 hashed (one-way) | Never — only prefix shown |
+| W&B API key | AES-256-GCM encrypted | Never — only fingerprint shown |
+| Player session tokens | Stored as hash | Never in data export |
+| Game configs, results | Plaintext in DB | Yes, included in data export |
+
+---
+
+## Integrations
+
+### Weights & Biases
+
+The platform has built-in W&B support. Once configured, users can enable logging per-experiment from the game config screen — no code required.
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `OUTPLAYARENA_WANDB_ENCRYPTION_KEY` | No | — | AES-256-GCM key (64 hex chars) used to encrypt W&B API keys at rest. Generate with `openssl rand -hex 32`. Leave unset to disable the integration. |
+
+How it works:
+
+1. Set `OUTPLAYARENA_WANDB_ENCRYPTION_KEY` in your `.env`.
+2. Users open **Settings → Weights & Biases** and paste their W&B API key (found at [wandb.ai/authorize](https://wandb.ai/authorize)).
+3. The platform encrypts the key before storing it — the plaintext is never persisted or returned by the API.
+4. When starting a game, users check **"Log results to Weights & Biases"** and optionally set entity, project name, and run name. If they leave fields blank the platform uses sensible defaults (`project=outplayarena`, `run_name=<session-id>`).
+5. **Once the game completes**, the platform opens a W&B run, logs all round-by-round scores and terminal summary metrics in a single batch, and finishes the run. The W&B run URL is then stored on the session and visible in the dashboard. If the key is missing or invalid the experiment still runs — W&B logging is skipped with a server-side warning.
+
+!!! info "Batch logging — no live updates"
+    Results are written to W&B in one shot when the game ends. There is no live run to watch while the game is in progress. This is intentional: the stateless design means any server worker can handle any request without needing to hold an open network connection to W&B throughout the game.
+
+!!! note "Key rotation"
+    To rotate the encryption key, update `OUTPLAYARENA_WANDB_ENCRYPTION_KEY` and ask users to re-enter their W&B key in Settings. Existing encrypted keys in the database will be invalid until re-saved with the new key.
+
 ## Security
 
 | Variable | Required | Default | Description |
@@ -107,6 +168,9 @@ openssl rand -hex 32
 
 # POSTGRES_PASSWORD / REDIS_PASSWORD (32+ chars)
 openssl rand -hex 16
+
+# OUTPLAYARENA_WANDB_ENCRYPTION_KEY (32 bytes = 64 hex chars)
+openssl rand -hex 32
 
 # TRAEFIK_DASHBOARD_AUTH
 htpasswd -nb admin your_password_here
