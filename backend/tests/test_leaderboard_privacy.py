@@ -5,14 +5,13 @@ Covers:
 - _build_leaderboard_response() — with and without enough agents for α-Rank
 - _public_agent_id() / _namespace_match() — agent ID namespacing
 - _build_personal_registry() — per-user on-demand registry construction
-- _restore_wandb_logger() — early return paths (no meta / no user_id)
 - GET /leaderboard?scope=personal — personal registry path
 - GET /leaderboard?scope=all — merged personal+public path
 - PATCH /sessions/{id}/visibility — toggle is_public, triggers rebuild
 """
 import os
 import uuid
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 os.environ.setdefault("API_PREFIX", "")
 os.environ.setdefault("ENABLE_AGENT_REST_API", "true")
@@ -34,7 +33,6 @@ from arena.main import (  # noqa: E402
     _public_agent_id,
     _namespace_match,
     _build_personal_registry,
-    _restore_wandb_logger,
     get_broker,
 )
 from arena.db import get_db  # noqa: E402
@@ -404,73 +402,6 @@ class TestBuildPersonalRegistry:
 
         reg = await _build_personal_registry(_UID)
         assert reg.match_history.count("m-dup") == 1
-
-
-# ── _restore_wandb_logger early return paths ──────────────────────────────────
-
-
-class TestRestoreWandbLoggerEarlyReturns:
-    @pytest.mark.asyncio
-    async def test_returns_none_when_no_meta_and_no_db_meta(self):
-        broker = FakeBroker()  # cache_get always returns None
-        session = MagicMock()
-        session.session_id = "sess-1"
-        session.wandb_run_meta = None  # no DB meta either
-        db = MagicMock()
-
-        result = await _restore_wandb_logger(session, db, broker)
-
-        assert result is None
-
-    @pytest.mark.asyncio
-    async def test_uses_wandb_run_meta_when_cache_empty(self):
-        broker = FakeBroker()  # cache_get returns None
-        session = MagicMock()
-        session.session_id = "sess-1"
-        session.wandb_run_meta = {"run_id": "abc", "project": "test"}
-        session.user_id = None  # no user → early return after meta check
-
-        db = MagicMock()
-
-        result = await _restore_wandb_logger(session, db, broker)
-
-        assert result is None  # user_id is None → returns None
-
-    @pytest.mark.asyncio
-    async def test_returns_none_when_cache_has_meta_but_no_user_id(self):
-        class _CacheBroker(FakeBroker):
-            async def cache_get(self, key):
-                return {"run_id": "xyz", "project": "outplayarena"}
-
-        session = MagicMock()
-        session.session_id = "sess-2"
-        session.wandb_run_meta = None
-        session.user_id = None
-
-        result = await _restore_wandb_logger(session, MagicMock(), _CacheBroker())
-
-        assert result is None
-
-    @pytest.mark.asyncio
-    async def test_returns_none_when_no_cred_found(self):
-        class _CacheBroker(FakeBroker):
-            async def cache_get(self, key):
-                return {"run_id": "xyz", "project": "outplayarena"}
-
-        session = MagicMock()
-        session.session_id = "sess-3"
-        session.wandb_run_meta = None
-        session.user_id = uuid.uuid4()
-
-        async def _fake_execute(stmt):
-            return FakeResult(None)  # no credential found
-
-        db = MagicMock()
-        db.execute = AsyncMock(side_effect=_fake_execute)
-
-        result = await _restore_wandb_logger(session, db, _CacheBroker())
-
-        assert result is None
 
 
 # ── Leaderboard scope endpoint tests ─────────────────────────────────────────

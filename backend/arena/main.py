@@ -23,8 +23,9 @@ from pydantic import BaseModel
 from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from arena._version import ARENA_VERSION
 from arena.db import get_db, async_session as _async_session_factory
-from arena.experiment_config import split_runtime_config, ExperimentRuntimeConfig
+from arena.experiment_config import split_runtime_config
 from arena.game_registry import GameRegistry, GameRegistryError
 from arena.manifest import build_agent_manifest
 from arena.messaging import RedisBroker, StatePersister, MessageLogger
@@ -35,7 +36,8 @@ from arena.models.session import SessionModel
 from arena.models.api_key import ApiKey
 from arena.models.message_log import MessageLog
 from arena.models.wandb_credential import WandbCredential
-from arena.integrations.wandb_logger import encrypt_api_key, decrypt_api_key, WandbConfigError
+from arena.integrations.wandb_logger import encrypt_api_key, decrypt_api_key, WandbConfigError, WandbGameLogger
+from arena.experiment_config import WandbConfig
 from arena.auth.oauth import github_login, github_callback, google_login, google_callback, _callback_base_for
 from arena.auth.jwt import create_access_token
 from arena.auth.dependencies import get_current_user, get_local_or_optional_user, require_user
@@ -53,13 +55,6 @@ STATIC_ROOT = Path(__file__).resolve().parent.parent / "static"
 GAME_REGISTRY = GameRegistry()
 
 _logger_main = logging.getLogger(__name__)
-
-# In-process cache of live WandbGameLogger instances keyed by session_id.
-# Avoids re-creating the wandb.Run connection on every request from the
-# same container.  Populated on session creation; entries removed when the
-# game completes.  A new container (rolling update) rebuilds from DB+Redis
-# via _restore_wandb_logger().
-_session_loggers: dict[str, Any] = {}
 
 _broker: RedisBroker | None = None
 _persister: StatePersister | None = None
@@ -223,72 +218,57 @@ async def _gdpr_purge_loop() -> None:
         await asyncio.sleep(24 * 3600)
 
 
-async def _restore_wandb_logger(
-    session: "GameSession",
-    db: AsyncSession,
-    broker: "MessageBroker",
-) -> Any:
-    """Reconstruct a WandbGameLogger for a session after container replacement.
+async def _log_session_to_wandb(session: "GameSession", row: Any, db: AsyncSession) -> None:
+    """Log a completed session to W&B in one stateless call.
 
-    Tries the Redis cache first (fast, survives restarts as long as the cache
-    TTL holds), then falls back to the DB row.  Re-opens the W&B run with
-    resume='allow' so metrics continue on the same run rather than creating a
-    new one.  Returns None on any failure — never blocks the game.
+    Fetches the user's encrypted key from the DB, creates a run, logs all
+    rounds and terminal metrics, finishes the run, and persists the run_meta.
+    Never raises — W&B failures are logged as warnings so they never block
+    the game response.
     """
-    meta = await broker.cache_get(f"session:{session.session_id}:wandb_run")
-    if not meta and session.wandb_run_meta:
-        meta = session.wandb_run_meta
-
-    if not meta:
-        return None
-
-    if not session.user_id:
-        return None
-
     try:
-        from arena.models.wandb_credential import WandbCredential  # already imported
         cred_result = await db.execute(
-            select(WandbCredential).where(WandbCredential.user_id == session.user_id)
+            select(WandbCredential).where(WandbCredential.user_id == row.user_id)
         )
         cred = cred_result.scalar_one_or_none()
         if cred is None:
-            return None
-
-        decrypted = decrypt_api_key(cred.encrypted_api_key)
-        try:
-            import wandb as _wandb
-            run = _wandb.init(
-                id=meta["run_id"],
-                project=meta.get("project"),
-                entity=meta.get("entity"),
-                resume="allow",
-                settings=_wandb.Settings(_api_key=decrypted),
+            _logger_main.warning(
+                "W&B logging requested for session %s but user has no stored key",
+                session.session_id,
             )
-        finally:
-            decrypted = None  # type: ignore[assignment]
+            return
 
-        from arena.experiment_config import WandbConfig
-        from arena.integrations.wandb_logger import WandbGameLogger
+        wcfg = row.wandb_config_json
+        wandb_cfg = WandbConfig(
+            api_key="[fetched-below]",
+            project=wcfg.get("project", "outplayarena"),
+            entity=wcfg.get("entity"),
+            run_name=wcfg.get("run_name"),
+            tags=wcfg.get("tags"),
+        )
         logger = WandbGameLogger(
-            wandb_config=WandbConfig(
-                api_key="[restored]",
-                project=meta.get("project", "outplayarena"),
-                entity=meta.get("entity"),
-                run_name=meta.get("run_name"),
-            ),
+            wandb_config=wandb_cfg,
             game_config=session.config,
-            encrypted_api_key="[restored]",
+            encrypted_api_key=cred.encrypted_api_key,
             agents=session.agents,
         )
-        logger._run = run
-        return logger
+        round_payloads = session.build_wandb_round_payloads()
+        terminal_payload = session.build_wandb_terminal_payload()
+        run_meta = logger.log_complete_session(round_payloads, terminal_payload)
+        if run_meta:
+            row.wandb_run_json = run_meta
+            await db.commit()
+            _logger_main.info(
+                "W&B run %s logged for session %s",
+                run_meta.get("run_id"),
+                session.session_id,
+            )
     except Exception:
         _logger_main.warning(
-            "Could not restore W&B logger for session %s — continuing without it",
+            "W&B logging failed for session %s — game result unaffected",
             session.session_id,
             exc_info=True,
         )
-        return None
 
 
 def _public_agent_id(model_name: str, username: str | None) -> str:
@@ -532,6 +512,12 @@ def health():
     return {"status": "ok"}
 
 
+@app.get(f"{API_PREFIX}/version")
+def get_version():
+    """Return the running arena platform version."""
+    return {"version": ARENA_VERSION}
+
+
 @app.get(f"{API_PREFIX}/games")
 def list_games():
     """List all registered games."""
@@ -633,7 +619,7 @@ async def create_experiment(
     except (ValueError, GameRegistryError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    # Resolve agents before session creation so the W&B run can log them.
+    # Resolve agents.
     agents = request.get("agents")
     if not isinstance(agents, dict):
         agent_a = request.get("agent_a")
@@ -646,36 +632,28 @@ async def create_experiment(
     if not agents:
         agents = None
 
-    # Build runtime config: if the caller asked for W&B logging, resolve the
-    # stored encrypted key.  Missing or broken key warns but never fails the
-    # experiment — the game still runs, just without W&B logging.
-    runtime_config: ExperimentRuntimeConfig = ExperimentRuntimeConfig()
+    # If the caller asked for W&B logging, verify the user has a stored
+    # credential and persist the config for end-of-game logging.  The key is
+    # never decrypted here — it is fetched fresh from the DB when the game
+    # completes and the logger runs in a single stateless call.
+    wandb_config_json: dict | None = None
     if wandb_fields.enabled:
-        cred_result = await db.execute(
+        cred_check = await db.execute(
             select(WandbCredential).where(WandbCredential.user_id == user.id)
         )
-        cred = cred_result.scalar_one_or_none()
-        if cred is None:
+        if cred_check.scalar_one_or_none() is None:
             _logger_main.warning(
                 "User %s requested wandb_logging but has no W&B key configured "
                 "(add one in Settings) — continuing without W&B logging.",
                 user.id,
             )
         else:
-            try:
-                decrypted = decrypt_api_key(cred.encrypted_api_key)
-                runtime_config = ExperimentRuntimeConfig(
-                    wandb=wandb_fields.to_wandb_config(decrypted)
-                )
-            except WandbConfigError:
-                _logger_main.warning(
-                    "Could not decrypt W&B key for user %s — "
-                    "continuing without W&B logging.",
-                    user.id,
-                    exc_info=True,
-                )
-            finally:
-                decrypted = None  # type: ignore[assignment]
+            wandb_config_json = {
+                "project": wandb_fields.project,
+                "entity": wandb_fields.entity,
+                "run_name": wandb_fields.run_name,
+                "tags": wandb_fields.tags,
+            }
 
     interactive = request.get("interactive", False)
     locked = not interactive
@@ -684,7 +662,6 @@ async def create_experiment(
         config,
         game=game,
         locked=locked,
-        runtime_config=runtime_config,
         agents=agents,
     )
 
@@ -692,26 +669,18 @@ async def create_experiment(
         db,
         user_id=str(user.id),
         agents=agents,
+        wandb_config_json=wandb_config_json,
     )
 
-    # Persist W&B run metadata and prime both caches.
-    if session.wandb_run_meta:
-        result = await db.execute(
-            select(SessionModel).where(SessionModel.id == session.session_id)
-        )
-        sess_row = result.scalar_one_or_none()
-        if sess_row is not None:
-            sess_row.wandb_run_json = session.wandb_run_meta
-            await db.commit()
-        await broker.cache_set(
-            f"session:{session.session_id}:wandb_run",
-            session.wandb_run_meta,
-            ttl=7200,
-        )
-        if session.wandb_logger:
-            _session_loggers[session.session_id] = session.wandb_logger
-
     response = session.creation_response()
+
+    _logger_main.info(
+        "Session %s created (arena v%s, game=%s, user=%s)",
+        session.session_id,
+        response["arena_version"],
+        response.get("config", {}).get("game", "unknown"),
+        user.id,
+    )
 
     if MCP_ENDPOINT:
         response["mcp_url"] = MCP_ENDPOINT
@@ -774,18 +743,6 @@ async def submit_action(
     session = await get_session(session_id, db)
     token = bearer_token(authorization)
 
-    # Restore the W&B logger if this container doesn't have one in-process.
-    # In-process cache hit: O(1).  Cache miss (new container after rolling update):
-    # reconstruct from Redis/DB — at most once per session per container lifetime.
-    if session.wandb_run_meta:
-        if session_id in _session_loggers:
-            session.wandb_logger = _session_loggers[session_id]
-        else:
-            restored = await _restore_wandb_logger(session, db, broker)
-            if restored:
-                session.wandb_logger = restored
-                _session_loggers[session_id] = restored
-
     try:
         session.submit_action_with_token(token, request.allocation, forfeit=request.forfeit)
     except ValueError as exc:
@@ -822,6 +779,11 @@ async def submit_action(
     row.player_tokens_json = session.player_tokens
     await db.commit()
 
+    # Stateless W&B logging: when the game completes, open a run, log all
+    # rounds + terminal metrics in one shot, finish, store run_meta in DB.
+    if session.status == "completed" and row.wandb_config_json and row.user_id:
+        await _log_session_to_wandb(session, row, db)
+
     player = session.player_for_token(token)
     public = session.public_state()
     round_number = public.get("round", 0) or state_dict.get("round_number", 0)
@@ -851,10 +813,6 @@ async def submit_action(
         "player": player,
         "status": session.status,
     })
-
-    # Evict completed sessions from the in-process logger cache to bound memory.
-    if session.status == "completed":
-        _session_loggers.pop(session_id, None)
 
     return public
 

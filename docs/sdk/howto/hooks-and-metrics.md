@@ -4,7 +4,10 @@
 
 ## Recommended: built-in Weights & Biases logging
 
-The recommended way to track experiment results is the platform's built-in W&B integration — no agent code required. Add your W&B key in **Settings → Weights & Biases**, then check "Log results to Weights & Biases" when starting a game. The platform automatically logs the full game config, agent names, per-round scores, and terminal results to your W&B project.
+The recommended way to track experiment results is the platform's built-in W&B integration — no agent code required. Add your W&B key in **Settings → Weights & Biases**, then check "Log results to Weights & Biases" when starting a game. The platform automatically logs the full game config, agent names, per-round scores, and terminal results to your W&B project **once the game finishes**.
+
+!!! info "Batch logging — no live updates"
+    Results are written to W&B in a single batch when the game ends, not round by round during play. There is no live run to watch while the game is in progress. The W&B run URL becomes available on the session record after game completion.
 
 See [Pattern 3 — W&B logging → Option A](#pattern-3-wb-logging) below for API usage, and [Deployment → Configuration → Integrations](../../deployment/configuration.md#integrations) for server-side setup.
 
@@ -116,48 +119,39 @@ results = quick_play(
 )
 ```
 
-The platform logs the full game config (including agent names), per-round scores, and terminal results automatically. If your W&B key isn't configured yet, the experiment runs without logging — no failure.
+The platform logs the full game config (including agent names), per-round scores, and terminal results automatically — all in one shot when the game ends. If your W&B key isn't configured yet, the experiment runs without logging — no failure.
 
 See [Deployment → Configuration](../../deployment/configuration.md#integrations) for server-side setup (`OUTPLAYARENA_WANDB_ENCRYPTION_KEY`).
 
-#### Attaching your agent to the platform's W&B run
+!!! info "When does the run appear in W&B?"
+    The W&B run is created **after the last action is submitted**, not when the experiment starts. You won't see a run in your W&B workspace until the game is complete. Once it appears, all rounds and terminal metrics are already present — there is nothing to stream or watch live.
 
-Every turn response carries the W&B run coordinates (`run_id`, `run_name`,
-`entity`, `project`, `url`) when logging is active.  The SDK surfaces them
-via the `on_wandb_run_started` hook and the `self.wandb_run` attribute,
-fired the first time the metadata arrives (before the first action):
+#### Accessing the W&B run URL after a game
+
+Once a game completes, the run coordinates (`run_id`, `run_name`, `entity`, `project`, `url`) are stored on the session and included in `GET /api/session/{id}/state` under the `wandb_run` key. The SDK surfaces them via the `on_wandb_run_started` hook and `self.wandb_run`, **fired once after `on_episode_end`** when the metadata has been written to the session:
 
 ```python
-import wandb
 from outplayarena_sdk import ColonelBlottoAgent
 
 
 class ObservingAgent(ColonelBlottoAgent):
     def on_wandb_run_started(self, wandb_run: dict) -> None:
-        # Attach to the same run the platform opened for this game.
-        # Any metrics you log here appear alongside the platform's metrics
-        # on the same W&B run page.
-        wandb.init(
-            id=wandb_run["run_id"],
-            project=wandb_run["project"],
-            entity=wandb_run["entity"],
-            resume="allow",
-        )
-
-    def on_action_decision(self, action, reasoning):
-        if self.wandb_run:
-            wandb.log({"reasoning_length": len(reasoning)})
+        # Called after the game ends and the W&B run URL is available.
+        # Use this to record the run URL, open a browser tab, or attach
+        # your own custom W&B run for side-by-side comparison.
+        print(f"W&B run: {wandb_run['url']}")
 
     def on_episode_end(self, results):
-        wandb.finish()
+        # on_episode_end fires first; on_wandb_run_started fires after,
+        # once the platform has written the run_meta to the session record.
+        pass
 ```
 
 `self.wandb_run` is `None` when the session was created without W&B logging
 (including sessions created programmatically without `wandb_logging=True`),
 so the guard `if self.wandb_run` is always safe.
 
-This pattern works identically for REST and MCP agents — both share the
-same `BaseAgent._drive()` loop where the hook is called.
+If you want to add **your own metrics** alongside the platform's run, do so in `on_episode_end` using the SDK's [custom hook pattern](#option-b-custom-sdk-hook-bring-your-own-run) — open a separate W&B run that logs whatever your agent tracked internally.
 
 ### Option B — custom SDK hook (bring your own run)
 

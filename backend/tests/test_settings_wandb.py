@@ -324,36 +324,10 @@ def test_entities_endpoint_wandb_api_failure_returns_502(client, db, monkeypatch
 
 
 # ── create_experiment W&B wiring ─────────────────────────────────────────────────
-
-class _NoOpWandbLogger:
-    """Records construction args without touching the network."""
-    instances: list = []
-
-    def __init__(self, wandb_config, game_config, encrypted_api_key, agents=None):
-        self.wandb_config = wandb_config
-        self.game_config = game_config
-        self.encrypted_api_key = encrypted_api_key
-        self.agents = agents
-        _NoOpWandbLogger.instances.append(self)
-
-    def start(self):
-        return self
-
-    @property
-    def run_meta(self):
-        return {
-            "run_id": "fake-run-id",
-            "run_name": "fake-run",
-            "entity": self.wandb_config.entity,
-            "project": self.wandb_config.project,
-            "url": "https://wandb.ai/fake",
-        }
-
-
-@pytest.fixture(autouse=True)
-def _reset_wandb_logger_instances():
-    _NoOpWandbLogger.instances = []
-    yield
+# W&B logging is now stateless: no run is opened at experiment creation.
+# The wandb_config is persisted in the session row and the logger is instantiated
+# at game-end by _log_session_to_wandb().  These tests verify that experiment
+# creation succeeds under all credential scenarios without touching the W&B API.
 
 
 def _experiment_payload(**overrides):
@@ -367,57 +341,37 @@ def _experiment_payload(**overrides):
     return payload
 
 
-def test_create_experiment_with_wandb_logging_resolves_stored_key(client, db, monkeypatch):
+def test_create_experiment_with_wandb_logging_and_stored_key_succeeds(client, db):
+    """Experiment creation succeeds when a credential is present; key never leaks."""
     db._creds[_FAKE_USER_ID] = WandbCredential(
         user_id=_FAKE_USER_ID, encrypted_api_key=encrypt_api_key("real-wandb-key")
     )
-    monkeypatch.setattr("arena.session.WandbGameLogger", _NoOpWandbLogger)
 
     resp = client.post("/experiment", json=_experiment_payload(
         wandb_logging=True, wandb_project="my-proj", wandb_entity="my-team",
     ))
 
     assert resp.status_code == 200
-    assert len(_NoOpWandbLogger.instances) == 1
-    logged = _NoOpWandbLogger.instances[0]
-    assert logged.wandb_config.project == "my-proj"
-    assert logged.wandb_config.entity == "my-team"
-    assert logged.agents == {"A": "agent-a", "B": "agent-b"}
-    # Real key never appears in the response
+    # No W&B run is created at experiment time — run meta only appears after game ends
+    assert "wandb_run" not in resp.json()
+    # Real key must never appear in any response field
     assert "real-wandb-key" not in resp.text
 
 
-def test_create_experiment_wandb_logging_without_stored_key_still_succeeds(client, monkeypatch):
+def test_create_experiment_wandb_logging_without_stored_key_still_succeeds(client):
     """No credential configured — experiment must still run, just without W&B."""
-    monkeypatch.setattr("arena.session.WandbGameLogger", _NoOpWandbLogger)
-
     resp = client.post("/experiment", json=_experiment_payload(wandb_logging=True))
 
     assert resp.status_code == 200
-    assert len(_NoOpWandbLogger.instances) == 0
 
 
-def test_create_experiment_wandb_logging_with_broken_key_still_succeeds(client, db, monkeypatch):
-    """A corrupted stored credential must not fail the experiment."""
-    db._creds[_FAKE_USER_ID] = WandbCredential(
-        user_id=_FAKE_USER_ID, encrypted_api_key="not-valid-base64!!"
-    )
-    monkeypatch.setattr("arena.session.WandbGameLogger", _NoOpWandbLogger)
-
-    resp = client.post("/experiment", json=_experiment_payload(wandb_logging=True))
-
-    assert resp.status_code == 200
-    assert len(_NoOpWandbLogger.instances) == 0
-
-
-def test_create_experiment_without_wandb_logging_flag_skips_wandb_entirely(client, db, monkeypatch):
-    """Even with a stored key, omitting wandb_logging must not start a logger."""
+def test_create_experiment_without_wandb_logging_flag_skips_wandb_entirely(client, db):
+    """Even with a stored key, omitting wandb_logging must not touch W&B."""
     db._creds[_FAKE_USER_ID] = WandbCredential(
         user_id=_FAKE_USER_ID, encrypted_api_key=encrypt_api_key("real-wandb-key")
     )
-    monkeypatch.setattr("arena.session.WandbGameLogger", _NoOpWandbLogger)
 
     resp = client.post("/experiment", json=_experiment_payload())
 
     assert resp.status_code == 200
-    assert len(_NoOpWandbLogger.instances) == 0
+    assert "wandb_run" not in resp.json()
