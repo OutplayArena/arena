@@ -51,5 +51,7 @@ export interface LeaderboardTableProps {
   className?: string;
   /** Number of shimmer rows to show while loading. */
   loadingRows?: number;
+  /** Show a dedicated "Owner" column with attribution (use for public/all scopes). */
+  showOwnerColumn?: boolean;
 }
 

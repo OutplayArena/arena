@@ -298,6 +298,7 @@ export function LeaderboardPage() {
           error={error}
           note={data?.note}
           loadingRows={8}
+          showOwnerColumn={!!user && scope !== "personal"}
           onRetry={() => { setLoading(true); setError(null); setRetry((r) => r + 1); }}
           emptyAction={
             <button
