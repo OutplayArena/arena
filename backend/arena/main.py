@@ -54,6 +54,13 @@ GAME_REGISTRY = GameRegistry()
 
 _logger_main = logging.getLogger(__name__)
 
+# In-process cache of live WandbGameLogger instances keyed by session_id.
+# Avoids re-creating the wandb.Run connection on every request from the
+# same container.  Populated on session creation; entries removed when the
+# game completes.  A new container (rolling update) rebuilds from DB+Redis
+# via _restore_wandb_logger().
+_session_loggers: dict[str, Any] = {}
+
 _broker: RedisBroker | None = None
 _persister: StatePersister | None = None
 _logger: MessageLogger | None = None
@@ -214,6 +221,74 @@ async def _gdpr_purge_loop() -> None:
         except Exception:
             _log.warning("GDPR purge loop error", exc_info=True)
         await asyncio.sleep(24 * 3600)
+
+
+async def _restore_wandb_logger(
+    session: "GameSession",
+    db: AsyncSession,
+    broker: "MessageBroker",
+) -> Any:
+    """Reconstruct a WandbGameLogger for a session after container replacement.
+
+    Tries the Redis cache first (fast, survives restarts as long as the cache
+    TTL holds), then falls back to the DB row.  Re-opens the W&B run with
+    resume='allow' so metrics continue on the same run rather than creating a
+    new one.  Returns None on any failure — never blocks the game.
+    """
+    meta = await broker.cache_get(f"session:{session.session_id}:wandb_run")
+    if not meta and session.wandb_run_meta:
+        meta = session.wandb_run_meta
+
+    if not meta:
+        return None
+
+    if not session.user_id:
+        return None
+
+    try:
+        from arena.models.wandb_credential import WandbCredential  # already imported
+        cred_result = await db.execute(
+            select(WandbCredential).where(WandbCredential.user_id == session.user_id)
+        )
+        cred = cred_result.scalar_one_or_none()
+        if cred is None:
+            return None
+
+        decrypted = decrypt_api_key(cred.encrypted_api_key)
+        try:
+            import wandb as _wandb
+            run = _wandb.init(
+                id=meta["run_id"],
+                project=meta.get("project"),
+                entity=meta.get("entity"),
+                resume="allow",
+                settings=_wandb.Settings(_api_key=decrypted),
+            )
+        finally:
+            decrypted = None  # type: ignore[assignment]
+
+        from arena.experiment_config import WandbConfig
+        from arena.integrations.wandb_logger import WandbGameLogger
+        logger = WandbGameLogger(
+            wandb_config=WandbConfig(
+                api_key="[restored]",
+                project=meta.get("project", "outplayarena"),
+                entity=meta.get("entity"),
+                run_name=meta.get("run_name"),
+            ),
+            game_config=session.config,
+            encrypted_api_key="[restored]",
+            agents=session.agents,
+        )
+        logger._run = run
+        return logger
+    except Exception:
+        _logger_main.warning(
+            "Could not restore W&B logger for session %s — continuing without it",
+            session.session_id,
+            exc_info=True,
+        )
+        return None
 
 
 async def _load_registries_from_db() -> None:
@@ -555,6 +630,23 @@ async def create_experiment(
         agents=agents,
     )
 
+    # Persist W&B run metadata and prime both caches.
+    if session.wandb_run_meta:
+        result = await db.execute(
+            select(SessionModel).where(SessionModel.id == session.session_id)
+        )
+        sess_row = result.scalar_one_or_none()
+        if sess_row is not None:
+            sess_row.wandb_run_json = session.wandb_run_meta
+            await db.commit()
+        await broker.cache_set(
+            f"session:{session.session_id}:wandb_run",
+            session.wandb_run_meta,
+            ttl=7200,
+        )
+        if session.wandb_logger:
+            _session_loggers[session.session_id] = session.wandb_logger
+
     response = session.creation_response()
 
     if MCP_ENDPOINT:
@@ -617,6 +709,18 @@ async def submit_action(
     """Submit an action (allocation or forfeit) for a player in a session."""
     session = await get_session(session_id, db)
     token = bearer_token(authorization)
+
+    # Restore the W&B logger if this container doesn't have one in-process.
+    # In-process cache hit: O(1).  Cache miss (new container after rolling update):
+    # reconstruct from Redis/DB — at most once per session per container lifetime.
+    if session.wandb_run_meta:
+        if session_id in _session_loggers:
+            session.wandb_logger = _session_loggers[session_id]
+        else:
+            restored = await _restore_wandb_logger(session, db, broker)
+            if restored:
+                session.wandb_logger = restored
+                _session_loggers[session_id] = restored
 
     try:
         session.submit_action_with_token(token, request.allocation, forfeit=request.forfeit)
@@ -683,6 +787,11 @@ async def submit_action(
         "player": player,
         "status": session.status,
     })
+
+    # Evict completed sessions from the in-process logger cache to bound memory.
+    if session.status == "completed":
+        _session_loggers.pop(session_id, None)
+
     return public
 
 

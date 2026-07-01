@@ -152,6 +152,7 @@ class BaseAgent:
         self._openai: OpenAI | None = None
         self._reasoning: ReasoningModerator | None = None
         self._stopped = False
+        self.wandb_run: dict[str, Any] | None = None
 
     # ── Lazy properties ───────────────────────────────────────────────────
 
@@ -212,6 +213,24 @@ class BaseAgent:
     def on_episode_end(self, results: dict[str, Any]) -> None:
         """Called once after the game is complete."""
 
+    def on_wandb_run_started(self, wandb_run: dict[str, Any]) -> None:
+        """Called once per episode the first time W&B run metadata arrives.
+
+        ``wandb_run`` contains: ``run_id``, ``run_name``, ``entity``,
+        ``project``, ``url``.
+
+        Override to attach your own W&B logging to the same run the platform
+        opened::
+
+            def on_wandb_run_started(self, wandb_run):
+                wandb.init(
+                    id=wandb_run["run_id"],
+                    project=wandb_run["project"],
+                    entity=wandb_run["entity"],
+                    resume="allow",
+                )
+        """
+
     def on_error(self, error: Exception, context: dict[str, Any]) -> None:
         """Default: re-raise. Subclasses can swallow, log, or recover."""
         raise error
@@ -257,6 +276,7 @@ class BaseAgent:
         first_state = await self._transport.get_state()
         self._last_state = first_state
         self._resolve_config(first_state.get("config"))
+        self._apply_wandb_run_meta(first_state)
         self.on_episode_start(self._session_id, self.seed)
 
         try:
@@ -283,6 +303,7 @@ class BaseAgent:
         while step < self.max_steps:
             state = self._last_state or await self._transport.get_state()
             self._last_state = state
+            self._apply_wandb_run_meta(state)
 
             if self._is_terminal(state):
                 return
@@ -556,6 +577,13 @@ class BaseAgent:
         if isinstance(config, dict):
             self._config = config
             self._seed_resolver.resolve_from_config(config)
+
+    def _apply_wandb_run_meta(self, state: dict[str, Any]) -> None:
+        """Extract W&B run metadata from a state response and fire the hook once."""
+        meta = state.get("wandb_run")
+        if meta and self.wandb_run is None:
+            self.wandb_run = meta
+            self.on_wandb_run_started(meta)
 
     async def _sleep(self) -> None:
         if self.poll_interval > 0:

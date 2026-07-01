@@ -110,6 +110,19 @@ class WandbGameLogger(BaseLogger):
         self._run.finish()
         self._run = None
 
+    @property
+    def run_meta(self) -> dict[str, Any] | None:
+        """Stable W&B run identifiers — safe to persist and share with SDK clients."""
+        if self._run is None:
+            return None
+        return {
+            "run_id":   self._run.id,
+            "run_name": self._run.name,
+            "entity":   self._run.entity,
+            "project":  self._run.project,
+            "url":      self._run.url,
+        }
+
     def _game_config_dict(self):
         if hasattr(self.game_config, "to_dict"):
             return self.game_config.to_dict()

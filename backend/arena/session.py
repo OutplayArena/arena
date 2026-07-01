@@ -49,6 +49,7 @@ class GameSession:
     messages: list[dict] | None = None
     runtime_config: ExperimentRuntimeConfig | None = None
     wandb_logger: WandbGameLogger | None = None
+    wandb_run_meta: dict | None = None
     wandb_finished: bool = False
 
     @classmethod
@@ -104,6 +105,7 @@ class GameSession:
             agents=agents,
             runtime_config=runtime_config,
             wandb_logger=wandb_logger,
+            wandb_run_meta=wandb_logger.run_meta if wandb_logger else None,
         )
 
     @classmethod
@@ -126,6 +128,7 @@ class GameSession:
             locked=row.locked,
             agents=row.agents_json,
             messages=row.messages_json,
+            wandb_run_meta=row.wandb_run_json,
         )
 
     async def save_new(self, db: AsyncSession, user_id: str | None = None, agents: dict[str, str] | None = None) -> None:
@@ -165,6 +168,8 @@ class GameSession:
             config_hash=self.config_hash,
         )
         result["messages"] = self.messages or []
+        if self.wandb_run_meta:
+            result["wandb_run"] = self.wandb_run_meta
         return result
 
     def add_message(self, sender: str, content: str, recipient: str = "all") -> dict:
@@ -258,12 +263,15 @@ class GameSession:
         )
 
     def creation_response(self):
-        return {
+        resp = {
             "session_id": self.session_id,
             "config_hash": self.config_hash,
             "config": self.config.to_dict() if hasattr(self.config, "to_dict") else {},
             "player_tokens": dict(self.player_tokens),
         }
+        if self.wandb_run_meta:
+            resp["wandb_run"] = self.wandb_run_meta
+        return resp
 
     def player_for_token(self, token):
         try:
