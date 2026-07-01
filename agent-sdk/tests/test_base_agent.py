@@ -1246,3 +1246,46 @@ class TestBudgetExhausted:
             # 1st response). On failure, last_text is preserved.
             assert action == ""
             assert text == ""
+
+
+# ── _apply_wandb_run_meta ─────────────────────────────────────────────────────
+
+
+class TestApplyWandbRunMeta:
+    def _agent(self):
+        return BaseAgent(
+            player="A",
+            player_token=_make_session_token(),
+            session_id="test-session-1",
+            arena_url="http://x",
+            llm_config=_make_llm_config(),
+        )
+
+    def test_sets_wandb_run_and_fires_hook_on_first_meta(self):
+        agent = self._agent()
+        fired = []
+        agent.on_wandb_run_started = lambda meta: fired.append(meta)
+
+        meta = {"run_id": "abc", "run_name": "run-1", "entity": "lab", "project": "p", "url": "http://w"}
+        agent._apply_wandb_run_meta({"wandb_run": meta})
+
+        assert agent.wandb_run == meta
+        assert fired == [meta]
+
+    def test_does_not_fire_hook_twice(self):
+        agent = self._agent()
+        fired = []
+        agent.on_wandb_run_started = lambda meta: fired.append(meta)
+
+        meta = {"run_id": "abc"}
+        agent._apply_wandb_run_meta({"wandb_run": meta})
+        agent._apply_wandb_run_meta({"wandb_run": meta})  # second call is no-op
+
+        assert len(fired) == 1
+
+    def test_noop_when_no_wandb_run_in_state(self):
+        agent = self._agent()
+
+        agent._apply_wandb_run_meta({"phase": "playing"})
+
+        assert agent.wandb_run is None
