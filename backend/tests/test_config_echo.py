@@ -28,6 +28,7 @@ importlib.reload(arena.main)
 from arena.main import app, get_broker  # noqa: E402
 from arena.db import get_db  # noqa: E402
 from arena.auth.dependencies import require_user, _ensure_local_user  # noqa: E402
+from arena.experiment_config import ExperimentRuntimeConfig  # noqa: E402
 from arena.session import GameSession  # noqa: E402
 
 
@@ -190,7 +191,7 @@ def test_creation_response_session_level_config_equals_engine_config():
         rounds=1,
         seed=7,
     )
-    session = GameSession.create(cfg)
+    session = GameSession.create(cfg, runtime_config=ExperimentRuntimeConfig())
     response = session.creation_response()
 
     assert response["config"] == cfg.to_dict()

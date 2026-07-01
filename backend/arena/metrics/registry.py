@@ -183,17 +183,6 @@ class AgentRegistry:
 
     # ── serialization for DB persistence ────────────────────────────────────
 
-    def clear(self) -> None:
-        """Reset all state to empty — used before a full leaderboard rebuild."""
-        self.elo_ratings = defaultdict(lambda: 1200.0)
-        self.marginal_payoffs = defaultdict(lambda: defaultdict(list))
-        self.match_history = []
-        self.matches_played = defaultdict(int)
-        self.agg_metrics = defaultdict(lambda: defaultdict(float))
-        self.agg_metric_counts = defaultdict(lambda: defaultdict(int))
-        self.match_timestamps = {}
-        self.elo_snapshots = defaultdict(list)
-
     def to_dict(self) -> dict:
         return {
             "alpha": self.alpha,

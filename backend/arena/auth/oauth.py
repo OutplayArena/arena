@@ -62,15 +62,7 @@ def _google_client() -> StarletteOAuth2App:
     return oauth.google  # type: ignore[no-any-return]
 
 
-async def _upsert_user(
-    db: AsyncSession,
-    provider: str,
-    provider_user_id: str,
-    email: str,
-    name: str,
-    avatar_url: str | None,
-    username: str | None = None,
-) -> User:
+async def _upsert_user(db: AsyncSession, provider: str, provider_user_id: str, email: str, name: str, avatar_url: str | None) -> User:
     result = await db.execute(
         select(User).where(User.provider == provider, User.provider_user_id == provider_user_id)
     )
@@ -80,8 +72,6 @@ async def _upsert_user(
         user.name = name
         user.avatar_url = avatar_url
         user.last_login_at = datetime.now(timezone.utc)
-        if username:
-            user.username = username
         await db.commit()
         await db.refresh(user)
     else:
@@ -92,7 +82,6 @@ async def _upsert_user(
             avatar_url=avatar_url,
             provider=provider,
             provider_user_id=provider_user_id,
-            username=username,
         )
         db.add(user)
         await db.commit()
@@ -150,9 +139,6 @@ async def github_callback(request: Any, db: AsyncSession) -> User:
 
     name = profile.get("name") or profile.get("login", "")
     avatar_url = profile.get("avatar_url")
-    # Store the GitHub login handle (@handle) as the public display username —
-    # never the email or numeric user ID.
-    username = profile.get("login") or None
 
     return await _upsert_user(
         db,
@@ -161,7 +147,6 @@ async def github_callback(request: Any, db: AsyncSession) -> User:
         email=email,
         name=name,
         avatar_url=avatar_url,
-        username=username,
     )
 
 
@@ -177,10 +162,6 @@ async def google_callback(request: Any, db: AsyncSession) -> User:
     resp = await client.get("oauth2/v3/userinfo", token=token)
     userinfo = resp.json()
 
-    # Google's given_name is the first name only (e.g. "Alice") — safe to display
-    # publicly without revealing a full name, surname, or email.
-    given_name = userinfo.get("given_name") or (userinfo.get("name", "").split()[0] if userinfo.get("name") else None)
-
     return await _upsert_user(
         db,
         provider="google",
@@ -188,5 +169,4 @@ async def google_callback(request: Any, db: AsyncSession) -> User:
         email=userinfo.get("email", ""),
         name=userinfo.get("name", ""),
         avatar_url=userinfo.get("picture"),
-        username=given_name,
     )

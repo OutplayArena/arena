@@ -12,7 +12,7 @@ import type { SiteConfig } from "./types";
 
 function createMockAuth(overrides: Partial<AuthState> = {}): AuthState {
   return {
-    user: { id: "test-user", email: "test@test.com", name: "Test User", avatar_url: null, privacy_accepted: true, username: "testuser" },
+    user: { id: "test-user", email: "test@test.com", name: "Test User", avatar_url: null },
     token: "mock-token",
     loading: false,
     hasProviders: true,
@@ -20,7 +20,6 @@ function createMockAuth(overrides: Partial<AuthState> = {}): AuthState {
     sessionExpired: false,
     login: vi.fn(),
     logout: vi.fn(),
-    refreshUser: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }

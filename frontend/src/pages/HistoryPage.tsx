@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { listSessions, listGames, deleteSession, setSessionVisibility } from "../api";
+import { listSessions, listGames, deleteSession } from "../api";
 import { outcomeBadge, statusBadge } from "../components/badges";
 import type { SessionSummary, GameEntry } from "../types";
 
@@ -17,7 +17,6 @@ export function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [togglingVisibility, setTogglingVisibility] = useState<string | null>(null);
 
   const game = searchParams.get("game") || "";
   const agent = searchParams.get("agent") || "";
@@ -48,20 +47,6 @@ export function HistoryPage() {
     const next = new URLSearchParams(searchParams);
     if (value) next.set(key, value); else next.delete(key);
     setSearchParams(next);
-  };
-
-  const handleToggleVisibility = async (sessionId: string, currentIsPublic: boolean) => {
-    setTogglingVisibility(sessionId);
-    try {
-      await setSessionVisibility(sessionId, !currentIsPublic);
-      setSessions((prev) => prev.map((s) =>
-        s.id === sessionId ? { ...s, is_public: !currentIsPublic } : s
-      ));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setTogglingVisibility(null);
-    }
   };
 
   const handleDelete = async (sessionId: string) => {
@@ -132,7 +117,6 @@ export function HistoryPage() {
                 <th className="px-4 py-2.5 text-[11px] font-mono font-medium text-muted">Agent A</th>
                 <th className="px-4 py-2.5 text-[11px] font-mono font-medium text-muted">Agent B</th>
                 <th className="px-4 py-2.5 text-[11px] font-mono font-medium text-muted">Outcome</th>
-                <th className="px-4 py-2.5 text-[11px] font-mono font-medium text-muted">Visibility</th>
                 <th className="px-3 py-2.5 w-0" />
               </tr>
             </thead>
@@ -149,34 +133,6 @@ export function HistoryPage() {
                   <td className="px-4 py-2.5 text-xs text-ink font-medium" onClick={() => navigate(`/play/${s.game_slug || games[0]?.slug || ""}/${s.id}`)}>{s.agent_a || "Unknown"}</td>
                   <td className="px-4 py-2.5 text-xs text-ink font-medium" onClick={() => navigate(`/play/${s.game_slug || games[0]?.slug || ""}/${s.id}`)}>{s.agent_b || "Unknown"}</td>
                   <td className="px-4 py-2.5" onClick={() => navigate(`/play/${s.game_slug || games[0]?.slug || ""}/${s.id}`)}>{outcomeBadge(s.winner)}</td>
-                  <td className="px-4 py-2.5">
-                    {s.status === "completed" ? (
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleToggleVisibility(s.id, s.is_public); }}
-                        disabled={togglingVisibility === s.id}
-                        title={s.is_public ? "Public — click to make private" : "Private — click to publish to leaderboard"}
-                        className={`flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-[var(--radius-chip)] transition-colors ${
-                          s.is_public
-                            ? "text-success bg-success/10 hover:bg-success/20"
-                            : "text-muted bg-surface-container hover:bg-line"
-                        }`}
-                      >
-                        {s.is_public ? (
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                          </svg>
-                        ) : (
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                          </svg>
-                        )}
-                        {s.is_public ? "Public" : "Private"}
-                      </button>
-                    ) : (
-                      <span className="text-[11px] text-quiet">—</span>
-                    )}
-                  </td>
                   <td className="px-2 py-2.5">
                     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       {s.locked ? (

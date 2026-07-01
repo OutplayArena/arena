@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from arena._version import ARENA_VERSION  # noqa: E402
 from mcp.server.transport_security import TransportSecuritySettings  # noqa: E402
 from mcp.server.fastmcp import FastMCP  # noqa: E402
 from outplayarena_sdk.client import ArenaClient  # noqa: E402
@@ -250,12 +249,6 @@ def get_agent_manifest(game: str) -> dict:
     how to interact with the platform without needing the OutplayArena SDK.
     """
     return arena_client().get_agent_manifest(game)
-
-
-@mcp.tool()
-def get_arena_version() -> dict:
-    """Return the running OutplayArena platform version."""
-    return {"version": ARENA_VERSION}
 
 
 @mcp.prompt("arena-intro")

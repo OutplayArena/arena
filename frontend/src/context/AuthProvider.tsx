@@ -56,15 +56,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSessionExpired(false);
   }, []);
 
-  const refreshUser = useCallback(async () => {
-    if (!token) return;
-    const u = await request<UserInfo>("/api/auth/me");
-    setUser(u);
-  }, [token]);
-
   const value = useMemo(() => ({
-    user, token, loading, hasProviders, providers, sessionExpired, login, logout, refreshUser
-  }), [user, token, loading, hasProviders, providers, sessionExpired, login, logout, refreshUser]);
+    user, token, loading, hasProviders, providers, sessionExpired, login, logout
+  }), [user, token, loading, hasProviders, providers, sessionExpired, login, logout]);
 
   return (
     <AuthContext.Provider value={value}>

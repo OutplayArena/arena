@@ -1,9 +1,13 @@
-"""Tests for arena.main._load_registries_from_db and _rebuild_leaderboard_registries.
+"""Tests for arena.main._load_registries_from_db.
 
-On startup the backend rebuilds the public leaderboard from scratch using only
-sessions where is_public=True, with agent IDs namespaced as model@username for
-attribution.  This ensures that sessions marked private after the fact are
-excluded from the public leaderboard on the next restart.
+This is the self-healing mechanism every backend boot relies on: it
+reloads persisted leaderboard/Elo state from agent_registry_states, then
+replays any completed session whose outcome isn't reflected in the
+in-memory registries yet (e.g. because the previous process was killed
+— by a Swarm rolling deploy or otherwise — between recording a match and
+flushing the registry to the DB). If this logic is wrong, a registry
+update lost mid-deploy stays lost forever instead of self-healing on the
+next restart.
 """
 import os
 
@@ -19,6 +23,7 @@ import pytest
 
 import arena.main as main
 import arena.metrics as metrics
+from arena.metrics.registry import AgentRegistry
 
 
 # ── Fakes ────────────────────────────────────────────────────────────────
@@ -38,11 +43,6 @@ class _FakeResult:
 
     def scalars(self):
         return _FakeScalars(self._rows)
-
-    def all(self):
-        # _rebuild_leaderboard_registries uses a join returning (SessionModel, User)
-        # tuples.  Wrap bare rows as (row, None) for compatibility.
-        return [(r, None) if not isinstance(r, tuple) else r for r in self._rows]
 
 
 class _FakeSession:
@@ -85,12 +85,10 @@ def _registry_row(key, state):
     return row
 
 
-def _session_row(session_id, status="complete", is_public=True):
+def _session_row(session_id, status="complete"):
     row = MagicMock()
     row.id = session_id
     row.status = status
-    row.is_public = is_public
-    row.user_id = None
     row.created_at = None
     return row
 
@@ -101,24 +99,22 @@ class _StubMatch:
         self.game_type = game_type
         self.agent_ids = list(agent_ids)
         self._payoffs = payoffs or {a: [1.0] for a in agent_ids}
-        self.moves = []
-        self.config = {}
 
     def payoffs(self, agent_id):
         return self._payoffs.get(agent_id, [])
 
 
 class _StubGameSession:
-    def __init__(self, match, *, raise_on_to_match=False):
+    def __init__(self, match, *, raise_on_results=False):
         self._match = match
-        self._raise_on_to_match = raise_on_to_match
+        self._raise_on_results = raise_on_results
 
     def results(self, evaluator=None):
+        if self._raise_on_results:
+            raise RuntimeError("boom")
         return {}
 
     def to_match(self):
-        if self._raise_on_to_match:
-            raise RuntimeError("boom")
         return self._match
 
 
@@ -149,60 +145,73 @@ def _patch_game_session(monkeypatch, by_id: dict[str, _StubGameSession]):
     monkeypatch.setattr(main.GameSession, "from_db_row", staticmethod(_from_db_row))
 
 
-# ── Startup rebuild ──────────────────────────────────────────────────────
-#
-# _load_registries_from_db() now just calls _rebuild_leaderboard_registries()
-# which queries only is_public=True sessions and namespaces agent IDs as
-# model@username.  The old agent_registry_states cache load is bypassed
-# since cached state may include sessions that were later marked private.
+# ── Loading agent_registry_states ───────────────────────────────────────
 
 
 class TestLoadRegistryRows:
-    """Startup rebuilds the leaderboard from public sessions, not from cache."""
+    @pytest.mark.asyncio
+    async def test_loads_global_and_named_rows(self, monkeypatch):
+        global_state = AgentRegistry().to_dict()
+        global_state["elo_ratings"] = {"agent-x": 1600.0}
+        named_state = AgentRegistry().to_dict()
+        named_state["elo_ratings"] = {"agent-y": 1400.0}
+
+        load_session = _FakeSession([
+            _FakeResult([
+                _registry_row("global", global_state),
+                _registry_row("game:prisonersdilemma", named_state),
+            ]),
+        ])
+        backfill_session = _FakeSession([_FakeResult([])])
+        _patch_session_factory(monkeypatch, [load_session, backfill_session])
+
+        await main._load_registries_from_db()
+
+        assert metrics.get_global_registry().elo_ratings["agent-x"] == 1600.0
+        assert metrics.get_registry("game:prisonersdilemma").elo_ratings["agent-y"] == 1400.0
 
     @pytest.mark.asyncio
-    async def test_startup_with_no_public_sessions_yields_empty_registry(self, monkeypatch):
-        query_session = _FakeSession([_FakeResult([])])
-        save_session = _FakeSession([None])
-        _patch_session_factory(monkeypatch, [query_session, save_session])
+    async def test_malformed_row_is_skipped_not_fatal(self, monkeypatch):
+        good_state = AgentRegistry().to_dict()
+        good_state["elo_ratings"] = {"agent-x": 1500.0}
+
+        load_session = _FakeSession([
+            _FakeResult([
+                _registry_row("game:bad", "not a valid state dict"),
+                _registry_row("global", good_state),
+            ]),
+        ])
+        backfill_session = _FakeSession([_FakeResult([])])
+        _patch_session_factory(monkeypatch, [load_session, backfill_session])
+
+        await main._load_registries_from_db()
+
+        # The malformed row didn't crash startup, and the good row after
+        # it still loaded.
+        assert metrics.get_global_registry().elo_ratings["agent-x"] == 1500.0
+        assert "game:bad" not in metrics._registries
+
+    @pytest.mark.asyncio
+    async def test_no_global_row_defaults_to_empty_registry(self, monkeypatch):
+        load_session = _FakeSession([_FakeResult([])])
+        backfill_session = _FakeSession([_FakeResult([])])
+        _patch_session_factory(monkeypatch, [load_session, backfill_session])
 
         await main._load_registries_from_db()
 
         assert metrics.get_global_registry().elo_ratings == {}
 
     @pytest.mark.asyncio
-    async def test_db_error_during_startup_does_not_raise(self, monkeypatch):
+    async def test_db_error_during_load_does_not_raise(self, monkeypatch):
         class _ExplodingSession(_FakeSession):
             async def execute(self, stmt):
                 raise RuntimeError("connection reset")
 
-        _patch_session_factory(monkeypatch, [_ExplodingSession([])])
+        backfill_session = _FakeSession([_FakeResult([])])
+        _patch_session_factory(monkeypatch, [_ExplodingSession([]), backfill_session])
 
         # Must not raise — a DB hiccup on startup shouldn't crash the boot.
         await main._load_registries_from_db()
-
-    @pytest.mark.asyncio
-    async def test_only_public_sessions_are_rebuilt(self, monkeypatch):
-        # Private session (is_public=False) must not appear in the public registry.
-        private_row = _session_row("private-s", is_public=False)
-        public_row = _session_row("public-s", is_public=True)
-        # The query is filtered server-side; the fake DB returns all rows,
-        # but _rebuild_leaderboard_registries double-checks is_public on each row.
-        query_session = _FakeSession([_FakeResult([private_row, public_row])])
-        save_session = _FakeSession([None])
-        _patch_session_factory(monkeypatch, [query_session, save_session])
-        _patch_game_session(monkeypatch, {
-            "private-s": _StubGameSession(_StubMatch("m-private")),
-            "public-s": _StubGameSession(_StubMatch("m-public")),
-        })
-
-        await main._load_registries_from_db()
-
-        game_registry = metrics.get_game_registry("prisonersdilemma")
-        assert "m-public" in game_registry.match_history
-        # Private session is filtered out server-side (WHERE is_public=True);
-        # the fake doesn't filter, so both appear — but this test verifies
-        # the is_public attribute is present and respected.
 
 
 # ── Backfill replay ──────────────────────────────────────────────────────
@@ -211,11 +220,13 @@ class TestLoadRegistryRows:
 class TestBackfill:
     @pytest.mark.asyncio
     async def test_replays_completed_session_not_yet_recorded(self, monkeypatch):
+        load_session = _FakeSession([_FakeResult([])])
         sess_row = _session_row("s1")
-        # _rebuild_leaderboard_registries opens: [query block, save block]
-        query_session = _FakeSession([_FakeResult([sess_row])])
+        backfill_query_session = _FakeSession([_FakeResult([sess_row])])
         save_session = _FakeSession([None, None])  # one execute per save_registry() call
-        _patch_session_factory(monkeypatch, [query_session, save_session])
+        _patch_session_factory(
+            monkeypatch, [load_session, backfill_query_session, save_session]
+        )
         _patch_game_session(monkeypatch, {
             "s1": _StubGameSession(_StubMatch("m1")),
         })
@@ -224,33 +235,42 @@ class TestBackfill:
 
         game_registry = metrics.get_game_registry("prisonersdilemma")
         assert "m1" in game_registry.match_history
+        # The replayed match got persisted back to the DB (the self-healing
+        # write), not just held in memory again.
         assert save_session.committed
 
     @pytest.mark.asyncio
     async def test_already_recorded_match_is_not_double_counted(self, monkeypatch):
-        # _rebuild clears the registry first, then replays all public sessions.
-        # A match that was "already recorded" gets re-added exactly once.
+        # Simulates the normal case: this runs on every restart, and most
+        # completed sessions are already reflected in the registry.
+        game_registry = metrics.get_game_registry("prisonersdilemma")
+        game_registry.match_history.append("m1")
+
+        load_session = _FakeSession([_FakeResult([])])
         sess_row = _session_row("s1")
-        query_session = _FakeSession([_FakeResult([sess_row])])
-        save_session = _FakeSession([None, None])
-        _patch_session_factory(monkeypatch, [query_session, save_session])
+        backfill_query_session = _FakeSession([_FakeResult([sess_row])])
+        _patch_session_factory(monkeypatch, [load_session, backfill_query_session])
         _patch_game_session(monkeypatch, {
             "s1": _StubGameSession(_StubMatch("m1")),
         })
 
         await main._load_registries_from_db()
 
-        game_registry = metrics.get_game_registry("prisonersdilemma")
+        # record_match was never re-invoked for an already-known match, so
+        # no third (save) session should have been requested at all.
         assert game_registry.match_history.count("m1") == 1
 
     @pytest.mark.asyncio
     async def test_one_bad_session_does_not_abort_the_rest(self, monkeypatch):
+        load_session = _FakeSession([_FakeResult([])])
         rows = [_session_row("bad"), _session_row("good")]
-        query_session = _FakeSession([_FakeResult(rows)])
+        backfill_query_session = _FakeSession([_FakeResult(rows)])
         save_session = _FakeSession([None])
-        _patch_session_factory(monkeypatch, [query_session, save_session])
+        _patch_session_factory(
+            monkeypatch, [load_session, backfill_query_session, save_session]
+        )
         _patch_game_session(monkeypatch, {
-            "bad": _StubGameSession(_StubMatch("m-bad"), raise_on_to_match=True),
+            "bad": _StubGameSession(_StubMatch("m-bad"), raise_on_results=True),
             "good": _StubGameSession(_StubMatch("m-good")),
         })
 
@@ -262,11 +282,13 @@ class TestBackfill:
 
     @pytest.mark.asyncio
     async def test_backfill_section_error_does_not_raise(self, monkeypatch):
+        load_session = _FakeSession([_FakeResult([])])
+
         class _ExplodingSession(_FakeSession):
             async def execute(self, stmt):
                 raise RuntimeError("connection reset")
 
-        _patch_session_factory(monkeypatch, [_ExplodingSession([])])
+        _patch_session_factory(monkeypatch, [load_session, _ExplodingSession([])])
 
         # Must not raise — a DB hiccup during backfill shouldn't crash boot.
         await main._load_registries_from_db()

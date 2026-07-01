@@ -7,9 +7,6 @@ import wandb
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from arena._version import ARENA_VERSION
-from arena.integrations.base_logger import BaseLogger
-
 
 ENCRYPTION_KEY_ENV = "OUTPLAYARENA_WANDB_ENCRYPTION_KEY"
 
@@ -63,18 +60,11 @@ def decrypt_api_key(encrypted: str, key: bytes | None = None) -> str:
         raise WandbConfigError("could not decrypt wandb api key") from exc
 
 
-class WandbGameLogger(BaseLogger):
-    def __init__(
-        self,
-        wandb_config,
-        game_config,
-        encrypted_api_key: str,
-        agents: dict[str, str] | None = None,
-    ):
+class WandbGameLogger:
+    def __init__(self, wandb_config, game_config, encrypted_api_key: str):
         self.wandb_config = wandb_config
         self.game_config = game_config
         self.encrypted_api_key = encrypted_api_key
-        self.agents = agents
         self._run = None
 
     # Start a W&B run using the decrypted session-scoped API key.
@@ -86,9 +76,8 @@ class WandbGameLogger(BaseLogger):
                 entity=self.wandb_config.entity,
                 name=self.wandb_config.run_name,
                 tags=list(self.wandb_config.tags or []),
-                config=self._full_config_dict(),
-                settings=wandb.Settings(api_key=api_key),
-                reinit="create_new",
+                config=self._game_config_dict(),
+                settings=wandb.Settings(_api_key=api_key),
             )
         finally:
             api_key = None
@@ -112,65 +101,7 @@ class WandbGameLogger(BaseLogger):
         self._run.finish()
         self._run = None
 
-    def log_complete_session(
-        self,
-        round_payloads: list[tuple[dict[str, Any], int]],
-        terminal_payload: dict[str, Any],
-    ) -> dict[str, Any] | None:
-        """Open a run, log all rounds and terminal metrics in one shot, finish.
-
-        This is the stateless entry point: no persistent run object is held
-        between calls.  Returns run_meta on success, None on any failure.
-        """
-        api_key = decrypt_api_key(self.encrypted_api_key)
-        try:
-            run = wandb.init(
-                project=self.wandb_config.project,
-                entity=self.wandb_config.entity,
-                name=self.wandb_config.run_name,
-                tags=list(self.wandb_config.tags or []),
-                config=self._full_config_dict(),
-                settings=wandb.Settings(api_key=api_key),
-                reinit="create_new",
-            )
-        finally:
-            api_key = None
-            del api_key
-
-        try:
-            for payload, step in round_payloads:
-                run.log(payload, step=step)
-            run.log(terminal_payload)
-            return {
-                "run_id":   run.id,
-                "run_name": run.name,
-                "entity":   run.entity,
-                "project":  run.project,
-                "url":      run.url,
-            }
-        finally:
-            run.finish()
-
-    @property
-    def run_meta(self) -> dict[str, Any] | None:
-        """Stable W&B run identifiers — safe to persist and share with SDK clients."""
-        if self._run is None:
-            return None
-        return {
-            "run_id":   self._run.id,
-            "run_name": self._run.name,
-            "entity":   self._run.entity,
-            "project":  self._run.project,
-            "url":      self._run.url,
-        }
-
     def _game_config_dict(self):
         if hasattr(self.game_config, "to_dict"):
             return self.game_config.to_dict()
         return self.game_config
-
-    def _full_config_dict(self) -> dict[str, Any]:
-        cfg = self._game_config_dict()
-        if not isinstance(cfg, dict):
-            cfg = {"config": cfg}
-        return {**cfg, "agents": self.agents or {}, "arena_version": ARENA_VERSION}

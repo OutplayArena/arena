@@ -8,7 +8,6 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { GamePlayPage } from "./pages/GamePlayPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { KeysPage } from "./pages/KeysPage";
-import { SettingsPage } from "./pages/SettingsPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { GamesPage } from "./pages/GamesPage";
 import { PapersPage } from "./pages/PapersPage";
@@ -17,7 +16,6 @@ import { AgentDetailPage } from "./pages/AgentDetailPage";
 import { DocsPage } from "./pages/DocsPage";
 import { GettingStartedPage } from "./pages/GettingStartedPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import { PrivacyGate } from "./components/PrivacyGate";
 
 export default function App() {
   // Hide the React chrome on /docs/* so the user gets the mkdocs Material
@@ -30,7 +28,6 @@ export default function App() {
 
   return (
     <div className="flex flex-col min-h-screen min-h-dvh">
-      <PrivacyGate />
       {!isDocs && <NavBar />}
       <main className="flex-1 flex flex-col min-h-0">
         <ErrorBoundary>
@@ -74,14 +71,6 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <HistoryPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <SettingsPage />
                 </ProtectedRoute>
               }
             />

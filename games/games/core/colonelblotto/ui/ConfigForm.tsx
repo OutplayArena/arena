@@ -20,7 +20,7 @@ export default function BlottoConfigForm({ gameSlug, locked, sessionStatus, init
   const seedRef = useRef<HTMLInputElement>(null);
 
   const { players, setPlayers, agents, remoteKeys,
-    status, running, isReplay, formDisabled, handleStartGame, wandbLogging } =
+    status, running, isReplay, formDisabled, handleStartGame } =
     useGameConfig({ gameSlug, locked, sessionStatus, initialValues,
       defaultAgents: ["interactive", "remote"] });
 
@@ -54,7 +54,6 @@ export default function BlottoConfigForm({ gameSlug, locked, sessionStatus, init
       onStartGame={onSubmit}
       disabled={formDisabled} running={running}
       isReplay={isReplay} locked={locked} status={status}
-      wandbLogging={wandbLogging}
     >
       <label className="grid gap-1 text-[10px] font-extrabold text-muted uppercase tracking-wider">
         Rounds

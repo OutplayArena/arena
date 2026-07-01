@@ -17,7 +17,7 @@ export default function UltimatumConfigForm({ gameSlug, locked, sessionStatus, i
   const seedRef = useRef<HTMLInputElement>(null);
 
   const { players, setPlayers, agents, remoteKeys,
-    status, running, isReplay, formDisabled, handleStartGame, wandbLogging } =
+    status, running, isReplay, formDisabled, handleStartGame } =
     useGameConfig({ gameSlug, locked, sessionStatus, initialValues,
       defaultAgents: ["interactive", "remote"] });
 
@@ -37,7 +37,6 @@ export default function UltimatumConfigForm({ gameSlug, locked, sessionStatus, i
       onStartGame={onSubmit}
       disabled={formDisabled} running={running}
       isReplay={isReplay} locked={locked} status={status}
-      wandbLogging={wandbLogging}
     >
       <div className="rounded-lg border border-sky-200 dark:border-sky-800/40 bg-sky-50 dark:bg-sky-950/20 px-3 py-2">
         <p className="text-[11px] text-sky-700 dark:text-sky-300 font-semibold">

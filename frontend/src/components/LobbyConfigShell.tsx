@@ -1,9 +1,7 @@
 import type { ReactNode } from "react";
 import type { GameAgent } from "@frontend/types";
 import { PlayerSetupCard, type PlayerSetupValue } from "./PlayerSetupCard";
-import { WandbLoggingSection } from "./WandbLoggingSection";
 import { useApp } from "@frontend/hooks/useApp";
-import type { WandbLoggingState, WandbLoggingSetters } from "@frontend/hooks/useWandbLoggingConfig";
 
 interface LobbyConfigShellProps {
   players: PlayerSetupValue[];
@@ -19,7 +17,6 @@ interface LobbyConfigShellProps {
   minPlayers?: number;
   maxPlayers?: number;
   children?: ReactNode;
-  wandbLogging?: WandbLoggingState & WandbLoggingSetters;
 }
 
 const PLAYER_IDS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
@@ -38,7 +35,6 @@ export function LobbyConfigShell({
   minPlayers = 2,
   maxPlayers = 2,
   children,
-  wandbLogging,
 }: LobbyConfigShellProps) {
   const { state } = useApp();
   const effectiveStatus = state.sessionStatus;
@@ -158,11 +154,6 @@ export function LobbyConfigShell({
             </h2>
             <div className="space-y-3">{children}</div>
           </section>
-        )}
-
-        {/* Logging — always rendered for every game */}
-        {wandbLogging && (
-          <WandbLoggingSection {...wandbLogging} disabled={disabled} />
         )}
       </div>
 
