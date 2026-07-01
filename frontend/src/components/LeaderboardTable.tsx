@@ -10,18 +10,44 @@ function splitAgentId(agentId: string): { model: string; provider: string } {
   return { model: agentId, provider: "Unknown" };
 }
 
-function AgentName({ agentId }: { agentId: string }) {
+function AgentName({
+  agentId,
+  displayName,
+  ownerUsername,
+  isOwn,
+}: {
+  agentId: string;
+  displayName?: string;
+  ownerUsername?: string | null;
+  isOwn?: boolean;
+}) {
   const navigate = useNavigate();
-  const { model, provider } = splitAgentId(agentId);
+  const { model, provider } = splitAgentId(displayName || agentId);
   return (
-    <button
-      type="button"
-      onClick={() => navigate(`/leaderboard/${encodeURIComponent(agentId)}`)}
-      className="text-left font-mono text-xs text-accent hover:text-accent/80 hover:underline transition-colors"
-    >
-      <span className="font-semibold">{model}</span>
-      <span className="text-muted ml-1.5">({provider})</span>
-    </button>
+    <div className="flex items-center gap-2 min-w-0">
+      <button
+        type="button"
+        onClick={() => navigate(`/leaderboard/${encodeURIComponent(agentId)}`)}
+        className="text-left font-mono text-xs text-accent hover:text-accent/80 hover:underline transition-colors truncate"
+      >
+        <span className="font-semibold">{model}</span>
+        {provider !== "Unknown" && (
+          <span className="text-muted ml-1.5">({provider})</span>
+        )}
+      </button>
+      {/* Attribution chip — shown in public/all scope for non-own entries */}
+      {ownerUsername && !isOwn && (
+        <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-[var(--radius-chip)] bg-surface-container text-muted">
+          @{ownerUsername}
+        </span>
+      )}
+      {/* "You" badge for the current user's own entries in mixed scope */}
+      {isOwn && ownerUsername && (
+        <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-[var(--radius-chip)] bg-accent/10 text-accent">
+          You
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -116,7 +142,7 @@ export function LeaderboardTable({
           {rows.map((row, i) => (
             <tr key={row.agentId} className={`border-b border-line/50 last:border-0 ${i % 2 === 1 ? "bg-surface-soft/50" : ""} hover:bg-surface-soft/80 transition-colors`}>
               <td className="px-5 py-3.5"><RankBadge rank={i + 1} /></td>
-              <td className="px-5 py-3.5"><AgentName agentId={row.agentId} /></td>
+              <td className="px-5 py-3.5"><AgentName agentId={row.agentId} displayName={row.displayName} ownerUsername={row.ownerUsername} isOwn={row.isOwn} /></td>
               <td className="px-5 py-3.5">
                 <span className="text-xs font-mono text-ink">{row.matches_played}</span>
               </td>

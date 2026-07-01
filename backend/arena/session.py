@@ -235,7 +235,13 @@ class GameSession:
         history = state_dict.get("history", [])
         config_dict = self.config.to_dict() if hasattr(self.config, "to_dict") else {}
         game_type = config_dict.get("game", "unknown")
-        player_ids = list(self.config.player_ids()) if hasattr(self.config, "player_ids") else ["A", "B"]
+        role_ids = list(self.config.player_ids()) if hasattr(self.config, "player_ids") else ["A", "B"]
+
+        # Resolve role labels ("A", "B") to actual model/agent names from
+        # agents_json so the leaderboard tracks real identifiers, not generic roles.
+        # Falls back to the role ID when agents_json is absent or incomplete.
+        agents = self.agents or {}
+        agent_names = {role: (agents.get(role) or role) for role in role_ids}
 
         moves = []
         for entry in history:
@@ -243,12 +249,12 @@ class GameSession:
             actions = entry.get("allocations") or entry.get("actions", {})
             scores = entry.get("payoffs") or entry.get("scores", {})
 
-            for player in player_ids:
-                action = actions.get(player)
-                payoff = float(scores.get(player, 0))
+            for role in role_ids:
+                action = actions.get(role)
+                payoff = float(scores.get(role, 0))
                 if action is not None:
                     moves.append(Move(
-                        agent_id=player,
+                        agent_id=agent_names[role],
                         round_number=round_num,
                         action=action,
                         payoff=payoff,
@@ -257,7 +263,7 @@ class GameSession:
         return Match(
             match_id=self.session_id,
             game_type=game_type,
-            agent_ids=player_ids,
+            agent_ids=list(agent_names.values()),
             moves=moves,
             config=config_dict,
         )

@@ -29,7 +29,7 @@ from arena.game_registry import GameRegistry, GameRegistryError
 from arena.manifest import build_agent_manifest
 from arena.messaging import RedisBroker, StatePersister, MessageLogger
 from arena.messaging.broker import MessageBroker
-from arena.metrics import AgentRegistry, get_global_registry, set_global_registry, set_registry, get_all_registries, get_game_registry, MatchEvaluator, save_registry
+from arena.metrics import AgentRegistry, get_global_registry, set_global_registry, get_all_registries, get_game_registry, MatchEvaluator, save_registry
 from arena.session import GameSession, _serialize_state
 from arena.models.session import SessionModel
 from arena.models.api_key import ApiKey
@@ -291,89 +291,152 @@ async def _restore_wandb_logger(
         return None
 
 
-async def _load_registries_from_db() -> None:
-    """Load persisted AgentRegistry state from the agent_registry_states
-    table, then replay any completed sessions whose match_id is not yet in
-    the registries (backfill for sessions that completed against an older
-    backend version that didn't record per-game state)."""
-    import json
-    import logging
-    logger = logging.getLogger("arena.leaderboard")
-    try:
-        async with _async_session_factory() as db:
-            from arena.models.agent_registry import AgentRegistryState
-            from sqlalchemy import select
-            result = await db.execute(select(AgentRegistryState))
-            loaded_global = False
-            loaded_count = 0
-            for row in result.scalars().all():
-                state = row.state_json
-                try:
-                    if isinstance(state, (str, bytes, bytearray)):
-                        state = json.loads(state)
-                    reg = AgentRegistry.from_dict(state)
-                except Exception as exc:
-                    logger.warning(
-                        "Skipping malformed agent_registry_states row key=%r: %s",
-                        row.key, exc,
-                    )
-                    continue
-                if row.key == "global" or row.key == "overall":
-                    set_global_registry(reg)
-                    loaded_global = True
-                else:
-                    set_registry(reg, row.key)
-                loaded_count += 1
-            if not loaded_global:
-                set_global_registry(AgentRegistry())
-            logger.info("Loaded %d agent registry rows from DB (global=%s)",
-                        loaded_count, loaded_global)
-    except Exception as exc:
-        logger.warning("Failed to load agent registries from DB on startup: %s", exc)
+def _public_agent_id(model_name: str, username: str | None) -> str:
+    """Return a namespaced agent ID for the global public registry.
 
-    # Backfill: any completed session whose match_id is not yet in the
-    # in-memory registries gets replayed through get_results() so its
-    # per-game metrics, Elo snapshots, and aggregated values are recorded.
+    Format: ``model@username`` (e.g. ``gpt-4o@herbertw``).
+    The ``@username`` suffix is what the leaderboard uses to attribute results
+    to a specific user without exposing anything beyond their public handle.
+    Falls back to bare model_name when username is unavailable.
+    """
+    return f"{model_name}@{username}" if username else model_name
+
+
+def _namespace_match(match: Any, username: str | None) -> Any:
+    """Return a copy of match with agent_ids and move agent_ids namespaced."""
+    from arena.metrics.contracts import Match, Move
+    namespaced_ids = [_public_agent_id(a, username) for a in match.agent_ids]
+    id_map = dict(zip(match.agent_ids, namespaced_ids))
+    new_moves = [
+        Move(
+            agent_id=id_map.get(m.agent_id, m.agent_id),
+            round_number=m.round_number,
+            action=m.action,
+            payoff=m.payoff,
+        )
+        for m in match.moves
+    ]
+    return Match(
+        match_id=match.match_id,
+        game_type=match.game_type,
+        agent_ids=namespaced_ids,
+        moves=new_moves,
+        config=match.config,
+    )
+
+
+async def _rebuild_leaderboard_registries() -> None:
+    """Clear all in-memory registries and rebuild from only is_public=True sessions.
+
+    Agent IDs in the public registry are namespaced as ``model@username`` so
+    different users' runs of the same model appear as distinct leaderboard
+    entries with attribution.  Called on startup and whenever a session's
+    visibility changes.
+    """
+    import numpy as np
+    import logging
+    log = logging.getLogger("arena.leaderboard")
+
+    for reg in get_all_registries().values():
+        reg.clear()
+
+    count = 0
     try:
-        from arena.models.session import SessionModel
         async with _async_session_factory() as db:
-            from sqlalchemy import select
             result = await db.execute(
-                select(SessionModel).where(SessionModel.status.in_(("complete", "completed")))
+                select(SessionModel, User)
+                .outerjoin(User, SessionModel.user_id == User.id)
+                .where(SessionModel.status.in_(("complete", "completed")))
+                .where(SessionModel.is_public.is_(True))
             )
-            sessions = result.scalars().all()
-        backfilled = 0
-        for sess_row in sessions:
+            rows = result.all()
+
+        for sess_row, user_row in rows:
             try:
+                username = user_row.username if user_row else None
                 session = GameSession.from_db_row(sess_row)
-                evaluator = MatchEvaluator(get_global_registry())
-                _ = session.results(evaluator=evaluator)
                 match = session.to_match()
                 game_type = match.game_type
-                if game_type and game_type != "unknown":
-                    import numpy as np
-                    game_registry = get_game_registry(game_type)
-                    if match.match_id in game_registry.match_history:
-                        continue
-                    avg_payoffs = {
-                        a: float(np.mean(match.payoffs(a))) if match.payoffs(a) else 0.0
-                        for a in match.agent_ids
-                    }
-                    ts = sess_row.created_at.isoformat() if sess_row.created_at else None
-                    game_registry.record_match(match, avg_payoffs, timestamp=ts)
-                    backfilled += 1
+                if not game_type or game_type == "unknown":
+                    continue
+                namespaced = _namespace_match(match, username)
+                game_registry = get_game_registry(game_type)
+                if namespaced.match_id in game_registry.match_history:
+                    continue
+                avg_payoffs = {
+                    a: float(np.mean(namespaced.payoffs(a))) if namespaced.payoffs(a) else 0.0
+                    for a in namespaced.agent_ids
+                }
+                ts = sess_row.created_at.isoformat() if sess_row.created_at else None
+                game_registry.record_match(namespaced, avg_payoffs, timestamp=ts)
+                count += 1
             except Exception:
                 continue
-        if backfilled:
-            async with _async_session_factory() as db:
-                for key, reg in get_all_registries().items():
-                    try:
-                        await save_registry(reg, db, key)
-                    except Exception:
-                        pass
-        logger.info("Backfilled %d completed sessions into leaderboard registries", backfilled)
+
+        async with _async_session_factory() as db:
+            for key, reg in get_all_registries().items():
+                try:
+                    await save_registry(reg, db, key)
+                except Exception:
+                    pass
+        log.info("Leaderboard rebuilt from %d public sessions", count)
+    except Exception:
+        log.warning("Leaderboard rebuild error", exc_info=True)
+
+
+async def _build_personal_registry(user_id: Any) -> "AgentRegistry":
+    """Compute a fresh per-user registry from all of the user's completed sessions.
+
+    Uses bare model names (no @username suffix) since all entries belong to
+    the same user.  Not cached — computed on demand per leaderboard request.
+    """
+    import numpy as np
+    reg = AgentRegistry()
+    try:
+        async with _async_session_factory() as db:
+            result = await db.execute(
+                select(SessionModel).where(
+                    SessionModel.user_id == user_id,
+                    SessionModel.status.in_(("complete", "completed")),
+                )
+            )
+            rows = result.scalars().all()
+
+        for sess_row in rows:
+            try:
+                session = GameSession.from_db_row(sess_row)
+                match = session.to_match()
+                if not match.game_type or match.game_type == "unknown":
+                    continue
+                if match.match_id in reg.match_history:
+                    continue
+                avg_payoffs = {
+                    a: float(np.mean(match.payoffs(a))) if match.payoffs(a) else 0.0
+                    for a in match.agent_ids
+                }
+                ts = sess_row.created_at.isoformat() if sess_row.created_at else None
+                reg.record_match(match, avg_payoffs, timestamp=ts)
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return reg
+
+
+async def _load_registries_from_db() -> None:
+    """Build the public leaderboard registries from all is_public=True sessions.
+
+    The old agent_registry_states cache is no longer used as a primary source
+    because it may contain state derived from sessions that were later marked
+    private.  We always rebuild from the session table on startup, with agent
+    IDs namespaced as model@username for attribution.
+    """
+    set_global_registry(AgentRegistry())
+    try:
+        await _rebuild_leaderboard_registries()
     except Exception as exc:
-        logger.warning("Leaderboard backfill failed: %s", exc)
+        import logging
+        logging.getLogger("arena.leaderboard").warning("Leaderboard rebuild failed: %s", exc)
 
 
 class ActionRequest(BaseModel):
@@ -387,6 +450,7 @@ class UserResponse(BaseModel):
     name: str
     avatar_url: str | None
     privacy_accepted: bool = False
+    username: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -986,24 +1050,35 @@ async def get_results(session_id: str, db: AsyncSession = Depends(get_db)):
         result = session.results(evaluator=evaluator)
         result = sanitize_for_json(result)
 
-        # Also record in per-game registry with agent metrics
+        # Only record in the public leaderboard registry when the session is
+        # explicitly marked public by its owner.
+        sess_row_result = await db.execute(
+            select(SessionModel).where(SessionModel.id == session_id)
+        )
+        sess = sess_row_result.scalar_one_or_none()
+
         match = session.to_match()
         game_type = match.game_type
-        if game_type and game_type != "unknown":
+        if game_type and game_type != "unknown" and sess and getattr(sess, "is_public", False):
             import numpy as np
+            # Look up owner username for attribution in the public registry.
+            username: str | None = None
+            if sess.user_id:
+                user_row_result = await db.execute(
+                    select(User).where(User.id == sess.user_id)
+                )
+                user_row = user_row_result.scalar_one_or_none()
+                username = user_row.username if user_row else None
+            namespaced = _namespace_match(match, username)
             game_registry = get_game_registry(game_type)
             avg_payoffs = {
-                a: float(np.mean(match.payoffs(a))) if match.payoffs(a) else 0.0
-                for a in match.agent_ids
+                a: float(np.mean(namespaced.payoffs(a))) if namespaced.payoffs(a) else 0.0
+                for a in namespaced.agent_ids
             }
             rich = result.get("rich_metrics", {})
             agent_metrics = rich.get("agents", None)
-            session_row = await db.execute(
-                select(SessionModel).where(SessionModel.id == session_id)
-            )
-            sess = session_row.scalar_one_or_none()
-            ts = sess.created_at.isoformat() if sess and sess.created_at else None
-            game_registry.record_match(match, avg_payoffs, agent_metrics=agent_metrics, timestamp=ts)
+            ts = sess.created_at.isoformat() if sess.created_at else None
+            game_registry.record_match(namespaced, avg_payoffs, agent_metrics=agent_metrics, timestamp=ts)
 
         try:
             for key, reg in get_all_registries().items():
@@ -1129,6 +1204,7 @@ def _session_summary(row: SessionModel) -> dict[str, Any]:
         "seed": config.get("seed"),
         "status": row.status,
         "locked": row.locked,
+        "is_public": row.is_public if hasattr(row, "is_public") else False,
     }
 
 
@@ -1225,6 +1301,44 @@ async def delete_session(
     await db.delete(row)
     await db.commit()
     return {"deleted": session_id}
+
+
+class VisibilityUpdate(BaseModel):
+    is_public: bool
+
+
+@app.patch(f"{API_PREFIX}/sessions/{{session_id}}/visibility")
+async def set_session_visibility(
+    session_id: str,
+    payload: VisibilityUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_local_or_optional_user),
+):
+    """Toggle whether a completed session appears on the public leaderboard.
+
+    Only the owning user may change visibility.  Triggers a full registry
+    rebuild so the leaderboard immediately reflects the new state.
+    """
+    stmt = select(SessionModel).where(SessionModel.id == session_id)
+    if user:
+        stmt = stmt.where(SessionModel.user_id == user.id)
+    else:
+        stmt = stmt.where(SessionModel.user_id.is_(None))
+    result = await db.execute(stmt)
+    row = result.scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="session not found")
+
+    row.is_public = payload.is_public
+    await db.commit()
+
+    # Rebuild the global public registry to reflect the visibility change.
+    try:
+        await _rebuild_leaderboard_registries()
+    except Exception:
+        _logger_main.warning("Leaderboard rebuild failed after visibility change", exc_info=True)
+
+    return {"session_id": session_id, "is_public": row.is_public}
 
 
 @app.get(f"{API_PREFIX}/dashboard")
@@ -1743,6 +1857,7 @@ def _user_response(user: User) -> UserResponse:
         name=user.name,
         avatar_url=user.avatar_url,
         privacy_accepted=user.privacy_accepted_at is not None,
+        username=user.username,
     )
 
 
@@ -1995,6 +2110,80 @@ def _build_leaderboard_entries(
     }
 
 
+def _leaderboard_agent_entry(agent_id: str, registry: AgentRegistry, pop: dict, agg: dict,
+                              current_username: str | None, is_personal: bool) -> dict:
+    """Build a single leaderboard agent entry, adding display name and attribution.
+
+    Public registry agent IDs are ``model@username`` (e.g. ``gpt-4o@herbertw``).
+    Personal registry agent IDs are bare model names (e.g. ``gpt-4o``).
+    """
+    if "@" in agent_id:
+        display_name, owner_username = agent_id.rsplit("@", 1)
+    else:
+        display_name = agent_id
+        owner_username = current_username if is_personal else None
+
+    is_own = is_personal or (owner_username is not None and owner_username == current_username)
+
+    return {
+        "agent_id": agent_id,
+        "display_name": display_name,
+        "owner_username": owner_username,
+        "is_own": is_own,
+        "elo": pop.get("elo_ratings", {}).get(agent_id),
+        "alpha_rank": pop.get("alpha_rank_scores", {}).get(agent_id),
+        "matches_played": registry.matches_played.get(agent_id, 0),
+        "metrics": agg.get(agent_id, {}),
+    }
+
+
+def _build_leaderboard_response(
+    registry: AgentRegistry,
+    target: list[str],
+    sort_by: str,
+    sort_dir: str,
+    page: int,
+    page_size: int,
+    current_username: str | None = None,
+    is_personal: bool = False,
+) -> dict:
+    date_range = _registry_date_range(registry)
+    if len(target) < 2:
+        entries = [
+            _leaderboard_agent_entry(a, registry,
+                                     {"elo_ratings": registry.elo_ratings,
+                                      "alpha_rank_scores": {}},
+                                     registry.aggregated_metrics([a]),
+                                     current_username, is_personal)
+            for a in target
+        ]
+        return {
+            "agents": entries, "total": len(entries),
+            "page": page, "page_size": page_size,
+            "total_matches": len(registry.match_history),
+            "date_range": date_range,
+            "note": "Need at least 2 agents for α-Rank computation.",
+        }
+
+    evaluator = MatchEvaluator(registry)
+    pop = evaluator.population_report(target)
+    agg = registry.aggregated_metrics(target)
+
+    entries = [
+        _leaderboard_agent_entry(a, registry, pop, agg, current_username, is_personal)
+        for a in target
+    ]
+    reverse = sort_dir.lower() != "asc"
+    entries.sort(key=lambda e: _safe_sort_key(e, sort_by), reverse=reverse)
+    total = len(entries)
+    return {
+        "agents": entries[(page - 1) * page_size: page * page_size],
+        "total": total, "page": page, "page_size": page_size,
+        "total_matches": len(registry.match_history),
+        "date_range": date_range,
+    }
+
+
 @app.get(f"{API_PREFIX}/leaderboard")
 async def get_leaderboard(
     game: str | None = Query(default=None, description="Game type filter (e.g. colonelblotto)"),
@@ -2005,46 +2194,119 @@ async def get_leaderboard(
     agent_ids: str | None = Query(default=None, description="Comma-separated agent IDs to filter"),
     date_from: str | None = Query(default=None, description="ISO date: only include agents active after this"),
     date_to: str | None = Query(default=None, description="ISO date: only include agents active before this"),
+    scope: str = Query(default="public", description="personal | public | all (ignored for anonymous users)"),
     db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_local_or_optional_user),
 ):
-    """Paginated, sortable leaderboard. Returns agents sorted by the chosen metric."""
-    if game:
-        registry = get_game_registry(game)
-    else:
-        registry = get_global_registry()
+    """Paginated, sortable leaderboard with privacy scoping.
 
-    known = list(registry.elo_ratings.keys())
-    if agent_ids:
-        requested = [a.strip() for a in agent_ids.split(",") if a.strip()]
-        target = [a for a in requested if a in known]
-    else:
-        target = known
+    - Anonymous / scope=public: only sessions explicitly marked public,
+      agents attributed as model@username.
+    - Logged-in / scope=personal (recommended default for UI): the user's
+      own sessions (public + private), bare model names, no attribution.
+    - Logged-in / scope=all: personal entries (is_own=True) + other users'
+      public entries (is_own=False, attributed with owner_username).
+    """
+    effective_scope = "public"
+    if user:
+        effective_scope = scope if scope in ("personal", "public", "all") else "personal"
 
-    # Time-range filter on agent activity. Agents with no snapshots are
-    # excluded when a date filter is set — they have no recorded activity.
-    if date_from or date_to:
-        filtered = []
-        for a in target:
-            snaps = registry.elo_snapshots.get(a, [])
-            if not snaps:
-                continue
-            day_min = min(t[:10] for t, _ in snaps)
-            day_max = max(t[:10] for t, _ in snaps)
-            if date_from and day_max < date_from:
-                continue
-            if date_to and day_min > date_to:
-                continue
-            filtered.append(a)
-        target = filtered
+    current_username = user.username if user else None
 
-    if sort_by not in _SORTABLE_KEYS:
-        sort_by = "alpha_rank"
+    def _get_registry(is_personal: bool) -> AgentRegistry:
+        if game:
+            return get_game_registry(game) if not is_personal else get_game_registry(game)
+        return get_global_registry()
 
-    result = _build_leaderboard_entries(
-        registry, target,
-        sort_by=sort_by, sort_dir=sort_dir,
-        page=page, page_size=page_size,
+    def _filtered_target(registry: AgentRegistry) -> list[str]:
+        known = list(registry.elo_ratings.keys())
+        if agent_ids:
+            requested = [a.strip() for a in agent_ids.split(",") if a.strip()]
+            target = [a for a in requested if a in known]
+        else:
+            target = known
+        if date_from or date_to:
+            filtered = []
+            for a in target:
+                snaps = registry.elo_snapshots.get(a, [])
+                if not snaps:
+                    continue
+                day_min = min(t[:10] for t, _ in snaps)
+                day_max = max(t[:10] for t, _ in snaps)
+                if date_from and day_max < date_from:
+                    continue
+                if date_to and day_min > date_to:
+                    continue
+                filtered.append(a)
+            return filtered
+        return target
+
+    actual_sort = sort_by if sort_by in _SORTABLE_KEYS else "alpha_rank"
+
+    if effective_scope == "personal" and user:
+        personal_reg = await _build_personal_registry(user.id)
+        target = _filtered_target(personal_reg)
+        result = _build_leaderboard_response(
+            personal_reg, target, actual_sort, sort_dir, page, page_size,
+            current_username=current_username, is_personal=True,
+        )
+        result["scope"] = "personal"
+        return sanitize_for_json(result)
+
+    if effective_scope == "all" and user:
+        # Personal half: user's own sessions including private ones
+        personal_reg = await _build_personal_registry(user.id)
+        personal_target = _filtered_target(personal_reg)
+        personal_entries: list[dict] = []
+        if len(personal_target) >= 2:
+            evaluator = MatchEvaluator(personal_reg)
+            pop = evaluator.population_report(personal_target)
+            agg = personal_reg.aggregated_metrics(personal_target)
+        else:
+            pop = {"elo_ratings": personal_reg.elo_ratings, "alpha_rank_scores": {}}
+            agg = personal_reg.aggregated_metrics(personal_target)
+        for a in personal_target:
+            personal_entries.append(_leaderboard_agent_entry(
+                a, personal_reg, pop, agg, current_username, is_personal=True))
+
+        # Public half: other users' public sessions, exclude current user's public entries
+        pub_reg = get_game_registry(game) if game else get_global_registry()
+        pub_target = [
+            a for a in _filtered_target(pub_reg)
+            if not (current_username and a.endswith(f"@{current_username}"))
+        ]
+        public_entries: list[dict] = []
+        if pub_target:
+            if len(pub_target) >= 2:
+                evaluator = MatchEvaluator(pub_reg)
+                pop_pub = evaluator.population_report(pub_target)
+            else:
+                pop_pub = {"elo_ratings": pub_reg.elo_ratings, "alpha_rank_scores": {}}
+            agg_pub = pub_reg.aggregated_metrics(pub_target)
+            for a in pub_target:
+                public_entries.append(_leaderboard_agent_entry(
+                    a, pub_reg, pop_pub, agg_pub, current_username, is_personal=False))
+
+        all_entries = personal_entries + public_entries
+        reverse = sort_dir.lower() != "asc"
+        all_entries.sort(key=lambda e: _safe_sort_key(e, actual_sort), reverse=reverse)
+        total = len(all_entries)
+        start = (page - 1) * page_size
+        result = {
+            "agents": all_entries[start: start + page_size],
+            "total": total, "page": page, "page_size": page_size,
+            "scope": "all",
+        }
+        return sanitize_for_json(result)
+
+    # Default / public scope
+    registry = get_game_registry(game) if game else get_global_registry()
+    target = _filtered_target(registry)
+    result = _build_leaderboard_response(
+        registry, target, actual_sort, sort_dir, page, page_size,
+        current_username=current_username, is_personal=False,
     )
+    result["scope"] = "public"
     return sanitize_for_json(result)
 
 

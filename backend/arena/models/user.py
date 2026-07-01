@@ -28,3 +28,6 @@ class User(Base):
     privacy_accepted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # Public display handle: GitHub login (@handle) or Google given_name (first name).
+    # Never set to email — only the provider's own public identifier.
+    username: Mapped[str | None] = mapped_column(String(128), nullable=True)
