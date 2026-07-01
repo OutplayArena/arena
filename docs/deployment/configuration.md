@@ -136,7 +136,10 @@ How it works:
 2. Users open **Settings → Weights & Biases** and paste their W&B API key (found at [wandb.ai/authorize](https://wandb.ai/authorize)).
 3. The platform encrypts the key before storing it — the plaintext is never persisted or returned by the API.
 4. When starting a game, users check **"Log results to Weights & Biases"** and optionally set entity, project name, and run name. If they leave fields blank the platform uses sensible defaults (`project=outplayarena`, `run_name=<session-id>`).
-5. At the end of each round and on game completion, results (scores, metrics, full game config, agent names) are streamed to the user's W&B project. If the key is missing or invalid the experiment still runs — W&B logging is skipped with a server-side warning.
+5. **Once the game completes**, the platform opens a W&B run, logs all round-by-round scores and terminal summary metrics in a single batch, and finishes the run. The W&B run URL is then stored on the session and visible in the dashboard. If the key is missing or invalid the experiment still runs — W&B logging is skipped with a server-side warning.
+
+!!! info "Batch logging — no live updates"
+    Results are written to W&B in one shot when the game ends. There is no live run to watch while the game is in progress. This is intentional: the stateless design means any server worker can handle any request without needing to hold an open network connection to W&B throughout the game.
 
 !!! note "Key rotation"
     To rotate the encryption key, update `OUTPLAYARENA_WANDB_ENCRYPTION_KEY` and ask users to re-enter their W&B key in Settings. Existing encrypted keys in the database will be invalid until re-saved with the new key.

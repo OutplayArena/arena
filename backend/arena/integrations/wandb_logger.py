@@ -7,6 +7,7 @@ import wandb
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
+from arena._version import ARENA_VERSION
 from arena.integrations.base_logger import BaseLogger
 
 
@@ -86,7 +87,8 @@ class WandbGameLogger(BaseLogger):
                 name=self.wandb_config.run_name,
                 tags=list(self.wandb_config.tags or []),
                 config=self._full_config_dict(),
-                settings=wandb.Settings(_api_key=api_key),
+                settings=wandb.Settings(api_key=api_key),
+                reinit="create_new",
             )
         finally:
             api_key = None
@@ -110,6 +112,45 @@ class WandbGameLogger(BaseLogger):
         self._run.finish()
         self._run = None
 
+    def log_complete_session(
+        self,
+        round_payloads: list[tuple[dict[str, Any], int]],
+        terminal_payload: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        """Open a run, log all rounds and terminal metrics in one shot, finish.
+
+        This is the stateless entry point: no persistent run object is held
+        between calls.  Returns run_meta on success, None on any failure.
+        """
+        api_key = decrypt_api_key(self.encrypted_api_key)
+        try:
+            run = wandb.init(
+                project=self.wandb_config.project,
+                entity=self.wandb_config.entity,
+                name=self.wandb_config.run_name,
+                tags=list(self.wandb_config.tags or []),
+                config=self._full_config_dict(),
+                settings=wandb.Settings(api_key=api_key),
+                reinit="create_new",
+            )
+        finally:
+            api_key = None
+            del api_key
+
+        try:
+            for payload, step in round_payloads:
+                run.log(payload, step=step)
+            run.log(terminal_payload)
+            return {
+                "run_id":   run.id,
+                "run_name": run.name,
+                "entity":   run.entity,
+                "project":  run.project,
+                "url":      run.url,
+            }
+        finally:
+            run.finish()
+
     @property
     def run_meta(self) -> dict[str, Any] | None:
         """Stable W&B run identifiers — safe to persist and share with SDK clients."""
@@ -132,4 +173,4 @@ class WandbGameLogger(BaseLogger):
         cfg = self._game_config_dict()
         if not isinstance(cfg, dict):
             cfg = {"config": cfg}
-        return {**cfg, "agents": self.agents or {}}
+        return {**cfg, "agents": self.agents or {}, "arena_version": ARENA_VERSION}
