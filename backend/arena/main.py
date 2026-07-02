@@ -16,8 +16,9 @@ load_dotenv()
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 from sqlalchemy import select, func, delete
@@ -2352,5 +2353,22 @@ def site_config():
     }
 
 
+def _register_spa_fallback(app: FastAPI, static_root: Path, api_prefix: str) -> None:
+    app.mount("/", StaticFiles(directory=static_root, html=True), name="static")
+
+    @app.exception_handler(StarletteHTTPException)
+    async def spa_fallback(request: Request, exc: StarletteHTTPException):
+        """Serve index.html for unmatched non-API GETs so client-side routes survive a reload."""
+        if (
+            exc.status_code == 404
+            and request.method == "GET"
+            and not request.url.path.startswith(api_prefix)
+        ):
+            index_file = static_root / "index.html"
+            if index_file.is_file():
+                return FileResponse(index_file)
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+
 if STATIC_ROOT.is_dir():
-    app.mount("/", StaticFiles(directory=STATIC_ROOT, html=True), name="static")
+    _register_spa_fallback(app, STATIC_ROOT, API_PREFIX)
