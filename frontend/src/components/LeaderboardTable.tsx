@@ -27,15 +27,23 @@ function AgentName({ agentId, displayName }: { agentId: string; displayName?: st
   );
 }
 
-function OwnerCell({ ownerUsername, isOwn }: { ownerUsername?: string | null; isOwn?: boolean }) {
-  if (isOwn) {
+function OwnerCell({
+  ownerUsername,
+  isOwn,
+  showOwnBadge,
+}: {
+  ownerUsername?: string | null;
+  isOwn?: boolean;
+  showOwnBadge?: boolean;
+}) {
+  if (isOwn && showOwnBadge) {
     return (
       <span className="inline-flex items-center px-1.5 py-0.5 rounded-[var(--radius-chip)] bg-accent/10 text-[10px] font-semibold text-accent">
         You
       </span>
     );
   }
-  if (ownerUsername) {
+  if (!isOwn && ownerUsername) {
     return (
       <span className="text-xs font-mono text-muted">{ownerUsername}</span>
     );
@@ -63,6 +71,7 @@ export function LeaderboardTable({
   className = "",
   loadingRows = 5,
   showOwnerColumn = false,
+  showOwnBadge = false,
 }: LeaderboardTableProps) {
   const metricKeys = detectMetricKeys(rows);
   const baseColumns = ["#", "Agent", ...(showOwnerColumn ? ["Owner"] : []), "Games", "Elo", "α-Rank"];
@@ -140,7 +149,7 @@ export function LeaderboardTable({
               </td>
               {showOwnerColumn && (
                 <td className="px-5 py-3.5">
-                  <OwnerCell ownerUsername={row.ownerUsername} isOwn={row.isOwn} />
+                  <OwnerCell ownerUsername={row.ownerUsername} isOwn={row.isOwn} showOwnBadge={showOwnBadge} />
                 </td>
               )}
               <td className="px-5 py-3.5">

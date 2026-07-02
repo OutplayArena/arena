@@ -6,6 +6,8 @@ export interface UserInfo {
   privacy_accepted: boolean;
   /** Public display handle: GitHub @login or Google first name. Never email. */
   username: string | null;
+  /** Personal preference: show the "You" badge highlighting own rows on the leaderboard. Defaults to false (opt-in). */
+  show_own_leaderboard_badge: boolean;
 }
 
 export interface ProvidersResponse {

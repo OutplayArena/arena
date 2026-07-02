@@ -53,5 +53,7 @@ export interface LeaderboardTableProps {
   loadingRows?: number;
   /** Show a dedicated "Owner" column with attribution (use for public/all scopes). */
   showOwnerColumn?: boolean;
+  /** Show the "You" badge on the viewer's own rows (personal display preference, default off/hidden). */
+  showOwnBadge?: boolean;
 }
 

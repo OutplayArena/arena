@@ -277,6 +277,7 @@ def _make_user() -> User:
     user.email = "test@example.com"
     user.name = "Test User"
     user.avatar_url = None
+    user.show_own_leaderboard_badge = False
     return user
 
 

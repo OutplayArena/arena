@@ -299,6 +299,7 @@ export function LeaderboardPage() {
           note={data?.note}
           loadingRows={8}
           showOwnerColumn={!!user && scope !== "personal"}
+          showOwnBadge={!!user?.show_own_leaderboard_badge}
           onRetry={() => { setLoading(true); setError(null); setRetry((r) => r + 1); }}
           emptyAction={
             <button
