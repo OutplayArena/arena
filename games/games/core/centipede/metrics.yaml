@@ -19,3 +19,5 @@ metrics:
   - forgiveness_index
   - conditional_cooperation
   - multilateral_cooperation_index
+  - payoff_volatility
+  - action_concentration

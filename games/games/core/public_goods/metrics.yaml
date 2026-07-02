@@ -20,3 +20,5 @@ metrics:
   - tit_for_tat_adherence
   - forgiveness_index
   - conditional_cooperation
+  - payoff_volatility
+  - action_concentration
