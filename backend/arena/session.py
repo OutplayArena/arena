@@ -1,4 +1,5 @@
 from dataclasses import dataclass, asdict, is_dataclass
+from datetime import datetime, timezone
 from typing import Any
 import secrets
 import uuid
@@ -155,6 +156,7 @@ class GameSession:
 
         state_dict = _serialize_state(self.state)
         round_number = state_dict.get("round_number", 0)
+        turn_phase = "before" if sender in state_dict.get("awaiting", []) else "after"
 
         msg = {
             "id": str(uuid.uuid4()),
@@ -162,6 +164,8 @@ class GameSession:
             "recipient": recipient,
             "content": content,
             "round": round_number,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "turn_phase": turn_phase,
         }
         self.messages.append(msg)
         return msg
