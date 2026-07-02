@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { createExperiment, getGameAgents } from "../api";
 import { randomAgentName } from "../components/names";
+import { resolveAgentId } from "../components/playerAgentResolver";
 import { useApp } from "./useApp";
+import { useWandbLoggingConfig } from "./useWandbLoggingConfig";
 import type { GameAgent } from "../types";
 import type { PlayerSetupValue } from "../components/LobbyConfigShell";
 
@@ -48,6 +50,7 @@ export function useGameConfig({
   const [remoteKeys, setRemoteKeys] = useState<Record<string, string> | null>(null);
   const [status, setStatus] = useState("");
   const [running, setRunning] = useState(false);
+  const wandbLogging = useWandbLoggingConfig();
 
   const effectiveLocked = locked || state.sessionLocked;
   const effectiveStatus = sessionStatus || state.sessionStatus;
@@ -68,19 +71,30 @@ export function useGameConfig({
 
   useEffect(() => {
     if (initRanRef.current || !isReplay || !initialValues) return;
+    // Wait for the available-agent list to resolve before reconstructing
+    // the dropdown id from the saved display name, otherwise we'd resolve
+    // against an empty list and fall back to "remote" / "interactive"
+    // incorrectly for built-in bots like "uniform".
+    if (agents.length === 0) return;
     initRanRef.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPlayers((prev) =>
       prev.map((p, i) => {
         const side = PLAYER_IDS[i];
         const agentKey = `agent_${side.toLowerCase()}` as string;
         const agentIdKey = `agent_${side.toLowerCase()}_id` as string;
+        const savedName = initialValues[agentKey] as string | undefined;
+        const explicitId = initialValues[agentIdKey] as string | undefined;
         return {
-          agentId: (initialValues[agentIdKey] as string) ?? p.agentId,
-          name: (initialValues[agentKey] as string) ?? p.name,
+          // Prefer the explicit id when the caller provided it
+          // (preserves behaviour for callers that already surface it),
+          // otherwise reconstruct from the saved display name.
+          agentId: explicitId ?? resolveAgentId(savedName, agents) ?? p.agentId,
+          name: savedName ?? p.name,
         };
       })
     );
-  }, [isReplay, initialValues]);
+  }, [isReplay, initialValues, agents]);
 
   const handleStartGame = async (
     e: React.FormEvent,
@@ -117,6 +131,7 @@ export function useGameConfig({
       agents: agentsDict,
       interactive: isInteractive,
       ...extra,
+      ...wandbLogging.toConfigFields(),
     };
 
     try {
@@ -168,5 +183,6 @@ export function useGameConfig({
     handleStartGame,
     minPlayers,
     maxPlayers,
+    wandbLogging,
   };
 }

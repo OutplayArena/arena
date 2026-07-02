@@ -23,6 +23,12 @@ export function detectMetricKeys(rows: Array<{ metrics?: Record<string, number> 
 
 export interface LeaderboardTableRow {
   agentId: string;
+  /** Display name (model name without @username suffix). */
+  displayName?: string;
+  /** Public handle of the owning user, shown as attribution in public scope. */
+  ownerUsername?: string | null;
+  /** Whether this row belongs to the currently logged-in user. */
+  isOwn?: boolean;
   matches_played: number;
   elo: number;
   alpha_rank: number | null;
@@ -45,5 +51,7 @@ export interface LeaderboardTableProps {
   className?: string;
   /** Number of shimmer rows to show while loading. */
   loadingRows?: number;
+  /** Show a dedicated "Owner" column with attribution (use for public/all scopes). */
+  showOwnerColumn?: boolean;
 }
 

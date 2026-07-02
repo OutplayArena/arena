@@ -632,6 +632,11 @@ class TestSessionEndpoints:
         assert body["id"] == created["session_id"]
         assert body["game_slug"] == "colonelblotto"
         assert body["rounds"] == 2
+        # The full submitted config must be returned so the play page can
+        # render the Config tab with the exact parameters the game was run
+        # with (locked view for running/completed/failed sessions).
+        assert body["config"]["rounds"] == 2
+        assert body["config"]["game"] == "colonelblotto"
 
     def test_get_session_summary_missing_returns_404(self, client):
         c, _, _, _ = client
@@ -1018,6 +1023,44 @@ class TestInternalHelpers:
         assert result["id"] == "sess-1"
         assert result["game_slug"] == "colonelblotto"
         assert result["winner"] is None
+        # The full config must be returned so the play page can render the
+        # exact parameters the game was run with in the locked Config tab.
+        assert result["config"] == {
+            "game": "colonelblotto",
+            "battlefields": [],
+            "budget": [100],
+        }
+
+    def test_session_summary_includes_full_config(self):
+        # Configs can contain arbitrary game-specific fields (e.g. payoff
+        # matrix for Prisoner's Dilemma, custom battlefields for Colonel
+        # Blotto).  The summary must round-trip the whole dict so the
+        # frontend can re-render the config form read-only.
+        row = SessionModel()
+        row.id = "sess-pd"
+        row.state_json = {}
+        row.config_json = {
+            "game": "prisonersdilemma",
+            "variant": "noisy",
+            "players": 2,
+            "rounds": 7,
+            "payoff_T": 5.0,
+            "payoff_R": 3.0,
+            "payoff_P": 1.0,
+            "payoff_S": 0.0,
+            "noise": 0.1,
+            "seed": 42,
+            "scenario": "climate",
+            "system_prompt": "negotiate well",
+        }
+        row.agents_json = {}
+        row.status = "completed"
+        row.locked = True
+        row.created_at = None
+        result = _session_summary(row)
+        assert result["config"]["rounds"] == 7
+        assert result["config"]["scenario"] == "climate"
+        assert result["config"]["system_prompt"] == "negotiate well"
 
     def test_session_summary_with_history_winner_a(self):
         row = SessionModel()

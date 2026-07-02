@@ -12,6 +12,20 @@ interface Props {
   initialValues?: Record<string, unknown>;
 }
 
+function readNumber(value: unknown, fallback: number): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) {
+    return Number(value);
+  }
+  return fallback;
+}
+
+function readSeed(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export default function BlottoConfigForm({ gameSlug, locked, sessionStatus, initialValues }: Props) {
   const [searchParams] = useSearchParams();
   const roundsRef = useRef<HTMLInputElement>(null);
@@ -20,14 +34,39 @@ export default function BlottoConfigForm({ gameSlug, locked, sessionStatus, init
   const seedRef = useRef<HTMLInputElement>(null);
 
   const { players, setPlayers, agents, remoteKeys,
-    status, running, isReplay, formDisabled, handleStartGame } =
+    status, running, isReplay, formDisabled, handleStartGame, wandbLogging } =
     useGameConfig({ gameSlug, locked, sessionStatus, initialValues,
       defaultAgents: ["interactive", "remote"] });
 
-  // Pre-populate from URL params
-  const defaultRounds = searchParams.get("rounds") ?? "10";
-  const defaultFields = searchParams.get("fields") ?? "5";
-  const defaultResources = searchParams.get("resources") ?? "100";
+  // When the session is locked/completed/running, the play page passes the
+  // actual parameters the game was run with (as a flat config dictionary).
+  // When it isn't, fall back to URL params (lobby links) so a fresh
+  // configuration can still be started from a shared URL.
+  const replayRounds = isReplay ? readNumber(initialValues?.rounds, 10) : null;
+  const replayFields = isReplay
+    ? readNumber(
+        initialValues?.num_battlefields ??
+          (Array.isArray(initialValues?.battlefields) ? (initialValues!.battlefields as unknown[]).length : undefined),
+        5,
+      )
+    : null;
+  const replayResources = isReplay
+    ? readNumber(
+        initialValues?.total_resources ??
+          (Array.isArray(initialValues?.budget) ? (initialValues!.budget as number[])[0] : undefined),
+        100,
+      )
+    : null;
+  const replaySeed = isReplay ? readSeed(initialValues?.seed) : null;
+
+  const defaultRounds =
+    replayRounds !== null ? String(replayRounds) : (searchParams.get("rounds") ?? "10");
+  const defaultFields =
+    replayFields !== null ? String(replayFields) : (searchParams.get("fields") ?? "5");
+  const defaultResources =
+    replayResources !== null
+      ? String(replayResources)
+      : (searchParams.get("resources") ?? "100");
 
   const onSubmit = (e: React.FormEvent) => {
     const numFields = Number(fieldsRef.current?.value ?? 5);
@@ -54,6 +93,7 @@ export default function BlottoConfigForm({ gameSlug, locked, sessionStatus, init
       onStartGame={onSubmit}
       disabled={formDisabled} running={running}
       isReplay={isReplay} locked={locked} status={status}
+      wandbLogging={wandbLogging}
     >
       <label className="grid gap-1 text-[10px] font-extrabold text-muted uppercase tracking-wider">
         Rounds
@@ -71,7 +111,14 @@ export default function BlottoConfigForm({ gameSlug, locked, sessionStatus, init
       </div>
       <label className="grid gap-1 text-[10px] font-extrabold text-muted uppercase tracking-wider">
         Seed (optional)
-        <input ref={seedRef} type="number" className={inputClass} disabled={formDisabled} placeholder="Random" />
+        <input
+          ref={seedRef}
+          type="number"
+          className={inputClass}
+          disabled={formDisabled}
+          placeholder="Random"
+          defaultValue={replaySeed !== null ? String(replaySeed) : ""}
+        />
       </label>
     </LobbyConfigShell>
   );

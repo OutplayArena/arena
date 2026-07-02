@@ -188,6 +188,31 @@ export function getGameScenarios(name: string): Promise<{ scenarios: ScenarioInf
   return request<{ scenarios: ScenarioInfo[] }>(`/api/games/${name}/scenarios`);
 }
 
+export function getGameSkill(name: string): Promise<{ game: string; title: string; sections: Record<string, string> }> {
+  return request(`/api/games/${name}/skill`);
+}
+
+// ── W&B Settings ──────────────────────────────────────────────────────
+
+export function getWandbKeyStatus(): Promise<{ configured: boolean; updated_at: string | null; key_fingerprint: string | null }> {
+  return request("/api/settings/wandb-key");
+}
+
+export function saveWandbKey(apiKey: string): Promise<{ configured: boolean }> {
+  return request("/api/settings/wandb-key", {
+    method: "PUT",
+    body: JSON.stringify({ api_key: apiKey }),
+  });
+}
+
+export function deleteWandbKey(): Promise<{ configured: boolean }> {
+  return request("/api/settings/wandb-key", { method: "DELETE" });
+}
+
+export function getWandbEntities(): Promise<{ personal_entity: string; entities: string[] }> {
+  return request("/api/settings/wandb-key/entities");
+}
+
 export function connectSessionStream(
   sessionId: string,
   onStateChange: (state: GameState) => void,
@@ -292,6 +317,7 @@ export function getLeaderboard(params?: {
   agent_ids?: string;
   date_from?: string;
   date_to?: string;
+  scope?: "personal" | "public" | "all";
 }): Promise<LeaderboardResponse> {
   const searchParams = new URLSearchParams();
   if (params?.game) searchParams.set("game", params.game);
@@ -302,8 +328,19 @@ export function getLeaderboard(params?: {
   if (params?.agent_ids) searchParams.set("agent_ids", params.agent_ids);
   if (params?.date_from) searchParams.set("date_from", params.date_from);
   if (params?.date_to) searchParams.set("date_to", params.date_to);
+  if (params?.scope) searchParams.set("scope", params.scope);
   const qs = searchParams.toString();
   return request<LeaderboardResponse>(`/api/leaderboard${qs ? `?${qs}` : ""}`);
+}
+
+export function setSessionVisibility(
+  sessionId: string,
+  isPublic: boolean,
+): Promise<{ session_id: string; is_public: boolean }> {
+  return request(`/api/sessions/${sessionId}/visibility`, {
+    method: "PATCH",
+    body: JSON.stringify({ is_public: isPublic }),
+  });
 }
 
 export function getAgentDetail(agentId: string): Promise<AgentDetailResponse> {
@@ -314,5 +351,41 @@ export function getAgentHistory(agentId: string, game?: string): Promise<RatingH
   const qs = game ? `?game=${game}` : "";
   return request<RatingHistoryResponse>(`/api/leaderboard/agents/${agentId}/history${qs}`);
 }
+
+// ── GDPR ──────────────────────────────────────────────────────────────
+
+/**
+ * Fetch the authenticated user's full data export as a JSON blob and
+ * trigger a browser file download.  The raw key/token values are never
+ * included — the backend redacts them before responding.
+ */
+export async function downloadUserData(): Promise<void> {
+  const resp = await fetch("/api/settings/data-export", {
+    credentials: "include",
+  });
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => resp.statusText);
+    throw new ApiError(text, resp.status);
+  }
+  const blob = await resp.blob();
+  const disposition = resp.headers.get("Content-Disposition") ?? "";
+  const match = disposition.match(/filename="([^"]+)"/);
+  const filename = match?.[1] ?? "outplayarena-export.json";
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export function deleteAccount(): Promise<{ deleted: boolean }> {
+  return request<{ deleted: boolean }>("/api/settings/account", { method: "DELETE" });
+}
+
+export function acceptPrivacy(): Promise<{ privacy_accepted: boolean }> {
+  return request<{ privacy_accepted: boolean }>("/api/settings/accept-privacy", { method: "POST" });
+}
+
 
 
