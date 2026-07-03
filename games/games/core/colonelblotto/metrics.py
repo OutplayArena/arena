@@ -9,19 +9,12 @@ import numpy as np
 from arena.game_components.game_metrics import GameMetrics
 from arena.metrics.behavioral import BehavioralMetrics
 from arena.metrics.extension import GameMetricsExtension
+from arena.metrics.risk import _hhi as _herfindahl_hirschman_index
 
 
 # ---------------------------------------------------------------------------
 # Low-level helpers (private to this module)
 # ---------------------------------------------------------------------------
-
-def _herfindahl_hirschman_index(allocation: list[int]) -> float:
-    """Concentration measure: 0 = perfectly spread, 1 = all-in on one battlefield."""
-    total = sum(allocation)
-    if total == 0:
-        return 0.0
-    return float(sum((x / total) ** 2 for x in allocation))
-
 
 def _fronts_won_nplayer(
     allocations: dict[str, list[int]],

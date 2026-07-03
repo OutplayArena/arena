@@ -8,6 +8,7 @@ from arena.metrics.cooperative import CooperativeMetrics
 from arena.metrics.equilibrium import EquilibriumMetrics
 from arena.metrics.extension import GameMetricsExtension
 from arena.metrics.registry import AgentRegistry
+from arena.metrics.risk import RiskMetrics
 
 
 _COOPERATIVE_GAME_TYPES = frozenset({
@@ -134,6 +135,8 @@ class MatchEvaluator:
                 "cumulative_regret":      BehavioralMetrics.regret(payoffs, best_response_payoff),
                 "adaptive_regret_series": BehavioralMetrics.adaptive_regret(payoffs),
                 "nash_gap":               nash_gaps.get(agent_id, 0.0),
+                "payoff_volatility":      RiskMetrics.payoff_volatility(payoffs),
+                "action_concentration":   RiskMetrics.action_concentration(actions),
             }
 
             # Cooperative signals — vs. every opponent

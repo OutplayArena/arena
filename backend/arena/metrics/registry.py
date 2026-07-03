@@ -19,6 +19,7 @@ _AGGREGATED_METRICS = frozenset({
     "strategy_entropy",
     "behavioral_consistency",
     "cooperation_rate",
+    "payoff_volatility",
 })
 
 
