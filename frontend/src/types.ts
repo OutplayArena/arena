@@ -269,6 +269,8 @@ export interface MailboxMessage {
   recipient: string;
   content: string;
   round: number;
+  created_at?: string;
+  turn_phase?: "before" | "after";
 }
 
 export interface BenchmarkAgent {

@@ -3,7 +3,7 @@ import { useApp } from "../hooks/useApp";
 import { downloadJSON } from "./badges";
 import { getGameMetrics, getMailboxMessages } from "../api";
 import type { RichMetrics, MetricDescriptor, MailboxMessage } from "../types";
-import { MailboxHistory } from "./MailboxPanel";
+import { GameTimeline } from "./GameTimeline";
 
 interface AutoHistoryViewProps {
   hasMatch: boolean;
@@ -132,13 +132,6 @@ function RichMetricsPanel({ rich, catalog }: { rich: RichMetrics; catalog: Recor
   );
 }
 
-function formatAction(action: unknown): string {
-  if (Array.isArray(action)) return `[${action.join(", ")}]`;
-  if (typeof action === "string") return action;
-  if (typeof action === "number") return String(action);
-  return String(action ?? "");
-}
-
 export function AutoHistoryView({ hasMatch, canvasCollapsed, onExpandCanvas, gameSlug }: AutoHistoryViewProps) {
   const { state } = useApp();
   const { activeMatch } = state;
@@ -196,45 +189,12 @@ export function AutoHistoryView({ hasMatch, canvasCollapsed, onExpandCanvas, gam
 
         {hasMatch && activeMatch && total > 0 && (
           <>
-            <div className="rounded-card border border-line/40 overflow-hidden">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-line/40 bg-surface-container/50">
-                    <th className="px-3 py-2 text-[10px] font-extrabold text-muted">R</th>
-                    <th className="px-3 py-2 text-[10px] font-extrabold text-muted">{activeMatch.agent_a}</th>
-                    <th className="px-3 py-2 text-[10px] font-extrabold text-muted">{activeMatch.agent_b}</th>
-                    <th className="px-3 py-2 text-[10px] font-extrabold text-muted">Scores</th>
-                    <th className="px-3 py-2 text-[10px] font-extrabold text-muted">W</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((round) => (
-                    <tr
-                      key={round.round}
-                      className={`border-b border-line/20 last:border-b-0 ${
-                        round.winner === "A" ? "bg-agent-a/[0.04]" : round.winner === "B" ? "bg-agent-b/[0.04]" : ""
-                      }`}
-                    >
-                      <td className="px-3 py-2 text-xs text-muted font-mono">{round.round}</td>
-                      <td className="px-3 py-2 text-xs text-ink font-mono">
-                        {formatAction(round.action_a)}
-                      </td>
-                      <td className="px-3 py-2 text-xs text-ink font-mono">
-                        {formatAction(round.action_b)}
-                      </td>
-                      <td className="px-3 py-2 text-xs text-ink">
-                        A:{round.score_a} B:{round.score_b}
-                      </td>
-                      <td className="px-3 py-2 text-xs font-bold">
-                        <span className={round.winner === "A" ? "text-agent-a" : round.winner === "B" ? "text-agent-b" : "text-muted"}>
-                          {round.winner === "Tie" ? "D" : round.winner}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <GameTimeline
+              history={history}
+              messages={messages}
+              agentA={activeMatch.agent_a}
+              agentB={activeMatch.agent_b}
+            />
 
             <div className="mt-3 flex items-center justify-between">
               <div className="text-[11px] text-muted">
@@ -270,10 +230,6 @@ export function AutoHistoryView({ hasMatch, canvasCollapsed, onExpandCanvas, gam
 
             {activeMatch.rich_metrics && (
               <RichMetricsPanel rich={activeMatch.rich_metrics} catalog={catalog} />
-            )}
-
-            {messages.length > 0 && (
-              <MailboxHistory messages={messages} />
             )}
           </>
         )}
