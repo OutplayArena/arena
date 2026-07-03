@@ -21,6 +21,7 @@ import type {
   LeaderboardResponse,
   AgentDetailResponse,
   RatingHistoryResponse,
+  UserInfo,
 } from "./types";
 
 export class ApiError extends Error {
@@ -385,6 +386,13 @@ export function deleteAccount(): Promise<{ deleted: boolean }> {
 
 export function acceptPrivacy(): Promise<{ privacy_accepted: boolean }> {
   return request<{ privacy_accepted: boolean }>("/api/settings/accept-privacy", { method: "POST" });
+}
+
+export function updatePreferences(prefs: { show_own_leaderboard_badge: boolean }): Promise<UserInfo> {
+  return request<UserInfo>("/api/settings/preferences", {
+    method: "PATCH",
+    body: JSON.stringify(prefs),
+  });
 }
 
 

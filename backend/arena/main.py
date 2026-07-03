@@ -432,8 +432,13 @@ class UserResponse(BaseModel):
     avatar_url: str | None
     privacy_accepted: bool = False
     username: str | None = None
+    show_own_leaderboard_badge: bool = False
 
     model_config = {"from_attributes": True}
+
+
+class UpdatePreferencesRequest(BaseModel):
+    show_own_leaderboard_badge: bool
 
 
 def config_from_request(request: dict[str, Any]):
@@ -1823,6 +1828,7 @@ def _user_response(user: User) -> UserResponse:
         avatar_url=user.avatar_url,
         privacy_accepted=user.privacy_accepted_at is not None,
         username=user.username,
+        show_own_leaderboard_badge=user.show_own_leaderboard_badge,
     )
 
 
@@ -1860,6 +1866,27 @@ async def accept_privacy(
             row.privacy_accepted_at = datetime.now(timezone.utc)
             await db.commit()
     return {"privacy_accepted": True}
+
+
+@app.patch(f"{API_PREFIX}/settings/preferences", response_model=UserResponse)
+async def update_preferences(
+    body: UpdatePreferencesRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Update the current user's personal display preferences.
+
+    Currently only controls whether the "You" badge highlighting the
+    user's own rows is shown on the leaderboard (default hidden/opt-in).
+    """
+    result = await db.execute(select(User).where(User.id == user.id))
+    row = result.scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="user not found")
+    row.show_own_leaderboard_badge = body.show_own_leaderboard_badge
+    await db.commit()
+    await db.refresh(row)
+    return _user_response(row)
 
 
 # ── Benchmark report ────────────────────────────────────────────────────

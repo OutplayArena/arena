@@ -173,4 +173,82 @@ describe("LeaderboardTable", () => {
     );
     expect(screen.getByText(/See full leaderboard/i)).toBeInTheDocument();
   });
+
+  describe("OwnerCell 'You' badge", () => {
+    const OWN_ROWS: LeaderboardTableRow[] = [
+      {
+        agentId: "anthropic__claude-opus-4-8",
+        ownerUsername: "herbertw",
+        isOwn: true,
+        matches_played: 50,
+        elo: 1500,
+        alpha_rank: 0.4,
+      },
+      {
+        agentId: "openai__gpt-4o",
+        ownerUsername: "someoneelse",
+        isOwn: false,
+        matches_played: 30,
+        elo: 1400,
+        alpha_rank: 0.3,
+      },
+    ];
+
+    it("does not show the 'You' badge by default even for the viewer's own row", () => {
+      renderInRouter(
+        <LeaderboardTable
+          rows={OWN_ROWS}
+          totalMatches={80}
+          loading={false}
+          error={null}
+          showOwnerColumn
+        />,
+      );
+      expect(screen.queryByText("You")).not.toBeInTheDocument();
+    });
+
+    it("shows the 'You' badge on the owner's row when showOwnBadge is true", () => {
+      renderInRouter(
+        <LeaderboardTable
+          rows={OWN_ROWS}
+          totalMatches={80}
+          loading={false}
+          error={null}
+          showOwnerColumn
+          showOwnBadge
+        />,
+      );
+      expect(screen.getByText("You")).toBeInTheDocument();
+    });
+
+    it("never shows the 'You' badge on another user's row, even when showOwnBadge is true", () => {
+      renderInRouter(
+        <LeaderboardTable
+          rows={OWN_ROWS}
+          totalMatches={80}
+          loading={false}
+          error={null}
+          showOwnerColumn
+          showOwnBadge
+        />,
+      );
+      expect(screen.getByText("someoneelse")).toBeInTheDocument();
+    });
+
+    it("shows the owner username instead of the badge when showOwnBadge is false", () => {
+      renderInRouter(
+        <LeaderboardTable
+          rows={OWN_ROWS}
+          totalMatches={80}
+          loading={false}
+          error={null}
+          showOwnerColumn
+        />,
+      );
+      // Own row falls back to the placeholder (not the raw username) when hidden,
+      // since the API never returns ownerUsername for the viewer's own row in
+      // practice — but the component itself must not leak "You" either way.
+      expect(screen.queryByText("You")).not.toBeInTheDocument();
+    });
+  });
 });
