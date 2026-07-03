@@ -309,20 +309,48 @@ EOF
 
 else
   echo "[1/4] Skipping image management (run with --build or --pull [TAG] to manage images)"
-  # Sanity-check: warn if any of the expected images is missing in minikube.
-  # The chart defaults to her3ert/outplayarena-*:latest, so check both
-  # the registry-tagged form (for --pull users) and the local-tag form
-  # (for --build users) to cover both workflows.
-  for img in \
-      "${REGISTRY_ORG}/${REGISTRY_REPO_BACKEND}:latest" \
-      "${REGISTRY_ORG}/${REGISTRY_REPO_MCP}:latest" \
-      "${LOCAL_REPO_DOCS}:latest"; do
-    if ! minikube image ls 2>/dev/null | grep -qE "(^|/)$(echo "$img" | sed 's,/,\\/,g')$"; then
+  # A bare re-apply should keep using whatever images are already in
+  # minikube, not silently flip back to the chart's registry defaults.
+  # The registry defaults can be stale relative to a prior --build, and
+  # that mismatch breaks the migrations Job when the DB is ahead of the
+  # registry image (alembic can't locate the DB's current revision). If
+  # the local arena-backend/arena-mcp images are present, reuse them so
+  # the running pods and the migrations Job stay on the same image;
+  # otherwise fall back to the chart defaults (registry tags).
+  _have_local_image() {
+    minikube image ls 2>/dev/null \
+      | grep -qE "(^|/)$(echo "$1" | sed 's,/,\\/,g')$"
+  }
+  if _have_local_image "${LOCAL_REPO_BACKEND}:latest" \
+     && _have_local_image "${LOCAL_REPO_MCP}:latest"; then
+    echo "  (local images ${LOCAL_REPO_BACKEND} / ${LOCAL_REPO_MCP} found in minikube — reusing them)"
+    HELM_IMAGE_OVERRIDES=(
+      "--set" "backend.image.repository=${LOCAL_REPO_BACKEND}"
+      "--set" "mcpServer.image.repository=${LOCAL_REPO_MCP}"
+      "--set" "migrations.image.repository=${LOCAL_REPO_BACKEND}"
+    )
+  else
+    echo "  (local images not found — using chart defaults: ${REGISTRY_ORG}/${REGISTRY_REPO_BACKEND}:latest)"
+    HELM_IMAGE_OVERRIDES=()
+  fi
+  # Sanity-check: warn if the images we'll actually use are missing.
+  # When reusing local images, check the local form; otherwise check
+  # the chart-default registry form. Docs is always local (no registry
+  # counterpart).
+  if [ "${#HELM_IMAGE_OVERRIDES[@]}" -gt 0 ]; then
+    _check_backend="${LOCAL_REPO_BACKEND}:latest"
+    _check_mcp="${LOCAL_REPO_MCP}:latest"
+  else
+    _check_backend="${REGISTRY_ORG}/${REGISTRY_REPO_BACKEND}:latest"
+    _check_mcp="${REGISTRY_ORG}/${REGISTRY_REPO_MCP}:latest"
+  fi
+  for img in "$_check_backend" "$_check_mcp" "${LOCAL_REPO_DOCS}:latest"; do
+    if ! _have_local_image "$img"; then
       echo "  ! $img not found in minikube. Run '$0 --pull' or '$0 --build'."
     fi
   done
+  unset _check_backend _check_mcp
   echo
-  HELM_IMAGE_OVERRIDES=()
 fi
 
 # ── 2. (optional) Install/upgrade Traefik ────────────────────────
@@ -372,11 +400,21 @@ helm upgrade "$RELEASE" helm/arena \
   "${HELM_TRAEFIK_OVERRIDES[@]}"
 echo
 
-# ── 4. Wait for migrations to finish and main pods to be ready ──────
-echo "[4/4] Waiting for migrations Job and main pods ..."
-kubectl -n "$NS" wait --for=condition=complete --timeout=300s \
-  "job/${RELEASE}-migrations" 2>/dev/null || \
-  echo "  (migrations job not found or still running — check with: kubectl -n $NS get jobs)"
+# ── 4. Wait for main pods to be ready ───────────────────────────────
+# Migrations run as a pre-upgrade Helm hook (see
+# helm/arena/templates/migrations/job.yaml), so they already completed
+# during the `helm upgrade` above — a failed hook would have aborted
+# the upgrade before reaching this step. The Job is TTL-deleted ~5 min
+# after finishing, so it may or may not still exist here; only wait on
+# it if it's still around.
+echo "[4/4] Waiting for main pods ..."
+if kubectl -n "$NS" get job "${RELEASE}-migrations" >/dev/null 2>&1; then
+  kubectl -n "$NS" wait --for=condition=complete --timeout=120s \
+    "job/${RELEASE}-migrations" 2>/dev/null || \
+    echo "  (migrations job still running — check: kubectl -n $NS get jobs)"
+else
+  echo "  (migrations ran as a pre-upgrade hook and have been cleaned up)"
+fi
 kubectl -n "$NS" rollout status deploy/"${RELEASE}-backend" --timeout=180s
 kubectl -n "$NS" rollout status deploy/"${RELEASE}-mcp"     --timeout=180s
 kubectl -n "$NS" rollout status deploy/"${RELEASE}-docs"    --timeout=180s
