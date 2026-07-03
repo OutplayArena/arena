@@ -5,6 +5,7 @@ agent loop can be exercised end-to-end without hitting a real backend.
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -789,6 +790,26 @@ class TestRunSync:
         # Stub out run to avoid hitting the network.
         agent.run = AsyncMock(return_value={"winner": "A"})
         result = agent.run_sync()
+        assert result == {"winner": "A"}
+
+    def test_run_sync_works_inside_running_event_loop(self):
+        """run_sync() must not raise "cannot be called from a running
+        event loop" when invoked from inside a running loop (e.g. a
+        Jupyter kernel). It offloads asyncio.run to a worker thread with
+        its own loop instead."""
+        agent = _RecordingAgent(
+            player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
+            arena_url="http://x", llm_config=_make_llm_config(),
+        )
+        agent.run = AsyncMock(return_value={"winner": "A"})
+
+        async def inside_running_loop():
+            # This coroutine runs inside an active event loop, mirroring
+            # how user code executes in a Jupyter kernel.
+            return agent.run_sync()
+
+        result = asyncio.run(inside_running_loop())
         assert result == {"winner": "A"}
 
 
