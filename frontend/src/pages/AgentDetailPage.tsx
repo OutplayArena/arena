@@ -11,6 +11,8 @@ const METRIC_LABELS: Record<string, string> = {
   strategy_entropy: "Entropy",
   behavioral_consistency: "Consistency",
   cooperation_rate: "Cooperation",
+  payoff_volatility: "Volatility",
+  action_concentration: "Concentration",
 };
 
 function MetricBadge({ label, value, format }: { label: string; value: number | null | undefined; format?: (v: number) => string }) {
