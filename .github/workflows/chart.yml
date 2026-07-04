@@ -1,0 +1,103 @@
+name: Chart
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [dev, main]
+    paths:
+      - "helm/**"
+      - "scripts/helm-upgrade.sh"
+      - ".github/workflows/chart.yml"
+  pull_request:
+    paths:
+      - "helm/**"
+      - "scripts/helm-upgrade.sh"
+      - ".github/workflows/chart.yml"
+
+jobs:
+  lint:
+    name: Lint + unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: "latest"
+
+      - name: Install helm-unittest plugin
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest --verify=false
+
+      - name: helm lint (validates against values.schema.json)
+        run: helm lint helm/arena
+
+      - name: helm unittest
+        run: helm unittest helm/arena --strict
+
+      - name: Install kubeconform
+        run: |
+          curl -sSL -o /tmp/kubeconform.tar.gz \
+            https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
+          tar -xzf /tmp/kubeconform.tar.gz -C /tmp
+
+      - name: kubeconform on rendered manifests (default + traefik)
+        run: |
+          helm template arena helm/arena > /tmp/default.yaml
+          helm template arena-traefik helm/arena --set traefik.enabled=true > /tmp/traefik.yaml
+          # --ignore-missing-schemas: traefik.io/v1alpha1 CRDs aren't in the
+          # stock Kubernetes schema; kubeconform skips them rather than failing.
+          /tmp/kubeconform -summary -ignore-missing-schemas /tmp/default.yaml /tmp/traefik.yaml
+
+  upgrade:
+    name: install → upgrade (immutability guard)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: "latest"
+
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: kind
+
+      - name: Build stub alembic image (no-op /usr/local/bin/alembic)
+        run: |
+          docker build -t arena-backend:latest -f helm/arena/tests/stub-alembic.Dockerfile .
+          kind load docker-image arena-backend:latest
+
+      # No --wait: the backend/mcp/docs Deployments would never roll out
+      # (the stub has no real server), but helm still waits for the
+      # pre-install/pre-upgrade hook (the migrations Job), which is exactly
+      # what we're testing. The stub alembic exits 0 once postgres is up.
+      - name: helm install
+        run: |
+          helm install arena helm/arena -n arena --create-namespace \
+            --set backend.image.repository=arena-backend \
+            --set mcpServer.image.repository=arena-backend \
+            --set docs.image.repository=arena-backend \
+            --set migrations.image.repository=arena-backend
+
+      - name: migrations hook completed
+        run: kubectl -n arena wait --for=condition=complete --timeout=180s job/arena-migrations
+
+      - name: helm upgrade (regression guard — must not hit "field is immutable")
+        run: |
+          helm upgrade arena helm/arena -n arena \
+            --set backend.image.repository=arena-backend \
+            --set mcpServer.image.repository=arena-backend \
+            --set docs.image.repository=arena-backend \
+            --set migrations.image.repository=arena-backend
+
+      - name: second helm upgrade (idempotency)
+        run: |
+          helm upgrade arena helm/arena -n arena \
+            --set backend.image.repository=arena-backend \
+            --set mcpServer.image.repository=arena-backend \
+            --set docs.image.repository=arena-backend \
+            --set migrations.image.repository=arena-backend
+
+      - name: cleanup
+        if: always()
+        run: helm uninstall arena -n arena 2>/dev/null || true

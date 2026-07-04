@@ -1,0 +1,32 @@
+suite: "dev.liveReload"
+release:
+  name: arena
+tests:
+  - it: "does not mount the static hostPath volume by default"
+    template: "templates/backend/deployment.yaml"
+    asserts:
+      - notExists:
+          path: spec.template.spec.volumes
+      - notExists:
+          path: spec.template.spec.containers[0].volumeMounts
+
+  - it: "mounts the static hostPath volume when liveReload is enabled"
+    template: "templates/backend/deployment.yaml"
+    set:
+      dev.liveReload: true
+      dev.staticSourcePath: /tmp/arena-static
+    asserts:
+      - exists:
+          path: spec.template.spec.volumes
+      - equal:
+          path: spec.template.spec.volumes[0].name
+          value: static-files
+      - equal:
+          path: spec.template.spec.volumes[0].hostPath.path
+          value: "/tmp/arena-static"
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].name
+          value: static-files
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].mountPath
+          value: /app/static
