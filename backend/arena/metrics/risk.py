@@ -5,7 +5,7 @@ from typing import Any
 import numpy as np
 
 
-def _hhi(allocation: list[int | float]) -> float:
+def hhi(allocation: list[int | float]) -> float:
     """Herfindahl-Hirschman Index: 0 = perfectly spread, 1 = all-in on one item."""
     total = sum(allocation)
     if total == 0:
@@ -16,7 +16,7 @@ def _hhi(allocation: list[int | float]) -> float:
 class RiskMetrics:
     """Volatility and concentration signals describing an agent's risk profile."""
 
-    _hhi = staticmethod(_hhi)
+    hhi = staticmethod(hhi)
 
     @staticmethod
     def payoff_volatility(payoffs: list[float]) -> float:
@@ -40,4 +40,4 @@ class RiskMetrics:
         ]
         if not vectors:
             return None
-        return float(np.mean([_hhi(v) for v in vectors]))
+        return float(np.mean([hhi(v) for v in vectors]))

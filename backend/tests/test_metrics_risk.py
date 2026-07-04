@@ -2,7 +2,7 @@
 
 import pytest
 
-from arena.metrics.risk import RiskMetrics, _hhi
+from arena.metrics.risk import RiskMetrics, hhi
 
 
 # ── payoff_volatility ──────────────────────────────────────────────────
@@ -53,15 +53,15 @@ class TestActionConcentration:
         assert result == pytest.approx(1.0)
 
 
-# ── shared _hhi helper (used by Colonel Blotto's metrics.py too) ────────
+# ── shared hhi helper (used by Colonel Blotto's metrics.py too) ────────
 
 
 class TestHHI:
     def test_all_in_one_battlefield(self):
-        assert _hhi([10, 0, 0]) == pytest.approx(1.0)
+        assert hhi([10, 0, 0]) == pytest.approx(1.0)
 
     def test_evenly_spread(self):
-        assert _hhi([5, 5, 5, 5]) == pytest.approx(0.25)
+        assert hhi([5, 5, 5, 5]) == pytest.approx(0.25)
 
     def test_zero_total(self):
-        assert _hhi([0, 0, 0]) == 0.0
+        assert hhi([0, 0, 0]) == 0.0

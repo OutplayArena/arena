@@ -92,6 +92,8 @@ export interface RichAgentMetrics {
   cumulative_regret: number;
   adaptive_regret_series: number[];
   nash_gap: number;
+  payoff_volatility?: number;
+  action_concentration?: number;
   cooperation_rate?: number;
   tit_for_tat_adherence?: Record<string, number>;
   forgiveness_index?: Record<string, number>;

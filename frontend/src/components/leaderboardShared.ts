@@ -5,6 +5,8 @@ export const METRIC_LABELS: Record<string, string> = {
   strategy_entropy: "Entropy",
   behavioral_consistency: "Consistency",
   cooperation_rate: "Cooperation",
+  payoff_volatility: "Volatility",
+  action_concentration: "Concentration",
 };
 
 export function formatMetric(key: string, val: number): string {

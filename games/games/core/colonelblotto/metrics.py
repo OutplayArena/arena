@@ -9,7 +9,7 @@ import numpy as np
 from arena.game_components.game_metrics import GameMetrics
 from arena.metrics.behavioral import BehavioralMetrics
 from arena.metrics.extension import GameMetricsExtension
-from arena.metrics.risk import _hhi as _herfindahl_hirschman_index
+from arena.metrics.risk import hhi as _herfindahl_hirschman_index
 
 
 # ---------------------------------------------------------------------------
