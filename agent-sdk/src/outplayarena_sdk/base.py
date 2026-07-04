@@ -32,6 +32,7 @@ Example::
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import json
 import random
 from typing import Any
@@ -292,8 +293,20 @@ class BaseAgent:
         return results
 
     def run_sync(self) -> dict[str, Any]:
-        """Synchronous wrapper around :meth:`run` for scripts and notebooks."""
-        return asyncio.run(self.run())
+        """Synchronous wrapper around :meth:`run` for scripts and notebooks.
+
+        Jupyter kernels already run an event loop, so a plain
+        ``asyncio.run()`` would raise "cannot be called from a running
+        event loop". When that's the case, drive the coroutine in a
+        dedicated thread with its own loop instead.
+        """
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(self.run())
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(asyncio.run, self.run()).result()
 
     # ── Loop internals ────────────────────────────────────────────────────
 
