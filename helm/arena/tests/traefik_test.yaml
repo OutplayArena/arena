@@ -1,0 +1,105 @@
+suite: "traefik toggle"
+release:
+  name: arena
+tests:
+  - it: "renders no Traefik IngressRoute when disabled"
+    template: "templates/traefik/ingressroute.yaml"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "renders no Traefik Middleware when disabled"
+    template: "templates/traefik/middleware.yaml"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "renders no docs IngressRoute when disabled"
+    template: "templates/docs/ingressroute.yaml"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "renders no mcp IngressRoute when disabled"
+    template: "templates/mcp-server/ingressroute.yaml"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "renders the Traefik IngressRoute with the configured host when enabled"
+    set:
+      traefik.enabled: true
+      traefik.host: agent-arena.local
+    template: "templates/traefik/ingressroute.yaml"
+    asserts:
+      - isKind:
+          of: IngressRoute
+      - equal:
+          path: metadata.name
+          value: arena
+      - equal:
+          path: spec.entryPoints[0]
+          value: web
+      - matchRegex:
+          path: spec.routes[0].match
+          pattern: "agent-arena\\.local"
+
+  - it: "adds tls.certResolver when certResolver is set"
+    set:
+      traefik.enabled: true
+      traefik.certResolver: letsencrypt
+    template: "templates/traefik/ingressroute.yaml"
+    asserts:
+      - equal:
+          path: spec.tls.certResolver
+          value: letsencrypt
+
+  - it: "adds tls.secretName when tlsSecret is set and certResolver is empty"
+    set:
+      traefik.enabled: true
+      traefik.certResolver: ""
+      traefik.tlsSecret: arena-tls
+    template: "templates/traefik/ingressroute.yaml"
+    asserts:
+      - equal:
+          path: spec.tls.secretName
+          value: arena-tls
+
+  - it: "renders both Middlewares when enabled"
+    set:
+      traefik.enabled: true
+    template: "templates/traefik/middleware.yaml"
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: metadata.name
+          value: arena-ratelimit
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: arena-strip-docs
+        documentIndex: 1
+
+  - it: "renders the docs IngressRoute when enabled"
+    set:
+      traefik.enabled: true
+      traefik.host: agent-arena.local
+    template: "templates/docs/ingressroute.yaml"
+    asserts:
+      - isKind:
+          of: IngressRoute
+      - equal:
+          path: metadata.name
+          value: arena-docs
+
+  - it: "renders the mcp IngressRoute when enabled"
+    set:
+      traefik.enabled: true
+    template: "templates/mcp-server/ingressroute.yaml"
+    asserts:
+      - isKind:
+          of: IngressRoute
+      - equal:
+          path: metadata.name
+          value: arena-mcp
