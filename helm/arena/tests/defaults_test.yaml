@@ -12,11 +12,11 @@ tests:
           path: metadata.name
           value: arena-migrations
 
-  - it: "is a pre-upgrade Helm hook (guards the spec.template immutability fix)"
+  - it: "is a post-install/post-upgrade Helm hook (guards the spec.template immutability fix)"
     asserts:
       - equal:
           path: metadata.annotations["helm.sh/hook"]
-          value: "pre-install,pre-upgrade"
+          value: "post-install,post-upgrade"
       - equal:
           path: metadata.annotations["helm.sh/hook-delete-policy"]
           value: before-hook-creation
