@@ -26,7 +26,7 @@ jobs:
           version: "latest"
 
       - name: Install helm-unittest plugin
-        run: helm plugin install https://github.com/helm-unittest/helm-unittest
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest --verify=false
 
       - name: helm lint (validates against values.schema.json)
         run: helm lint helm/arena
@@ -59,8 +59,6 @@ jobs:
           version: "latest"
 
       - uses: helm/kind-action@v1
-        with:
-          version: "v0.24.1"
 
       - name: Build stub alembic image (no-op /usr/local/bin/alembic)
         run: |
