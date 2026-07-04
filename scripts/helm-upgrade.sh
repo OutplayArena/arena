@@ -401,7 +401,7 @@ helm upgrade "$RELEASE" helm/arena \
 echo
 
 # ── 4. Wait for main pods to be ready ───────────────────────────────
-# Migrations run as a pre-upgrade Helm hook (see
+# Migrations run as a post-install/post-upgrade Helm hook (see
 # helm/arena/templates/migrations/job.yaml), so they already completed
 # during the `helm upgrade` above — a failed hook would have aborted
 # the upgrade before reaching this step. The Job is TTL-deleted ~5 min
@@ -413,7 +413,7 @@ if kubectl -n "$NS" get job "${RELEASE}-migrations" >/dev/null 2>&1; then
     "job/${RELEASE}-migrations" 2>/dev/null || \
     echo "  (migrations job still running — check: kubectl -n $NS get jobs)"
 else
-  echo "  (migrations ran as a pre-upgrade hook and have been cleaned up)"
+  echo "  (migrations ran as a post-install/post-upgrade hook and have been cleaned up)"
 fi
 kubectl -n "$NS" rollout status deploy/"${RELEASE}-backend" --timeout=180s
 kubectl -n "$NS" rollout status deploy/"${RELEASE}-mcp"     --timeout=180s
