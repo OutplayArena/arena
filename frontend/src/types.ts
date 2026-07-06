@@ -408,4 +408,49 @@ export interface RatingHistoryResponse {
   history: RatingHistoryPoint[];
 }
 
+// ── Matchmaking / lobby (#96) ──────────────────────────────────────────────
+
+export interface LobbyMatchSummary {
+  id: string;
+  host_user_id: string;
+  host_name: string | null;
+  game_type: string;
+  status: string;
+  total_slots: number;
+  filled_slots: number;
+  open_slots: number;
+  invite_code: string;
+  created_at: string | null;
+  started_at: string | null;
+  expires_at: string | null;
+}
+
+export interface LobbyMatchDetail extends LobbyMatchSummary {
+  participants: { slot: string; user_id: string; joined_at: string | null }[];
+  session_id?: string;
+}
+
+export interface CreateOpenMatchResponse {
+  match_id: string;
+  status: string;
+  invite_code: string;
+  invite_url: string;
+  host_token: string;
+  host_slot: string;
+  total_slots: number;
+  filled_slots: number;
+  open_slots: number;
+  expires_at: string;
+}
+
+export interface JoinMatchResponse {
+  match_id: string;
+  slot: string;
+  player_token: string;
+  status: string;
+  filled_slots: number;
+  total_slots: number;
+  session_id?: string;
+}
+
 

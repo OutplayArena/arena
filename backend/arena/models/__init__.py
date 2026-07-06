@@ -7,5 +7,6 @@ from arena.models.mailbox_message import MailboxMessage
 from arena.models.error_log import ErrorLog
 from arena.models.wandb_credential import WandbCredential
 from arena.models.platform_setting import PlatformSetting
+from arena.models.match import Match, MatchParticipant
 
-__all__ = ["Base", "User", "SessionModel", "ApiKey", "MessageLog", "MailboxMessage", "ErrorLog", "WandbCredential", "PlatformSetting"]
+__all__ = ["Base", "User", "SessionModel", "ApiKey", "MessageLog", "MailboxMessage", "ErrorLog", "WandbCredential", "PlatformSetting", "Match", "MatchParticipant"]
