@@ -16,7 +16,9 @@ import { LeaderboardPage } from "./pages/LeaderboardPage";
 import { AgentDetailPage } from "./pages/AgentDetailPage";
 import { DocsPage } from "./pages/DocsPage";
 import { GettingStartedPage } from "./pages/GettingStartedPage";
+import { AdminPage } from "./pages/AdminPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute } from "./components/AdminRoute";
 import { PrivacyGate } from "./components/PrivacyGate";
 
 export default function App() {
@@ -91,6 +93,14 @@ export default function App() {
                 <ProtectedRoute>
                   <KeysPage />
                 </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <AdminRoute>
+                  <AdminPage />
+                </AdminRoute>
               }
             />
             <Route path="/getting-started" element={<GettingStartedPage />} />

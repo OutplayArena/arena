@@ -22,6 +22,10 @@ import type {
   AgentDetailResponse,
   RatingHistoryResponse,
   UserInfo,
+  AdminUsersResponse,
+  AdminSessionsResponse,
+  AdminStatsResponse,
+  AdminSettings,
 } from "./types";
 
 export class ApiError extends Error {
@@ -392,6 +396,33 @@ export function updatePreferences(prefs: { show_own_leaderboard_badge: boolean }
   return request<UserInfo>("/api/settings/preferences", {
     method: "PATCH",
     body: JSON.stringify(prefs),
+  });
+}
+
+// ── Admin dashboard (#116) ─────────────────────────────────────────────────
+
+export function getAdminUsers(limit = 100, offset = 0): Promise<AdminUsersResponse> {
+  const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  return request<AdminUsersResponse>(`/api/admin/users?${q.toString()}`);
+}
+
+export function getAdminSessions(limit = 100, offset = 0): Promise<AdminSessionsResponse> {
+  const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  return request<AdminSessionsResponse>(`/api/admin/sessions?${q.toString()}`);
+}
+
+export function getAdminStats(): Promise<AdminStatsResponse> {
+  return request<AdminStatsResponse>("/api/admin/stats");
+}
+
+export function getAdminSettings(): Promise<AdminSettings> {
+  return request<AdminSettings>("/api/admin/settings");
+}
+
+export function updateAdminSettings(partial: Partial<AdminSettings>): Promise<Partial<AdminSettings>> {
+  return request<Partial<AdminSettings>>("/api/admin/settings", {
+    method: "PUT",
+    body: JSON.stringify(partial),
   });
 }
 

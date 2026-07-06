@@ -41,7 +41,7 @@ from arena.integrations.wandb_logger import encrypt_api_key, decrypt_api_key, Wa
 from arena.experiment_config import WandbConfig
 from arena.auth.oauth import github_login, github_callback, google_login, google_callback, _callback_base_for
 from arena.auth.jwt import create_access_token
-from arena.auth.dependencies import get_current_user, get_local_or_optional_user, require_user
+from arena.auth.dependencies import get_current_user, get_local_or_optional_user, require_user, require_admin
 from arena.auth.apikey import generate_platform_key
 from arena.models.user import User
 
@@ -433,6 +433,7 @@ class UserResponse(BaseModel):
     privacy_accepted: bool = False
     username: str | None = None
     show_own_leaderboard_badge: bool = False
+    is_admin: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -1771,7 +1772,237 @@ async def delete_account(
     return {"deleted": True}
 
 
+# ── Admin dashboard (#116) ─────────────────────────────────────────────
+# All /api/admin/* endpoints are gated by `require_admin` (checks
+# ENABLE_ADMIN_DASHBOARD env + is_admin column OR ADMIN_USER_IDS allowlist).
+# Email addresses are masked (partial) so admin UI never surfaces full
+# addresses. Response shapes are intentionally small and dashboard-shaped.
+
+def _mask_email(email: str) -> str:
+    """Partial email redaction: keep name[0] + domain[0..<2] chars."""
+    if not email or "@" not in email:
+        return email
+    name, _, domain = email.partition("@")
+    if not name or not domain:
+        return email
+    shown_name = name[0] if len(name) >= 1 else ""
+    shown_domain = domain[0] + domain[1] if len(domain) >= 1 else ""
+    return f"{shown_name}***@***.{domain.split('.')[-1]}" if "." in domain else f"{shown_name}***@***.{shown_domain}"
+
+
+def _admin_user_row(u: User) -> dict:
+    return {
+        "id": str(u.id),
+        "username": u.username,
+        "name": u.name,
+        "provider": u.provider,
+        "email_masked": _mask_email(u.email),
+        "is_admin": bool(getattr(u, "is_admin", False)),
+        "created_at": u.created_at.isoformat() if u.created_at else None,
+        "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
+    }
+
+
+@app.get(f"{API_PREFIX}/admin/users")
+async def admin_list_users(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    """List registered users with masked emails (#116)."""
+    result = await db.execute(select(User).order_by(User.created_at.desc()))
+    users = result.scalars().all()
+    return {"users": [_admin_user_row(u) for u in users]}
+
+
+@app.get(f"{API_PREFIX}/admin/sessions")
+async def admin_list_sessions(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_admin),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+):
+    """List all sessions across all users (#116)."""
+    total_r = await db.execute(select(func.count()).select_from(SessionModel))
+    total = total_r.scalar_one()
+    rows_r = await db.execute(
+        select(SessionModel)
+        .order_by(SessionModel.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    rows = rows_r.scalars().all()
+    return {
+        "total": total,
+        "sessions": [
+            {
+                "id": r.id,
+                "status": r.status,
+                "game": r.config_json.get("game") if isinstance(r.config_json, dict) else None,
+                "user_id": str(r.user_id) if r.user_id else None,
+                "is_public": r.is_public,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in rows
+        ],
+    }
+
+
+@app.get(f"{API_PREFIX}/admin/stats")
+async def admin_stats(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    """Platform-wide telemetry for the admin dashboard (#116)."""
+    from arena.platform_settings import get_platform_setting as _get_set
+
+    running = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(SessionModel)
+                .where(SessionModel.status == "running")
+            )
+        ).scalar_one()
+    )
+    ready = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(SessionModel)
+                .where(SessionModel.status == "ready")
+            )
+        ).scalar_one()
+    )
+    queued = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(SessionModel)
+                .where(SessionModel.status == "queued")
+            )
+        ).scalar_one()
+    )
+    failed = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(SessionModel)
+                .where(SessionModel.status == "failed")
+            )
+        ).scalar_one()
+    )
+    wandb_users = int(
+        (
+            await db.execute(select(func.count()).select_from(WandbCredential))
+        ).scalar_one()
+    )
+    login_enabled = await _get_set("login_enabled", db, cast=bool)
+    db_size = "unavailable"
+    try:
+        size_r = await db.execute(
+            select(func.pg_database_size(func.current_database()))
+        )
+        db_size = size_r.scalar_one()
+    except Exception:
+        _logger_main.debug("pg_database_size unavailable; reporting placeholder", exc_info=True)
+    return {
+        "sessions_running": running,
+        "sessions_ready": ready,
+        "sessions_queued": queued,
+        "sessions_failed": failed,
+        "wandb_users": wandb_users,
+        "login_enabled": login_enabled,
+        "db_size_bytes": db_size,
+        "backup": {"status": "not_configured"},
+    }
+
+
+@app.get(f"{API_PREFIX}/admin/errors")
+async def admin_list_errors(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_admin),
+    limit: int = Query(50, ge=1, le=500),
+):
+    """Recent server errors from the error_logs table (#116)."""
+    from arena.models.error_log import ErrorLog
+
+    result = await db.execute(
+        select(ErrorLog).order_by(ErrorLog.created_at.desc()).limit(limit)
+    )
+    errors = result.scalars().all()
+    return {
+        "errors": [
+            {
+                "id": str(e.id),
+                "method": e.method,
+                "path": e.path,
+                "exception_type": e.exception_type,
+                "message": e.message,
+                "client_ip": e.client_ip,
+                "user_agent": e.user_agent,
+                "created_at": e.created_at.isoformat() if e.created_at else None,
+            }
+            for e in errors
+        ]
+    }
+
+
+@app.get(f"{API_PREFIX}/admin/settings")
+async def admin_get_settings(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    """Read the runtime-editable platform settings (#116)."""
+    from arena.platform_settings import get_platform_setting as _get_set
+
+    return {
+        "max_concurrent_sessions": await _get_set("max_concurrent_sessions", db, cast=int),
+        "max_concurrent_sessions_per_user": await _get_set(
+            "max_concurrent_sessions_per_user", db, cast=int
+        ),
+        "login_enabled": await _get_set("login_enabled", db, cast=bool),
+    }
+
+
+@app.put(f"{API_PREFIX}/admin/settings")
+async def admin_update_settings(
+    body: dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    """Update runtime-editable platform settings (#116).
+
+    Accepts a partial body; only the provided keys are updated. Boolean
+    ``login_enabled`` toggles whether new logins are accepted (enforced
+    in the OAuth callback endpoints).
+    """
+    from arena.platform_settings import set_platform_setting as _set_set
+
+    allowed = {"max_concurrent_sessions", "max_concurrent_sessions_per_user", "login_enabled"}
+    updated = {}
+    for key, value in body.items():
+        if key not in allowed:
+            continue
+        await _set_set(key, value, db, updated_by=user.id)
+        updated[key] = value
+    return updated
+
+
 # ── OAuth ──────────────────────────────────────────────────────────────
+
+async def _enforce_login_enabled(db: AsyncSession) -> None:
+    """Reject new logins when the admin has toggled login_enabled=false (#116).
+
+    Reads the ``login_enabled`` platform setting (env-fallback True).
+    Called at the start of each OAuth login redirect so the toggle is
+    enforced before the user is bounced out to the provider.
+    """
+    from arena.platform_settings import get_platform_setting as _get_set
+
+    enabled = await _get_set("login_enabled", db, cast=bool)
+    if not enabled:
+        raise HTTPException(status_code=403, detail="login is temporarily disabled")
+
 
 def _provider_configured(client_id: str | None, client_secret: str | None) -> bool:
     return bool(client_id and client_id.strip() and client_secret and client_secret.strip())
@@ -1793,8 +2024,9 @@ def auth_providers():
 
 
 @app.get(f"{API_PREFIX}/auth/github/login")
-async def auth_github_login(request: Request):
+async def auth_github_login(request: Request, db: AsyncSession = Depends(get_db)):
     """Initiate GitHub OAuth login flow."""
+    await _enforce_login_enabled(db)
     return await github_login(request)
 
 
@@ -1807,8 +2039,9 @@ async def auth_github_callback(request: Request, db: AsyncSession = Depends(get_
 
 
 @app.get(f"{API_PREFIX}/auth/google/login")
-async def auth_google_login(request: Request):
+async def auth_google_login(request: Request, db: AsyncSession = Depends(get_db)):
     """Initiate Google OAuth login flow."""
+    await _enforce_login_enabled(db)
     return await google_login(request)
 
 
@@ -1821,6 +2054,8 @@ async def auth_google_callback(request: Request, db: AsyncSession = Depends(get_
 
 
 def _user_response(user: User) -> UserResponse:
+    from arena.auth.dependencies import _user_is_admin
+
     return UserResponse(
         id=str(user.id),
         email=user.email,
@@ -1829,6 +2064,7 @@ def _user_response(user: User) -> UserResponse:
         privacy_accepted=user.privacy_accepted_at is not None,
         username=user.username,
         show_own_leaderboard_badge=user.show_own_leaderboard_badge,
+        is_admin=_user_is_admin(user),
     )
 
 
@@ -2367,6 +2603,8 @@ async def get_agent_history(
 @app.get(f"{API_PREFIX}/site-config")
 def site_config():
     """Return site configuration from site.yaml."""
+    from arena.auth.dependencies import _is_admin_enabled
+
     if SITE_YAML.is_file():
         data = yaml.safe_load(SITE_YAML.read_text(encoding="utf-8")) or {}
     else:
@@ -2377,6 +2615,7 @@ def site_config():
         "privacy_notice_url": data.get("privacy_notice_url", ""),
         "about_text": data.get("about_text", ""),
         "footer": data.get("footer") or {"copyright": "", "tagline": ""},
+        "admin_dashboard_enabled": _is_admin_enabled(),
     }
 
 

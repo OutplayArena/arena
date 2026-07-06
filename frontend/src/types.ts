@@ -8,6 +8,9 @@ export interface UserInfo {
   username: string | null;
   /** Personal preference: show the "You" badge highlighting own rows on the leaderboard. Defaults to false (opt-in). */
   show_own_leaderboard_badge: boolean;
+  /** Admin dashboard access (#116). Source of truth is the backend `users.is_admin`
+   * column; `ADMIN_USER_IDS` env var is a bootstrap-only allowlist. */
+  is_admin?: boolean;
 }
 
 export interface ProvidersResponse {
@@ -155,6 +158,64 @@ export interface SiteConfig {
     copyright: string;
     tagline: string;
   };
+  /** Whether the backend `ENABLE_ADMIN_DASHBOARD` toggle is on (#116).
+   * The /admin route is only rendered when this is true AND the current
+   * user is an admin (see UserInfo.is_admin). */
+  admin_dashboard_enabled?: boolean;
+}
+
+// ── Admin dashboard (#116) ─────────────────────────────────────────────────
+// All admin API endpoints are gated by `require_admin` on the backend and
+// return 403 when `ENABLE_ADMIN_DASHBOARD=false` or the user is not an admin.
+
+export interface AdminUserRow {
+  id: string;
+  username: string | null;
+  name: string;
+  provider: string;
+  /** Partially redacted email — only the first char of the name and the TLD. */
+  email_masked: string;
+  is_admin: boolean;
+  created_at: string | null;
+  last_login_at: string | null;
+}
+
+export interface AdminUsersResponse {
+  users: AdminUserRow[];
+}
+
+export interface AdminSessionRow {
+  id: string;
+  status: string;
+  game: string | null;
+  user_id: string | null;
+  is_public: boolean;
+  created_at: string | null;
+}
+
+export interface AdminSessionsResponse {
+  total: number;
+  sessions: AdminSessionRow[];
+}
+
+export interface AdminStatsResponse {
+  sessions_running: number;
+  sessions_ready: number;
+  sessions_queued: number;
+  sessions_failed: number;
+  /** Number of users with a stored W&B credential. */
+  wandb_users: number;
+  /** Whether new logins are accepted (toggleable via PUT /admin/settings). */
+  login_enabled: boolean;
+  /** Database size in bytes, or "unavailable" when the backend can't query pg_database_size. */
+  db_size_bytes: number | string;
+  backup: { status: string };
+}
+
+export interface AdminSettings {
+  max_concurrent_sessions: number;
+  max_concurrent_sessions_per_user: number;
+  login_enabled: boolean;
 }
 
 export interface HealthResponse {

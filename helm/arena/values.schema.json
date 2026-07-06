@@ -67,7 +67,8 @@
           "additionalProperties": true,
           "properties": {
             "apiPrefix": { "type": "string" },
-            "enableAgentRestApi": { "type": "string" }
+            "enableAgentRestApi": { "type": "string" },
+            "enableAdminDashboard": { "type": "string" }
           }
         },
         "resources": { "$ref": "#/definitions/resources" },
