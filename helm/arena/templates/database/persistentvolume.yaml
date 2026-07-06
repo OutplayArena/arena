@@ -12,9 +12,7 @@ spec:
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
-  {{- if .Values.database.storageClassName }}
-  storageClassName: {{ .Values.database.storageClassName }}
-  {{- end }}
+  storageClassName: {{ .Values.database.storageClassName | quote }}  # explicit ("") bypasses default-class admission on the PVC so it binds to this static PV by name
   hostPath:
     path: /data/outplayarena-postgres
     type: DirectoryOrCreate
