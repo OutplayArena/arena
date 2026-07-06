@@ -456,5 +456,12 @@ cat <<EOF
   To tear down:
       ./scripts/dev-tunnel.sh stop   # if started
       helm -n $NS uninstall $RELEASE
+
+      # The database PV (database.createPV=true default in values.yaml) is
+      # NOT tracked by Helm, so `helm uninstall` leaves it intact — the next
+      # `helm install` re-binds the same PV and your DB survives teardowns.
+      # To wipe the DB too (truly fresh start):
+      #   kubectl -n $NS delete pvc data-${RELEASE}-db-0
+      #   kubectl delete pv ${RELEASE}-arena-db-pv  # or: kubectl delete pv arena-db-pv
 ==============================================================
 EOF

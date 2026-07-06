@@ -12,7 +12,22 @@ database:
   password: outplayarena
   storage: 10Gi
   storageClassName: ""
-  createPV: false
+  # When true, the chart renders a static PersistentVolume
+  # (templates/database/persistentvolume.yaml) with reclaimPolicy: Retain and
+  # a hostPath at /data/outplayarena-postgres. The StatefulSet's
+  # volumeClaimTemplates PVC then binds to this PV by name (see
+  # statefulset.yaml). Because the PV is NOT tracked by Helm, `helm uninstall`
+  # leaves it intact — the next `helm install` re-binds the same PV and your
+  # database survives teardowns. On minikube the hostPath lives inside the
+  # minikube container/VM: it survives `helm uninstall` and `minikube stop`,
+  # but is wiped by `minikube delete`. Set to false to fall back to the
+  # cluster's default StorageClass (e.g. minikube's standard, which has
+  # reclaimPolicy: Delete — your DB will be wiped on `helm uninstall`).
+  createPV: true
+  # Name of the static PV. When empty, the chart defaults to
+  # "<fullname>-db-pv". Set this explicitly only if you need to share a PV
+  # across releases or pin to a pre-existing PV.
+  volumeName: ""
   resources:
     requests:
       cpu: 100m

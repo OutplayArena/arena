@@ -69,6 +69,16 @@ spec:
         {{- if .Values.database.storageClassName }}
         storageClassName: {{ .Values.database.storageClassName }}
         {{- end }}
-        {{- if .Values.database.volumeName }}
+        {{- /*
+          Bind the PVC to the static PV by name when createPV is true. Without
+          an explicit volumeName, the default StorageClass's dynamic
+          provisioner may satisfy the PVC first (Immediate binding), stealing
+          the bind from the static Retain PV. The default matches the name
+          used by templates/database/persistentvolume.yaml.
+        */ -}}
+        {{- $pvName := .Values.database.volumeName | default (printf "%s-db-pv" (include "arena.fullname" .)) }}
+        {{- if .Values.database.createPV }}
+        volumeName: {{ $pvName }}
+        {{- else if .Values.database.volumeName }}
         volumeName: {{ .Values.database.volumeName }}
         {{- end }}
