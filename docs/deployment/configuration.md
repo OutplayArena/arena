@@ -33,6 +33,13 @@ All configuration is via environment variables. Copy the appropriate template to
 | `API_PREFIX` | No | `/api` | Path prefix for all API routes |
 | `ENABLE_AGENT_REST_API` | No | `false` | Allow agents to call game endpoints directly via REST. In production, keep `false` — only MCP servers should access game endpoints |
 | `CORS_ALLOW_ORIGINS` | Yes (prod) | `*` | Comma-separated allowed CORS origins. Set to your domain in production (e.g. `https://arena.example.com`) |
+| `ENABLE_ADMIN_DASHBOARD` | No | `false` | Expose the `/api/admin/*` endpoints and the `/admin` frontend route. Requires an admin user (see `ADMIN_USER_IDS` or the `users.is_admin` column) |
+| `ADMIN_USER_IDS` | No | — | Comma-separated UUID allowlist for admin access. Bootstrap mechanism — lets the first admin sign in before any `is_admin` DB row can be flipped via the dashboard |
+| `MAX_CONCURRENT_SESSIONS` | No | `50` | Global cap on concurrent `ready`/`running` game sessions. New sessions exceeding this are queued (status `queued`) until a slot frees. Overridable at runtime via `platform_settings` |
+| `MAX_CONCURRENT_SESSIONS_PER_USER` | No | `5` | Per-user cap on concurrent sessions. Overridable at runtime via `platform_settings` |
+| `ENABLE_MATCHMAKING` | No | `true` | Kill switch for the `/api/lobby/*` matchmaking endpoints. Auto-disabled in local mode (no OAuth providers) regardless of this flag |
+| `MATCHMAKING_TTL_HOURS` | No | `24` | Hours an open match waits for opponents before auto-expiring |
+| `MATCHMAKING_SWEEPER_INTERVAL_SECONDS` | No | `3600` | How often the background sweeper looks for expired matches |
 
 !!! danger "CORS in production"
     `CORS_ALLOW_ORIGINS=*` combined with credentials allows cross-site authenticated requests. Always set this to your specific domain in production.
