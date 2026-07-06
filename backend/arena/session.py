@@ -249,6 +249,7 @@ class GameSession:
             "config_hash": self.config_hash,
             "config": self.config.to_dict() if hasattr(self.config, "to_dict") else {},
             "player_tokens": dict(self.player_tokens),
+            "status": self.status,
         }
         if self.wandb_run_meta:
             resp["wandb_run"] = self.wandb_run_meta

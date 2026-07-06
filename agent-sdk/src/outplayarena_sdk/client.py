@@ -453,6 +453,59 @@ class ArenaClient:
         """
         return self.get_state()["phase"] == "complete"
 
+    def get_session_status(self) -> dict:
+        """Return the lifecycle status of the session and its queue position.
+
+        Polls ``GET /session/{id}/status``. When the concurrency queue (#117)
+        is active and the session was created with ``status='queued'`` (HTTP
+        202 from ``POST /experiment``), this returns
+        ``{"status": "queued", "queue_position": N}`` until the background
+        drainer promotes it to ``ready``.
+
+        Raises:
+            ValueError: If session_id is not set.
+            httpx.HTTPStatusError: If the API request fails.
+        """
+        session_id = self._require_session_id()
+        response = self.http_client.get(
+            f"{self.base_url}/session/{session_id}/status",
+            timeout=self.timeout,
+        )
+        return self._json_or_raise(response)
+
+    def wait_until_ready(
+        self,
+        poll_interval: float = 1.0,
+        timeout: float | None = 120.0,
+    ) -> dict:
+        """Block until a queued session reaches ``ready`` (or terminal).
+
+        Polls :meth:`get_session_status` every ``poll_interval`` seconds until
+        the status is no longer ``queued``. Returns the final status payload
+        (``{"status": ..., "queue_position": 0}``). If ``timeout`` is reached
+        while still queued, raises ``TimeoutError``.
+
+        Args:
+            poll_interval: Seconds between polls (default 1.0).
+            timeout: Maximum seconds to wait. ``None`` waits forever.
+
+        Raises:
+            ValueError: If session_id is not set.
+            TimeoutError: If still queued after ``timeout`` seconds.
+        """
+        import time
+
+        deadline = None if timeout is None else time.monotonic() + timeout
+        while True:
+            payload = self.get_session_status()
+            if payload.get("status") != "queued":
+                return payload
+            if deadline is not None and time.monotonic() >= deadline:
+                raise TimeoutError(
+                    f"session {self.session_id} still queued after {timeout}s"
+                )
+            time.sleep(poll_interval)
+
     def _require_session_id(self) -> str:
         if not self.session_id:
             raise ValueError("session_id is required")
