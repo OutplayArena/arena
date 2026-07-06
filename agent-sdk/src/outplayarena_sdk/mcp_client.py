@@ -111,7 +111,11 @@ class MCPClient:
 
     def disconnect(self) -> None:
         """Disconnect from the MCP server."""
-        if not self._connected or not self._exit_stack or not self._loop:
+        if (
+            not getattr(self, "_connected", False)
+            or not getattr(self, "_exit_stack", None)
+            or not getattr(self, "_loop", None)
+        ):
             return
 
         async def _disconnect():
