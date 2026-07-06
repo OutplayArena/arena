@@ -195,6 +195,11 @@ class TestAuthHeaders:
         client2 = MCPClient("http://example.com", "nks_x")
         assert client2.mcp_url == "http://example.com"
 
+    def test_del_safe_on_partially_initialized_instance(self):
+        client = MCPClient.__new__(MCPClient)
+        client.__del__()
+        client.disconnect()
+
 
 class TestMCPURLHandling:
     def test_constructor_stores_args(self):
