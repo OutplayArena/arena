@@ -66,7 +66,19 @@ spec:
         resources:
           requests:
             storage: {{ .Values.database.storage }}
-        {{- if .Values.database.storageClassName }}
+        {{- /*
+          When createPV=true the PVC must bind to the named static PV, NOT to a
+          dynamically-provisioned one. We force storageClassName explicitly
+          (empty string when user didn't pin one) to bypass the cluster's
+          default StorageClass admission — otherwise the injected default
+          class on the PVC won't match the static PV's class, and binding
+          stalls. When createPV=false we honour the legacy behaviour: render
+          # only if the user pinned a class, otherwise default-class admission
+          on a nil storageClassName does the right thing for dynamic supply.
+        */ -}}
+        {{- if .Values.database.createPV }}
+        storageClassName: {{ .Values.database.storageClassName | quote }}
+        {{- else if .Values.database.storageClassName }}
         storageClassName: {{ .Values.database.storageClassName }}
         {{- end }}
         {{- /*

@@ -29,6 +29,20 @@ tests:
       - equal:
           path: spec.volumeClaimTemplates[0].spec.volumeName
           value: arena-db-pv
+      # storageClassName must be set explicitly (empty string OK) to bypass
+      # the cluster's default StorageClass admission — otherwise the injected
+      # default wouldn't match the static PV's class and binding would stall.
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
+          value: ""
+
+  - it: "static PV forces an explicit (possibly empty) storageClassName"
+    templates:
+      - "templates/database/persistentvolume.yaml"
+    asserts:
+      - equal:
+          path: spec.storageClassName
+          value: ""
 
   - it: "PV honors an explicit database.volumeName override"
     set:
@@ -55,6 +69,17 @@ tests:
           path: spec.volumeClaimTemplates[0].spec.volumeName
           value: my-shared-pv
 
+  - it: "honours an explicit database.storageClassName on PV and PVC"
+    set:
+      database:
+        storageClassName: pinned-sc
+    templates:
+      - "templates/database/persistentvolume.yaml"
+    asserts:
+      - equal:
+          path: spec.storageClassName
+          value: pinned-sc
+
   # ── createPV=false (opt-out: dynamic provisioning) ───────────────────
   - it: "does not render the static PV when createPV is false"
     set:
@@ -75,6 +100,23 @@ tests:
     asserts:
       - notExists:
           path: spec.volumeClaimTemplates[0].spec.volumeName
+      # createPV=false → storageClassName is only rendered if user pinned one,
+      # otherwise it's omitted and the cluster's default StorageClass admission
+      # handles dynamic provisioning.
+      - notExists:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
+
+  - it: "createPV=false + explicit storageClassName flows through to PVC"
+    set:
+      database:
+        createPV: false
+        storageClassName: pinned-sc
+    templates:
+      - "templates/database/statefulset.yaml"
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
+          value: pinned-sc
 
   - it: "PVC keeps an explicit volumeName even when createPV is false"
     set:
