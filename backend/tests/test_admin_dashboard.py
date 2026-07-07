@@ -469,3 +469,187 @@ class TestIsAdminEnabled:
         monkeypatch.setenv("ENABLE_ADMIN_DASHBOARD", "false")
         get_settings.cache_clear()
         assert _is_admin_enabled() is False
+
+
+# ── /admin/sessions endpoint (#116) ──────────────────────────────────────
+
+
+class _FakeSessionRow:
+    def __init__(self, sid, status="running", game="test_game",
+                 user_id=None, is_public=False, created_at=None):
+        import datetime
+        self.id = sid
+        self.status = status
+        self.config_json = {"game": game}
+        self.user_id = user_id
+        self.is_public = is_public
+        self.created_at = created_at or datetime.datetime.now(datetime.timezone.utc)
+
+
+class TestAdminSessionsEndpoint:
+    def test_returns_sessions_with_total(self, monkeypatch):
+        uid = uuid.uuid4()
+        admin = User(id=uid, email="a@b.io", name="A", provider="github", provider_user_id="a")
+        admin.is_admin = True
+
+        sessions = [
+            _FakeSessionRow("s1", status="running", game="blotto", user_id=uid, is_public=True),
+            _FakeSessionRow("s2", status="ready", game="prisoner", user_id=None, is_public=False),
+        ]
+
+        class Db(FakeAdminDb):
+            async def execute(self, stmt):
+                compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+                low = compiled.lower()
+                if "count(" in low and "sessions" in low:
+                    return FakeResult(len(sessions))
+                if "from sessions" in low:
+                    return FakeResult(sessions)
+                return await super().execute(stmt)
+
+        db = Db(users={uid: admin})
+        client = _seed_admin_client(monkeypatch, db, admin)
+        try:
+            resp = client.get("/admin/sessions?limit=10&offset=0")
+            assert resp.status_code == 200, resp.text
+            data = resp.json()
+            assert data["total"] == 2
+            assert len(data["sessions"]) == 2
+            assert data["sessions"][0]["game"] == "blotto"
+            assert data["sessions"][0]["is_public"] is True
+        finally:
+            _cleanup_overrides()
+
+
+# ── /admin/errors endpoint (#116) ────────────────────────────────────────
+
+
+class _FakeErrorLog:
+    def __init__(self, eid, method="GET", path="/api/test",
+                 exception_type="ValueError", message="boom",
+                 client_ip="127.0.0.1", user_agent="test-agent", created_at=None):
+        import datetime
+        self.id = eid
+        self.method = method
+        self.path = path
+        self.exception_type = exception_type
+        self.message = message
+        self.client_ip = client_ip
+        self.user_agent = user_agent
+        self.created_at = created_at or datetime.datetime.now(datetime.timezone.utc)
+
+
+class TestAdminErrorsEndpoint:
+    def test_returns_recent_errors(self, monkeypatch):
+        uid = uuid.uuid4()
+        admin = User(id=uid, email="a@b.io", name="A", provider="github", provider_user_id="a")
+        admin.is_admin = True
+
+        errors = [
+            _FakeErrorLog(uuid.uuid4(), method="POST", path="/api/experiment",
+                          exception_type="RuntimeError", message="crash"),
+            _FakeErrorLog(uuid.uuid4(), method="GET", path="/api/leaderboard",
+                          exception_type="KeyError", message="missing key"),
+        ]
+
+        class Db(FakeAdminDb):
+            async def execute(self, stmt):
+                compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+                low = compiled.lower()
+                if "error_logs" in low:
+                    return FakeResult(errors)
+                return await super().execute(stmt)
+
+        db = Db(users={uid: admin})
+        client = _seed_admin_client(monkeypatch, db, admin)
+        try:
+            resp = client.get("/admin/errors?limit=50")
+            assert resp.status_code == 200, resp.text
+            data = resp.json()
+            assert len(data["errors"]) == 2
+            assert data["errors"][0]["exception_type"] == "RuntimeError"
+            assert data["errors"][0]["client_ip"] == "127.0.0.1"
+        finally:
+            _cleanup_overrides()
+
+
+# ── /admin/stats pg_database_size failure (#116) ─────────────────────────
+
+
+class TestAdminStatsPgSizeFailure:
+    def test_stats_when_pg_database_size_unavailable(self, monkeypatch):
+        uid = uuid.uuid4()
+        admin = User(id=uid, email="a@b.io", name="A", provider="github", provider_user_id="a")
+        admin.is_admin = True
+
+        class Db(FakeAdminDb):
+            async def execute(self, stmt):
+                compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+                low = compiled.lower()
+                if "count(" in low and "sessions" in low:
+                    return FakeResult(0)
+                if "count(" in low and "wandb_credentials" in low:
+                    return FakeResult(0)
+                if "platform_settings" in compiled and "WHERE" in compiled.upper():
+                    for key, val in self.settings.items():
+                        if f"'{key}'" in compiled:
+                            return FakeResult(PlatformSetting(key=key, value=str(val)))
+                    return FakeResult(None)
+                if "pg_database_size" in low:
+                    raise Exception("pg_database_size not available in test")
+                return FakeResult(None)
+
+        db = Db(users={uid: admin})
+        db.settings = {"login_enabled": "true"}
+        client = _seed_admin_client(monkeypatch, db, admin)
+        try:
+            resp = client.get("/admin/stats")
+            assert resp.status_code == 200, resp.text
+            data = resp.json()
+            assert data["db_size_bytes"] == "unavailable"
+            assert data["sessions_running"] == 0
+        finally:
+            _cleanup_overrides()
+
+
+# ── _enforce_login_enabled on OAuth endpoints (#116) ────────────────────
+
+
+class TestLoginDisabled:
+    def test_github_login_rejected_when_disabled(self, monkeypatch):
+        uid = uuid.uuid4()
+        admin = User(id=uid, email="a@b.io", name="A", provider="github", provider_user_id="a")
+        admin.is_admin = True
+
+        db = FakeAdminDb(users={uid: admin}, settings={})
+
+        async def _db_factory():
+            yield db
+
+        app.dependency_overrides[arena.main.get_db] = _db_factory
+        client = TestClient(app)
+        try:
+            resp = client.get("/auth/github/login", follow_redirects=False)
+            assert resp.status_code == 403, resp.text
+            assert "disabled" in resp.json()["detail"].lower()
+        finally:
+            _cleanup_overrides()
+
+    def test_google_login_rejected_when_disabled(self, monkeypatch):
+        uid = uuid.uuid4()
+        admin = User(id=uid, email="a@b.io", name="A", provider="github", provider_user_id="a")
+        admin.is_admin = True
+
+        db = FakeAdminDb(users={uid: admin}, settings={})
+
+        async def _db_factory():
+            yield db
+
+        app.dependency_overrides[arena.main.get_db] = _db_factory
+        client = TestClient(app)
+        try:
+            resp = client.get("/auth/google/login", follow_redirects=False)
+            assert resp.status_code == 403, resp.text
+            assert "disabled" in resp.json()["detail"].lower()
+        finally:
+            _cleanup_overrides()
