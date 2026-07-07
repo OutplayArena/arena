@@ -1,6 +1,7 @@
 """Tests for the game-concurrency queue (#117): admission gate, 202
 queueing, queued-action rejection, and the drainer promotion loop.
 """
+import asyncio
 import datetime
 import os
 import uuid
@@ -115,10 +116,21 @@ class FakeDb:
                 if r.user_id is not None and f"'{str(r.user_id)}'" in compiled:
                     user_filter = r.user_id
                     break
+            # Parse created_at < cutoff for queue-position queries
+            import re as _re
+            _dm = _re.search(r"created_at < '([^']+)'", compiled)
+            _cutoff = None
+            if _dm:
+                try:
+                    _cutoff = datetime.datetime.fromisoformat(_dm.group(1))
+                except ValueError:
+                    pass
             count = 0
             for r in self.rows:
                 if r.status in statuses:
                     if user_filter is not None and r.user_id != user_filter:
+                        continue
+                    if _cutoff is not None and r.created_at is not None and r.created_at >= _cutoff:
                         continue
                     count += 1
             return _FakeResult(count)
@@ -485,5 +497,242 @@ class TestCreateExperimentQueuesAtCapacity:
             assert data["status"] == "queued"
             assert data["queue_position"] == 2
             assert data.get("player_tokens")  # tokens minted for later use
+        finally:
+            _m.app.dependency_overrides.clear()
+
+
+# ── drainer: no free slots (concurrency.py:220) ──────────────────────────
+
+
+class TestDrainerNoFreeSlots:
+    @pytest.mark.asyncio
+    async def test_returns_zero_when_at_capacity(self, monkeypatch):
+        """When active_global == max_global, the drainer returns 0 — no
+        queued sessions can be promoted."""
+        monkeypatch.setenv("MAX_CONCURRENT_SESSIONS", "2")
+        monkeypatch.setenv("MAX_CONCURRENT_SESSIONS_PER_USER", "10")
+        get_settings.cache_clear()
+        active1 = _FakeRow(status="ready")
+        active2 = _FakeRow(status="running")
+        queued = _FakeRow(status="queued")
+        db = FakeDb(rows=[active1, active2, queued])
+        broker = FakeBroker()
+        promoted = await promote_queued_sessions(db, broker)
+        assert promoted == 0
+        assert queued.status == "queued"
+        assert broker.published == []
+
+
+# ── _queue_drainer_loop (concurrency.py:270-278) ─────────────────────────
+
+
+class TestQueueDrainerLoop:
+    def test_promotes_then_exits_on_cancel(self, monkeypatch):
+        """The drainer loop calls promote_queued_sessions once, then
+        asyncio.sleep raises CancelledError to break the infinite loop."""
+        import arena.concurrency as cq
+
+        oldest = _FakeRow(
+            sid="oldest", status="queued",
+            created_at=datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc),
+        )
+        active = _FakeRow(sid="active", status="ready")
+        db = FakeDb(rows=[active, oldest])
+
+        class _Factory:
+            def __call__(self):
+                return self
+
+            async def __aenter__(self):
+                return db
+
+            async def __aexit__(self, *args):
+                return False
+
+        monkeypatch.setattr(cq, "_async_session_factory", _Factory())
+
+        sleep_calls = []
+
+        async def fake_sleep(seconds):
+            sleep_calls.append(seconds)
+            raise asyncio.CancelledError()
+
+        monkeypatch.setattr(asyncio, "sleep", fake_sleep)
+
+        with pytest.raises(asyncio.CancelledError):
+            asyncio.run(cq._queue_drainer_loop(FakeBroker()))
+
+        assert len(sleep_calls) == 1
+        assert oldest.status == "ready"
+
+    def test_continues_after_error(self, monkeypatch):
+        """If the DB session factory raises, the loop logs the warning and
+        continues — sleep is still called, then CancelledError breaks out."""
+        import arena.concurrency as cq
+
+        class _ExplodingFactory:
+            def __call__(self):
+                return self
+
+            async def __aenter__(self):
+                raise RuntimeError("simulated DB error")
+
+            async def __aexit__(self, *args):
+                return False
+
+        monkeypatch.setattr(cq, "_async_session_factory", _ExplodingFactory())
+
+        async def fake_sleep(seconds):
+            raise asyncio.CancelledError()
+
+        monkeypatch.setattr(asyncio, "sleep", fake_sleep)
+
+        with pytest.raises(asyncio.CancelledError):
+            asyncio.run(cq._queue_drainer_loop(FakeBroker()))
+
+    def test_reraises_cancelled_from_promote(self, monkeypatch):
+        """CancelledError raised inside promote_queued_sessions is re-raised
+        (not swallowed by the generic except Exception handler)."""
+        import arena.concurrency as cq
+
+        async def _cancel_promote(db, broker):
+            raise asyncio.CancelledError()
+
+        monkeypatch.setattr(cq, "promote_queued_sessions", _cancel_promote)
+
+        class _Factory:
+            def __call__(self):
+                return self
+
+            async def __aenter__(self):
+                return FakeDb()
+
+            async def __aexit__(self, *args):
+                return False
+
+        monkeypatch.setattr(cq, "_async_session_factory", _Factory())
+
+        with pytest.raises(asyncio.CancelledError):
+            asyncio.run(cq._queue_drainer_loop(FakeBroker()))
+
+
+# ── endpoint: GET /session/{id}/status (main.py:770-788) ──────────────────
+
+
+class TestGetSessionStatus:
+    def test_returns_ready_with_zero_position(self, monkeypatch):
+        """A ready session reports queue_position=0."""
+        import arena.main as _m
+        from arena.db import get_db
+
+        row = _FakeRow(sid="sess-ready", status="ready")
+        db = FakeDb(rows=[row])
+
+        async def _db_factory():
+            yield db
+
+        _m.app.dependency_overrides[get_db] = _db_factory
+        try:
+            from fastapi.testclient import TestClient
+            client = TestClient(_m.app)
+            resp = client.get("/session/sess-ready/status")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["status"] == "ready"
+            assert data["queue_position"] == 0
+        finally:
+            _m.app.dependency_overrides.clear()
+
+    def test_returns_queued_with_position(self, monkeypatch):
+        """A queued session reports its queue position (1-based, counting
+        older queued rows ahead of it)."""
+        import arena.main as _m
+        from arena.db import get_db
+
+        older1 = _FakeRow(
+            sid="q1", status="queued",
+            created_at=datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc),
+        )
+        older2 = _FakeRow(
+            sid="q2", status="queued",
+            created_at=datetime.datetime(2026, 1, 2, tzinfo=datetime.timezone.utc),
+        )
+        target = _FakeRow(
+            sid="q3", status="queued",
+            created_at=datetime.datetime(2026, 1, 3, tzinfo=datetime.timezone.utc),
+        )
+        db = FakeDb(rows=[older1, older2, target])
+
+        async def _db_factory():
+            yield db
+
+        _m.app.dependency_overrides[get_db] = _db_factory
+        try:
+            from fastapi.testclient import TestClient
+            client = TestClient(_m.app)
+            resp = client.get("/session/q3/status")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["status"] == "queued"
+            assert data["queue_position"] == 3  # 2 ahead + self
+        finally:
+            _m.app.dependency_overrides.clear()
+
+    def test_404_for_missing_session(self, monkeypatch):
+        """A non-existent session returns 404."""
+        import arena.main as _m
+        from arena.db import get_db
+
+        db = FakeDb(rows=[])
+
+        async def _db_factory():
+            yield db
+
+        _m.app.dependency_overrides[get_db] = _db_factory
+        try:
+            from fastapi.testclient import TestClient
+            client = TestClient(_m.app)
+            resp = client.get("/session/nope/status")
+            assert resp.status_code == 404
+        finally:
+            _m.app.dependency_overrides.clear()
+
+
+# ── endpoint: POST /session/{id}/action 409 guard (main.py:802-806) ───────
+
+
+class TestQueuedActionRejected:
+    def test_submit_action_returns_409_when_queued(self, monkeypatch):
+        """POST /session/{id}/action returns 409 when the session is queued."""
+        import arena.main as _m
+        from arena.db import get_db
+
+        class _FakeSession:
+            status = "queued"
+
+        async def _fake_get_session(session_id, db):
+            return _FakeSession()
+
+        monkeypatch.setattr("arena.main.get_session", _fake_get_session)
+
+        async def _db_factory():
+            yield None
+
+        class _FakeBroker:
+            async def publish(self, channel, message):
+                pass
+
+        _m.app.dependency_overrides[get_db] = _db_factory
+        _m.app.dependency_overrides[_m.get_broker] = lambda: _FakeBroker()
+        try:
+            from fastapi.testclient import TestClient
+            client = TestClient(_m.app)
+            resp = client.post(
+                "/session/sess-1/action",
+                json={"allocation": [], "forfeit": False},
+                headers={"Authorization": "Bearer test"},
+            )
+            assert resp.status_code == 409
+            assert "queued" in resp.json()["detail"]
         finally:
             _m.app.dependency_overrides.clear()
