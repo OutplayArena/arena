@@ -85,11 +85,17 @@ class FakeDb:
         self.settings_rows = settings_rows if settings_rows is not None else {}
         self.added = []
 
-    async def execute(self, stmt):
+    async def execute(self, stmt, params=None):
         try:
             compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
         except Exception:
             compiled = str(stmt)
+
+        # Advisory lock queries (#117) — always succeed in the fake DB.
+        if "pg_advisory_xact_lock" in compiled:
+            return _FakeResult(True)
+        if "pg_try_advisory_xact_lock" in compiled:
+            return _FakeResult(True)
 
         # platform_settings lookup → return the stored row or None
         if "platform_settings" in compiled and "WHERE" in compiled.upper():
@@ -273,6 +279,81 @@ class TestDrainer:
         assert broker.published == []
 
 
+# ── advisory locks (multi-replica safety) ──────────────────────────────
+
+
+class _LockTrackingFakeDb(FakeDb):
+    """FakeDb that records advisory-lock calls and can simulate a
+    'lock not acquired' (pg_try returns False)."""
+
+    def __init__(self, *args, try_lock_result=True, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.lock_calls: list[str] = []
+        self._try_lock_result = try_lock_result
+
+    async def execute(self, stmt, params=None):
+        try:
+            compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        except Exception:
+            compiled = str(stmt)
+
+        if "pg_advisory_xact_lock" in compiled and "try" not in compiled:
+            self.lock_calls.append("blocking")
+            return _FakeResult(True)
+        if "pg_try_advisory_xact_lock" in compiled:
+            self.lock_calls.append("try")
+            return _FakeResult(self._try_lock_result)
+
+        return await super().execute(stmt)
+
+
+class TestAdvisoryLocks:
+    @pytest.mark.asyncio
+    async def test_admission_acquires_blocking_lock(self, monkeypatch):
+        """evaluate_admission calls pg_advisory_xact_lock before counting."""
+        monkeypatch.setenv("MAX_CONCURRENT_SESSIONS", "5")
+        monkeypatch.setenv("MAX_CONCURRENT_SESSIONS_PER_USER", "2")
+        get_settings.cache_clear()
+        db = _LockTrackingFakeDb(rows=[])
+        await evaluate_admission(db, str(uuid.uuid4()))
+        assert "blocking" in db.lock_calls
+
+    @pytest.mark.asyncio
+    async def test_drainer_acquires_try_lock_on_success(self, monkeypatch):
+        """promote_queued_sessions calls pg_try_advisory_xact_lock and
+        proceeds when it returns True."""
+        monkeypatch.setenv("MAX_CONCURRENT_SESSIONS", "2")
+        get_settings.cache_clear()
+        db = _LockTrackingFakeDb(
+            rows=[_FakeRow(status="ready"), _FakeRow(status="queued")],
+            try_lock_result=True,
+        )
+        broker = FakeBroker()
+        promoted = await promote_queued_sessions(db, broker)
+        assert "try" in db.lock_calls
+        assert promoted >= 0  # didn't short-circuit
+
+    @pytest.mark.asyncio
+    async def test_drainer_skips_when_try_lock_fails(self, monkeypatch):
+        """When pg_try_advisory_xact_lock returns False (another pod holds
+        the lock), the drainer returns 0 immediately — no counts, no
+        promotion, no events."""
+        monkeypatch.setenv("MAX_CONCURRENT_SESSIONS", "2")
+        get_settings.cache_clear()
+        db = _LockTrackingFakeDb(
+            rows=[_FakeRow(status="ready"), _FakeRow(status="queued")],
+            try_lock_result=False,
+        )
+        broker = FakeBroker()
+        promoted = await promote_queued_sessions(db, broker)
+        assert promoted == 0
+        assert broker.published == []
+        # The drainer should have called the lock but NOT the count query
+        # (it short-circuited before the count).
+        assert "try" in db.lock_calls
+        assert "blocking" not in db.lock_calls
+
+
 # ── endpoint: create_experiment returns 202 when queued ───────────────────
 
 
@@ -331,8 +412,11 @@ class TestCreateExperimentQueuesAtCapacity:
             def __init__(self):
                 self._store = {}
 
-            async def execute(self, stmt):
+            async def execute(self, stmt, params=None):
                 compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+                # Advisory lock queries (#117) — always succeed in the fake DB.
+                if "pg_advisory_xact_lock" in compiled or "pg_try_advisory_xact_lock" in compiled:
+                    return _Result(True)
                 if "users" in compiled and "local" in compiled:
                     from arena.models.user import User
                     u = User(id=LOCAL_USER_ID)

@@ -13,12 +13,19 @@ FastAPI lifespan (modeled on ``_gdpr_purge_loop``). Every few seconds it
 recomputes free global slots, promotes the oldest ``queued`` rows to
 ``ready`` (respecting the per-user cap), and publishes a
 ``session:{id}:events`` -> ``session_promoted`` event so any SSE
-subscriber wakes up immediately. With ``backend.replicas=1`` (the chart
-default) there is exactly one drainer; horizontal scaling would need
-leader election (out of scope for v1 — documented in the module docstring).
+subscriber wakes up immediately.
+
+**Multi-replica safety (#117):** both the admission gate and the drainer
+acquire Postgres transaction-scoped advisory locks before the
+count-then-act sequence. This makes the queue safe under horizontal
+scaling (HPA) — the lock lives in Postgres, not in the pod, so N replicas
+can run concurrently without TOCTOU races or over-promotion. The admission
+gate uses ``pg_advisory_xact_lock`` (blocking — serialized admissions,
+~1-5ms per lock); the drainer uses ``pg_try_advisory_xact_lock``
+(non-blocking — loser drainers skip instantly). Pods remain stateless.
 
 A queued session rejects action submits with 409 until it is promoted,
-so a Too-eager agent can't race ahead of its slot.
+so a too-eager agent can't race ahead of its slot.
 """
 from __future__ import annotations
 
@@ -27,7 +34,7 @@ import logging
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from arena.db import async_session as _async_session_factory
@@ -45,6 +52,13 @@ _DRAIN_INTERVAL_SECONDS = 2.0
 # per-user caps. ``queued`` is the waiting state; ``ready``/``running``
 # are active; ``completed``/``failed`` are terminal and free a slot.
 _ACTIVE_STATUSES = ("ready", "running")
+
+# Fixed 64-bit keys for Postgres transaction-scoped advisory locks.
+# Both are auto-released on commit/rollback — no cleanup needed on crash.
+# "ARNA" = admission gate; "ARND" = drainer. Different keys so the
+# admission gate and drainer don't block each other.
+_ADMISSION_LOCK_KEY = 0x41524E41  # "ARNA"
+_DRAINER_LOCK_KEY = 0x41524E44   # "ARND"
 
 
 @dataclass(frozen=True)
@@ -93,6 +107,14 @@ async def _evaluate_admission_inner(
     db: AsyncSession,
     user_id: str,
 ) -> AdmissionDecision:
+    # Acquire a transaction-scoped advisory lock so that the count-then-
+    # insert sequence is serialized across all pods. The lock is
+    # auto-released on commit/rollback — no cleanup needed. This is the
+    # multi-replica safety boundary for the admission gate (#117).
+    await db.execute(
+        text("SELECT pg_advisory_xact_lock(:k)"), {"k": _ADMISSION_LOCK_KEY}
+    )
+
     max_global = await get_platform_setting(
         "max_concurrent_sessions", db, cast=int
     )
@@ -162,7 +184,23 @@ async def promote_queued_sessions(db: AsyncSession, broker) -> int:
     the DB session and broker so this is unit-testable without a real DB.
     Recomputes free global slots, walks the oldest queued rows, honours
     the per-user cap, and publishes a ``session_promoted`` event per row.
+
+    Uses ``pg_try_advisory_xact_lock`` (non-blocking) so that when
+    multiple pods run a drainer, only one actually promotes per cycle —
+    the losers skip instantly without wasted DB round-trips (#117).
     """
+    # Try to acquire the drainer advisory lock. If another pod's drainer
+    # already holds it, skip this cycle — that drainer will handle the
+    # promotion. The lock is transaction-scoped (auto-released on commit).
+    got_lock = (
+        await db.execute(
+            text("SELECT pg_try_advisory_xact_lock(:k)"),
+            {"k": _DRAINER_LOCK_KEY},
+        )
+    ).scalar_one()
+    if not got_lock:
+        return 0
+
     max_global = await get_platform_setting("max_concurrent_sessions", db, cast=int)
     max_per_user = await get_platform_setting(
         "max_concurrent_sessions_per_user", db, cast=int
@@ -225,8 +263,9 @@ async def _queue_drainer_loop(broker) -> None:
     """Background loop: promote ``queued`` sessions as slots free up.
 
     Delegates each cycle to :func:`promote_queued_sessions` with a fresh
-    session from the global factory. Single-replica by default; horizontal
-    scaling needs leader election (out of scope for v1).
+    session from the global factory. Safe under HPA — the advisory lock
+    inside :func:`promote_queued_sessions` ensures only one drainer
+    across all pods promotes per cycle; losers skip instantly.
     """
     while True:
         try:
