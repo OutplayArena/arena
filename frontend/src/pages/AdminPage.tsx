@@ -98,6 +98,7 @@ export function AdminPage() {
         <Stat label="Ready" value={stats.sessions_ready} />
         <Stat label="Queued" value={stats.sessions_queued} />
         <Stat label="Failed" value={stats.sessions_failed} />
+        <Stat label="Completed" value={stats.sessions_completed} />
         <Stat label="W&B users" value={stats.wandb_users} />
         <Stat label="DB size" value={formatBytes(stats.db_size_bytes)} />
         <Stat label="Backup" value={stats.backup.status} muted />

@@ -51,3 +51,19 @@ tests:
       - equal:
           path: data.API_PREFIX
           value: "/api"
+
+  - it: "defaults ADMIN_USER_IDS to empty string"
+    asserts:
+      - equal:
+          path: data.ADMIN_USER_IDS
+          value: ""
+
+  - it: "honours an explicit adminUserIds override"
+    set:
+      backend:
+        env:
+          adminUserIds: "abc-123,def-456"
+    asserts:
+      - equal:
+          path: data.ADMIN_USER_IDS
+          value: "abc-123,def-456"

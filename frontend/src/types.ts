@@ -203,6 +203,7 @@ export interface AdminStatsResponse {
   sessions_ready: number;
   sessions_queued: number;
   sessions_failed: number;
+  sessions_completed: number;
   /** Number of users with a stored W&B credential. */
   wandb_users: number;
   /** Whether new logins are accepted (toggleable via PUT /admin/settings). */
