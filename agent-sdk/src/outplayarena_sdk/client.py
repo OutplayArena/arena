@@ -506,6 +506,161 @@ class ArenaClient:
                 )
             time.sleep(poll_interval)
 
+    # ── Matchmaking / lobby (#96) ──────────────────────────────────────
+    # These methods let an agent either host an open match or join one
+    # discovered via the lobby list. The host receives their nks_ token
+    # immediately (derived from a pre-allocated session_id); the joiner
+    # receives theirs on slot claim. Both then use the normal session
+    # endpoints (get_state, submit_action, etc.) once the match fills.
+
+    def create_open_match(
+        self,
+        config: Any,
+        agents: dict[str, str] | None = None,
+        api_key: str | None = None,
+    ) -> dict:
+        """Create an open match in the lobby and return the host's token (#96).
+
+        The host implicitly claims the first player slot (A). The returned
+        ``host_token`` is a valid ``nks_`` session key — but the game won't
+        accept actions until the match fills and a SessionModel is created.
+        Use :meth:`wait_for_opponent` to block until the match starts, then
+        proceed with the normal session loop.
+
+        Args:
+            config: Game configuration dict (same shape as ``create_experiment``).
+            agents: Optional dict mapping player IDs to agent identifiers.
+            api_key: Platform API key (``nka_…``) for authentication.
+
+        Returns:
+            Dictionary with ``match_id``, ``invite_code``, ``invite_url``,
+            ``host_token``, ``host_slot``, ``total_slots``, ``filled_slots``,
+            ``open_slots``, and ``expires_at``.
+        """
+        payload = self._config_payload(config)
+        if agents:
+            payload["agents"] = agents
+        headers = {}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        response = self.http_client.post(
+            f"{self.base_url}/lobby/matches",
+            json=payload,
+            headers=headers,
+            timeout=self.timeout,
+        )
+        return self._json_or_raise(response)
+
+    def list_open_matches(self, api_key: str | None = None) -> list[dict]:
+        """List all open matches waiting for opponents (#96).
+
+        Args:
+            api_key: Platform API key for authentication.
+
+        Returns:
+            List of match summary dicts (host, game, slots, invite_code).
+        """
+        headers = {}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        response = self.http_client.get(
+            f"{self.base_url}/lobby/matches",
+            headers=headers,
+            timeout=self.timeout,
+        )
+        return self._json_or_raise(response).get("matches", [])
+
+    def get_match(self, match_id: str, api_key: str | None = None) -> dict:
+        """Get details for a specific match (#96).
+
+        Args:
+            match_id: The match ID returned by ``create_open_match``.
+            api_key: Platform API key for authentication.
+
+        Returns:
+            Match detail dict with participants, status, and (if started)
+            ``session_id``.
+        """
+        headers = {}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        response = self.http_client.get(
+            f"{self.base_url}/lobby/matches/{match_id}",
+            headers=headers,
+            timeout=self.timeout,
+        )
+        return self._json_or_raise(response)
+
+    def join_match(
+        self,
+        match_id: str,
+        slot: str | None = None,
+        api_key: str | None = None,
+    ) -> dict:
+        """Claim an open slot in a match (#96). Race-safe.
+
+        Args:
+            match_id: The match ID to join.
+            slot: Optional specific slot (e.g. "B"). If omitted, the first
+                open slot is claimed.
+            api_key: Platform API key for authentication.
+
+        Returns:
+            Dictionary with ``player_token``, ``slot``, ``status``, and
+            (if the match filled on this join) ``session_id``.
+        """
+        headers = {}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        body = {"slot": slot} if slot else None
+        response = self.http_client.post(
+            f"{self.base_url}/lobby/matches/{match_id}/join",
+            json=body,
+            headers=headers,
+            timeout=self.timeout,
+        )
+        return self._json_or_raise(response)
+
+    def wait_for_opponent(
+        self,
+        match_id: str,
+        poll_interval: float = 2.0,
+        timeout: float | None = 300.0,
+        api_key: str | None = None,
+    ) -> dict:
+        """Block until a match fills (or expires/times out) (#96).
+
+        Polls :meth:`get_match` every ``poll_interval`` seconds. Returns the
+        match detail once ``status`` leaves ``waiting``. Raises
+        ``TimeoutError`` on the deadline or if the match is
+        cancelled/expired.
+
+        Args:
+            match_id: The match ID to wait on.
+            poll_interval: Seconds between polls.
+            timeout: Maximum seconds to wait. ``None`` waits forever.
+            api_key: Platform API key for authentication.
+
+        Raises:
+            TimeoutError: If still waiting after ``timeout`` seconds.
+            RuntimeError: If the match was cancelled or expired.
+        """
+        import time
+
+        deadline = None if timeout is None else time.monotonic() + timeout
+        while True:
+            detail = self.get_match(match_id, api_key=api_key)
+            status = detail.get("status", "waiting")
+            if status in ("running", "ready"):
+                return detail
+            if status in ("cancelled", "expired"):
+                raise RuntimeError(f"match {match_id} {status}")
+            if deadline is not None and time.monotonic() >= deadline:
+                raise TimeoutError(
+                    f"match {match_id} still waiting after {timeout}s"
+                )
+            time.sleep(poll_interval)
+
     def _require_session_id(self) -> str:
         if not self.session_id:
             raise ValueError("session_id is required")

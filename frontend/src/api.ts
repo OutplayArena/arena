@@ -26,6 +26,10 @@ import type {
   AdminSessionsResponse,
   AdminStatsResponse,
   AdminSettings,
+  LobbyMatchSummary,
+  LobbyMatchDetail,
+  CreateOpenMatchResponse,
+  JoinMatchResponse,
 } from "./types";
 
 export class ApiError extends Error {
@@ -426,5 +430,46 @@ export function updateAdminSettings(partial: Partial<AdminSettings>): Promise<Pa
   });
 }
 
+// ── Matchmaking / lobby (#96) ──────────────────────────────────────────────
+
+export function createOpenMatch(
+  config: ExperimentConfig,
+  agents?: Record<string, string>,
+): Promise<CreateOpenMatchResponse> {
+  const payload: Record<string, unknown> = { ...config };
+  if (agents) payload.agents = agents;
+  return request<CreateOpenMatchResponse>("/api/lobby/matches", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listOpenMatches(): Promise<LobbyMatchSummary[]> {
+  return request<{ matches: LobbyMatchSummary[] }>("/api/lobby/matches").then(
+    (r) => r.matches,
+  );
+}
+
+export function getMatch(matchId: string): Promise<LobbyMatchDetail> {
+  return request<LobbyMatchDetail>(`/api/lobby/matches/${matchId}`);
+}
+
+export function joinMatch(
+  matchId: string,
+  slot?: string,
+): Promise<JoinMatchResponse> {
+  const body = slot ? { slot } : undefined;
+  return request<JoinMatchResponse>(`/api/lobby/matches/${matchId}/join`, {
+    method: "POST",
+    body: body ? JSON.stringify(body) : undefined,
+  });
+}
+
+export function cancelMatch(matchId: string): Promise<{ cancelled: boolean }> {
+  return request<{ cancelled: boolean }>(
+    `/api/lobby/matches/${matchId}`,
+    { method: "DELETE" },
+  );
+}
 
 
