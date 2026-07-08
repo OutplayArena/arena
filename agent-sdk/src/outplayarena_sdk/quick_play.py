@@ -51,6 +51,7 @@ async def _quick_play_async(
     poll_interval: float = 1.0,
     max_tools_per_turn: int = 4,
     verbose: bool = False,
+    ready_timeout: float | None = None,
 ) -> dict[str, Any]:
     agent_cls = get_agent_class(game)
     game_config = {"game": game, "seed": seed, **(config or {})}
@@ -64,6 +65,16 @@ async def _quick_play_async(
     )
     player_tokens = created["player_tokens"]
     session_id = created["session_id"]
+
+    # If the session was queued (HTTP 202), wait for the drainer to
+    # promote it to "ready" before starting the agents.  This prevents
+    # the agents from hitting 409 on their first action submit (#117).
+    if created.get("status") == "queued":
+        if verbose:
+            print(f"[quick_play] session queued (position {created.get('queue_position', '?')}); waiting for promotion...")
+        rest.wait_until_ready(timeout=ready_timeout)
+        if verbose:
+            print("[quick_play] session promoted to ready")
 
     if mcp_url is None and "mcp_url" in created:
         mcp_url = created["mcp_url"]
@@ -91,6 +102,7 @@ async def _quick_play_async(
             max_tools_per_turn=max_tools_per_turn,
             verbose=verbose,
             seed=seed,
+            ready_timeout=ready_timeout,
         ))
 
     if not instances:
@@ -120,10 +132,15 @@ def quick_play(
     poll_interval: float = 1.0,
     max_tools_per_turn: int = 4,
     verbose: bool = False,
+    ready_timeout: float | None = None,
 ) -> dict[str, Any]:
     """Synchronous wrapper around the async quick_play.
 
     See module docstring for details.
+
+    Args:
+        ready_timeout: Maximum seconds to wait for a queued session to
+            become ready.  ``None`` (default) waits indefinitely.
     """
     return asyncio.run(
         _quick_play_async(
@@ -137,6 +154,7 @@ def quick_play(
             poll_interval=poll_interval,
             max_tools_per_turn=max_tools_per_turn,
             verbose=verbose,
+            ready_timeout=ready_timeout,
         )
     )
 
