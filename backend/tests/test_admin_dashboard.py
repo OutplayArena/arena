@@ -307,6 +307,7 @@ class TestAdminStatsEndpoint:
                     "ready": 2,
                     "queued": 1,
                     "failed": 4,
+                    "completed": 7,
                 }
                 self.wandb_count = 5
 
@@ -340,6 +341,7 @@ class TestAdminStatsEndpoint:
             assert data["sessions_ready"] == 2
             assert data["sessions_queued"] == 1
             assert data["sessions_failed"] == 4
+            assert data["sessions_completed"] == 7
             assert data["wandb_users"] == 5
             assert data["login_enabled"] is True
             assert data["db_size_bytes"] == 123456

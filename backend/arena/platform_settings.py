@@ -40,6 +40,8 @@ async def get_platform_setting(
         )
     ).scalar_one_or_none()
     if row is not None:
+        if cast is bool:
+            return row.value.strip().lower() not in ("false", "0", "no", "off", "")
         return cast(row.value)
     return _env_default(key, cast)
 

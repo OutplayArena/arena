@@ -2220,6 +2220,15 @@ async def admin_stats(
             )
         ).scalar_one()
     )
+    completed = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(SessionModel)
+                .where(SessionModel.status == "completed")
+            )
+        ).scalar_one()
+    )
     wandb_users = int(
         (
             await db.execute(select(func.count()).select_from(WandbCredential))
@@ -2239,6 +2248,7 @@ async def admin_stats(
         "sessions_ready": ready,
         "sessions_queued": queued,
         "sessions_failed": failed,
+        "sessions_completed": completed,
         "wandb_users": wandb_users,
         "login_enabled": login_enabled,
         "db_size_bytes": db_size,

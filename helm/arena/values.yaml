@@ -72,6 +72,8 @@ backend:
   replicas: 1
   env:
     apiPrefix: /api
+    enableAdminDashboard: "false"
+    adminUserIds: ""
   resources:
     requests:
       cpu: 100m
