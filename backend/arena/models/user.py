@@ -37,3 +37,9 @@ class User(Base):
     show_own_leaderboard_badge: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
     )
+    # Admin dashboard access (#116). Bootstrapped via the ADMIN_USER_IDS env
+    # var before any row can be flipped; afterwards editable at runtime via
+    # PUT /api/admin/users/{id} (or direct SQL).
+    is_admin: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )

@@ -8,4 +8,5 @@ metadata:
 data:
   API_PREFIX: {{ .Values.backend.env.apiPrefix | quote }}
   ENABLE_AGENT_REST_API: {{ .Values.backend.env.enableAgentRestApi | default "true" | quote }}
+  ENABLE_ADMIN_DASHBOARD: {{ .Values.backend.env.enableAdminDashboard | default "false" | quote }}
   MCP_ENDPOINT: "{{ .Values.mcpServer.publicBaseUrl }}/mcp"

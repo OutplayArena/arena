@@ -115,3 +115,38 @@ async def require_user(
     if _providers_configured():
         return await get_current_user(authorization, db)
     return await _ensure_local_user(db)
+
+
+def _is_admin_enabled() -> bool:
+    """Read the ENABLE_ADMIN_DASHBOARD env toggle (#116)."""
+    from arena.settings import get_settings
+
+    return bool(get_settings().enable_admin_dashboard)
+
+
+def _user_is_admin(user: User) -> bool:
+    """Admin if the DB flag is set OR the user's UUID is in ADMIN_USER_IDS."""
+    from arena.settings import get_settings
+
+    if getattr(user, "is_admin", False):
+        return True
+    return str(user.id).lower() in get_settings().admin_user_id_set
+
+
+async def require_admin(
+    authorization: str | None = Header(default=None),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Gate for /api/admin/* endpoints (#116).
+
+    Returns the authenticated user if: the dashboard is enabled via
+    ``ENABLE_ADMIN_DASHBOARD``, the caller is authenticated (per
+    :func:`require_user`), and the user is an admin (``is_admin`` column
+    OR in ``ADMIN_USER_IDS``). Otherwise raises 403.
+    """
+    if not _is_admin_enabled():
+        raise HTTPException(status_code=403, detail="admin dashboard disabled")
+    user = await require_user(authorization, db)
+    if not _user_is_admin(user):
+        raise HTTPException(status_code=403, detail="admin access required")
+    return user

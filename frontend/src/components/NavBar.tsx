@@ -36,9 +36,10 @@ const navLink = ({ isActive }: { isActive: boolean }) =>
 export const NavBar = memo(function NavBar() {
   const { theme, toggle } = useTheme();
   const { user, hasProviders, logout } = useAuth();
-  const { github_url, docs_url } = useSiteConfig();
+  const { github_url, docs_url, admin_dashboard_enabled } = useSiteConfig();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const showAdminLink = !!admin_dashboard_enabled && !!user?.is_admin;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -155,6 +156,16 @@ export const NavBar = memo(function NavBar() {
                 >
                   API Keys
                 </NavLink>
+                {showAdminLink && (
+                  <NavLink
+                    to="/admin"
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-3 py-2 text-xs text-ink hover:bg-surface-container transition-colors no-underline"
+                    role="menuitem"
+                  >
+                    Admin
+                  </NavLink>
+                )}
                 {user && (
                   <>
                     <div className="border-t border-line mx-0 my-1" />
