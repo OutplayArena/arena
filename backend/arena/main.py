@@ -44,6 +44,7 @@ from arena.auth.jwt import create_access_token
 from arena.auth.dependencies import get_current_user, get_local_or_optional_user, require_user
 from arena.auth.apikey import generate_platform_key
 from arena.models.user import User
+from arena.concurrency import evaluate_admission, _queue_drainer_loop as _concurrency_drain
 
 
 API_PREFIX = os.environ.get("API_PREFIX", "/api")
@@ -90,8 +91,10 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     await _logger.start()
     await _load_registries_from_db()
     _gdpr_task = asyncio.create_task(_gdpr_purge_loop())
+    _concurrency_task = asyncio.create_task(_concurrency_drain(_broker))
     yield
     _gdpr_task.cancel()
+    _concurrency_task.cancel()
     if _logger is not None:
         await _logger.stop()
         _logger = None
@@ -671,6 +674,14 @@ async def create_experiment(
         agents=agents,
     )
 
+    # Concurrency admission gate (#117): if the global or per-user active
+    # session count is already at its cap, persist this session with
+    # status='queued' and return 202 with a queue position. The
+    # background drainer promotes it to 'ready' once a slot frees.
+    admission = await evaluate_admission(db, str(user.id))
+    if admission.queued:
+        session.status = "queued"
+
     await session.save_new(
         db,
         user_id=str(user.id),
@@ -691,12 +702,19 @@ async def create_experiment(
     if MCP_ENDPOINT:
         response["mcp_url"] = MCP_ENDPOINT
 
+    if admission.queued:
+        response["queue_position"] = admission.position
+        response["max_concurrent_sessions"] = admission.max_concurrent_sessions
+        response["max_concurrent_sessions_per_user"] = admission.max_concurrent_sessions_per_user
+
     await broker.publish(f"session:{session.session_id}:events", {
         "event": "session_created",
         "session_id": session.session_id,
         "status": session.status,
     })
 
+    if admission.queued:
+        return JSONResponse(status_code=202, content=response)
     return response
 
 
@@ -736,6 +754,40 @@ async def get_observation(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
+@app.get(f"{API_PREFIX}/session/{{session_id}}/status")
+async def get_session_status(
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: None = require_agent_api(),
+):
+    """Return the lifecycle status of a session and its queue position.
+
+    The SDK's ``wait_until_ready`` helper polls this endpoint after a
+    session is created with ``status='queued'`` (HTTP 202 from
+    ``POST /experiment``). Returns 200 with ``{"status": ..., "queue_position": ...}``.
+    A non-queued session reports ``queue_position: 0``.
+    """
+    row = (
+        await db.execute(select(SessionModel).where(SessionModel.id == session_id))
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="session not found")
+    queue_position = 0
+    if row.status == "queued":
+        ahead = (
+            await db.execute(
+                select(func.count())
+                .select_from(SessionModel)
+                .where(
+                    SessionModel.status == "queued",
+                    SessionModel.created_at < row.created_at,
+                )
+            )
+        ).scalar_one()
+        queue_position = int(ahead) + 1
+    return {"status": row.status, "queue_position": queue_position}
+
+
 @app.post(f"{API_PREFIX}/session/{{session_id}}/action")
 async def submit_action(
     session_id: str,
@@ -747,6 +799,11 @@ async def submit_action(
 ):
     """Submit an action (allocation or forfeit) for a player in a session."""
     session = await get_session(session_id, db)
+    if session.status == "queued":
+        raise HTTPException(
+            status_code=409,
+            detail="session is queued waiting for a concurrency slot; call GET /session/{id}/status until status is ready",
+        )
     token = bearer_token(authorization)
 
     try:

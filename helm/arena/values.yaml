@@ -79,6 +79,12 @@ backend:
     limits:
       cpu: 500m
       memory: 512Mi
+  # The concurrency queue (#117) uses Postgres transaction-scoped advisory
+# locks (pg_advisory_xact_lock / pg_try_advisory_xact_lock) for both the
+# admission gate and the drainer, so it is safe to scale the backend
+# horizontally. Admissions are serialized globally (~1-5ms per lock
+# acquisition); the drainer uses a non-blocking try-lock so loser pods
+# skip instantly.
   autoscaling:
     enabled: true
     minReplicas: 1
