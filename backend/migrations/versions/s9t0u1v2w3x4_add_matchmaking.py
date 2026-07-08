@@ -1,7 +1,7 @@
 """add matchmaking tables
 
 Revision ID: s9t0u1v2w3x4
-Revises: q7r8s9t0u1v2
+Revises: r8s9t0u1v2w3
 Create Date: 2026-07-06 00:00:00.000000
 
 Adds the matchmaking data model (#96): ``matches`` (the waiting-phase
@@ -21,7 +21,7 @@ from sqlalchemy.dialects import postgresql
 
 
 revision = 's9t0u1v2w3x4'
-down_revision = 'q7r8s9t0u1v2'
+down_revision = 'r8s9t0u1v2w3'
 branch_labels = None
 depends_on = None
 
