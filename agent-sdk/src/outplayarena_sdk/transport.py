@@ -12,6 +12,8 @@ construction time; it is not hot-swapped at runtime.
 """
 from __future__ import annotations
 
+import asyncio
+import time
 from typing import Any
 
 from outplayarena_sdk.client import ArenaClient
@@ -88,6 +90,34 @@ class AsyncBackend:
         if self._mcp is not None:
             return self._mcp.send_message(content, recipient)
         return self._rest.send_message(content=content, recipient=recipient)
+
+    # ── Session lifecycle ─────────────────────────────────────────────────
+
+    async def wait_for_ready(
+        self,
+        poll_interval: float = 1.0,
+        timeout: float | None = None,
+    ) -> dict[str, Any]:
+        """Poll session status until it is no longer queued.
+
+        Returns the final status payload (e.g.
+        ``{"status": "ready", "queue_position": 0}``).  When *timeout* is
+        ``None`` the method waits indefinitely — the intended default for
+        agents that should block until their concurrency slot opens.
+
+        Always uses REST polling; the MCP server has no session-status
+        tool.
+        """
+        deadline = None if timeout is None else time.monotonic() + timeout
+        while True:
+            status = self._rest.get_session_status()
+            if status.get("status") != "queued":
+                return status
+            if deadline is not None and time.monotonic() >= deadline:
+                raise TimeoutError(
+                    f"session {self._rest.session_id} still queued after {timeout}s"
+                )
+            await asyncio.sleep(poll_interval)
 
     # ── Discovery (one-shot, REST only) ────────────────────────────────────
 
