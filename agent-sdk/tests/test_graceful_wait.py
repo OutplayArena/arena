@@ -262,3 +262,155 @@ def test_quick_play_skips_wait_when_session_not_queued():
 
             mock_instance.wait_until_ready.assert_not_called()
             assert result["winner"] == "B"
+
+
+# ── Coverage: edge cases for verbose + error branches ──────────────────────
+
+
+def test_is_queued_409_handles_json_parse_error():
+    """When resp.json() raises, _is_queued_409 returns False (not queued)."""
+    resp = MagicMock()
+    resp.status_code = 409
+    resp.json.side_effect = ValueError("not JSON")
+    exc = Exception("error")
+    exc.response = resp
+    assert _is_queued_409(exc) is False
+
+
+@pytest.mark.asyncio
+async def test_run_verbose_prints_on_promotion():
+    """BaseAgent.run() with verbose=True prints when session is promoted from queue."""
+    from outplayarena_sdk.base import BaseAgent
+
+    agent = BaseAgent.__new__(BaseAgent)
+    agent.player = "A"
+    agent.verbose = True
+    agent.poll_interval = 0.0
+    agent.ready_timeout = None
+    agent.max_steps = 1
+    agent._session_id = "sess-1"
+    agent._transport = MagicMock()
+    agent._transport.mcp = None
+    agent._transport.wait_for_ready = AsyncMock(
+        return_value={"status": "ready", "queue_position": 3}
+    )
+    # Terminal state on first poll so the loop exits immediately
+    agent._transport.get_state = AsyncMock(
+        return_value={"phase": "complete", "awaiting": []}
+    )
+    agent._transport.get_results = AsyncMock(return_value={"winner": "A"})
+    agent._openai = MagicMock()
+    agent._config = None
+    agent._seed_resolver = MagicMock()
+    agent._last_state = None
+    agent._stopped = False
+    agent.wandb_run = None
+    agent._mcp_client = None
+    agent._mcp_connected = False
+    agent._reasoning = None
+
+    with patch("builtins.print") as mock_print:
+        await agent.run()
+
+    printed = " ".join(str(c) for c in mock_print.call_args_list)
+    assert "promoted from queue" in printed
+    assert "position 3" in printed
+
+
+@pytest.mark.asyncio
+async def test_submit_action_verbose_prints_on_queued_409():
+    """_submit_action_with_retry with verbose=True prints when hitting a queued 409."""
+    from outplayarena_sdk.base import BaseAgent
+
+    agent = BaseAgent.__new__(BaseAgent)
+    agent.player = "B"
+    agent.verbose = True
+    agent.poll_interval = 0.0
+    agent.ready_timeout = 10.0
+    agent._transport = MagicMock()
+
+    queued_resp = httpx.Response(
+        status_code=409,
+        json={"detail": "session is queued waiting for a concurrency slot"},
+        request=httpx.Request("POST", "http://x"),
+    )
+    queued_exc = httpx.HTTPStatusError("conflict", request=queued_resp.request, response=queued_resp)
+
+    agent._transport.submit_action = AsyncMock(
+        side_effect=[queued_exc, {"status": "ok"}]
+    )
+    agent._transport.wait_for_ready = AsyncMock(
+        return_value={"status": "ready", "queue_position": 0}
+    )
+
+    with patch("builtins.print") as mock_print:
+        result = await agent._submit_action_with_retry([20, 20, 20, 20, 20])
+
+    assert result == {"status": "ok"}
+    printed = " ".join(str(c) for c in mock_print.call_args_list)
+    assert "action rejected" in printed
+    assert "queued" in printed
+
+
+def test_quick_play_verbose_prints_when_queued():
+    """quick_play with verbose=True prints queued/promoted messages."""
+    from outplayarena_sdk import quick_play
+
+    created_response = {
+        "session_id": "sess-v",
+        "player_tokens": {"A": "nks_A"},
+        "status": "queued",
+        "queue_position": 2,
+        "config_hash": "abc",
+        "arena_version": "1.0",
+        "config": {},
+    }
+
+    with patch("outplayarena_sdk.quick_play.ArenaClient") as MockClient:
+        mock_instance = MockClient.return_value
+        mock_instance.create_experiment.return_value = created_response
+        mock_instance.wait_until_ready.return_value = {"status": "ready"}
+
+        with patch("outplayarena_sdk.quick_play.get_agent_class") as mock_cls:
+            mock_agent = MagicMock()
+            mock_agent.run = AsyncMock(return_value={"winner": "A"})
+            mock_cls.return_value = MagicMock(return_value=mock_agent)
+
+            with patch("builtins.print") as mock_print:
+                quick_play(
+                    game="colonelblotto",
+                    agents={"A": {"model": "x", "api_key": "k"}},
+                    arena_url="http://localhost:8000/api",
+                    config={"rounds": 1},
+                    mcp_url="",
+                    verbose=True,
+                )
+
+        printed = " ".join(str(c) for c in mock_print.call_args_list)
+        assert "session queued" in printed
+        assert "promoted to ready" in printed
+
+
+def test_quick_play_returns_empty_with_no_agents():
+    """quick_play with an empty agents dict returns {} immediately."""
+    from outplayarena_sdk import quick_play
+
+    with patch("outplayarena_sdk.quick_play.ArenaClient") as MockClient:
+        mock_instance = MockClient.return_value
+        mock_instance.create_experiment.return_value = {
+            "session_id": "sess-empty",
+            "player_tokens": {},
+            "config_hash": "abc",
+            "arena_version": "1.0",
+            "config": {},
+        }
+
+        result = quick_play(
+            game="colonelblotto",
+            agents={},
+            arena_url="http://localhost:8000/api",
+            config={"rounds": 1},
+            mcp_url="",
+        )
+
+        assert result == {}
