@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, AsyncIterator
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import yaml
 from dotenv import load_dotenv
@@ -37,13 +37,24 @@ from arena.models.session import SessionModel
 from arena.models.api_key import ApiKey
 from arena.models.message_log import MessageLog
 from arena.models.wandb_credential import WandbCredential
+from arena.models.match import Match
 from arena.integrations.wandb_logger import encrypt_api_key, decrypt_api_key, WandbConfigError, WandbGameLogger
 from arena.experiment_config import WandbConfig
 from arena.auth.oauth import github_login, github_callback, google_login, google_callback, _callback_base_for
 from arena.auth.jwt import create_access_token
-from arena.auth.dependencies import get_current_user, get_local_or_optional_user, require_user
+from arena.auth.dependencies import get_current_user, get_local_or_optional_user, require_user, require_admin
 from arena.auth.apikey import generate_platform_key
 from arena.models.user import User
+from arena.concurrency import evaluate_admission, _queue_drainer_loop as _concurrency_drain
+from arena.matchmaking import (
+    create_lobby_match,
+    list_open_matches as _lobby_list,
+    get_match_detail as _lobby_get,
+    join_match as _lobby_join,
+    cancel_match as _lobby_cancel,
+    _matchmaking_sweeper_loop,
+    is_match_participant,
+)
 
 
 API_PREFIX = os.environ.get("API_PREFIX", "/api")
@@ -90,8 +101,12 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     await _logger.start()
     await _load_registries_from_db()
     _gdpr_task = asyncio.create_task(_gdpr_purge_loop())
+    _concurrency_task = asyncio.create_task(_concurrency_drain(_broker))
+    _matchmaking_task = asyncio.create_task(_matchmaking_sweeper_loop(_broker))
     yield
     _gdpr_task.cancel()
+    _concurrency_task.cancel()
+    _matchmaking_task.cancel()
     if _logger is not None:
         await _logger.stop()
         _logger = None
@@ -432,8 +447,14 @@ class UserResponse(BaseModel):
     avatar_url: str | None
     privacy_accepted: bool = False
     username: str | None = None
+    show_own_leaderboard_badge: bool = False
+    is_admin: bool = False
 
     model_config = {"from_attributes": True}
+
+
+class UpdatePreferencesRequest(BaseModel):
+    show_own_leaderboard_badge: bool
 
 
 def config_from_request(request: dict[str, Any]):
@@ -447,6 +468,44 @@ async def get_session(session_id: str, db: AsyncSession) -> GameSession:
     if row is None:
         raise HTTPException(status_code=404, detail="session not found")
     return GameSession.from_db_row(row)
+
+
+async def _check_match_participation(
+    session_id: str,
+    authorization: str | None,
+    db: AsyncSession,
+) -> None:
+    """Harden state/observation access for matched sessions (#96).
+
+    When a session was spawned by a matchmaking match (``match_id`` set),
+    a caller using a **platform user token** (not an ``nks_`` session key)
+    must be a participant in that match. The ``nks_`` token remains the
+    primary capability and passes through unchecked. No-op for sessions
+    without a ``match_id`` (preserves legacy behavior).
+    """
+    from arena.auth.session_key import SESSION_KEY_PREFIX
+    from arena.auth.jwt import decode_access_token
+
+    if not authorization or not authorization.startswith("Bearer "):
+        return
+    token = authorization[len("Bearer "):].strip()
+    if token.startswith(SESSION_KEY_PREFIX):
+        return
+    try:
+        user_id_str = decode_access_token(token)
+        if not user_id_str:
+            return
+        user_id = UUID(user_id_str)
+    except Exception:
+        return
+    is_participant = await is_match_participant(
+        db, session_id=session_id, user_id=user_id
+    )
+    if not is_participant:
+        raise HTTPException(
+            status_code=403,
+            detail="not a participant in this match",
+        )
 
 
 def bearer_token(authorization: str | None) -> str:
@@ -666,6 +725,14 @@ async def create_experiment(
         agents=agents,
     )
 
+    # Concurrency admission gate (#117): if the global or per-user active
+    # session count is already at its cap, persist this session with
+    # status='queued' and return 202 with a queue position. The
+    # background drainer promotes it to 'ready' once a slot frees.
+    admission = await evaluate_admission(db, str(user.id))
+    if admission.queued:
+        session.status = "queued"
+
     await session.save_new(
         db,
         user_id=str(user.id),
@@ -686,23 +753,250 @@ async def create_experiment(
     if MCP_ENDPOINT:
         response["mcp_url"] = MCP_ENDPOINT
 
+    if admission.queued:
+        response["queue_position"] = admission.position
+        response["max_concurrent_sessions"] = admission.max_concurrent_sessions
+        response["max_concurrent_sessions_per_user"] = admission.max_concurrent_sessions_per_user
+
     await broker.publish(f"session:{session.session_id}:events", {
         "event": "session_created",
         "session_id": session.session_id,
         "status": session.status,
     })
 
+    if admission.queued:
+        return JSONResponse(status_code=202, content=response)
     return response
+
+
+# ── Lobby / matchmaking (#96) ─────────────────────────────────────────
+# All /api/lobby/* endpoints check `_providers_configured()` first —
+# matchmaking is intrinsically multi-user; in local mode (no OAuth) they
+# return 403 with a clear message. The host creates an open match and
+# immediately receives their nks_ token (derived from a pre-allocated
+# session_id). Joiners claim slots via a race-safe DB constraint.
+
+def _require_multi_user_mode():
+    """Raise 403 when no OAuth providers are configured (local mode)."""
+    from arena.auth.dependencies import _providers_configured
+
+    if not _providers_configured():
+        raise HTTPException(
+            status_code=403,
+            detail="matchmaking requires multi-user mode (configure GitHub or Google OAuth)",
+        )
+
+
+def _matchmaking_enabled() -> bool:
+    from arena.settings import get_settings
+
+    return bool(get_settings().enable_matchmaking)
+
+
+@app.post(f"{API_PREFIX}/lobby/matches")
+async def lobby_create_match(
+    request: dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+    _: None = require_agent_api(),
+):
+    """Create an open match in the lobby (#96).
+
+    The host picks a game config and implicitly claims the first player
+    slot. Returns the match_id, invite_code, invite_url, and the host's
+    nks_ token (so the host agent can poll until the match starts).
+    """
+    _require_multi_user_mode()
+    if not _matchmaking_enabled():
+        raise HTTPException(status_code=403, detail="matchmaking is disabled")
+
+    game_payload, _wandb = split_runtime_config(request)
+    try:
+        config = GAME_REGISTRY.config_from_request(game_payload)
+        GAME_REGISTRY.game_from_config(config)
+    except (ValueError, GameRegistryError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    agents = request.get("agents")
+    if not isinstance(agents, dict):
+        agents = None
+
+    game_type = config.to_dict().get("game", "unknown") if hasattr(config, "to_dict") else "unknown"
+    config_hash = config.config_hash()
+
+    try:
+        match, host_token = await create_lobby_match(
+            db,
+            host_user_id=user.id,
+            game_type=game_type,
+            config=config,
+            config_hash=config_hash,
+            agents=agents,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    host_slot = config.player_ids()[0] if config.player_ids() else "A"
+    return {
+        "match_id": match.id,
+        "status": match.status,
+        "invite_code": match.invite_code,
+        "invite_url": f"/lobby/{match.id}?code={match.invite_code}",
+        "host_token": host_token,
+        "host_slot": host_slot,
+        "total_slots": match.total_slots,
+        "filled_slots": match.filled_slots,
+        "open_slots": match.total_slots - match.filled_slots,
+        "expires_at": match.expires_at.isoformat(),
+    }
+
+
+@app.get(f"{API_PREFIX}/lobby/matches")
+async def lobby_list_matches(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """List all open matches waiting for opponents (#96)."""
+    _require_multi_user_mode()
+    return {"matches": await _lobby_list(db)}
+
+
+@app.get(f"{API_PREFIX}/lobby/matches/{{match_id}}")
+async def lobby_get_match(
+    match_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Get details for a specific match (#96)."""
+    _require_multi_user_mode()
+    detail = await _lobby_get(db, match_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="match not found")
+    return detail
+
+
+@app.post(f"{API_PREFIX}/lobby/matches/{{match_id}}/join")
+async def lobby_join_match(
+    match_id: str,
+    request: dict[str, Any] | None = None,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+    broker: MessageBroker = Depends(get_broker),
+    _: None = require_agent_api(),
+):
+    """Claim an open slot in a match. Race-safe (#96).
+
+    Returns 200 with the joiner's nks_ token and the match status. If the
+    match fills on this join, returns 200 with ``status='running'`` and
+    the ``session_id``. Returns 409 if the slot was claimed by another
+    user at the same instant (DB unique constraint catches the race).
+    """
+    _require_multi_user_mode()
+    if not _matchmaking_enabled():
+        raise HTTPException(status_code=403, detail="matchmaking is disabled")
+
+    slot = None
+    if request and isinstance(request, dict):
+        slot = request.get("slot")
+
+    try:
+        token, claimed_slot, match_filled, m = await _lobby_join(
+            db, match_id=match_id, user_id=user.id, slot=slot
+        )
+    except ValueError as exc:
+        status_code = 404 if "not found" in str(exc) else 409
+        if "expired" in str(exc) or "not open" in str(exc):
+            status_code = 409
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+
+    if match_filled and m.session_id:
+        await broker.publish(
+            f"match:{match_id}:events",
+            {
+                "event": "match_filled",
+                "match_id": match_id,
+                "session_id": m.session_id,
+                "status": "running",
+            },
+        )
+
+    response = {
+        "match_id": match_id,
+        "slot": claimed_slot,
+        "player_token": token,
+        "status": m.status,
+        "filled_slots": m.filled_slots,
+        "total_slots": m.total_slots,
+    }
+    if m.session_id:
+        response["session_id"] = m.session_id
+    return response
+
+
+@app.delete(f"{API_PREFIX}/lobby/matches/{{match_id}}")
+async def lobby_cancel_match(
+    match_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Cancel a waiting match (host only) (#96)."""
+    _require_multi_user_mode()
+    try:
+        ok = await _lobby_cancel(db, match_id=match_id, user_id=user.id)
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    if not ok:
+        raise HTTPException(status_code=404, detail="match not found")
+    return {"cancelled": True}
+
+
+@app.get(f"{API_PREFIX}/lobby/matches/{{match_id}}/stream")
+async def lobby_stream_match(
+    match_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """SSE stream for a match: emits match_filled / match_expired events (#96).
+
+    Used by the SDK's ``wait_for_opponent`` helper and the frontend's
+    wait screen. Events:
+    - ``match_filled`` → the match started; ``session_id`` included.
+    - ``match_expired`` → the match TTL elapsed; the host should retry.
+    """
+    _require_multi_user_mode()
+
+    match = (
+        await db.execute(select(Match).where(Match.id == match_id))
+    ).scalar_one_or_none()
+    if match is None:
+        raise HTTPException(status_code=404, detail="match not found")
+
+    async def _event_stream():
+        from arena.messaging.broker import MessageBroker
+
+        broker = get_broker()
+        if not isinstance(broker, MessageBroker):
+            yield f"event: match_status\ndata: {json.dumps({'status': match.status})}\n\n"
+            return
+        channel = f"match:{match_id}:events"
+        async for msg in await broker.subscribe(channel):
+            yield f"data: {json.dumps(msg)}\n\n"
+            if msg.get("event") in ("match_filled", "match_expired"):
+                break
+
+    return StreamingResponse(_event_stream(), media_type="text/event-stream")
 
 
 @app.get(f"{API_PREFIX}/session/{{session_id}}/state")
 async def get_state(
     session_id: str,
+    authorization: str | None = Header(default=None),
     db: AsyncSession = Depends(get_db),
     broker: MessageBroker = Depends(get_broker),
     _: None = require_agent_api(),
 ):
     """Get the current state of a session."""
+    await _check_match_participation(session_id, authorization, db)
     cached = await broker.cache_get(f"session:{session_id}:state")
     if cached is not None:
         return cached
@@ -715,10 +1009,12 @@ async def get_observation(
     session_id: str,
     player: str = Query(..., description="Player ID (e.g. A or B)"),
     variant: str = Query("neutral", description="Prompt variant: neutral, gain_framed, loss_framed"),
+    authorization: str | None = Header(default=None),
     db: AsyncSession = Depends(get_db),
     _: None = require_agent_api(),
 ):
     """Get the observation for a player in the current session state."""
+    await _check_match_participation(session_id, authorization, db)
     session = await get_session(session_id, db)
     state = session.public_state()
     config_dict = session.config.to_dict() if hasattr(session.config, "to_dict") else {}
@@ -729,6 +1025,40 @@ async def get_observation(
         raise game_registry_error(exc) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get(f"{API_PREFIX}/session/{{session_id}}/status")
+async def get_session_status(
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: None = require_agent_api(),
+):
+    """Return the lifecycle status of a session and its queue position.
+
+    The SDK's ``wait_until_ready`` helper polls this endpoint after a
+    session is created with ``status='queued'`` (HTTP 202 from
+    ``POST /experiment``). Returns 200 with ``{"status": ..., "queue_position": ...}``.
+    A non-queued session reports ``queue_position: 0``.
+    """
+    row = (
+        await db.execute(select(SessionModel).where(SessionModel.id == session_id))
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="session not found")
+    queue_position = 0
+    if row.status == "queued":
+        ahead = (
+            await db.execute(
+                select(func.count())
+                .select_from(SessionModel)
+                .where(
+                    SessionModel.status == "queued",
+                    SessionModel.created_at < row.created_at,
+                )
+            )
+        ).scalar_one()
+        queue_position = int(ahead) + 1
+    return {"status": row.status, "queue_position": queue_position}
 
 
 @app.post(f"{API_PREFIX}/session/{{session_id}}/action")
@@ -742,6 +1072,11 @@ async def submit_action(
 ):
     """Submit an action (allocation or forfeit) for a player in a session."""
     session = await get_session(session_id, db)
+    if session.status == "queued":
+        raise HTTPException(
+            status_code=409,
+            detail="session is queued waiting for a concurrency slot; call GET /session/{id}/status until status is ready",
+        )
     token = bearer_token(authorization)
 
     try:
@@ -1766,7 +2101,247 @@ async def delete_account(
     return {"deleted": True}
 
 
+# ── Admin dashboard (#116) ─────────────────────────────────────────────
+# All /api/admin/* endpoints are gated by `require_admin` (checks
+# ENABLE_ADMIN_DASHBOARD env + is_admin column OR ADMIN_USER_IDS allowlist).
+# Email addresses are masked (partial) so admin UI never surfaces full
+# addresses. Response shapes are intentionally small and dashboard-shaped.
+
+def _mask_email(email: str) -> str:
+    """Partial email redaction: keep name[0] + domain[0..<2] chars."""
+    if not email or "@" not in email:
+        return email
+    name, _, domain = email.partition("@")
+    if not name or not domain:
+        return email
+    shown_name = name[0] if len(name) >= 1 else ""
+    shown_domain = domain[0] + domain[1] if len(domain) >= 1 else ""
+    return f"{shown_name}***@***.{domain.split('.')[-1]}" if "." in domain else f"{shown_name}***@***.{shown_domain}"
+
+
+def _admin_user_row(u: User) -> dict:
+    return {
+        "id": str(u.id),
+        "username": u.username,
+        "name": u.name,
+        "provider": u.provider,
+        "email_masked": _mask_email(u.email),
+        "is_admin": bool(getattr(u, "is_admin", False)),
+        "created_at": u.created_at.isoformat() if u.created_at else None,
+        "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
+    }
+
+
+@app.get(f"{API_PREFIX}/admin/users")
+async def admin_list_users(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    """List registered users with masked emails (#116)."""
+    result = await db.execute(select(User).order_by(User.created_at.desc()))
+    users = result.scalars().all()
+    return {"users": [_admin_user_row(u) for u in users]}
+
+
+@app.get(f"{API_PREFIX}/admin/sessions")
+async def admin_list_sessions(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_admin),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+):
+    """List all sessions across all users (#116)."""
+    total_r = await db.execute(select(func.count()).select_from(SessionModel))
+    total = total_r.scalar_one()
+    rows_r = await db.execute(
+        select(SessionModel)
+        .order_by(SessionModel.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    rows = rows_r.scalars().all()
+    return {
+        "total": total,
+        "sessions": [
+            {
+                "id": r.id,
+                "status": r.status,
+                "game": r.config_json.get("game") if isinstance(r.config_json, dict) else None,
+                "user_id": str(r.user_id) if r.user_id else None,
+                "is_public": r.is_public,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in rows
+        ],
+    }
+
+
+@app.get(f"{API_PREFIX}/admin/stats")
+async def admin_stats(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    """Platform-wide telemetry for the admin dashboard (#116)."""
+    from arena.platform_settings import get_platform_setting as _get_set
+
+    running = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(SessionModel)
+                .where(SessionModel.status == "running")
+            )
+        ).scalar_one()
+    )
+    ready = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(SessionModel)
+                .where(SessionModel.status == "ready")
+            )
+        ).scalar_one()
+    )
+    queued = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(SessionModel)
+                .where(SessionModel.status == "queued")
+            )
+        ).scalar_one()
+    )
+    failed = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(SessionModel)
+                .where(SessionModel.status == "failed")
+            )
+        ).scalar_one()
+    )
+    completed = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(SessionModel)
+                .where(SessionModel.status == "completed")
+            )
+        ).scalar_one()
+    )
+    wandb_users = int(
+        (
+            await db.execute(select(func.count()).select_from(WandbCredential))
+        ).scalar_one()
+    )
+    login_enabled = await _get_set("login_enabled", db, cast=bool)
+    db_size = "unavailable"
+    try:
+        size_r = await db.execute(
+            select(func.pg_database_size(func.current_database()))
+        )
+        db_size = size_r.scalar_one()
+    except Exception:
+        _logger_main.debug("pg_database_size unavailable; reporting placeholder", exc_info=True)
+    return {
+        "sessions_running": running,
+        "sessions_ready": ready,
+        "sessions_queued": queued,
+        "sessions_failed": failed,
+        "sessions_completed": completed,
+        "wandb_users": wandb_users,
+        "login_enabled": login_enabled,
+        "db_size_bytes": db_size,
+        "backup": {"status": "not_configured"},
+    }
+
+
+@app.get(f"{API_PREFIX}/admin/errors")
+async def admin_list_errors(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_admin),
+    limit: int = Query(50, ge=1, le=500),
+):
+    """Recent server errors from the error_logs table (#116)."""
+    from arena.models.error_log import ErrorLog
+
+    result = await db.execute(
+        select(ErrorLog).order_by(ErrorLog.created_at.desc()).limit(limit)
+    )
+    errors = result.scalars().all()
+    return {
+        "errors": [
+            {
+                "id": str(e.id),
+                "method": e.method,
+                "path": e.path,
+                "exception_type": e.exception_type,
+                "message": e.message,
+                "client_ip": e.client_ip,
+                "user_agent": e.user_agent,
+                "created_at": e.created_at.isoformat() if e.created_at else None,
+            }
+            for e in errors
+        ]
+    }
+
+
+@app.get(f"{API_PREFIX}/admin/settings")
+async def admin_get_settings(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    """Read the runtime-editable platform settings (#116)."""
+    from arena.platform_settings import get_platform_setting as _get_set
+
+    return {
+        "max_concurrent_sessions": await _get_set("max_concurrent_sessions", db, cast=int),
+        "max_concurrent_sessions_per_user": await _get_set(
+            "max_concurrent_sessions_per_user", db, cast=int
+        ),
+        "login_enabled": await _get_set("login_enabled", db, cast=bool),
+    }
+
+
+@app.put(f"{API_PREFIX}/admin/settings")
+async def admin_update_settings(
+    body: dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_admin),
+):
+    """Update runtime-editable platform settings (#116).
+
+    Accepts a partial body; only the provided keys are updated. Boolean
+    ``login_enabled`` toggles whether new logins are accepted (enforced
+    in the OAuth callback endpoints).
+    """
+    from arena.platform_settings import set_platform_setting as _set_set
+
+    allowed = {"max_concurrent_sessions", "max_concurrent_sessions_per_user", "login_enabled"}
+    updated = {}
+    for key, value in body.items():
+        if key not in allowed:
+            continue
+        await _set_set(key, value, db, updated_by=user.id)
+        updated[key] = value
+    return updated
+
+
 # ── OAuth ──────────────────────────────────────────────────────────────
+
+async def _enforce_login_enabled(db: AsyncSession) -> None:
+    """Reject new logins when the admin has toggled login_enabled=false (#116).
+
+    Reads the ``login_enabled`` platform setting (env-fallback True).
+    Called at the start of each OAuth login redirect so the toggle is
+    enforced before the user is bounced out to the provider.
+    """
+    from arena.platform_settings import get_platform_setting as _get_set
+
+    enabled = await _get_set("login_enabled", db, cast=bool)
+    if not enabled:
+        raise HTTPException(status_code=403, detail="login is temporarily disabled")
+
 
 def _provider_configured(client_id: str | None, client_secret: str | None) -> bool:
     return bool(client_id and client_id.strip() and client_secret and client_secret.strip())
@@ -1788,8 +2363,9 @@ def auth_providers():
 
 
 @app.get(f"{API_PREFIX}/auth/github/login")
-async def auth_github_login(request: Request):
+async def auth_github_login(request: Request, db: AsyncSession = Depends(get_db)):
     """Initiate GitHub OAuth login flow."""
+    await _enforce_login_enabled(db)
     return await github_login(request)
 
 
@@ -1802,8 +2378,9 @@ async def auth_github_callback(request: Request, db: AsyncSession = Depends(get_
 
 
 @app.get(f"{API_PREFIX}/auth/google/login")
-async def auth_google_login(request: Request):
+async def auth_google_login(request: Request, db: AsyncSession = Depends(get_db)):
     """Initiate Google OAuth login flow."""
+    await _enforce_login_enabled(db)
     return await google_login(request)
 
 
@@ -1816,6 +2393,8 @@ async def auth_google_callback(request: Request, db: AsyncSession = Depends(get_
 
 
 def _user_response(user: User) -> UserResponse:
+    from arena.auth.dependencies import _user_is_admin
+
     return UserResponse(
         id=str(user.id),
         email=user.email,
@@ -1823,6 +2402,8 @@ def _user_response(user: User) -> UserResponse:
         avatar_url=user.avatar_url,
         privacy_accepted=user.privacy_accepted_at is not None,
         username=user.username,
+        show_own_leaderboard_badge=user.show_own_leaderboard_badge,
+        is_admin=_user_is_admin(user),
     )
 
 
@@ -1860,6 +2441,27 @@ async def accept_privacy(
             row.privacy_accepted_at = datetime.now(timezone.utc)
             await db.commit()
     return {"privacy_accepted": True}
+
+
+@app.patch(f"{API_PREFIX}/settings/preferences", response_model=UserResponse)
+async def update_preferences(
+    body: UpdatePreferencesRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    """Update the current user's personal display preferences.
+
+    Currently only controls whether the "You" badge highlighting the
+    user's own rows is shown on the leaderboard (default hidden/opt-in).
+    """
+    result = await db.execute(select(User).where(User.id == user.id))
+    row = result.scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="user not found")
+    row.show_own_leaderboard_badge = body.show_own_leaderboard_badge
+    await db.commit()
+    await db.refresh(row)
+    return _user_response(row)
 
 
 # ── Benchmark report ────────────────────────────────────────────────────
@@ -2340,6 +2942,8 @@ async def get_agent_history(
 @app.get(f"{API_PREFIX}/site-config")
 def site_config():
     """Return site configuration from site.yaml."""
+    from arena.auth.dependencies import _is_admin_enabled
+
     if SITE_YAML.is_file():
         data = yaml.safe_load(SITE_YAML.read_text(encoding="utf-8")) or {}
     else:
@@ -2350,6 +2954,7 @@ def site_config():
         "privacy_notice_url": data.get("privacy_notice_url", ""),
         "about_text": data.get("about_text", ""),
         "footer": data.get("footer") or {"copyright": "", "tagline": ""},
+        "admin_dashboard_enabled": _is_admin_enabled(),
     }
 
 

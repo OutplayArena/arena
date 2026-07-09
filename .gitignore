@@ -173,5 +173,6 @@ backend/static/assets/
 !*.cfg
 !frontend/package.json
 !frontend/package-lock.json
+!helm/arena/values.schema.json
 minikube-linux-amd64
 .eslintcache

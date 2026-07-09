@@ -12,7 +12,7 @@ import type { SiteConfig } from "./types";
 
 function createMockAuth(overrides: Partial<AuthState> = {}): AuthState {
   return {
-    user: { id: "test-user", email: "test@test.com", name: "Test User", avatar_url: null, privacy_accepted: true, username: "testuser" },
+    user: { id: "test-user", email: "test@test.com", name: "Test User", avatar_url: null, privacy_accepted: true, username: "testuser", show_own_leaderboard_badge: false },
     token: "mock-token",
     loading: false,
     hasProviders: true,

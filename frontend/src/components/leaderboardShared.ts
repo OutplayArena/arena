@@ -5,6 +5,8 @@ export const METRIC_LABELS: Record<string, string> = {
   strategy_entropy: "Entropy",
   behavioral_consistency: "Consistency",
   cooperation_rate: "Cooperation",
+  payoff_volatility: "Volatility",
+  action_concentration: "Concentration",
 };
 
 export function formatMetric(key: string, val: number): string {
@@ -53,5 +55,7 @@ export interface LeaderboardTableProps {
   loadingRows?: number;
   /** Show a dedicated "Owner" column with attribution (use for public/all scopes). */
   showOwnerColumn?: boolean;
+  /** Show the "You" badge on the viewer's own rows (personal display preference, default off/hidden). */
+  showOwnBadge?: boolean;
 }
 

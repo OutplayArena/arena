@@ -10,6 +10,7 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
     privacy_notice_url: "",
     about_text: "",
     footer: { copyright: "", tagline: "" },
+    admin_dashboard_enabled: false,
   });
 
   useEffect(() => {

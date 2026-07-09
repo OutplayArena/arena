@@ -17,9 +17,10 @@ spec:
       annotations:
         checksum/oauth-secret: {{ .Values.oauth | toJson | sha256sum }}
         checksum/config: {{ dict
-            "apiPrefix"          .Values.backend.env.apiPrefix
-            "enableAgentRestApi" (default "true" .Values.backend.env.enableAgentRestApi)
-            "mcpPublicBaseUrl"   .Values.mcpServer.publicBaseUrl
+            "apiPrefix"            .Values.backend.env.apiPrefix
+            "enableAgentRestApi"   (default "true" .Values.backend.env.enableAgentRestApi)
+            "enableAdminDashboard" (default "false" .Values.backend.env.enableAdminDashboard)
+            "mcpPublicBaseUrl"     .Values.mcpServer.publicBaseUrl
           | toJson | sha256sum }}
     spec:
       serviceAccountName: {{ include "arena.fullname" . }}-backend

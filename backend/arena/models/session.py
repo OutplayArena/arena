@@ -30,6 +30,10 @@ class SessionModel(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="ready")
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     locked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Backref to the Match that spawned this session (#96). Set when a
+    # matchmaking match fills and the session is created. Used by the
+    # participant-hardening check on state/observation endpoints.
+    match_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

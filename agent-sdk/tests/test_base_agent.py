@@ -5,6 +5,7 @@ agent loop can be exercised end-to-end without hitting a real backend.
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -150,6 +151,7 @@ def _make_fake_transport(states: list[dict]) -> MagicMock:
     transport.get_observation = AsyncMock(return_value={"system": "s", "turn": "t"})
     transport.submit_action = AsyncMock(return_value={"status": "ok"})
     transport.get_results = AsyncMock(return_value={"winner": "A"})
+    transport.wait_for_ready = AsyncMock(return_value={"status": "ready", "queue_position": 0})
     return transport
 
 
@@ -452,6 +454,7 @@ class TestRunLoop:
         )
         boom = RuntimeError("backend down")
         transport = MagicMock()
+        transport.wait_for_ready = AsyncMock(return_value={"status": "ready", "queue_position": 0})
         transport.get_state = AsyncMock(side_effect=boom)
         agent._transport = transport
         agent._openai = MagicMock()
@@ -791,6 +794,26 @@ class TestRunSync:
         result = agent.run_sync()
         assert result == {"winner": "A"}
 
+    def test_run_sync_works_inside_running_event_loop(self):
+        """run_sync() must not raise "cannot be called from a running
+        event loop" when invoked from inside a running loop (e.g. a
+        Jupyter kernel). It offloads asyncio.run to a worker thread with
+        its own loop instead."""
+        agent = _RecordingAgent(
+            player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
+            arena_url="http://x", llm_config=_make_llm_config(),
+        )
+        agent.run = AsyncMock(return_value={"winner": "A"})
+
+        async def inside_running_loop():
+            # This coroutine runs inside an active event loop, mirroring
+            # how user code executes in a Jupyter kernel.
+            return agent.run_sync()
+
+        result = asyncio.run(inside_running_loop())
+        assert result == {"winner": "A"}
+
 
 class TestMessageSending:
     @pytest.mark.asyncio
@@ -836,6 +859,7 @@ class TestStateRefreshError:
             {"phase": "playing", "awaiting": ["A"], "round": 2, "config": {"seed": 1}},
         ])
         transport = MagicMock()
+        transport.wait_for_ready = AsyncMock(return_value={"status": "ready", "queue_position": 0})
         transport.mcp = None
         transport.get_state = AsyncMock(side_effect=[
             next(states_iter),
@@ -864,6 +888,7 @@ class TestFetchObservation:
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         transport = MagicMock()
+        transport.wait_for_ready = AsyncMock(return_value={"status": "ready", "queue_position": 0})
         transport.mcp = None
         transport.get_observation = AsyncMock(return_value={"system": "s", "turn": "t"})
         agent._transport = transport
@@ -879,6 +904,7 @@ class TestFetchObservation:
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         transport = MagicMock()
+        transport.wait_for_ready = AsyncMock(return_value={"status": "ready", "queue_position": 0})
         transport.mcp = MagicMock()
         transport.get_observation = AsyncMock(return_value={"system": "s", "turn": "t"})
         agent._transport = transport
@@ -896,6 +922,7 @@ class TestDispatchToolCall:
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         transport = MagicMock()
+        transport.wait_for_ready = AsyncMock(return_value={"status": "ready", "queue_position": 0})
         transport.mcp = None
         transport.get_observation = AsyncMock(return_value={"system": "s", "turn": "t"})
         agent._transport = transport
@@ -916,6 +943,7 @@ class TestDispatchToolCall:
         )
         state = {"phase": "playing", "round": 1}
         transport = MagicMock()
+        transport.wait_for_ready = AsyncMock(return_value={"status": "ready", "queue_position": 0})
         transport.mcp = None
         transport.get_state = AsyncMock(return_value=state)
         agent._transport = transport
@@ -935,6 +963,7 @@ class TestDispatchToolCall:
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         transport = MagicMock()
+        transport.wait_for_ready = AsyncMock(return_value={"status": "ready", "queue_position": 0})
         transport.mcp = None
         transport.get_mailbox = AsyncMock(return_value=[{"id": "1"}])
         agent._transport = transport
@@ -954,6 +983,7 @@ class TestDispatchToolCall:
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         transport = MagicMock()
+        transport.wait_for_ready = AsyncMock(return_value={"status": "ready", "queue_position": 0})
         transport.mcp = None
         transport.send_message = AsyncMock(return_value={"id": "msg-1"})
         agent._transport = transport
@@ -974,6 +1004,7 @@ class TestDispatchToolCall:
             arena_url="http://x", llm_config=_make_llm_config(),
         )
         transport = MagicMock()
+        transport.wait_for_ready = AsyncMock(return_value={"status": "ready", "queue_position": 0})
         transport.mcp = None
         agent._transport = transport
 

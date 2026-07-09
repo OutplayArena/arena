@@ -1,0 +1,43 @@
+suite: "migrations Job defaults"
+release:
+  name: arena
+templates:
+  - "templates/migrations/job.yaml"
+tests:
+  - it: "is a Job named arena-migrations"
+    asserts:
+      - isKind:
+          of: Job
+      - equal:
+          path: metadata.name
+          value: arena-migrations
+
+  - it: "is a post-install/post-upgrade Helm hook (guards the spec.template immutability fix)"
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: "post-install,post-upgrade"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: before-hook-creation
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "-10"
+
+  - it: "uses the chart-default migrations image by default"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: alembic
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "her3ert/outplayarena-backend:latest"
+
+  - it: "waits for the database before running alembic"
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: wait-for-db
+      - equal:
+          path: spec.template.spec.initContainers[0].image
+          value: busybox:1.36

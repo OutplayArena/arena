@@ -3,11 +3,11 @@ codecov:
   status:
     project:
       default:
-        target: 80%
+        target: 90%
         threshold: 2%
     patch:
       default:
-        target: 80%
+        target: 90%
   ignore:
     - "games/games/_template/**"
     - "scripts/**"

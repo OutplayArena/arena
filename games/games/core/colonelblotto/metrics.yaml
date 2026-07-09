@@ -9,3 +9,5 @@ metrics:
   - cumulative_regret
   - nash_gap
   - gini_coefficient
+  - payoff_volatility
+  - action_concentration

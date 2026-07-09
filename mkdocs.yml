@@ -213,5 +213,9 @@ nav:
       - Minikube Dev: contributing/minikube.md
       - Adding Games: contributing/adding-games.md
       - Docs Development: contributing/docs.md
+      - E2E Test Plan: testing/e2e-test-plan.md
+  - Release Notes:
+      - releases/index.md
+      - v0.4.0: releases/v0.4.0.md
   - Blog:
       - blog/index.md

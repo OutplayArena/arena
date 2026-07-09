@@ -209,6 +209,8 @@ class TestAggregatedMetrics:
             "strategy_entropy",
             "behavioral_consistency",
             "cooperation_rate",
+            "payoff_volatility",
+            "action_concentration",
         })
 
 

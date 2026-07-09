@@ -1,0 +1,39 @@
+suite: "image overrides"
+release:
+  name: arena
+tests:
+  - it: "migrations Job uses the overridden repository (guards the image-mismatch class)"
+    template: "templates/migrations/job.yaml"
+    set:
+      migrations.image.repository: arena-backend
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "arena-backend:latest"
+
+  - it: "backend Deployment uses the overridden repository"
+    template: "templates/backend/deployment.yaml"
+    set:
+      backend.image.repository: arena-backend
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "arena-backend:latest"
+
+  - it: "mcp Deployment uses the overridden repository"
+    template: "templates/mcp-server/deployment.yaml"
+    set:
+      mcpServer.image.repository: arena-mcp
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "arena-mcp:latest"
+
+  - it: "docs Deployment uses the overridden repository"
+    template: "templates/docs/deployment.yaml"
+    set:
+      docs.image.repository: arena-docs
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "arena-docs:latest"

@@ -1,4 +1,5 @@
 from dataclasses import dataclass, asdict, is_dataclass
+from datetime import datetime, timezone
 from typing import Any
 import secrets
 import uuid
@@ -55,11 +56,12 @@ class GameSession:
         game=None,
         locked: bool = False,
         agents: dict[str, str] | None = None,
+        session_id: str | None = None,
     ) -> "GameSession":
         if game is None:
             game = GameRegistry().game_from_config(config)
 
-        session_id = str(uuid.uuid4())
+        session_id = session_id or str(uuid.uuid4())
         player_tokens = {
             player: derive_session_key(session_id, player)
             for player in config.player_ids()
@@ -106,6 +108,7 @@ class GameSession:
         user_id: str | None = None,
         agents: dict[str, str] | None = None,
         wandb_config_json: dict | None = None,
+        match_id: str | None = None,
     ) -> None:
         row = SessionModel(
             id=self.session_id,
@@ -120,6 +123,7 @@ class GameSession:
             locked=self.locked,
             messages_json=self.messages or [],
             wandb_config_json=wandb_config_json,
+            match_id=match_id,
         )
         db.add(row)
         await db.commit()
@@ -155,6 +159,7 @@ class GameSession:
 
         state_dict = _serialize_state(self.state)
         round_number = state_dict.get("round_number", 0)
+        turn_phase = "before" if sender in state_dict.get("awaiting", []) else "after"
 
         msg = {
             "id": str(uuid.uuid4()),
@@ -162,6 +167,8 @@ class GameSession:
             "recipient": recipient,
             "content": content,
             "round": round_number,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "turn_phase": turn_phase,
         }
         self.messages.append(msg)
         return msg
@@ -245,6 +252,7 @@ class GameSession:
             "config_hash": self.config_hash,
             "config": self.config.to_dict() if hasattr(self.config, "to_dict") else {},
             "player_tokens": dict(self.player_tokens),
+            "status": self.status,
         }
         if self.wandb_run_meta:
             resp["wandb_run"] = self.wandb_run_meta

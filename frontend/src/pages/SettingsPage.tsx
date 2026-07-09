@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getWandbKeyStatus, saveWandbKey, deleteWandbKey, downloadUserData, deleteAccount } from "../api";
+import { getWandbKeyStatus, saveWandbKey, deleteWandbKey, downloadUserData, deleteAccount, updatePreferences } from "../api";
 import { useAuth } from "../hooks/useAuth";
 
 const inputClass =
@@ -81,7 +81,11 @@ function ConfirmModal({
 }
 
 export function SettingsPage() {
-  const { logout } = useAuth();
+  const { logout, user, refreshUser } = useAuth();
+
+  // Display preferences state
+  const [savingPrefs, setSavingPrefs] = useState(false);
+  const [prefsError, setPrefsError] = useState<string | null>(null);
 
   // W&B state
   const [configured, setConfigured] = useState<boolean | null>(null);
@@ -155,6 +159,21 @@ export function SettingsPage() {
       setGdprError(err instanceof Error ? err.message : String(err));
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const handleToggleOwnBadge = async () => {
+    if (!user) return;
+    const next = !user.show_own_leaderboard_badge;
+    setSavingPrefs(true);
+    setPrefsError(null);
+    try {
+      await updatePreferences({ show_own_leaderboard_badge: next });
+      await refreshUser();
+    } catch (err) {
+      setPrefsError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSavingPrefs(false);
     }
   };
 
@@ -291,6 +310,47 @@ export function SettingsPage() {
               )}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ── Leaderboard display preferences ─────────────────────────── */}
+      <div className="w-full rounded-[var(--radius-card)] border border-line bg-surface overflow-hidden mb-6">
+        <div className="px-5 py-4 bg-surface-soft">
+          <span className="text-sm font-bold text-ink">Leaderboard</span>
+        </div>
+        <div className="border-t border-line/60 p-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold text-ink">Highlight my own results</p>
+              <p className="text-[11px] text-muted mt-0.5 max-w-sm">
+                Show a "You" badge on your own rows in the leaderboard. Hidden by default so you
+                can compare your performance against agents without knowing which row is yours.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!!user?.show_own_leaderboard_badge}
+              aria-label="Highlight my own results on the leaderboard"
+              onClick={handleToggleOwnBadge}
+              disabled={savingPrefs || !user}
+              className={`shrink-0 relative h-6 w-11 rounded-full transition-colors disabled:opacity-50 ${
+                user?.show_own_leaderboard_badge ? "bg-accent" : "bg-surface-container border border-line"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                  user?.show_own_leaderboard_badge ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+
+          {prefsError && (
+            <div className="mt-3 px-3 py-2.5 rounded-[var(--radius-chip)] border border-danger/20 bg-danger/5 text-xs text-danger">
+              {prefsError}
+            </div>
+          )}
         </div>
       </div>
 

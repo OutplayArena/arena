@@ -1,0 +1,69 @@
+suite: "backend ConfigMap env wiring"
+release:
+  name: arena
+templates:
+  - "templates/backend/configmap.yaml"
+tests:
+  - it: "renders the agent REST API flag with the Helm-configmap default (true)"
+    asserts:
+      - equal:
+          path: data.ENABLE_AGENT_REST_API
+          value: "true"
+
+  - it: "renders ENABLE_ADMIN_DASHBOARD default as false (#116)"
+    asserts:
+      - equal:
+          path: data.ENABLE_ADMIN_DASHBOARD
+          value: "false"
+
+  - it: "defaults ENABLE_ADMIN_DASHBOARD to false when absent from values"
+    set:
+      backend:
+        env:
+          enableAgentRestApi: "true"
+    asserts:
+      - equal:
+          path: data.ENABLE_ADMIN_DASHBOARD
+          value: "false"
+
+  - it: "honours an explicit enableAdminDashboard=true override"
+    set:
+      backend:
+        env:
+          enableAdminDashboard: "true"
+    asserts:
+      - equal:
+          path: data.ENABLE_ADMIN_DASHBOARD
+          value: "true"
+
+  - it: "honours an explicit enableAgentRestApi override"
+    set:
+      backend:
+        env:
+          enableAgentRestApi: "true"
+    asserts:
+      - equal:
+          path: data.ENABLE_AGENT_REST_API
+          value: "true"
+
+  - it: "always exposes the API_PREFIX"
+    asserts:
+      - equal:
+          path: data.API_PREFIX
+          value: "/api"
+
+  - it: "defaults ADMIN_USER_IDS to empty string"
+    asserts:
+      - equal:
+          path: data.ADMIN_USER_IDS
+          value: ""
+
+  - it: "honours an explicit adminUserIds override"
+    set:
+      backend:
+        env:
+          adminUserIds: "abc-123,def-456"
+    asserts:
+      - equal:
+          path: data.ADMIN_USER_IDS
+          value: "abc-123,def-456"

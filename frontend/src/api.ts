@@ -21,6 +21,15 @@ import type {
   LeaderboardResponse,
   AgentDetailResponse,
   RatingHistoryResponse,
+  UserInfo,
+  AdminUsersResponse,
+  AdminSessionsResponse,
+  AdminStatsResponse,
+  AdminSettings,
+  LobbyMatchSummary,
+  LobbyMatchDetail,
+  CreateOpenMatchResponse,
+  JoinMatchResponse,
 } from "./types";
 
 export class ApiError extends Error {
@@ -387,5 +396,80 @@ export function acceptPrivacy(): Promise<{ privacy_accepted: boolean }> {
   return request<{ privacy_accepted: boolean }>("/api/settings/accept-privacy", { method: "POST" });
 }
 
+export function updatePreferences(prefs: { show_own_leaderboard_badge: boolean }): Promise<UserInfo> {
+  return request<UserInfo>("/api/settings/preferences", {
+    method: "PATCH",
+    body: JSON.stringify(prefs),
+  });
+}
+
+// ── Admin dashboard (#116) ─────────────────────────────────────────────────
+
+export function getAdminUsers(limit = 100, offset = 0): Promise<AdminUsersResponse> {
+  const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  return request<AdminUsersResponse>(`/api/admin/users?${q.toString()}`);
+}
+
+export function getAdminSessions(limit = 100, offset = 0): Promise<AdminSessionsResponse> {
+  const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  return request<AdminSessionsResponse>(`/api/admin/sessions?${q.toString()}`);
+}
+
+export function getAdminStats(): Promise<AdminStatsResponse> {
+  return request<AdminStatsResponse>("/api/admin/stats");
+}
+
+export function getAdminSettings(): Promise<AdminSettings> {
+  return request<AdminSettings>("/api/admin/settings");
+}
+
+export function updateAdminSettings(partial: Partial<AdminSettings>): Promise<Partial<AdminSettings>> {
+  return request<Partial<AdminSettings>>("/api/admin/settings", {
+    method: "PUT",
+    body: JSON.stringify(partial),
+  });
+}
+
+// ── Matchmaking / lobby (#96) ──────────────────────────────────────────────
+
+export function createOpenMatch(
+  config: ExperimentConfig,
+  agents?: Record<string, string>,
+): Promise<CreateOpenMatchResponse> {
+  const payload: Record<string, unknown> = { ...config };
+  if (agents) payload.agents = agents;
+  return request<CreateOpenMatchResponse>("/api/lobby/matches", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listOpenMatches(): Promise<LobbyMatchSummary[]> {
+  return request<{ matches: LobbyMatchSummary[] }>("/api/lobby/matches").then(
+    (r) => r.matches,
+  );
+}
+
+export function getMatch(matchId: string): Promise<LobbyMatchDetail> {
+  return request<LobbyMatchDetail>(`/api/lobby/matches/${matchId}`);
+}
+
+export function joinMatch(
+  matchId: string,
+  slot?: string,
+): Promise<JoinMatchResponse> {
+  const body = slot ? { slot } : undefined;
+  return request<JoinMatchResponse>(`/api/lobby/matches/${matchId}/join`, {
+    method: "POST",
+    body: body ? JSON.stringify(body) : undefined,
+  });
+}
+
+export function cancelMatch(matchId: string): Promise<{ cancelled: boolean }> {
+  return request<{ cancelled: boolean }>(
+    `/api/lobby/matches/${matchId}`,
+    { method: "DELETE" },
+  );
+}
 
 

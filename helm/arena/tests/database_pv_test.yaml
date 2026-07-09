@@ -1,0 +1,142 @@
+suite: "database persistent volume"
+release:
+  name: arena
+tests:
+  # ── createPV=true (chart default) ──────────────────────────────────────
+  - it: "renders the static PV when createPV is true"
+    templates:
+      - "templates/database/persistentvolume.yaml"
+    asserts:
+      - isKind:
+          of: PersistentVolume
+      - equal:
+          path: metadata.name
+          value: arena-db-pv
+      - equal:
+          path: spec.persistentVolumeReclaimPolicy
+          value: Retain
+      - equal:
+          path: spec.hostPath.path
+          value: /data/outplayarena-postgres
+      - equal:
+          path: spec.accessModes[0]
+          value: ReadWriteOnce
+
+  - it: "PVC binds to the static PV by volumeName when createPV is true"
+    templates:
+      - "templates/database/statefulset.yaml"
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.volumeName
+          value: arena-db-pv
+      # storageClassName must be set explicitly (empty string OK) to bypass
+      # the cluster's default StorageClass admission — otherwise the injected
+      # default wouldn't match the static PV's class and binding would stall.
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
+          value: ""
+
+  - it: "static PV forces an explicit (possibly empty) storageClassName"
+    templates:
+      - "templates/database/persistentvolume.yaml"
+    asserts:
+      - equal:
+          path: spec.storageClassName
+          value: ""
+
+  - it: "PV honors an explicit database.volumeName override"
+    set:
+      database:
+        volumeName: my-shared-pv
+    templates:
+      - "templates/database/persistentvolume.yaml"
+    asserts:
+      - equal:
+          path: metadata.name
+          value: my-shared-pv
+      - equal:
+          path: spec.persistentVolumeReclaimPolicy
+          value: Retain
+
+  - it: "PVC honors an explicit database.volumeName override"
+    set:
+      database:
+        volumeName: my-shared-pv
+    templates:
+      - "templates/database/statefulset.yaml"
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.volumeName
+          value: my-shared-pv
+
+  - it: "honours an explicit database.storageClassName on PV and PVC"
+    set:
+      database:
+        storageClassName: pinned-sc
+    templates:
+      - "templates/database/persistentvolume.yaml"
+    asserts:
+      - equal:
+          path: spec.storageClassName
+          value: pinned-sc
+
+  # ── createPV=false (opt-out: dynamic provisioning) ───────────────────
+  - it: "does not render the static PV when createPV is false"
+    set:
+      database:
+        createPV: false
+    templates:
+      - "templates/database/persistentvolume.yaml"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "PVC has no volumeName when createPV is false and volumeName unset"
+    set:
+      database:
+        createPV: false
+    templates:
+      - "templates/database/statefulset.yaml"
+    asserts:
+      - notExists:
+          path: spec.volumeClaimTemplates[0].spec.volumeName
+      # createPV=false → storageClassName is only rendered if user pinned one,
+      # otherwise it's omitted and the cluster's default StorageClass admission
+      # handles dynamic provisioning.
+      - notExists:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
+
+  - it: "createPV=false + explicit storageClassName flows through to PVC"
+    set:
+      database:
+        createPV: false
+        storageClassName: pinned-sc
+    templates:
+      - "templates/database/statefulset.yaml"
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
+          value: pinned-sc
+
+  - it: "PVC keeps an explicit volumeName even when createPV is false"
+    set:
+      database:
+        createPV: false
+        volumeName: pre-existing-pv
+    templates:
+      - "templates/database/statefulset.yaml"
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.volumeName
+          value: pre-existing-pv
+
+  # ── release name flows into the generated PV name ───────────────────
+  - it: "uses <fullname>-db-pv as the default PV name"
+    release:
+      name: my-release
+    templates:
+      - "templates/database/persistentvolume.yaml"
+    asserts:
+      - equal:
+          path: metadata.name
+          value: my-release-arena-db-pv

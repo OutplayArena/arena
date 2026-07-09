@@ -32,6 +32,7 @@ Example::
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import json
 import random
 from typing import Any
@@ -45,6 +46,18 @@ from outplayarena_sdk.reasoning import ReasoningModerator
 from outplayarena_sdk.seed import SeedResolver
 from outplayarena_sdk.tools import build_backend_tools
 from outplayarena_sdk.transport import AsyncBackend
+
+
+def _is_queued_409(exc: Exception) -> bool:
+    """Return True if *exc* is a 409 'session is queued' error."""
+    resp = getattr(exc, "response", None)
+    if resp is not None and getattr(resp, "status_code", None) == 409:
+        try:
+            detail = resp.json().get("detail", "")
+            return "queued" in detail.lower()
+        except Exception:
+            pass
+    return False
 
 
 class LLMConfig:
@@ -119,6 +132,7 @@ class BaseAgent:
         use_mcp: bool = True,
         verbose: bool = False,
         seed: int | None = None,
+        ready_timeout: float | None = None,
     ):
         if not session_id:
             raise ValueError(
@@ -142,6 +156,7 @@ class BaseAgent:
         self.max_tools_per_turn = max_tools_per_turn
         self.use_mcp = use_mcp
         self.verbose = verbose
+        self.ready_timeout = ready_timeout
         self._session_id: str | None = session_id
         self._config: dict[str, Any] | None = None
         self._seed_resolver = SeedResolver(override=seed)
@@ -273,6 +288,19 @@ class BaseAgent:
         """Run the autonomous loop until the game reaches a terminal state."""
         await self._ensure_ready()
         assert self._transport is not None
+
+        # Wait for the session to be admitted if it's queued (#117).
+        # The admission gate may return 202 with status="queued" when
+        # concurrency limits are reached.  We block here until the
+        # drainer promotes the session to "ready" so the agent never
+        # hits a 409 on its first action submit.
+        status = await self._transport.wait_for_ready(
+            poll_interval=self.poll_interval,
+            timeout=self.ready_timeout,
+        )
+        if self.verbose and status.get("queue_position", 0) > 0:
+            print(f"[{self.player}] session promoted from queue (was position {status['queue_position']})")
+
         first_state = await self._transport.get_state()
         self._last_state = first_state
         self._resolve_config(first_state.get("config"))
@@ -292,8 +320,20 @@ class BaseAgent:
         return results
 
     def run_sync(self) -> dict[str, Any]:
-        """Synchronous wrapper around :meth:`run` for scripts and notebooks."""
-        return asyncio.run(self.run())
+        """Synchronous wrapper around :meth:`run` for scripts and notebooks.
+
+        Jupyter kernels already run an event loop, so a plain
+        ``asyncio.run()`` would raise "cannot be called from a running
+        event loop". When that's the case, drive the coroutine in a
+        dedicated thread with its own loop instead.
+        """
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(self.run())
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(asyncio.run, self.run()).result()
 
     # ── Loop internals ────────────────────────────────────────────────────
 
@@ -364,16 +404,30 @@ class BaseAgent:
         return await self._transport.get_observation(variant="neutral")
 
     async def _submit_action_with_retry(self, action: Any) -> dict[str, Any]:
-        """Submit the committed action, retrying once after a brief backoff
-        on a transient backend hiccup (e.g. the sub-second connection drop a
-        zero-downtime server deploy can cause). Unlike the post-round state
-        refresh below, this call carries the agent's actual move and must
-        eventually succeed or fail loudly — it isn't safe to just swallow.
+        """Submit the committed action, retrying on transient failures.
+
+        Two retry paths:
+
+        1. **Session queued (409)**: the concurrency drainer hasn't
+           promoted the session yet.  We wait for ``ready`` (up to
+           ``ready_timeout``) and retry — the default is to wait
+           indefinitely so the agent doesn't race ahead of its slot.
+
+        2. **Other transient errors** (e.g. sub-second connection drop
+           during a zero-downtime deploy): back off 1 s and retry once.
         """
         assert self._transport is not None
         try:
             return await self._transport.submit_action(action)
-        except Exception:
+        except Exception as exc:
+            if _is_queued_409(exc):
+                if self.verbose:
+                    print(f"[{self.player}] action rejected (session queued); waiting for promotion...")
+                await self._transport.wait_for_ready(
+                    poll_interval=self.poll_interval,
+                    timeout=self.ready_timeout,
+                )
+                return await self._transport.submit_action(action)
             await asyncio.sleep(1.0)
             return await self._transport.submit_action(action)
 

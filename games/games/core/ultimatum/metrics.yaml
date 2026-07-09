@@ -14,3 +14,5 @@ metrics:
   - social_welfare
   - gini_coefficient
   - backward_induction_adherence
+  - payoff_volatility
+  - action_concentration

@@ -47,6 +47,7 @@ _FAKE_USER = User(
 )
 _FAKE_USER.created_at = _NOW
 _FAKE_USER.last_login_at = _NOW
+_FAKE_USER.show_own_leaderboard_badge = False
 
 
 class FakeResult:
@@ -155,8 +156,10 @@ def _reset_fake_user_privacy_flag():
     """_FAKE_USER is a module-level singleton shared by reference with
     GdprFakeDb — reset mutable state between tests to avoid leakage."""
     _FAKE_USER.privacy_accepted_at = None
+    _FAKE_USER.show_own_leaderboard_badge = False
     yield
     _FAKE_USER.privacy_accepted_at = None
+    _FAKE_USER.show_own_leaderboard_badge = False
 
 
 @pytest.fixture()
@@ -372,6 +375,41 @@ def test_auth_me_reflects_privacy_accepted_after_acceptance(client):
     resp = client.get("/auth/me")
     assert resp.status_code == 200
     assert resp.json()["privacy_accepted"] is True
+
+
+# ── Leaderboard "You" badge preference ───────────────────────────────────────────
+
+def test_show_own_leaderboard_badge_defaults_to_false(client):
+    resp = client.get("/auth/me")
+    assert resp.status_code == 200
+    assert resp.json()["show_own_leaderboard_badge"] is False
+
+
+def test_update_preferences_sets_show_own_leaderboard_badge(client):
+    resp = client.patch(
+        "/settings/preferences", json={"show_own_leaderboard_badge": True}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["show_own_leaderboard_badge"] is True
+    assert _FAKE_USER.show_own_leaderboard_badge is True
+
+
+def test_update_preferences_reflected_in_subsequent_auth_me(client):
+    client.patch("/settings/preferences", json={"show_own_leaderboard_badge": True})
+
+    resp = client.get("/auth/me")
+
+    assert resp.status_code == 200
+    assert resp.json()["show_own_leaderboard_badge"] is True
+
+
+def test_update_preferences_can_be_toggled_back_off(client):
+    client.patch("/settings/preferences", json={"show_own_leaderboard_badge": True})
+    resp = client.patch(
+        "/settings/preferences", json={"show_own_leaderboard_badge": False}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["show_own_leaderboard_badge"] is False
 
 
 # ── 90-day inactivity auto-purge ─────────────────────────────────────────────────
