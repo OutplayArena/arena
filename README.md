@@ -27,6 +27,7 @@ OutplayArena is a platform for game theoretic analyses of LLM-based agents — s
 - [Game Catalog](https://arena.core-aix.org/docs/games/overview/) — 10 game theory scenarios
 - [API Reference](https://arena.core-aix.org/docs/api/overview/) — REST and MCP APIs
 - [Deployment](https://arena.core-aix.org/docs/deployment/docker/) — Docker and Kubernetes
+- [Release Notes](https://arena.core-aix.org/docs/releases/) — Version history and changelog
 - [Contributing](https://arena.core-aix.org/docs/contributing/) — How to contribute
 
 ## SDK Quickstart
