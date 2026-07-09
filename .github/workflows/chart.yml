@@ -40,29 +40,33 @@ jobs:
             https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
           tar -xzf /tmp/kubeconform.tar.gz -C /tmp
 
+      - name: Download Kubernetes JSON schemas (local cache for kubeconform)
+        run: |
+          # Sparse-clone only the master-standalone/ directory from
+          # kubernetes-json-schema so kubeconform validates against local
+          # files instead of making per-resource HTTP requests to
+          # raw.githubusercontent.com (which is intermittently rate-limited,
+          # causing flaky CI failures). Sparse checkout avoids downloading
+          # the full repo (hundreds of MB of per-version schemas).
+          git clone --depth 1 --filter=blob:none --sparse \
+            https://github.com/yannh/kubernetes-json-schema.git /tmp/k8s-schemas
+          git -C /tmp/k8s-schemas sparse-checkout set master-standalone
+
       - name: kubeconform on rendered manifests (default + traefik)
         run: |
           helm template arena helm/arena > /tmp/default.yaml
           helm template arena-traefik helm/arena --set traefik.enabled=true > /tmp/traefik.yaml
-          # -skip Kind=IngressRoute,Kind=Middleware: these traefik.io/v1alpha1
-          # CRDs have no stock Kubernetes schema; -skip prevents kubeconform
-          # from even attempting a schema download (which would fail on every
-          # run, not just flaky ones).
+          # -schema-location: point at the local schema cache so kubeconform
+          # never hits raw.githubusercontent.com at runtime.
+          # -skip IngressRoute,Middleware: traefik CRDs aren't in the stock
+          # Kubernetes schema bundle.
           # -ignore-missing-schemas: safety-net for any other unknown kinds.
-          # Retry loop: schema downloads from raw.githubusercontent.com are
-          # intermittently rate-limited (HTTP 429 / connection reset). Up to
-          # 3 attempts with a 10s back-off absorbs transient failures.
-          for attempt in 1 2 3; do
-            /tmp/kubeconform -summary \
-              -skip 'Kind=IngressRoute' \
-              -skip 'Kind=Middleware' \
-              -ignore-missing-schemas \
-              /tmp/default.yaml /tmp/traefik.yaml \
-              && exit 0
-            echo "kubeconform attempt $attempt failed (network?), retrying in 10s..."
-            sleep 10
-          done
-          exit 1
+          /tmp/kubeconform -summary \
+            -skip 'Kind=IngressRoute' \
+            -skip 'Kind=Middleware' \
+            -ignore-missing-schemas \
+            -schema-location '/tmp/k8s-schemas/{{ .NormalizedKubernetesVersion }}/{{ .ResourceKind }}{{ .KindSuffix }}.json' \
+            /tmp/default.yaml /tmp/traefik.yaml
 
   upgrade:
     name: install → upgrade (immutability guard)
