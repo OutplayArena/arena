@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-09
+
+### Added
+- **Graceful session-ready waiting.** `BaseAgent` and `quick_play` now accept
+  a `ready_timeout` parameter (default `None` — wait indefinitely). When the
+  arena's concurrency queue is full, `quick_play` polls `wait_until_ready`
+  until the session is promoted to "ready" before launching agents. Inside the
+  agent loop, `_submit_action_with_retry` detects 409 "session is queued"
+  responses, calls `wait_for_ready` on the transport, and retries the action —
+  so queued sessions are transparently handled without user intervention
+  (#124).
+- `AsyncBackend.wait_for_ready` REST polling endpoint (#124).
+- `ArenaClient.wait_until_ready` convenience wrapper (#124).
+
+### Fixed
+- **`MCPClient.__del__` no longer crashes on partially-initialized instances.**
+  If `__init__` raised before `self._session` was set, the `__del__` finalizer
+  previously raised `AttributeError`. Now guarded with `hasattr` (#113).
+- **`run_sync()` now works inside a running event loop (Jupyter).** Previously
+  `asyncio.run()` inside an already-running loop raised `RuntimeError`. Now
+  detects the running loop and uses `nest_asyncio`-free scheduling via
+  `loop.run_until_complete` on a new thread (#110).
+
 ### Changed
 - **License: MIT → Apache License 2.0.** The SDK is now distributed under the
   Apache License 2.0 instead of the MIT License, aligning with the rest of
@@ -86,5 +109,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and exposed via `agent.rng` / `agent.seed` for downstream determinism.
 - Backwards-compat alias `MCPAgent` (subclass of `MCPClient`) for legacy code.
 
-[Unreleased]: https://github.com/OutplayArena/arena/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/OutplayArena/arena/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/OutplayArena/arena/releases/tag/v0.4.0
+[0.2.0]: https://github.com/OutplayArena/arena/releases/tag/v0.2.0
 [0.1.0]: https://github.com/OutplayArena/arena/releases/tag/v0.1.0
