@@ -277,6 +277,77 @@ _METRICS: dict[str, MetricDef] = {
         "description": "Ratio of risk-dominant welfare to Pareto-optimal welfare in Stag Hunt.",
     },
 
+    # ── Chicken Game metrics ────────────────────────────────────────────
+    "dare_rate": {
+        "name": "dare_rate",
+        "when": "terminal",
+        "type": "object",
+        "description": "Fraction of rounds each player chose to Dare.",
+    },
+    "crash_rate": {
+        "name": "crash_rate",
+        "when": "terminal",
+        "type": "number",
+        "description": "Fraction of rounds ending in mutual Dare (catastrophic crash).",
+    },
+    "yield_rate": {
+        "name": "yield_rate",
+        "when": "terminal",
+        "type": "number",
+        "description": "Fraction of rounds ending in mutual Swerve.",
+    },
+    "exploit_rate": {
+        "name": "exploit_rate",
+        "when": "terminal",
+        "type": "object",
+        "description": "Fraction of rounds each player dared against a swerving opponent.",
+    },
+    "mixed_ne_gap": {
+        "name": "mixed_ne_gap",
+        "when": "terminal",
+        "type": "object",
+        "description": (
+            "Distance of each player's empirical Dare frequency from the mixed-strategy "
+            "Nash equilibrium Dare probability."
+        ),
+    },
+    "alternation_index": {
+        "name": "alternation_index",
+        "when": "terminal",
+        "type": "number",
+        "description": "Degree of turn-taking (alternating who yields) across one-sided rounds.",
+    },
+    "cg_outcome_counts": {
+        "name": "cg_outcome_counts",
+        "when": "terminal",
+        "type": "object",
+        "description": "Normalized frequency of each Chicken Game outcome (DD, DS, SD, SS).",
+    },
+    "cg_crash_rate": {
+        "name": "cg_crash_rate",
+        "when": "terminal",
+        "type": "number",
+        "description": "Joint fraction of rounds with mutual Dare (crash).",
+    },
+    "cg_yield_rate": {
+        "name": "cg_yield_rate",
+        "when": "terminal",
+        "type": "number",
+        "description": "Joint fraction of rounds with mutual Swerve.",
+    },
+    "cg_mixed_ne_gap": {
+        "name": "cg_mixed_ne_gap",
+        "when": "terminal",
+        "type": "number",
+        "description": "Distance of the pooled empirical Dare rate from the mixed-strategy Nash equilibrium.",
+    },
+    "cg_nash_dare_probability": {
+        "name": "cg_nash_dare_probability",
+        "when": "terminal",
+        "type": "number",
+        "description": "Theoretical mixed-strategy Nash equilibrium Dare probability for the configured payoffs.",
+    },
+
     # ── Equilibrium rationality metrics ─────────────────────────────────
     "equilibrium_selection_rate": {
         "name": "equilibrium_selection_rate",

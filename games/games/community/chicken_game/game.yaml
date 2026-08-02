@@ -1,0 +1,88 @@
+name: Chicken Game
+version: "1.0.0"
+status: experimental
+author: "OutplayLabs"
+description: >
+  A 2-player anti-coordination game with two pure Nash equilibria and one mixed
+  equilibrium. Each round both players simultaneously choose to Swerve or Dare.
+  Daring against a swerving opponent wins big; mutual Swerve is a safe tie;
+  mutual Dare is a catastrophic crash. Tests commitment, risk appetite, and
+  whether agents can out-signal an opponent without triggering mutual ruin.
+tags:
+  - risk
+  - competitive
+  - simultaneous
+  - multi-round
+  - multiple-equilibria
+ontology:
+  action_space: binary_choice
+  information_structure: simultaneous
+  payoff_structure: mixed_motive
+  timing: multi_round
+players:
+  min: 2
+  max: 2
+config_schema:
+  game:
+    type: string
+    const: chicken_game
+  variant:
+    type: string
+    enum: [classic, noisy]
+    enum_labels:
+      classic: "Classic"
+      noisy: "Noisy"
+    description: "Game variant"
+    default: classic
+  players:
+    type: integer
+    const: 2
+  rounds:
+    type: integer
+    minimum: 1
+    default: 10
+  payoff_win:
+    type: number
+    description: "Payoff for daring while the opponent swerves (temptation)"
+    default: 1.0
+  payoff_tie:
+    type: number
+    description: "Payoff when both players swerve (mutual yield)"
+    default: 0.0
+  payoff_lose:
+    type: number
+    description: "Payoff for swerving while the opponent dares (lose face)"
+    default: -1.0
+  payoff_crash:
+    type: number
+    description: "Payoff when both players dare (catastrophic mutual crash)"
+    default: -10.0
+  noise:
+    type: number
+    minimum: 0.0
+    maximum: 0.5
+    description: "Probability that an action is flipped (noisy variant)"
+    default: 0.0
+    visible_when:
+      variant: "noisy"
+  seed:
+    type:
+      - integer
+      - "null"
+    default: null
+  system_prompt:
+    type: string
+    description: "Optional system prompt override for LLM agents."
+    default: ""
+example_config:
+  game: chicken_game
+  variant: classic
+  players: 2
+  rounds: 10
+  payoff_win: 1.0
+  payoff_tie: 0.0
+  payoff_lose: -1.0
+  payoff_crash: -10.0
+  noise: 0.0
+  seed: 42
+  system_prompt: ""

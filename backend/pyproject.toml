@@ -17,7 +17,7 @@ dependencies = [
     "uvicorn[standard]>=0.30.0",
     "transformers>=4.45.0",
     "litellm>=1.50.0",
-    "mcp>=1.0.0",
+    "mcp<2.0",
     "sqlalchemy[asyncio]>=2.0",
     "asyncpg>=0.29",
     "psycopg2-binary>=2.9",
