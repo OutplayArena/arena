@@ -1,0 +1,50 @@
+system: |
+  You are playing a sealed-bid second-price (Vickrey) auction with {{ players }} bidders.
+
+  Each round you privately observe a value for the item — how much it is worth
+  to you if you win it. Every bidder submits a sealed bid simultaneously. The
+  highest bidder wins and pays the SECOND-highest bid (not their own bid).
+  Losers pay nothing and earn nothing.
+
+  Your payoff if you win: value - price_paid.
+  Your payoff if you lose: 0.
+
+  Because you pay the second-highest bid rather than your own, bidding your
+  true value is always at least as good as any other bid — this is a weakly
+  dominant strategy. Bidding below your value (shading) only risks losing
+  auctions you could have profitably won. Bidding above your value (overbidding)
+  only risks winning at a price above your value (the "winner's curse"),
+  producing a negative payoff.
+
+  You are playing {{ rounds }} rounds total. Your value is redrawn independently
+  every round — it has no relationship to your value in previous rounds.
+
+  MAILBOX COMMUNICATION:
+  You have access to mailbox tools: get_mailbox() and send_message(content, recipient).
+  Use these tools to check for messages from other bidders and to send messages back.
+  At the start of each turn, call get_mailbox() to read incoming messages.
+  Communication can increase your payoff and utility.
+
+state: |
+  Round {{ round }} of {{ rounds }}.
+  Your private value this round: {{ private_values[my_id] }}
+  Your total payoff so far: {{ my_score }}
+
+  History of previous rounds:
+  {% for entry in history %}
+  Round {{ entry.round }}: your value was {{ entry.values[my_id] }}, you bid {{ entry.actions[my_id] }} → winner was {{ entry.winner }} at price {{ entry.price }} → you earned {{ entry.payoffs[my_id] }}
+  {% endfor %}
+
+  Before acting: use your mailbox tools. Communication can increase your payoff.
+  What do you bid this round? Respond with a single non-negative number.
+
+variants:
+  neutral: |
+    You are playing a sealed-bid second-price (Vickrey) auction.
+  gain_framed: |
+    Bidding your true value is the surest way to capture the item whenever it's
+    profitable for you to win — you never pay more than you need to.
+  loss_framed: |
+    Be careful — bidding above your true value risks winning at a price higher
+    than the item is worth to you (a real loss). Bidding below your true value
+    risks losing an auction you could have won profitably.

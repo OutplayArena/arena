@@ -1,0 +1,76 @@
+name: Vickrey Auction
+version: "1.0.0"
+status: experimental
+author: "OutplayLabs"
+description: >
+  Sealed-bid second-price auction. Each round every bidder privately observes
+  an independently drawn value for the item and submits a sealed bid; the
+  highest bidder wins and pays the second-highest bid. Truthful bidding
+  (bid = value) is weakly dominant, giving an exact rationality benchmark —
+  any deviation (shading or overbidding) is directly measurable, and
+  overbidding exposes the bidder to winner's-curse losses.
+tags:
+  - auction
+  - economic
+  - continuous-action
+  - simultaneous
+  - multi-round
+  - n-player
+  - incentive-compatible
+ontology:
+  action_space: continuous
+  information_structure: simultaneous
+  payoff_structure: mixed_motive
+  timing: multi_round
+players:
+  min: 2
+  max: 8
+config_schema:
+  game:
+    type: string
+    const: vickrey_auction
+  players:
+    type: integer
+    minimum: 2
+    maximum: 8
+    default: 3
+  rounds:
+    type: integer
+    minimum: 1
+    default: 10
+  value_min:
+    type: number
+    description: "Lower bound of each bidder's independently drawn private value"
+    default: 0.0
+  value_max:
+    type: number
+    description: "Upper bound of each bidder's independently drawn private value"
+    default: 100.0
+  max_bid:
+    type: number
+    description: "Maximum allowed bid (must be >= value_max to allow observing overbidding)"
+    default: 200.0
+  truthful_tolerance:
+    type: number
+    description: "Absolute deviation from true value within which a bid counts as truthful"
+    default: 1.0
+    minimum: 0.0
+  seed:
+    type:
+      - integer
+      - "null"
+    default: null
+  system_prompt:
+    type: string
+    description: "Optional system prompt override for LLM agents."
+    default: ""
+example_config:
+  game: vickrey_auction
+  players: 3
+  rounds: 10
+  value_min: 0.0
+  value_max: 100.0
+  max_bid: 200.0
+  truthful_tolerance: 1.0
+  seed: 42
+  system_prompt: ""
