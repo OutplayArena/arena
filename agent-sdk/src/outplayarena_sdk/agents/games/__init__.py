@@ -18,6 +18,7 @@ from outplayarena_sdk.agents.games.battle_of_the_sexes import (
     BattleOfTheSexesAgent,
 )
 from outplayarena_sdk.agents.games.centipede import CentipedeAgent
+from outplayarena_sdk.agents.games.chicken_game import ChickenGameAgent
 from outplayarena_sdk.agents.games.colonelblotto import ColonelBlottoAgent
 from outplayarena_sdk.agents.games.cournot_duopoly import CournotDuopolyAgent
 from outplayarena_sdk.agents.games.prisonersdilemma import (
@@ -35,6 +36,7 @@ from outplayarena_sdk.agents.games.ultimatum import UltimatumAgent
 __all__ = [
     "BattleOfTheSexesAgent",
     "CentipedeAgent",
+    "ChickenGameAgent",
     "ColonelBlottoAgent",
     "CournotDuopolyAgent",
     "PrisonersDilemmaAgent",
