@@ -63,6 +63,33 @@ def _pattern_exploitability(allocations: list[list[int]]) -> float:
     return float(np.mean(acs))
 
 
+def _convergence_rate(allocations: list[list[int]]) -> float:
+    """
+    Round-to-round convergence trend, complementary to pattern_exploitability (#135).
+
+    pattern_exploitability is a lag-1 autocorrelation over the *whole* history: if an
+    agent starts with diverse allocations and settles into a fixed strategy only in
+    the later rounds, the early diversity dilutes that autocorrelation and understates
+    how predictable the agent has actually become. This metric instead looks at
+    whether the round-to-round change (L1 distance between consecutive allocations)
+    is shrinking over time.
+
+    Returns the negated Pearson correlation between round index and consecutive-round
+    L1 distance: >0 = deltas shrink over rounds (converging to a fixed strategy),
+    <0 = deltas grow (diverging), 0 = insufficient data (<3 rounds) or no trend.
+    """
+    if len(allocations) < 3:
+        return 0.0
+    arr = np.array(allocations, dtype=float)
+    deltas = np.linalg.norm(np.diff(arr, axis=0), ord=1, axis=1)
+    if np.std(deltas) < 1e-8:
+        return 0.0
+    idx = np.arange(len(deltas), dtype=float)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        corr = np.corrcoef(idx, deltas)[0, 1]
+    return 0.0 if np.isnan(corr) else float(-corr)
+
+
 def _resource_targeting_overlap(
     allocations: dict[str, list[int]],
 ) -> dict[tuple[str, str], float]:
@@ -238,6 +265,7 @@ class ColonelBlottoMetrics(GameMetrics, GameMetricsExtension):
                 )),
                 "strategy_diversity":     BehavioralMetrics.strategy_entropy(allocs),
                 "pattern_exploitability": _pattern_exploitability(allocs),
+                "convergence_rate":       _convergence_rate(allocs),
                 "underdog_performance":   _underdog_performance(
                                               total_res, total_res_all, fronts_won_frac
                                           ),
@@ -253,6 +281,35 @@ class ColonelBlottoMetrics(GameMetrics, GameMetricsExtension):
     ) -> float:
         """KL divergence from a known Nash equilibrium distribution."""
         return _mixed_ne_distance(observed_allocations, ne_distribution)
+
+    @staticmethod
+    def exploitability_warning(state: dict, player_id: str) -> str | None:
+        """
+        Optional in-game signal (#135): if an opponent's allocation history is highly
+        autocorrelated (pattern_exploitability > 0.8, needs >=3 rounds of history —
+        the minimum for which lag-1 autocorrelation is defined), return a warning
+        string `player_id` can act on mid-game. Returns None otherwise.
+        """
+        history = state.get("history", [])
+        all_players = list(state.get("total_scores", {}).keys())
+        for opp in all_players:
+            if opp == player_id:
+                continue
+            opp_allocs = [
+                entry["allocations"][opp]
+                for entry in history
+                if isinstance(entry.get("allocations", {}).get(opp), list)
+            ]
+            if len(opp_allocs) < 3:
+                continue
+            score = _pattern_exploitability(opp_allocs)
+            if score > 0.8:
+                return (
+                    f"Note: {opp}'s allocations have been highly predictable across "
+                    f"rounds (pattern_exploitability={score:.2f}). A sufficiently "
+                    "adaptive strategy could exploit this pattern."
+                )
+        return None
 
 
 def compute_colonel_blotto_metrics(history, total_scores):
