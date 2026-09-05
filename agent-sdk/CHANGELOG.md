@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Docs
+- Clarified that `max_tools_per_turn` bounds LLM tool-calling *iterations*
+  (one LLM response, which may itself contain multiple tool calls), not
+  individual tool calls (#126).
+
 ## [0.4.0] - 2026-07-09
 
 ### Added

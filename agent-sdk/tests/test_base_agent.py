@@ -594,6 +594,48 @@ class TestToolCallingSubLoop:
             assert dispatch.call_count == 2
 
     @pytest.mark.asyncio
+    async def test_multiple_tool_calls_in_one_response_count_as_one_iteration(self):
+        """#126: max_tools_per_turn bounds LLM tool-calling *iterations*
+        (responses), not individual tool calls. A single response containing
+        3 tool calls with max_tools_per_turn=1 must dispatch all 3, since the
+        budget only decrements once per response, not once per call."""
+        agent = _PassthroughAgent(
+            player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
+            arena_url="http://x", llm_config=_make_llm_config(),
+            max_tools_per_turn=1,
+        )
+
+        def _tc(name):
+            tc = MagicMock()
+            tc.id = name
+            tc.function.name = name
+            tc.function.arguments = "{}"
+            return tc
+
+        many_calls = [_tc("get_observation"), _tc("get_game_state"), _tc("get_observation")]
+        agent._openai = MagicMock()
+        agent._openai.chat.completions.create = MagicMock(side_effect=[
+            _mock_response(tool_calls=many_calls),
+            _mock_response(content="[1, 1]"),
+        ])
+
+        with patch.object(
+            agent, "_dispatch_tool_call",
+            new=AsyncMock(return_value={"ok": True}),
+        ) as dispatch:
+            action, _text = await agent._decide_with_tools(
+                observation={"system": "s", "turn": "t"},
+                state={"phase": "playing", "awaiting": ["A"]},
+            )
+            # All 3 tool calls from the single response were dispatched...
+            assert dispatch.call_count == 3
+            # ...yet the budget (1 iteration) was already exhausted afterward,
+            # falling through to the final plain-text call.
+            assert action == "[1, 1]"
+            assert agent._openai.chat.completions.create.call_count == 2
+
+    @pytest.mark.asyncio
     async def test_falls_back_when_provider_rejects_tools(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),

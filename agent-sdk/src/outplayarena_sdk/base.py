@@ -153,6 +153,9 @@ class BaseAgent:
         self.mcp_url = mcp_url
         self.poll_interval = poll_interval
         self.max_steps = max_steps
+        # Budget of LLM tool-calling *iterations* per turn, not individual tool
+        # calls: one LLM response containing several tool calls (e.g. GPT-5.5
+        # routinely emits multiple) still only decrements this once (#126).
         self.max_tools_per_turn = max_tools_per_turn
         self.use_mcp = use_mcp
         self.verbose = verbose
@@ -463,6 +466,8 @@ class BaseAgent:
             {"role": "user", "content": turn_prompt},
         ]
 
+        # `budget` counts iterations of this while-loop (one LLM response
+        # each), not individual tool calls within a response (#126).
         budget = max(1, self.max_tools_per_turn)
         last_text = ""
         while budget > 0:
