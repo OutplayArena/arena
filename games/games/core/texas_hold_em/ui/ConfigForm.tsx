@@ -18,7 +18,8 @@ export default function TexasHoldEmConfigForm({ gameSlug, locked, sessionStatus,
   const { players, setPlayers, agents, remoteKeys,
     status, running, isReplay, formDisabled, handleStartGame, wandbLogging } =
     useGameConfig({ gameSlug, locked, sessionStatus, initialValues,
-      defaultAgents: ["interactive", "remote"] });
+      defaultAgents: ["interactive", "remote"],
+      minPlayers: 2, maxPlayers: 6 });
 
   const onSubmit = (e: React.FormEvent) =>
     handleStartGame(e, () => ({

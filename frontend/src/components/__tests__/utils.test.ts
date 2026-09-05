@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { copyToClipboard, buildBattlefields, resultToMatch } from "../utils";
+import { copyToClipboard, buildBattlefields, resultToMatch, lastActionsByPlayer } from "../utils";
 import type { GameResult, RunConfig } from "../../types";
 
 describe("buildBattlefields", () => {
@@ -124,6 +124,61 @@ describe("resultToMatch", () => {
     const match = resultToMatch(result, config);
     expect(match.history[0].score_a).toBe(0);
     expect(match.history[0].score_b).toBe(0);
+  });
+
+  it("handles Texas Hold'em-shaped history entries (issue #24)", () => {
+    // Hold'em entries use `hand` (not `round`), `street_actions` (not
+    // `allocations`/`actions`), a nested `result.winner`, and a *cumulative*
+    // `total_scores` rather than a per-round delta.
+    const result: GameResult = {
+      config_hash: "h4",
+      total_scores: { A: -2, B: 2 },
+      winner: "B",
+      metrics: {},
+      history: [
+        {
+          hand: 1,
+          street_actions: [
+            { player: "A", action: "check", street: "preflop" },
+            { player: "B", action: "fold", street: "preflop" },
+          ],
+          result: { outcome: "fold", winner: "A" },
+          total_scores: { A: 1, B: -1 },
+        } as unknown as GameResult["history"][number],
+        {
+          hand: 2,
+          street_actions: [
+            { player: "A", action: "fold", street: "preflop" },
+          ],
+          result: { outcome: "fold", winner: "B" },
+          total_scores: { A: -2, B: 2 },
+        } as unknown as GameResult["history"][number],
+      ],
+    };
+
+    const match = resultToMatch(result, config);
+    // Two distinct rounds, not collapsed into one (the reported #24 symptom).
+    expect(match.history.map((r) => r.round)).toEqual([1, 2]);
+    expect(match.history[0].action_a).toBe("check");
+    expect(match.history[0].action_b).toBe("fold");
+    expect(match.history[0].winner).toBe("A");
+    // Per-hand delta, not the raw cumulative total_scores.
+    expect(match.history[0].score_a).toBe(1);
+    expect(match.history[0].score_b).toBe(-1);
+    expect(match.history[1].score_a).toBe(-2 - 1); // -3: this hand's own delta
+    expect(match.history[1].score_b).toBe(2 - -1); // 3
+    expect(match.history[1].winner).toBe("B");
+  });
+
+  it("lastActionsByPlayer extracts each player's last street action", () => {
+    const acts = [
+      { player: "A", action: "check" },
+      { player: "B", action: "raise" },
+      { player: "A", action: "call" },
+    ];
+    expect(lastActionsByPlayer(acts)).toEqual({ A: "call", B: "raise" });
+    expect(lastActionsByPlayer(undefined)).toEqual({});
+    expect(lastActionsByPlayer(null)).toEqual({});
   });
 
   it("fails nicely when session_id is absent from config", () => {
