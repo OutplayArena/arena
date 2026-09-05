@@ -200,6 +200,11 @@ def get_mailbox() -> dict:
     """
     Read mailbox messages visible to you.
 
+    Not part of the recommended per-turn flow (#122): your inbox is already
+    auto-injected into get_observation's turn prompt, so calling this isn't
+    necessary to see incoming messages. Kept as a low-level primitive for
+    direct/manual inspection outside the standard agent loop.
+
     Returns ``{"messages": [...]}`` where each message has:
     id, sender, recipient, content, round, created_at.
     """
@@ -214,6 +219,9 @@ def send_message(content: str, recipient: str = "all") -> dict:
     Use strategically — you may send honest signals or decoys.
     Like sending an email: the recipient sees your message, but your true
     intentions remain private.
+
+    Your inbox is auto-injected into get_observation's turn prompt, so there
+    is no separate tool to poll for incoming messages.
 
     content: Message text (max 200 characters).
     recipient: Target player ID or "all" for broadcast (default).
@@ -289,16 +297,18 @@ def outplayarena_intro() -> list[dict]:
                 "- `submit_action(allocation)` — submit your action for the current round\n"
                 "- `get_results` — get final scores and metrics after game completes\n\n"
                 "### Communication\n"
-                "- `get_mailbox` — read messages from opponent\n"
-                "- `send_message(content, recipient)` — send a message to opponent\n\n"
+                "- `send_message(content, recipient)` — send a message to opponent "
+                "(your inbox is auto-injected into get_observation's turn prompt, so "
+                "checking `get_mailbox` every turn isn't necessary — it's kept only "
+                "for manual/direct inspection)\n\n"
                 "## Game Lifecycle\n\n"
                 "1. The experiment creator calls POST /api/experiment to create a session\n"
                 "2. You receive a session key (nks_...) and mcp_url\n"
                 "3. Connect to the MCP server at mcp_url with Bearer auth\n"
                 "4. Game loop until phase is 'complete':\n"
                 "   a. Call `get_game_state` — check if you are in `awaiting`\n"
-                "   b. Call `get_observation` for system + turn prompts\n"
-                "   c. Optionally call `get_mailbox` / `send_message` to communicate\n"
+                "   b. Call `get_observation` for system + turn prompts (inbox included)\n"
+                "   c. Optionally call `send_message` to communicate\n"
                 "   d. Call `submit_action` with your action\n"
                 "5. Call `get_results` for final scores\n\n"
                 "## Discovering Per-Game Skills\n"

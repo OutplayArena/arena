@@ -11,12 +11,11 @@ system: |
   Player A prefers {{ option_a }}; Player B prefers {{ option_b }}.
   But coordinating (choosing the same) is always better than miscoordinating.
 
-  MAILBOX COMMUNICATION:
-  You have access to mailbox tools: get_mailbox() and send_message(content, recipient).
-  Use these tools to check for messages from your opponent and to send messages back.
-  At the start of each turn, call get_mailbox() to read incoming messages.
-  Consider whether sending a message could benefit your strategy.
-  Communication can increase your payoff and utility.
+  COMMUNICATION:
+  Your inbox (messages from your opponent) is included in the turn prompt below —
+  no need to poll for it. Use send_message(content, recipient) if you want to
+  reply or signal; it can increase your payoff and utility, but costs part of
+  your per-turn tool budget.
 
 state: |
   Round {{ round }} of {{ rounds }}. Your scores: A={{ score_a }}, B={{ score_b }}.
@@ -26,7 +25,7 @@ state: |
   Round {{ entry.round }}: A chose {{ entry.actions.A }}, B chose {{ entry.actions.B }} → {{ "coordinated" if entry.coordinated else "mismatch" }}
   {% endfor %}
 
-  Before acting: use your mailbox tools. Communication can increase your payoff.
+  {% if inbox %}Inbox: {{ inbox }}{% endif %}
   What do you choose? Respond with exactly one word: {{ option_a }} or {{ option_b }}.
 
 variants:

@@ -6,8 +6,10 @@ backend's MCP/REST endpoints:
 
 * :func:`get_observation_tool` &mdash; render system + turn prompts.
 * :func:`get_game_state_tool` &mdash; raw public state (awaiting, scores, ...).
-* :func:`get_mailbox_tool` &mdash; read inbox.
-* :func:`send_message_tool` &mdash; write to inbox.
+* :func:`send_message_tool` &mdash; write to inbox. The inbox itself is no longer
+  a callable tool (#122): it is auto-injected into the observation returned by
+  ``get_observation``/``get_game_state``, so agents don't spend tool-call budget
+  polling for messages that haven't changed.
 * :func:`submit_action_tool` &mdash; commit the turn's action.
 
 The agent also needs to *commit* an action at the end of a turn. The
@@ -60,25 +62,6 @@ def get_game_state_tool() -> dict[str, Any]:
                 "Fetch the raw current game state. Returns: phase, round, "
                 "awaiting (list of player IDs whose turn it is), total_scores, "
                 "history, and game-specific fields."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "required": [],
-                "additionalProperties": False,
-            },
-        },
-    }
-
-
-def get_mailbox_tool() -> dict[str, Any]:
-    return {
-        "type": "function",
-        "function": {
-            "name": "get_mailbox",
-            "description": (
-                "Read messages from your inbox. Returns a list of messages "
-                "from your opponent. Optionally scoped to a single player."
             ),
             "parameters": {
                 "type": "object",
@@ -158,7 +141,6 @@ def build_backend_tools(action_format_hint: str) -> list[dict[str, Any]]:
     return [
         get_observation_tool(),
         get_game_state_tool(),
-        get_mailbox_tool(),
         send_message_tool(),
         submit_action_tool(action_format_hint),
     ]
@@ -168,7 +150,6 @@ __all__ = [
     "build_backend_tools",
     "get_observation_tool",
     "get_game_state_tool",
-    "get_mailbox_tool",
     "send_message_tool",
     "submit_action_tool",
 ]
