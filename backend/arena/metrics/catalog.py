@@ -162,6 +162,30 @@ _METRICS: dict[str, MetricDef] = {
         "type": "object",
         "description": "Cosine similarity of allocation vectors between player pairs.",
     },
+    "avg_hhi": {
+        "name": "avg_hhi",
+        "when": "terminal",
+        "type": "number",
+        "description": "Average Herfindahl-Hirschman Index of each round's allocation, measuring concentration across battlefields.",
+    },
+    "strategy_diversity": {
+        "name": "strategy_diversity",
+        "when": "terminal",
+        "type": "number",
+        "description": "Shannon entropy of the agent's allocation strategy across rounds.",
+    },
+    "convergence_rate": {
+        "name": "convergence_rate",
+        "when": "terminal",
+        "type": "number",
+        "description": "Round-to-round trend in allocation deltas: positive means the agent is converging toward a fixed strategy, negative means diverging.",
+    },
+    "underdog_performance": {
+        "name": "underdog_performance",
+        "when": "terminal",
+        "type": "number",
+        "description": "Fraction of battlefields won relative to the agent's share of total resources across all agents.",
+    },
 
     # ── Behavioral metrics ──────────────────────────────────────────────
     "strategy_entropy": {

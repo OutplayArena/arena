@@ -65,6 +65,49 @@ def test_convergence_rate_detects_shrinking_deltas():
     assert result["blotto"]["convergence_rate"] > 0
 
 
+def test_declared_metrics_do_not_drop_blotto_extension_fields():
+    """Regression test for #150: pattern_exploitability/convergence_rate (and
+    the other blotto-specific extension metrics) were computed correctly but
+    silently stripped from the API response because metrics.yaml never
+    declared them, so MatchEvaluator's declared_metrics allowlist dropped the
+    whole nested "blotto" dict."""
+    from arena.game_registry import GameRegistry
+    from arena.metrics.evaluator import MatchEvaluator
+    from arena.metrics.registry import AgentRegistry
+    from arena.metrics.contracts import Match, Move
+
+    allocs = [[10, 0, 0], [7, 2, 1], [6, 3, 1], [5, 4, 1], [5, 5, 0]]
+    match = Match(
+        match_id="m1",
+        game_type="colonelblotto",
+        agent_ids=["A", "B"],
+        moves=[
+            Move(agent_id="A", round_number=r, action=a, payoff=0.0)
+            for r, a in enumerate(allocs)
+        ]
+        + [
+            Move(agent_id="B", round_number=r, action=[3, 3, 4], payoff=0.0)
+            for r in range(len(allocs))
+        ],
+    )
+
+    registry = GameRegistry()
+    declared = registry.get_metric_names("colonelblotto")
+    evaluator = MatchEvaluator(AgentRegistry())
+    report = evaluator.evaluate(
+        match,
+        extension=ColonelBlottoMetrics(),
+        declared_metrics=declared,
+    )
+
+    blotto = report["agents"]["A"].get("blotto", {})
+    assert "pattern_exploitability" in blotto
+    assert "convergence_rate" in blotto
+    assert "avg_hhi" in blotto
+    assert "strategy_diversity" in blotto
+    assert "underdog_performance" in blotto
+
+
 def test_exploitability_warning_fires_on_predictable_opponent():
     history = [
         {"allocations": {"A": [10, 0, 0], "B": [3, 3, 4]}},
