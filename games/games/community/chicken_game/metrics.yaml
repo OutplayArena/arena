@@ -1,0 +1,24 @@
+metrics:
+  - total_payoff
+  - average_payoff
+  - dare_rate
+  - crash_rate
+  - yield_rate
+  - exploit_rate
+  - mixed_ne_gap
+  - alternation_index
+  - outcome_counts
+  - cg_outcome_counts
+  - cg_crash_rate
+  - cg_yield_rate
+  - cg_mixed_ne_gap
+  - cg_nash_dare_probability
+  - strategy_entropy
+  - behavioral_consistency
+  - cumulative_regret
+  - nash_gap
+  - social_welfare
+  - pareto_efficiency
+  - gini_coefficient
+  - payoff_volatility
+  - action_concentration
