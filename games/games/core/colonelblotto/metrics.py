@@ -191,6 +191,8 @@ class ColonelBlottoMetrics(GameMetrics, GameMetricsExtension):
         counts: dict[str, int] = {}
         for entry in history:
             for player, allocation in entry.get("allocations", {}).items():
+                if not isinstance(allocation, list):
+                    continue  # forfeited round: opponent's allocation is None
                 total = sum(allocation)
                 c = 0.0 if total == 0 else max(allocation) / total
                 totals[player] = totals.get(player, 0.0) + c

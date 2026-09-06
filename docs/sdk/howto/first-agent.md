@@ -56,7 +56,7 @@ agent = MyColonelBlottoAgent(
     # Optional:
     mcp_url="http://127.0.0.1:8000/mcp",       # use MCP instead of REST
     poll_interval=1.0,                          # seconds between state polls
-    max_tools_per_turn=4,                       # OpenAI function-calling budget
+    max_tools_per_turn=4,                       # budget of tool-calling iterations (LLM responses), not individual tool calls
     seed=42,                                    # override the backend's seed
 )
 ```
