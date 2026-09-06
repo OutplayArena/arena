@@ -47,7 +47,7 @@ def quick_play(
 | `seed` | Seed for the experiment. The same seed is passed to both agents so they see the same `agent.rng` stream. |
 | `mcp_url` | Optional MCP endpoint. Defaults to the `mcp_url` from `create_experiment` if not provided. |
 | `poll_interval` | Per-agent poll interval. |
-| `max_tools_per_turn` | Per-turn tool-call budget for each agent. |
+| `max_tools_per_turn` | Per-turn LLM tool-calling *iteration* budget for each agent — one response containing multiple tool calls still counts as a single iteration. |
 | `verbose` | Print debug information. |
 
 ## What it does

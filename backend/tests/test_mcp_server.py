@@ -235,6 +235,9 @@ def test_game_directory_tools_call_client(session_ctx_a, monkeypatch):
 
 
 def test_get_mailbox_calls_client_with_player(session_ctx_a, monkeypatch):
+    """get_mailbox stays available as a low-level MCP tool (#122) even though
+    the SDK's turn loop no longer offers it to the LLM — direct/manual
+    callers can still read the mailbox this way."""
     fake = FakeClient()
     monkeypatch.setattr(mcp_server, "arena_client", lambda: fake)
 

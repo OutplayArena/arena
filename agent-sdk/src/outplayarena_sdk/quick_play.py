@@ -49,7 +49,7 @@ async def _quick_play_async(
     seed: int = 42,
     mcp_url: str | None = None,
     poll_interval: float = 1.0,
-    max_tools_per_turn: int = 4,
+    max_tools_per_turn: int = 4,  # LLM tool-calling iterations, not individual tool calls (#126)
     verbose: bool = False,
     ready_timeout: float | None = None,
 ) -> dict[str, Any]:
@@ -130,7 +130,7 @@ def quick_play(
     seed: int = 42,
     mcp_url: str | None = None,
     poll_interval: float = 1.0,
-    max_tools_per_turn: int = 4,
+    max_tools_per_turn: int = 4,  # LLM tool-calling iterations, not individual tool calls (#126)
     verbose: bool = False,
     ready_timeout: float | None = None,
 ) -> dict[str, Any]:

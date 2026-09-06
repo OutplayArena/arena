@@ -152,6 +152,12 @@ class GameRegistry:
         opp_id = opp_ids[0] if opp_ids else None
         total_scores = state.get("total_scores", {})
 
+        messages = state.get("messages") or []
+        inbox = [
+            m for m in messages
+            if m.get("recipient") in ("all", player_id) or m.get("sender") == player_id
+        ]
+
         ctx.update({
             "player_id": player_id,
             "my_id": player_id,
@@ -164,6 +170,10 @@ class GameRegistry:
             "score_b": total_scores.get("B", 0),
             "total_scores": total_scores,
             "players": len(all_players),
+            # Auto-injected inbox (#122): the observation carries the player's
+            # visible mailbox messages directly, so agents no longer need to
+            # spend a tool call polling get_mailbox every turn.
+            "inbox": inbox,
         })
 
         if "round_total" in state:
@@ -184,6 +194,15 @@ class GameRegistry:
             ctx.setdefault("payoff_stag_stag", p.get("stag_stag", 0))
             ctx.setdefault("payoff_hare_hare", p.get("hare_hare", 0))
             ctx.setdefault("payoff_stag_hare", p.get("stag_hare", 0))
+
+        # Optional in-game exploitability signal (#135): a game's metrics extension
+        # may define `exploitability_warning(state, player_id) -> str | None` to
+        # surface a mid-game warning when an opponent's play is highly predictable.
+        ext = self.metrics_extension(game_name)
+        if ext is not None and hasattr(ext, "exploitability_warning"):
+            warning = ext.exploitability_warning(state, player_id)
+            if warning:
+                ctx["exploitability_warning"] = warning
 
         return ctx
 
