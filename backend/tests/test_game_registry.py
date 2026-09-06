@@ -220,6 +220,33 @@ def test_registry_get_metric_names_unknown_game_returns_empty_set():
     assert GameRegistry().get_metric_names("does-not-exist") == set()
 
 
+@pytest.mark.parametrize(
+    "game_type",
+    [
+        "colonelblotto",
+        "prisonersdilemma",
+        "texas_hold_em",
+        "chicken_game",
+        "battle_of_the_sexes",
+        "centipede",
+        "cournot_duopoly",
+        "public_goods",
+        "rock_paper_scissors",
+        "stag_hunt",
+        "ultimatum",
+    ],
+)
+def test_registry_get_metric_names_includes_risk_metrics(game_type):
+    """Regression test for #154: payoff_volatility/action_concentration are
+    declared in every one of these games' metrics.yaml and computed
+    generically by MatchEvaluator for every match, but were silently
+    dropped from every API response because neither name was registered
+    in the central metrics catalog."""
+    names = GameRegistry().get_metric_names(game_type)
+    assert "payoff_volatility" in names
+    assert "action_concentration" in names
+
+
 def test_registry_metrics_extension_returns_object_or_none():
     ext = GameRegistry().metrics_extension("colonelblotto")
     assert ext is not None

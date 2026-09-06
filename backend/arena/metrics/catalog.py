@@ -162,6 +162,30 @@ _METRICS: dict[str, MetricDef] = {
         "type": "object",
         "description": "Cosine similarity of allocation vectors between player pairs.",
     },
+    "avg_hhi": {
+        "name": "avg_hhi",
+        "when": "terminal",
+        "type": "number",
+        "description": "Average Herfindahl-Hirschman Index of each round's allocation, measuring concentration across battlefields.",
+    },
+    "strategy_diversity": {
+        "name": "strategy_diversity",
+        "when": "terminal",
+        "type": "number",
+        "description": "Shannon entropy of the agent's allocation strategy across rounds.",
+    },
+    "convergence_rate": {
+        "name": "convergence_rate",
+        "when": "terminal",
+        "type": "number",
+        "description": "Round-to-round trend in allocation deltas: positive means the agent is converging toward a fixed strategy, negative means diverging.",
+    },
+    "underdog_performance": {
+        "name": "underdog_performance",
+        "when": "terminal",
+        "type": "number",
+        "description": "Fraction of battlefields won relative to the agent's share of total resources across all agents.",
+    },
 
     # ── Behavioral metrics ──────────────────────────────────────────────
     "strategy_entropy": {
@@ -187,6 +211,20 @@ _METRICS: dict[str, MetricDef] = {
         "when": "terminal",
         "type": "object",
         "description": "Windowed regret over the course of the match — tracks learning/drift.",
+    },
+
+    # ── Risk metrics ─────────────────────────────────────────────────────
+    "payoff_volatility": {
+        "name": "payoff_volatility",
+        "when": "terminal",
+        "type": "number",
+        "description": "Standard deviation of the agent's round-by-round payoffs.",
+    },
+    "action_concentration": {
+        "name": "action_concentration",
+        "when": "terminal",
+        "type": "number",
+        "description": "Mean Herfindahl-Hirschman Index across the agent's numeric-vector actions (e.g. Blotto allocations, Cournot quantities). Null for scalar/string actions.",
     },
 
     # ── Equilibrium metrics ─────────────────────────────────────────────

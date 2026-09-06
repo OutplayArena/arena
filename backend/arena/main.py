@@ -1287,6 +1287,8 @@ async def send_mailbox_message(
     state_dict = _serialize_state(session.state)
     if state_dict.get("phase") == "complete":
         raise HTTPException(status_code=409, detail="game is already complete")
+    if session.status in ("failed", "complete", "completed"):
+        raise HTTPException(status_code=409, detail=f"session is {session.status}, not active")
 
     msg = session.add_message(sender=player, content=request.content.strip(), recipient=request.recipient)
 
@@ -1339,13 +1341,17 @@ async def get_results(session_id: str, db: AsyncSession = Depends(get_db)):
     """Get the final results and scores for a completed session."""
     session = await get_session(session_id, db)
     try:
-        registry = get_global_registry()
-        evaluator = MatchEvaluator(registry)
+        # Evaluate against a scratch registry, not the shared global one —
+        # computing this response must never mutate shared leaderboard state
+        # for a session that isn't (yet, or ever) public (#151).
+        evaluator = MatchEvaluator(AgentRegistry())
         result = session.results(evaluator=evaluator)
         result = sanitize_for_json(result)
 
-        # Only record in the public leaderboard registry when the session is
-        # explicitly marked public by its owner.
+        # Only record in the leaderboard registries when the session is
+        # explicitly marked public by its owner — both the global/"overall"
+        # registry and the per-game one, so a private session can never
+        # appear on the public leaderboard in either view (#151).
         sess_row_result = await db.execute(
             select(SessionModel).where(SessionModel.id == session_id)
         )
@@ -1372,6 +1378,7 @@ async def get_results(session_id: str, db: AsyncSession = Depends(get_db)):
             rich = result.get("rich_metrics", {})
             agent_metrics = rich.get("agents", None)
             ts = sess.created_at.isoformat() if sess.created_at else None
+            get_global_registry().record_match(namespaced, avg_payoffs, agent_metrics=agent_metrics, timestamp=ts)
             game_registry.record_match(namespaced, avg_payoffs, agent_metrics=agent_metrics, timestamp=ts)
 
         try:
