@@ -3,16 +3,12 @@ version: "1.0.0"
 status: stable
 author: "OutplayLabs"
 description: >
-  Heads-up Texas Hold'em with four betting streets (preflop, flop, turn,
+  Texas Hold'em (2-6 players) with four betting streets (preflop, flop, turn,
   river) and standard poker hand rankings. Each player starts with 100
-  chips; ante 1, fixed bet size 2. Players alternate actions: fold, check,
-  call, or raise. At showdown the best five-card hand wins the pot.
-warnings:
-  - title: "2-player only"
-    body: >
-      Texas Hold'em currently supports heads-up (2-player) play only.
-      Multi-player support is in progress — follow
-      [#41](https://github.com/OutplayArena/arena/issues/41) for updates.
+  chips; ante 1, fixed bet size 2. Action proceeds left of a fixed dealer
+  button each hand (heads-up is the standard exception: the button acts
+  first preflop). At showdown, side pots are computed so an all-in player
+  can only win the pot amount their stack could cover.
 tags:
   - zero-sum
   - sequential
@@ -25,7 +21,7 @@ ontology:
   timing: multi_round
 players:
   min: 2
-  max: 2
+  max: 6
 config_schema:
   game:
     type: string
@@ -38,7 +34,9 @@ config_schema:
     default: classic
   players:
     type: integer
-    const: 2
+    minimum: 2
+    maximum: 6
+    default: 2
   rounds:
     type: integer
     minimum: 1
@@ -48,6 +46,14 @@ config_schema:
       - integer
       - "null"
     default: null
+  compute_hand_equity:
+    type: boolean
+    default: false
+    description: >
+      Opt-in (#24): compute a preflop hand-equity estimate for every hand
+      (exact for the final board, Monte Carlo otherwise) and expose it via
+      history + the conservativeness_index/equity_realization metrics. Off
+      by default -- adds real per-hand cost, notably for long tournaments.
 example_config:
   game: texas_hold_em
   variant: classic

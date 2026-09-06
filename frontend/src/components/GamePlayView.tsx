@@ -12,7 +12,7 @@ import { AppProvider } from "../state";
 import type { AnimatedScores } from "../hooks/useCanvasRenderer";
 import { getState, submitAction, getResults, getInteractiveState, ApiError } from "../api";
 import { chooseAction } from "../agents";
-import { copyToClipboard, resultToMatch } from "./utils";
+import { copyToClipboard, resultToMatch, lastActionsByPlayer } from "./utils";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { SchemaPlayPanel } from "./SchemaPlayPanel";
 import { MailboxPanel } from "./MailboxPanel";
@@ -123,24 +123,42 @@ function GamePlayViewInner({ game, sessionId, locked, sessionStatus, replayMatch
         total_score_a: totalScores.A ?? 0,
         total_score_b: totalScores.B ?? 0,
         match_winner: undefined as PlayerSide | "Tie" | undefined,
-        history: ((gs.history as Array<Record<string, unknown>>) || []).map((r) => {
-          const moves = (r.allocations || r.actions || r.quantities || {}) as Record<string, unknown>;
-          const scores = (r.payoffs || r.round_payoffs || r.scores || {}) as Record<string, number>;
-          const totals = (r.total_scores || {}) as Record<string, number>;
-          return {
-            round: (r.round as number) || 0,
-            agent_a: pg.playerNames?.A ?? pg.agentAName,
-            agent_b: pg.playerNames?.B ?? pg.agentBName,
-            action_a: moves.A,
-            action_b: moves.B,
-            score_a: scores.A ?? 0,
-            score_b: scores.B ?? 0,
-            total_score_a: totals.A ?? 0,
-            total_score_b: totals.B ?? 0,
-            winner: (r.winner as string || "Tie") as "A" | "B" | "Tie",
-            raw: r,
-          };
-        }),
+        history: (() => {
+          // Cumulative total_scores from the previous round, for games
+          // (Texas Hold'em) whose history entries carry a running total
+          // rather than a per-round delta (#24).
+          let prevTotalA = 0;
+          let prevTotalB = 0;
+          return ((gs.history as Array<Record<string, unknown>>) || []).map((r) => {
+            const hasStreetActions = Array.isArray(r.street_actions);
+            const moves = hasStreetActions
+              ? lastActionsByPlayer(r.street_actions)
+              : ((r.allocations || r.actions || r.quantities || {}) as Record<string, unknown>);
+            const totals = (r.total_scores || {}) as Record<string, number>;
+            const totalA = totals.A ?? prevTotalA;
+            const totalB = totals.B ?? prevTotalB;
+            const scores = (r.payoffs || r.round_payoffs || r.scores) as Record<string, number> | undefined;
+            const scoreA = scores ? (scores.A ?? 0) : totalA - prevTotalA;
+            const scoreB = scores ? (scores.B ?? 0) : totalB - prevTotalB;
+            prevTotalA = totalA;
+            prevTotalB = totalB;
+            const resultObj = r.result as Record<string, unknown> | undefined;
+            const winner = (r.winner ?? resultObj?.winner ?? "Tie") as "A" | "B" | "Tie";
+            return {
+              round: (r.round as number) ?? (r.hand as number) ?? 0,
+              agent_a: pg.playerNames?.A ?? pg.agentAName,
+              agent_b: pg.playerNames?.B ?? pg.agentBName,
+              action_a: moves.A,
+              action_b: moves.B,
+              score_a: scoreA,
+              score_b: scoreB,
+              total_score_a: totalA,
+              total_score_b: totalB,
+              winner,
+              raw: r,
+            };
+          });
+        })(),
         metrics: {},
         currentState: gs,
         agents: pg.playerNames,

@@ -10,6 +10,14 @@ def make_game(rounds: int = 3) -> TexasHoldEmGame:
     return TexasHoldEmGame.from_config(cfg)
 
 
+def make_n_player_game(players: int, rounds: int = 1, seed: int | None = 1) -> TexasHoldEmGame:
+    cfg = config_from_dict({
+        "game": "texas_hold_em", "variant": "classic",
+        "players": players, "rounds": rounds, "seed": seed,
+    })
+    return TexasHoldEmGame.from_config(cfg)
+
+
 def play_actions(game, state, actions: list[tuple[str, str]]):
     for player, action in actions:
         state = game.apply_action(state, player, action)
@@ -349,17 +357,27 @@ def test_state_from_dict_round_trip():
 
 def test_to_call_helper():
     hs = {"A": 99.0, "B": 99.0}
-    assert _to_call(hs, {"A": 97.0, "B": 99.0}, "B") == 2.0
-    assert _to_call(hs, {"A": 99.0, "B": 97.0}, "A") == 2.0
-    assert _to_call(hs, {"A": 99.0, "B": 99.0}, "A") == 0.0
-    assert _to_call(hs, {"A": 99.0, "B": 99.0}, "B") == 0.0
+    live = ["A", "B"]
+    assert _to_call(hs, {"A": 97.0, "B": 99.0}, "B", live) == 2.0
+    assert _to_call(hs, {"A": 99.0, "B": 97.0}, "A", live) == 2.0
+    assert _to_call(hs, {"A": 99.0, "B": 99.0}, "A", live) == 0.0
+    assert _to_call(hs, {"A": 99.0, "B": 99.0}, "B", live) == 0.0
 
 
 def test_to_call_ignores_prior_winnings():
     hs = {"A": 101.0, "B": 97.0}
-    assert _to_call(hs, {"A": 101.0, "B": 97.0}, "A") == 0.0
-    assert _to_call(hs, {"A": 101.0, "B": 97.0}, "B") == 0.0
-    assert _to_call(hs, {"A": 99.0, "B": 97.0}, "B") == 2.0
+    live = ["A", "B"]
+    assert _to_call(hs, {"A": 101.0, "B": 97.0}, "A", live) == 0.0
+    assert _to_call(hs, {"A": 101.0, "B": 97.0}, "B", live) == 0.0
+    assert _to_call(hs, {"A": 99.0, "B": 97.0}, "B", live) == 2.0
+
+
+def test_to_call_ignores_folded_players_earlier_bet():
+    """A folded player's earlier commitment shouldn't set the bar for
+    remaining live players (N-player generalization)."""
+    hs = {"A": 99.0, "B": 99.0, "C": 99.0}
+    # C folded after committing more than A or B; only live players matter.
+    assert _to_call(hs, {"A": 97.0, "B": 97.0, "C": 90.0}, "A", ["A", "B"]) == 0.0
 
 
 def test_raise_then_fold():
@@ -408,7 +426,7 @@ def test_multi_hand_betting_not_inflated():
     start = dict(state.hand_start_chips)
     assert start["A"] > 0 and start["B"] > 0
     state = play_actions(game, state, [("A", "raise")])
-    tc_b = _to_call(state.hand_start_chips, state.chips, "B")
+    tc_b = _to_call(state.hand_start_chips, state.chips, "B", ["A", "B"])
     assert tc_b == BET_SIZE
 
 
@@ -454,3 +472,234 @@ def test_state_from_dict_without_hand_start():
     }
     restored = game.state_from_dict(d)
     assert restored.hand_start_chips == {"A": 99.0, "B": 99.0}
+
+
+# ── N-player support (#41) ────────────────────────────────────────────────────
+
+def test_config_supports_2_to_6_players():
+    for n in (2, 3, 4, 5, 6):
+        cfg = config_from_dict({"game": "texas_hold_em", "players": n, "rounds": 1})
+        assert cfg.player_ids() == [chr(ord("A") + i) for i in range(n)]
+
+
+def test_config_rejects_out_of_range_player_counts():
+    with pytest.raises(ValueError, match="2-6 players"):
+        config_from_dict({"game": "texas_hold_em", "players": 1, "rounds": 1})
+    with pytest.raises(ValueError, match="2-6 players"):
+        config_from_dict({"game": "texas_hold_em", "players": 7, "rounds": 1})
+
+
+def test_three_player_initial_deal():
+    game = make_n_player_game(3)
+    state = game.initial_state()
+    assert state.player_ids == ["A", "B", "C"]
+    assert len(state.hole_cards["A"]) == 2
+    assert len(state.hole_cards["B"]) == 2
+    assert len(state.hole_cards["C"]) == 2
+    # Hole cards must be disjoint.
+    all_hole = state.hole_cards["A"] + state.hole_cards["B"] + state.hole_cards["C"]
+    assert len(set(all_hole)) == 6
+    assert state.chips == {"A": STARTING_CHIPS - ANTE, "B": STARTING_CHIPS - ANTE, "C": STARTING_CHIPS - ANTE}
+    assert state.pot == ANTE * 3
+
+
+def test_three_player_preflop_first_actor_is_left_of_button():
+    """With 3+ players (no blinds), action starts left of the button on every
+    street including preflop -- unlike heads-up, where the button acts first
+    preflop as a special case."""
+    game = make_n_player_game(3)
+    state = game.initial_state()
+    assert state.awaiting == ["B"]
+
+
+def test_three_player_postflop_first_actor_is_left_of_button():
+    game = make_n_player_game(3)
+    state = game.initial_state()
+    state = play_actions(game, state, [("B", "check"), ("C", "check"), ("A", "check")])
+    assert state.street == "flop"
+    assert state.awaiting == ["B"]
+
+
+def test_three_player_turn_order_skips_folded_player():
+    game = make_n_player_game(3)
+    state = game.initial_state()
+    state = play_actions(game, state, [("B", "fold")])
+    assert state.awaiting == ["C"]
+    assert "B" in state.folded
+    assert not game.is_terminal(state)
+
+
+def test_fold_down_to_last_live_player_ends_hand():
+    game = make_n_player_game(3, rounds=1)
+    state = game.initial_state()
+    state = play_actions(game, state, [("B", "fold"), ("C", "fold")])
+    assert game.is_terminal(state)
+    result = state.history[0]["result"]
+    assert result["outcome"] == "fold"
+    assert result["winner"] == "A"
+
+
+def test_raise_reopens_action_for_players_who_already_acted():
+    """A raise must reopen action for players who already checked/called this
+    street, not just move to the immediate next seat."""
+    game = make_n_player_game(3, rounds=1)
+    state = game.initial_state()
+    # Preflop, n=3: B acts first.
+    state = play_actions(game, state, [("B", "check")])
+    assert state.awaiting == ["C"]
+    state = play_actions(game, state, [("C", "raise")])
+    # A hasn't acted yet, but B (who already checked) must also get a chance
+    # to respond to C's raise before the street can close.
+    assert state.awaiting == ["A"]
+    state = play_actions(game, state, [("A", "call")])
+    assert state.awaiting == ["B"]
+    assert state.street == "preflop"
+    state = play_actions(game, state, [("B", "call")])
+    assert state.street == "flop"
+
+
+def test_forfeit_with_three_players_continues_game():
+    game = make_n_player_game(3, rounds=1)
+    state = game.initial_state()
+    state = game.forfeit_round(state, "B")
+    assert "B" in state.folded
+    assert not game.is_terminal(state)
+    assert state.awaiting == ["C"]
+
+
+def test_forfeit_down_to_last_player_ends_hand():
+    game = make_n_player_game(3, rounds=1)
+    state = game.initial_state()
+    state = game.forfeit_round(state, "B")
+    state = game.forfeit_round(state, "C")
+    assert game.is_terminal(state)
+    assert state.history[0]["result"]["outcome"] == "forfeit"
+    assert state.history[0]["result"]["winner"] == "A"
+
+
+def test_side_pot_short_stack_only_wins_eligible_layer():
+    """C is short-stacked and all-in for less than A/B's later flop bet. C has
+    the best hand, so C must win the (smaller) pot they're eligible for, but
+    NOT the side pot built from A/B's extra flop betting, which they never
+    covered."""
+    game = make_n_player_game(3, rounds=1, seed=7)
+    state = game.initial_state()
+
+    # C had 3 chips before ante (1 -> 2 after ante), everyone else starts full.
+    state.hand_start_chips_pre_ante["C"] = 3.0
+    state.chips["C"] = 2.0
+    state.hand_start_chips["C"] = 2.0
+
+    state = play_actions(game, state, [("B", "raise"), ("C", "call"), ("A", "call")])
+    assert "C" in state.all_in
+    assert state.street == "flop"
+    pot_at_allin = state.pot
+
+    state = play_actions(game, state, [("B", "raise"), ("A", "call")])
+    assert state.street == "turn"
+    state = play_actions(game, state, [("B", "check"), ("A", "check")])
+    state = play_actions(game, state, [("B", "check"), ("A", "check")])
+    assert game.is_terminal(state)
+
+    result = state.history[0]["result"]
+    assert result["outcome"] == "showdown"
+    pots = result["pots"]
+    # Two layers: the pot C could contest, and a side pot only A/B covered.
+    assert len(pots) == 2
+    main_pot, side_pot = pots
+    assert main_pot["amount"] == pytest.approx(pot_at_allin)
+    assert set(main_pot["eligible"]) == {"A", "B", "C"}
+    assert set(side_pot["eligible"]) == {"A", "B"}
+    assert "C" not in side_pot["winners"]
+    # Whole-hand pot is fully distributed: no chips vanish or get double-paid.
+    total_awarded = sum(p["amount"] for p in pots)
+    assert total_awarded == pytest.approx(state.history[0]["pot"])
+
+
+def test_showdown_result_has_generic_per_player_hands():
+    game = make_n_player_game(3, rounds=1)
+    state = game.initial_state()
+    state = play_actions(game, state, [
+        ("B", "check"), ("C", "check"), ("A", "check"),
+        ("B", "check"), ("C", "check"), ("A", "check"),
+        ("B", "check"), ("C", "check"), ("A", "check"),
+        ("B", "check"), ("C", "check"), ("A", "check"),
+    ])
+    assert game.is_terminal(state)
+    result = state.history[0]["result"]
+    assert result["outcome"] == "showdown"
+    assert set(result["hands"].keys()) == {"A", "B", "C"}
+    for h in result["hands"].values():
+        assert "cards" in h and "hand" in h
+    assert result["winner"] in ("A", "B", "C", "Tie")
+
+
+def test_all_in_preflop_deals_out_remaining_streets_without_further_action():
+    """Once everyone remaining is all-in, no more betting is possible: the
+    engine must deal straight through to showdown in the same apply_action
+    call, rather than leaving `awaiting` empty with nobody able to move the
+    game forward."""
+    game = make_game(rounds=1)
+    state = game.initial_state()
+    state.chips = {"A": 2.0, "B": 2.0}
+    state.hand_start_chips = {"A": 2.0, "B": 2.0}
+    state.hand_start_chips_pre_ante = {"A": 3.0, "B": 3.0}
+
+    state = play_actions(game, state, [("A", "raise")])
+    assert "A" in state.all_in
+    state = play_actions(game, state, [("B", "call")])
+
+    assert "B" in state.all_in
+    assert game.is_terminal(state)
+    result = state.history[0]["result"]
+    assert result["outcome"] == "showdown"
+    assert len(result["community"]) == 5
+
+
+def test_street_actions_accumulate_across_the_whole_hand():
+    """street_actions must record every street's actions, not just the last
+    completed street (issue #24: History/metrics under-counted fold/raise
+    rates because earlier streets' actions were discarded on each street
+    reset)."""
+    game = make_game(rounds=1)
+    state = game.initial_state()
+    state = play_actions(game, state, [
+        ("A", "check"), ("B", "check"),   # preflop
+        ("B", "check"), ("A", "check"),   # flop
+        ("B", "check"), ("A", "check"),   # turn
+        ("B", "check"), ("A", "check"),   # river -> showdown
+    ])
+    assert game.is_terminal(state)
+    recorded = state.history[0]["street_actions"]
+    assert len(recorded) == 8
+    streets_seen = {a["street"] for a in recorded}
+    assert streets_seen == {"preflop", "flop", "turn", "river"}
+
+
+def test_compute_hand_equity_is_off_by_default():
+    game = make_game(rounds=1)
+    state = game.initial_state()
+    state = play_actions(game, state, [("A", "fold")])
+    assert "preflop_equity" not in state.history[0]
+
+
+def test_compute_hand_equity_opt_in_populates_history():
+    cfg = config_from_dict({
+        "game": "texas_hold_em", "players": 2, "rounds": 1,
+        "seed": 1, "compute_hand_equity": True,
+    })
+    game = TexasHoldEmGame.from_config(cfg)
+    state = game.initial_state()
+    state = play_actions(game, state, [("A", "fold")])
+    equity = state.history[0]["preflop_equity"]
+    assert set(equity.keys()) == {"A", "B"}
+    assert equity["A"] + equity["B"] == pytest.approx(1.0)
+
+
+def test_compute_results_generalizes_winner_over_n_players():
+    game = make_n_player_game(4, rounds=1)
+    state = game.initial_state()
+    state = play_actions(game, state, [("B", "fold"), ("C", "fold"), ("D", "fold")])
+    results = game.compute_results(state)
+    assert results["winner"] == "A"
+    assert set(results["total_scores"].keys()) == {"A", "B", "C", "D"}
