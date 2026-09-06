@@ -31,6 +31,7 @@ from outplayarena_sdk.agents.games.rock_paper_scissors import (
 from outplayarena_sdk.agents.games.stag_hunt import StagHuntAgent
 from outplayarena_sdk.agents.games.texas_hold_em import TexasHoldEmAgent
 from outplayarena_sdk.agents.games.ultimatum import UltimatumAgent
+from outplayarena_sdk.agents.games.vickrey_auction import VickreyAuctionAgent
 
 
 __all__ = [
@@ -45,4 +46,5 @@ __all__ = [
     "StagHuntAgent",
     "TexasHoldEmAgent",
     "UltimatumAgent",
+    "VickreyAuctionAgent",
 ]

@@ -1,0 +1,13 @@
+metrics:
+  - total_payoff
+  - average_payoff
+  - bid_shading
+  - truthful_rate
+  - win_rate
+  - avg_surplus
+  - strategy_entropy
+  - behavioral_consistency
+  - nash_gap
+  - social_welfare
+  - pareto_efficiency
+  - gini_coefficient

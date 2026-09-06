@@ -14,6 +14,7 @@ from outplayarena_sdk.agents.games import (
     StagHuntAgent,
     TexasHoldEmAgent,
     UltimatumAgent,
+    VickreyAuctionAgent,
 )
 from outplayarena_sdk.base import LLMConfig
 
@@ -273,6 +274,53 @@ class TestPublicGoods:
 
         # Negative max → defaults to 100.
         result = agent.parse_action("75", {"max_quantity": -10})
+        assert result == 75.0
+
+
+class TestVickreyAuction:
+    def test_simple(self):
+        agent = _agent(VickreyAuctionAgent)
+        state = {"max_bid": 200}
+        assert agent.parse_action("I bid 75", state) == 75.0
+
+    def test_clamps_to_max(self):
+        agent = _agent(VickreyAuctionAgent)
+        state = {"max_bid": 200}
+        assert agent.parse_action("I bid 500", state) == 200.0
+
+    def test_negative_clamps_to_zero(self):
+        agent = _agent(VickreyAuctionAgent)
+        state = {"max_bid": 200}
+        assert agent.parse_action("I bid -5", state) == 0.0
+
+    def test_hint_includes_max_bid(self):
+        agent = _agent(VickreyAuctionAgent)
+        agent._last_state = {"max_bid": 150}
+        hint = agent.action_format_hint()
+        assert "150" in hint
+        assert "non-negative" in hint
+
+    def test_hint_fallback_when_no_state(self):
+        agent = _agent(VickreyAuctionAgent)
+        agent._last_state = None
+        hint = agent.action_format_hint()
+        assert "non-negative" in hint
+        assert "up to" not in hint
+
+    def test_hint_fallback_when_max_bid_invalid(self):
+        agent = _agent(VickreyAuctionAgent)
+        agent._last_state = {"max_bid": "not a number"}
+        hint = agent.action_format_hint()
+        assert "non-negative" in hint
+
+    def test_parse_action_fallback_when_max_bid_invalid(self):
+        agent = _agent(VickreyAuctionAgent)
+        # No max_bid in state → defaults to 200.
+        result = agent.parse_action("75", {})
+        assert result == 75.0
+
+        # Negative max_bid → defaults to 200.
+        result = agent.parse_action("75", {"max_bid": -10})
         assert result == 75.0
 
 

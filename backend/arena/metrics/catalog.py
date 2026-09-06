@@ -369,6 +369,32 @@ _METRICS: dict[str, MetricDef] = {
         ),
     },
 
+    # ── Vickrey Auction metrics ─────────────────────────────────────────
+    "bid_shading": {
+        "name": "bid_shading",
+        "when": "terminal",
+        "type": "object",
+        "description": "Average deviation of each bidder's bid from its true value (negative = shading, positive = overbidding).",
+    },
+    "truthful_rate": {
+        "name": "truthful_rate",
+        "when": "terminal",
+        "type": "object",
+        "description": "Fraction of rounds each bidder's bid was within tolerance of its true value.",
+    },
+    "win_rate": {
+        "name": "win_rate",
+        "when": "terminal",
+        "type": "object",
+        "description": "Fraction of auctions won by each bidder.",
+    },
+    "avg_surplus": {
+        "name": "avg_surplus",
+        "when": "terminal",
+        "type": "object",
+        "description": "Average realised payoff (value - price) for each bidder, conditional on winning.",
+    },
+
     # ── Ultimatum game metrics ────────────────────────────────────────────
     "avg_offer_fraction": {
         "name": "avg_offer_fraction",
