@@ -155,6 +155,8 @@ nav:
       - Stag Hunt: games/catalog/stag_hunt.md
       - Battle of the Sexes: games/catalog/battle_of_the_sexes.md
       - Texas Hold'em: games/catalog/texas_hold_em.md
+      - Chicken Game: games/catalog/chicken_game.md
+      - Vickrey Auction: games/catalog/vickrey_auction.md
       - Metrics Reference: games/metrics.md
   - MCP:
       - mcp/overview.md

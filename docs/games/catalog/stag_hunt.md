@@ -49,6 +49,8 @@ A 2-player symmetric coordination game with two Nash equilibria. (Stag, Stag) is
 - `social_welfare`
 - `pareto_efficiency`
 - `gini_coefficient`
+- `payoff_volatility`
+- `action_concentration`
 
 ## Built-in Agents
 

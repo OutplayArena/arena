@@ -44,6 +44,8 @@ A sequential game where two players alternately choose to TAKE (end the game) or
 - `forgiveness_index`
 - `conditional_cooperation`
 - `multilateral_cooperation_index`
+- `payoff_volatility`
+- `action_concentration`
 
 ## Built-in Agents
 

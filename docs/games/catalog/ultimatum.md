@@ -38,6 +38,8 @@ Player A proposes a split of a fixed sum; Player B accepts or rejects. Both get 
 - `social_welfare`
 - `gini_coefficient`
 - `backward_induction_adherence`
+- `payoff_volatility`
+- `action_concentration`
 
 ## Built-in Agents
 

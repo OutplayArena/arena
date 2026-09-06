@@ -41,6 +41,8 @@ Two players must coordinate on one of two events (Opera or Football) with confli
 - `social_welfare`
 - `pareto_efficiency`
 - `gini_coefficient`
+- `payoff_volatility`
+- `action_concentration`
 
 ## Built-in Agents
 

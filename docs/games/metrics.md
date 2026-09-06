@@ -28,6 +28,8 @@ These metrics are computed for every game:
 - `bos_a_preferred_rate`
 - `bos_b_preferred_rate`
 - `equilibrium_selection_rate`
+- `payoff_volatility`
+- `action_concentration`
 
 ### Centipede Game
 
@@ -44,12 +46,40 @@ These metrics are computed for every game:
 - `forgiveness_index`
 - `conditional_cooperation`
 - `multilateral_cooperation_index`
+- `payoff_volatility`
+- `action_concentration`
+
+### Chicken Game
+
+- `dare_rate`
+- `crash_rate`
+- `yield_rate`
+- `exploit_rate`
+- `mixed_ne_gap`
+- `alternation_index`
+- `outcome_counts`
+- `cg_outcome_counts`
+- `cg_crash_rate`
+- `cg_yield_rate`
+- `cg_mixed_ne_gap`
+- `cg_nash_dare_probability`
+- `payoff_volatility`
+- `action_concentration`
 
 ### Colonel Blotto
 
 - `round_win_counts`
 - `round_win_rate`
 - `allocation_concentration`
+- `payoff_volatility`
+- `action_concentration`
+- `avg_hhi`
+- `strategy_diversity`
+- `pattern_exploitability`
+- `convergence_rate`
+- `underdog_performance`
+- `blotto_fronts_won`
+- `blotto_targeting_overlap`
 
 ### Cournot Duopoly
 
@@ -61,6 +91,8 @@ These metrics are computed for every game:
 - `cd_nash_quantity`
 - `cd_collusive_quantity`
 - `cd_collusion_index`
+- `payoff_volatility`
+- `action_concentration`
 
 ### Prisoner's Dilemma
 
@@ -78,6 +110,8 @@ These metrics are computed for every game:
 - `forgiveness_index`
 - `conditional_cooperation`
 - `multilateral_cooperation_index`
+- `payoff_volatility`
+- `action_concentration`
 
 ### Public Goods Game
 
@@ -93,6 +127,8 @@ These metrics are computed for every game:
 - `tit_for_tat_adherence`
 - `forgiveness_index`
 - `conditional_cooperation`
+- `payoff_volatility`
+- `action_concentration`
 
 ### Rock-Paper-Scissors
 
@@ -102,6 +138,8 @@ These metrics are computed for every game:
 - `rps_collision_rate`
 - `nash_distance`
 - `pattern_exploitability`
+- `payoff_volatility`
+- `action_concentration`
 
 ### Stag Hunt
 
@@ -119,6 +157,8 @@ These metrics are computed for every game:
 - `forgiveness_index`
 - `conditional_cooperation`
 - `multilateral_cooperation_index`
+- `payoff_volatility`
+- `action_concentration`
 
 ### Texas Hold'em
 
@@ -130,6 +170,8 @@ These metrics are computed for every game:
 - `fold_count`
 - `raise_count`
 - `the_showdown_rate`
+- `payoff_volatility`
+- `action_concentration`
 
 ### Ultimatum Game
 
@@ -140,3 +182,12 @@ These metrics are computed for every game:
 - `ug_acceptance_rate`
 - `ug_offer_fairness_index`
 - `backward_induction_adherence`
+- `payoff_volatility`
+- `action_concentration`
+
+### Vickrey Auction
+
+- `bid_shading`
+- `truthful_rate`
+- `win_rate`
+- `avg_surplus`

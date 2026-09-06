@@ -47,6 +47,8 @@ N players (3–10) simultaneously choose how much to contribute to a shared pool
 - `tit_for_tat_adherence`
 - `forgiveness_index`
 - `conditional_cooperation`
+- `payoff_volatility`
+- `action_concentration`
 
 ## Built-in Agents
 

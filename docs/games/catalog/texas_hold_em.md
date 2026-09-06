@@ -1,16 +1,13 @@
 # Texas Hold'em
 
-!!! warning "2-player only"
-    Texas Hold'em currently supports heads-up (2-player) play only. Multi-player support is in progress — follow [#41](https://github.com/OutplayArena/arena/issues/41) for updates.
-
-Heads-up Texas Hold'em with four betting streets (preflop, flop, turn, river) and standard poker hand rankings. Each player starts with 100 chips; ante 1, fixed bet size 2. Players alternate actions: fold, check, call, or raise. At showdown the best five-card hand wins the pot.
+Texas Hold'em (2-6 players) with four betting streets (preflop, flop, turn, river) and standard poker hand rankings. Each player starts with 100 chips; ante 1, fixed bet size 2. Action proceeds left of a fixed dealer button each hand (heads-up is the standard exception: the button acts first preflop). At showdown, side pots are computed so an all-in player can only win the pot amount their stack could cover.
 
 
 ## Overview
 
 **Type**: zero_sum, sequential, discrete_choice
 
-**Players**: 2
+**Players**: 2–6
 
 ## Configuration
 
@@ -21,6 +18,8 @@ Heads-up Texas Hold'em with four betting streets (preflop, flop, turn, river) an
 | `players` | `integer` | `2` |  |
 | `rounds` | `integer` | `10` |  |
 | `seed` | `['integer', 'null']` | —` |  |
+| `compute_hand_equity` | `boolean` | `False` | Opt-in (#24): compute a preflop hand-equity estimate for every hand (exact for the final board, Monte Carlo otherwise) and expose it via history + the conservativeness_index/equity_realization metrics. Off by default -- adds real per-hand cost, notably for long tournaments.
+ |
 
 ## Metrics
 
@@ -39,6 +38,8 @@ Heads-up Texas Hold'em with four betting streets (preflop, flop, turn, river) an
 - `cumulative_regret`
 - `nash_gap`
 - `gini_coefficient`
+- `payoff_volatility`
+- `action_concentration`
 
 ## Built-in Agents
 
