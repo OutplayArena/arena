@@ -216,6 +216,7 @@ nav:
       - E2E Test Plan: testing/e2e-test-plan.md
   - Release Notes:
       - releases/index.md
+      - v0.4.2: releases/v0.4.2.md
       - v0.4.0: releases/v0.4.0.md
   - Blog:
       - blog/index.md

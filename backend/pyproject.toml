@@ -1,6 +1,6 @@
 [project]
 name = "arena"
-version = "0.4.0"
+version = "0.4.2"
 description = "OutplayArena: An open benchmarking platform for game theoretic analysis of LLM-powered agents."
 requires-python = ">=3.12"
 authors = [
