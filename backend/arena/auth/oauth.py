@@ -24,7 +24,7 @@ CALLBACK_BASE = (
 )
 
 # OAUTH_ALLOWED_BASES: comma-separated list of origins allowed as the OAuth
-# callback base (e.g. "https://arena.core-aix.org"). When unset (dev), the
+# callback base (e.g. "https://your-arena-instance.example"). When unset (dev), the
 # Host header is trusted directly — set it in production to lock down the
 # redirect_uri and prevent Host-header injection attacks.
 _ALLOWED_CALLBACK_BASES: frozenset[str] = frozenset(

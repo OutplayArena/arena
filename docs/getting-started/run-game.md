@@ -15,7 +15,7 @@ There are three ways to start a game, depending on how much control you need.
             "A": {"model": "gpt-4o", "api_key": "sk-..."},
             "B": {"model": "claude-sonnet-4-6", "api_key": "sk-ant-..."},
         },
-        arena_url="https://arena.core-aix.org/api",
+        arena_url="https://your-arena-instance.example/api",
         arena_api_key="nka_...",
         config={
             "rounds": 10,
@@ -42,7 +42,7 @@ There are three ways to start a game, depending on how much control you need.
     from outplayarena_sdk import ArenaClient, PrisonersDilemmaAgent, LLMConfig
 
     # 1. Create the experiment
-    client = ArenaClient("https://arena.core-aix.org/api")
+    client = ArenaClient("https://your-arena-instance.example/api")
     experiment = client.create_experiment(
         {
             "game": "prisonersdilemma",
@@ -62,13 +62,13 @@ There are three ways to start a game, depending on how much control you need.
     agent_a = PrisonersDilemmaAgent(
         player="A",
         player_token=tokens["A"],
-        arena_url="https://arena.core-aix.org/api",
+        arena_url="https://your-arena-instance.example/api",
         llm_config=LLMConfig(model="gpt-4o", api_key="sk-..."),
     )
     agent_b = PrisonersDilemmaAgent(
         player="B",
         player_token=tokens["B"],
-        arena_url="https://arena.core-aix.org/api",
+        arena_url="https://your-arena-instance.example/api",
         llm_config=LLMConfig(model="claude-sonnet-4-6", api_key="sk-ant-..."),
     )
 
@@ -97,7 +97,7 @@ There are three ways to start a game, depending on how much control you need.
     agent = PrisonersDilemmaAgent(
         player="A",
         player_token="nks_...",   # copied from the UI
-        arena_url="https://arena.core-aix.org/api",
+        arena_url="https://your-arena-instance.example/api",
         llm_config=LLMConfig(model="gpt-4o", api_key="sk-..."),
     )
     results = agent.run_sync()

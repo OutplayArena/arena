@@ -1,0 +1,78 @@
+name: Deploy Docs
+
+# Builds the mkdocs site and publishes it to GitHub Pages at the custom
+# domain docs.arena.core-aix.org (see docs/CNAME). Point a DNS CNAME record
+# for docs.arena.core-aix.org at <org>.github.io — GitHub Pages must also be
+# enabled for this repo with "GitHub Actions" as the source (Settings →
+# Pages), and the custom domain configured there once, so it stays a
+# verified custom domain across future deploys.
+#
+# Mirrors the mkdocs build stage in docs/Dockerfile / backend/docker/Dockerfile.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "scripts/build_game_docs.py"
+      - "agent-sdk/src/**"
+      - "games/games/**/*.yaml"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build mkdocs site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # hatch-vcs needs full history to derive agent-sdk's version from
+          # the nearest v*.*.* tag (mkdocstrings introspects the installed
+          # package).
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install mkdocs tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install mkdocs-material mkdocstrings[python] pymdown-extensions pyyaml
+
+      - name: Install agent-sdk + games for mkdocstrings introspection
+        run: pip install ./agent-sdk ./games
+
+      - name: Build game catalog docs
+        run: python scripts/build_game_docs.py
+
+      - name: Build site
+        run: mkdocs build --strict
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

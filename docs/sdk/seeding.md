@@ -4,7 +4,7 @@ Reproducible experiments require that the random number generator be seeded iden
 
 ## What the SDK resolves
 
-The backend now echoes the full effective experiment config (including `seed`) in three response payloads &mdash; `creation_response`, `public_state`, and `get_results` (see [PR #37](https://arena.core-aix.org/pull/37)).
+The backend now echoes the full effective experiment config (including `seed`) in three response payloads &mdash; `creation_response`, `public_state`, and `get_results` (see [PR #37](https://github.com/OutplayArena/arena/pull/37)).
 
 On the first backend response, `BaseAgent` pulls `config["seed"]` out of that payload and seeds an internal `random.Random` instance. The resolved seed is exposed as `agent.seed` and the RNG as `agent.rng`.
 

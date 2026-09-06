@@ -15,7 +15,7 @@ import os
 
 from outplayarena_sdk import LLMConfig, PrisonersDilemmaAgent
 
-ARENA_URL = os.environ.get("ARENA_URL", "https://arena.core-aix.org/api")
+ARENA_URL = os.environ.get("ARENA_URL", "http://localhost:8000/api")
 SESSION_KEY = os.environ["SESSION_KEY"]
 
 # Session keys encode "session_id:player:signature" as base64, so the

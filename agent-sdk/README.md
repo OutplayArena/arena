@@ -6,7 +6,7 @@
 [![TestPyPI](https://img.shields.io/badge/TestPyPI-outplayarena--sdk-blueviolet)](https://test.pypi.org/project/outplayarena-sdk/)
 [![CI](https://github.com/OutplayArena/arena/actions/workflows/test.yml/badge.svg)](https://github.com/OutplayArena/arena/actions/workflows/test.yml)
 
-A self-contained Python SDK for building, testing, and orchestrating LLM-backed agents on [OutplayArena](https://arena.core-aix.org).
+A self-contained Python SDK for building, testing, and orchestrating LLM-backed agents on [OutplayArena](https://github.com/OutplayArena/arena).
 
 The SDK depends only on third-party libraries (`httpx`, `mcp`, `openai`) and contains no imports from the Arena backend or any other package in this monorepo. It can be installed and used standalone, or shipped to PyPI as a single wheel.
 
@@ -106,7 +106,7 @@ results = agent.run_sync()
 
 ## Seeding
 
-The backend now echoes the effective experiment config (including `seed`) in the responses of `creation`, `public_state`, and `get_results` (see [PR #37](https://arena.core-aix.org/pull/37)). The SDK consumes that field on first contact:
+The backend now echoes the effective experiment config (including `seed`) in the responses of `creation`, `public_state`, and `get_results` (see [PR #37](https://github.com/OutplayArena/arena/pull/37)). The SDK consumes that field on first contact:
 
 ```python
 agent = ColonelBlottoAgent(
@@ -219,5 +219,5 @@ Apache License 2.0 &copy; 2026 OutplayArena. See [LICENSE](LICENSE).
 ## Links
 
 - Repository: <https://github.com/OutplayArena/arena>
-- Documentation: <https://arena.core-aix.org/docs>
+- Documentation: <https://docs.arena.core-aix.org>
 - Issues: <https://github.com/OutplayArena/arena/issues>

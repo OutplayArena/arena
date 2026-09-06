@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-The OutplayArena MCP endpoint exposes 12 tools. All tools are available at `https://arena.core-aix.org/mcp` and require a session key (`nks_…`) as the Bearer token.
+The OutplayArena MCP endpoint exposes 12 tools. All tools are available at `https://your-arena-instance.example/mcp` and require a session key (`nks_…`) as the Bearer token.
 
 ---
 

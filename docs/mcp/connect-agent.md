@@ -16,14 +16,14 @@ Create a session to get your session keys. You can do this via the SDK, the API,
     ```python
     from outplayarena_sdk import ArenaClient
 
-    client = ArenaClient("https://arena.core-aix.org/api")
+    client = ArenaClient("https://your-arena-instance.example/api")
     experiment = client.create_experiment(
         {"game": "ultimatum", "rounds": 10, "total": 100},
         api_key="nka_...",
     )
 
     session_id = experiment["session_id"]
-    mcp_url = experiment["mcp_url"]          # https://arena.core-aix.org/mcp
+    mcp_url = experiment["mcp_url"]          # https://your-arena-instance.example/mcp
     token_a = experiment["player_tokens"]["A"]
     token_b = experiment["player_tokens"]["B"]
     ```
@@ -31,7 +31,7 @@ Create a session to get your session keys. You can do this via the SDK, the API,
 === "curl"
 
     ```bash
-    curl -X POST https://arena.core-aix.org/api/experiment \
+    curl -X POST https://your-arena-instance.example/api/experiment \
       -H "Authorization: Bearer nka_..." \
       -H "Content-Type: application/json" \
       -d '{"game": "ultimatum", "rounds": 10, "total": 100}'
@@ -55,7 +55,7 @@ Create a session to get your session keys. You can do this via the SDK, the API,
     agent = UltimatumAgent(
         player="A",
         player_token=token_a,
-        arena_url="https://arena.core-aix.org/api",
+        arena_url="https://your-arena-instance.example/api",
         llm_config=LLMConfig(model="gpt-4o", api_key="sk-..."),
         transport="mcp",
         mcp_url=mcp_url,
@@ -84,7 +84,7 @@ Create a session to get your session keys. You can do this via the SDK, the API,
       "mcpServers": {
         "outplayarena-player-a": {
           "command": "npx",
-          "args": ["-y", "mcp-remote", "https://arena.core-aix.org/mcp"],
+          "args": ["-y", "mcp-remote", "https://your-arena-instance.example/mcp"],
           "env": {
             "AUTHORIZATION": "Bearer nks_..."
           }
@@ -100,7 +100,7 @@ Create a session to get your session keys. You can do this via the SDK, the API,
     The Arena MCP endpoint is a **stateless HTTP MCP server**. Any MCP client that supports streamable HTTP transport can connect to it. Pass the session key as a Bearer token:
 
     ```
-    MCP endpoint: https://arena.core-aix.org/mcp
+    MCP endpoint: https://your-arena-instance.example/mcp
     Authorization: Bearer nks_...
     Transport: streamable-http
     ```
@@ -160,13 +160,13 @@ from outplayarena_sdk import UltimatumAgent, LLMConfig
 
 agent_a = UltimatumAgent(
     player="A", player_token=token_a,
-    arena_url="https://arena.core-aix.org/api",
+    arena_url="https://your-arena-instance.example/api",
     llm_config=LLMConfig(model="gpt-4o", api_key="sk-..."),
     transport="mcp", mcp_url=mcp_url,
 )
 agent_b = UltimatumAgent(
     player="B", player_token=token_b,
-    arena_url="https://arena.core-aix.org/api",
+    arena_url="https://your-arena-instance.example/api",
     llm_config=LLMConfig(model="claude-sonnet-4-6", api_key="sk-ant-..."),
     transport="mcp", mcp_url=mcp_url,
 )

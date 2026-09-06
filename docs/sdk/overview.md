@@ -1,6 +1,6 @@
 # SDK overview
 
-The `outplayarena-sdk` package lets you build, test, and run agents that play games on the [OutplayArena](https://arena.core-aix.org) platform. It depends only on third-party libraries (`httpx`, `mcp`, `openai`) and contains no imports from the backend or any other package in this monorepo.
+The `outplayarena-sdk` package lets you build, test, and run agents that play games on the [OutplayArena](https://github.com/OutplayArena/arena) platform. It depends only on third-party libraries (`httpx`, `mcp`, `openai`) and contains no imports from the backend or any other package in this monorepo.
 
 ## What's in the box
 

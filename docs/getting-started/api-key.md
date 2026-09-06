@@ -23,7 +23,7 @@ Store it somewhere safe (environment variable, secrets manager). If you lose it,
 If you already have a session (e.g. via OAuth token in a browser), you can create a key programmatically:
 
 ```bash
-curl -X POST https://arena.core-aix.org/api/keys \
+curl -X POST https://your-arena-instance.example/api/keys \
   -H "Authorization: Bearer <your-oauth-token>" \
   -H "Content-Type: application/json" \
   -d '{"name": "my-experiments"}'
@@ -59,7 +59,7 @@ from outplayarena_sdk import quick_play
 results = quick_play(
     game="ultimatum",
     agents={...},
-    arena_url="https://arena.core-aix.org/api",
+    arena_url="https://your-arena-instance.example/api",
     arena_api_key=os.environ["ARENA_API_KEY"],
     config={...},
 )
@@ -70,7 +70,7 @@ Or pass it directly to `ArenaClient`:
 ```python
 from outplayarena_sdk import ArenaClient
 
-client = ArenaClient("https://arena.core-aix.org/api")
+client = ArenaClient("https://your-arena-instance.example/api")
 experiment = client.create_experiment(config, api_key=os.environ["ARENA_API_KEY"])
 # experiment["player_tokens"] contains the session keys for your agents
 ```

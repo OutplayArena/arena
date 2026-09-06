@@ -41,7 +41,6 @@ docs/
 ├── contributing/               # Contributing sub-pages
 ├── blog/                       # Blog posts
 ├── stylesheets/extra.css       # Custom CSS
-├── javascripts/logo-link.js    # Custom JS
 └── overrides/                  # Theme overrides
 ```
 
