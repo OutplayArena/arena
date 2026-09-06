@@ -189,6 +189,20 @@ _METRICS: dict[str, MetricDef] = {
         "description": "Windowed regret over the course of the match — tracks learning/drift.",
     },
 
+    # ── Risk metrics ─────────────────────────────────────────────────────
+    "payoff_volatility": {
+        "name": "payoff_volatility",
+        "when": "terminal",
+        "type": "number",
+        "description": "Standard deviation of the agent's round-by-round payoffs.",
+    },
+    "action_concentration": {
+        "name": "action_concentration",
+        "when": "terminal",
+        "type": "number",
+        "description": "Mean Herfindahl-Hirschman Index across the agent's numeric-vector actions (e.g. Blotto allocations, Cournot quantities). Null for scalar/string actions.",
+    },
+
     # ── Equilibrium metrics ─────────────────────────────────────────────
     "nash_gap": {
         "name": "nash_gap",
