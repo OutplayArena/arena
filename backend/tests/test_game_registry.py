@@ -354,6 +354,32 @@ def test_render_observation_with_unknown_variant_falls_back_to_neutral():
     assert result["variant"] == "unknown_variant"
 
 
+def test_build_observation_context_includes_exploitability_warning_when_predictable():
+    """A Blotto opponent that has been highly predictable for 3+ rounds surfaces
+    an exploitability_warning in the observation context (issue #135)."""
+    registry = GameRegistry()
+    state = {
+        "total_scores": {"A": 0, "B": 0},
+        "history": [
+            {"allocations": {"A": [10, 0, 0], "B": [3, 3, 4]}},
+            {"allocations": {"A": [0, 10, 0], "B": [3, 3, 4]}},
+            {"allocations": {"A": [0, 0, 10], "B": [3, 3, 4]}},
+        ],
+    }
+    ctx = registry._build_observation_context("colonelblotto", state, {}, "A")
+    assert "B" in ctx["exploitability_warning"]
+
+
+def test_build_observation_context_omits_exploitability_warning_when_absent():
+    registry = GameRegistry()
+    state = {
+        "total_scores": {"A": 0, "B": 0},
+        "history": [{"allocations": {"A": [10, 0, 0], "B": [3, 3, 4]}}],
+    }
+    ctx = registry._build_observation_context("colonelblotto", state, {}, "A")
+    assert "exploitability_warning" not in ctx
+
+
 def test_build_observation_context_includes_pot_fields():
     registry = GameRegistry()
     state = {

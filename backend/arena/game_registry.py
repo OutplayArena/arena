@@ -195,6 +195,15 @@ class GameRegistry:
             ctx.setdefault("payoff_hare_hare", p.get("hare_hare", 0))
             ctx.setdefault("payoff_stag_hare", p.get("stag_hare", 0))
 
+        # Optional in-game exploitability signal (#135): a game's metrics extension
+        # may define `exploitability_warning(state, player_id) -> str | None` to
+        # surface a mid-game warning when an opponent's play is highly predictable.
+        ext = self.metrics_extension(game_name)
+        if ext is not None and hasattr(ext, "exploitability_warning"):
+            warning = ext.exploitability_warning(state, player_id)
+            if warning:
+                ctx["exploitability_warning"] = warning
+
         return ctx
 
     def _pick_turn_template(self, game_name: str, state: dict, prompts: dict) -> str:

@@ -20,6 +20,10 @@ turn: >
   Previous rounds:
   {{ history }}
   {% if inbox %}Inbox: {{ inbox }}{% endif %}
+  {% if exploitability_warning %}
+
+  {{ exploitability_warning }}
+  {% endif %}
 
   Respond with a JSON list of non-negative integers that sums exactly to
   your budget. The list length must match the number of battlefields.
