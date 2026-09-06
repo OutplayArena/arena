@@ -680,6 +680,43 @@ class TestSessionEndpoints:
             metrics_module._global_registry = saved_global
             metrics_module._registries = saved_registries
 
+    def test_results_still_record_public_session_in_both_registries(self, client):
+        """A public (is_public=True) session's completed match must still be
+        recorded in both the global and per-game leaderboard registries —
+        the #151 fix must not accidentally stop public sessions from ever
+        appearing on the leaderboard."""
+        import arena.metrics as metrics_module
+
+        saved_global = metrics_module._global_registry
+        saved_registries = dict(metrics_module._registries)
+        metrics_module._global_registry = None
+        metrics_module._registries = {}
+        try:
+            c, db, _, _ = client
+            created = c.post("/experiment", json=_valid_payload(rounds=1)).json()
+            session_id = created["session_id"]
+            token_a = created["player_tokens"]["A"]
+            token_b = created["player_tokens"]["B"]
+            db._store[session_id].is_public = True
+            c.post(
+                f"/session/{session_id}/action",
+                headers={"Authorization": f"Bearer {token_a}"},
+                json={"allocation": [10, 0, 0]},
+            )
+            c.post(
+                f"/session/{session_id}/action",
+                headers={"Authorization": f"Bearer {token_b}"},
+                json={"allocation": [0, 5, 5]},
+            )
+            response = c.get(f"/session/{session_id}/results")
+            assert response.status_code == 200
+
+            assert "A" in metrics_module.get_global_registry().elo_ratings
+            assert "A" in metrics_module.get_game_registry("colonelblotto").elo_ratings
+        finally:
+            metrics_module._global_registry = saved_global
+            metrics_module._registries = saved_registries
+
     def test_stream_session_returns_event_stream(self, client):
         c, _, _, _ = client
         with c.stream("GET", "/session/missing/stream") as response:
