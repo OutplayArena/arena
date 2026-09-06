@@ -34,6 +34,8 @@ Classic simultaneous zero-sum game. Two players each choose rock, paper, or scis
 - `cumulative_regret`
 - `nash_gap`
 - `gini_coefficient`
+- `payoff_volatility`
+- `action_concentration`
 
 ## Built-in Agents
 

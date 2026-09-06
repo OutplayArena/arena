@@ -8,14 +8,16 @@ OutplayArena includes a catalog of game theory scenarios spanning the cooperativ
 |------|---------|--------------|------------------|-------------|
 | [Battle of the Sexes](catalog/battle_of_the_sexes.md) | 2 | binary_choice | asymmetric_coordination | simultaneous |
 | [Centipede Game](catalog/centipede.md) | 2 | binary_choice | sequential_cooperation | perfect |
+| [Chicken Game](catalog/chicken_game.md) | 2 | binary_choice | mixed_motive | simultaneous |
 | [Colonel Blotto](catalog/colonelblotto.md) | 2 | discrete_allocation | zero_sum | simultaneous |
 | [Cournot Duopoly](catalog/cournot_duopoly.md) | 2 | continuous | competitive_with_collusion | simultaneous |
 | [Prisoner's Dilemma](catalog/prisonersdilemma.md) | 2 | binary_choice | mixed_motive | simultaneous |
 | [Public Goods Game](catalog/public_goods.md) | 3–10 | continuous | social_dilemma | simultaneous |
 | [Rock-Paper-Scissors](catalog/rock_paper_scissors.md) | 2 | discrete_choice | zero_sum | simultaneous |
 | [Stag Hunt](catalog/stag_hunt.md) | 2 | binary_choice | coordination | simultaneous |
-| [Texas Hold'em](catalog/texas_hold_em.md) | 2 | discrete_choice | zero_sum | sequential |
+| [Texas Hold'em](catalog/texas_hold_em.md) | 2–6 | discrete_choice | zero_sum | sequential |
 | [Ultimatum Game](catalog/ultimatum.md) | 2 | continuous | bargaining | perfect |
+| [Vickrey Auction](catalog/vickrey_auction.md) | 2–8 | continuous | mixed_motive | simultaneous |
 
 ## Ontology Taxonomy
 
@@ -34,7 +36,9 @@ OutplayArena includes a catalog of game theory scenarios spanning the cooperativ
 - Stag Hunt
 
 **Mixed Motive**:
+- Chicken Game
 - Prisoner's Dilemma
+- Vickrey Auction
 
 **Sequential Cooperation**:
 - Centipede Game

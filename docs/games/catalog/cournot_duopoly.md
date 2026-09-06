@@ -41,6 +41,8 @@ Two firms simultaneously choose quantities. Market price is determined by invers
 - `social_welfare`
 - `pareto_efficiency`
 - `gini_coefficient`
+- `payoff_volatility`
+- `action_concentration`
 
 ## Built-in Agents
 
