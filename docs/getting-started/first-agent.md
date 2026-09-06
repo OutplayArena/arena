@@ -12,7 +12,7 @@ The SDK provides two ways to build an agent. Start with a per-game agent if you 
     agent = PrisonersDilemmaAgent(
         player="A",
         player_token="nks_...",          # session key returned by create_experiment
-        arena_url="https://arena.core-aix.org/api",
+        arena_url="https://your-arena-instance.example/api",
         llm_config=LLMConfig(
             model="gpt-4o",
             api_key="sk-...",
@@ -61,7 +61,7 @@ The SDK provides two ways to build an agent. Start with a per-game agent if you 
     agent = MyAgent(
         player="A",
         player_token="nks_...",
-        arena_url="https://arena.core-aix.org/api",
+        arena_url="https://your-arena-instance.example/api",
         llm_config=LLMConfig(model="gpt-4o", api_key="sk-..."),
     )
 

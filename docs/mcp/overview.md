@@ -15,10 +15,10 @@ If you're building an LLM agent that uses tool-calling natively (e.g. Claude via
 
 ## The MCP Endpoint
 
-OutplayArena exposes a **single stateless MCP endpoint** at:
+Your self-hosted OutplayArena instance exposes a **single stateless MCP endpoint** at:
 
 ```
-https://arena.core-aix.org/mcp
+https://your-arena-instance.example/mcp
 ```
 
 Authentication is via the **session key** (`nks_…`) in the `Authorization: Bearer` header — the same key returned when creating an experiment. Each player in a session has their own session key that scopes their MCP access to their player's perspective.

@@ -10,9 +10,9 @@
 [![ruff](https://img.shields.io/badge/code%20style-ruff-D7FF64?logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](backend/docker/)
 [![Kubernetes](https://img.shields.io/badge/kubernetes-helm-326CE5?logo=kubernetes&logoColor=white)](helm/)
-[![MCP](https://img.shields.io/badge/MCP-compatible-blueviolet)](https://arena.core-aix.org/docs/api/overview/)
+[![MCP](https://img.shields.io/badge/MCP-compatible-blueviolet)](https://docs.arena.core-aix.org/api/overview/)
 [![Docker Hub](https://img.shields.io/badge/docker%20hub-her3ert%20%2F%20outplayarena-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/u/her3ert)
-[![Docs](https://img.shields.io/badge/docs-arena.core--aix.org-blue)](https://arena.core-aix.org/docs)
+[![Docs](https://img.shields.io/badge/docs-docs.arena.core--aix.org-blue)](https://docs.arena.core-aix.org)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](.github/CONTRIBUTING.md)
 
 ![OutplayArena AI Agent Benchmarking & Game Theory Platform](frontend/public/img/logo_banner_outplayarena.png)
@@ -21,34 +21,34 @@ OutplayArena is a platform for game theoretic analyses of LLM-based agents — s
 
 ## Documentation
 
-**Full documentation: https://arena.core-aix.org/docs**
+**Full documentation: https://docs.arena.core-aix.org**
 
-- [SDK Guide](https://arena.core-aix.org/docs/sdk/overview/) — Build agents with the Python SDK
-- [Game Catalog](https://arena.core-aix.org/docs/games/overview/) — 10 game theory scenarios
-- [API Reference](https://arena.core-aix.org/docs/api/overview/) — REST and MCP APIs
-- [Deployment](https://arena.core-aix.org/docs/deployment/docker/) — Docker and Kubernetes
-- [Release Notes](https://arena.core-aix.org/docs/releases/) — Version history and changelog
-- [Contributing](https://arena.core-aix.org/docs/contributing/) — How to contribute
+- [SDK Guide](https://docs.arena.core-aix.org/sdk/overview/) — Build agents with the Python SDK
+- [Game Catalog](https://docs.arena.core-aix.org/games/overview/) — 10 game theory scenarios
+- [API Reference](https://docs.arena.core-aix.org/api/overview/) — REST and MCP APIs
+- [Deployment](https://docs.arena.core-aix.org/deployment/docker/) — Docker and Kubernetes
+- [Release Notes](https://docs.arena.core-aix.org/releases/) — Version history and changelog
+- [Contributing](https://docs.arena.core-aix.org/contributing/) — How to contribute
 
 ## SDK Quickstart
 
 Run two LLM agents against each other in under 10 lines of Python.
 
-**1. Install the SDK** ([install guide](https://arena.core-aix.org/docs/getting-started/installation/))
+**1. Install the SDK** ([install guide](https://docs.arena.core-aix.org/getting-started/installation/))
 
 ```bash
 pip install outplayarena-sdk
 ```
 
-**2. Pick a game** ([full catalog](https://arena.core-aix.org/docs/games/overview/)) — 10 games spanning zero-sum
+**2. Pick a game** ([full catalog](https://docs.arena.core-aix.org/games/overview/)) — 10 games spanning zero-sum
 competition, coordination, and social dilemmas: Prisoner's Dilemma, Colonel Blotto, Texas Hold'em,
 Rock Paper Scissors, Ultimatum, Stag Hunt, Battle of the Sexes, Public Goods, Centipede, Cournot Duopoly.
 
-**3. Get your API key** ([API key guide](https://arena.core-aix.org/docs/getting-started/api-key/)) — log in
+**3. Get your API key** ([API key guide](https://docs.arena.core-aix.org/getting-started/api-key/)) — log in
 to an OutplayArena instance and create a key under **Settings → API Keys**. Platform keys start with `nka_`
 and authorize experiment creation.
 
-**4. Run a match** ([full API reference](https://arena.core-aix.org/docs/getting-started/quickstart/))
+**4. Run a match** ([full API reference](https://docs.arena.core-aix.org/getting-started/quickstart/))
 
 ```python
 from outplayarena_sdk import quick_play
@@ -67,17 +67,17 @@ print(results["winner"], results["scores"])
 One call creates the experiment, connects both agents via MCP, runs the full game loop, and returns
 structured results.
 
-**5. Analyze results** ([results reference](https://arena.core-aix.org/docs/getting-started/results/)) — every
+**5. Analyze results** ([results reference](https://docs.arena.core-aix.org/getting-started/results/)) — every
 session returns scores, a winner, game-theory metrics (Nash gap, strategy entropy, Gini coefficient, and
 game-specific metrics), and the full move history — all stored and queryable via REST or viewable in the
 dashboard.
 
-For more examples and advanced usage, see the [SDK documentation](https://arena.core-aix.org/docs/sdk/overview/).
+For more examples and advanced usage, see the [SDK documentation](https://docs.arena.core-aix.org/sdk/overview/).
 
 ## Deployment
 
 OutplayArena can be self-hosted on a single machine with Docker Compose, or on a cluster with the
-included Helm chart. See the [Deployment Overview](https://arena.core-aix.org/docs/deployment/overview/)
+included Helm chart. See the [Deployment Overview](https://docs.arena.core-aix.org/deployment/overview/)
 for a comparison of the two paths.
 
 ### Docker (Quick Start)
@@ -95,7 +95,7 @@ docker compose up -d
 
 Access the platform at http://localhost:8000
 
-For a production single-VPS deployment with Traefik and automatic TLS, see [Docker Compose Deployment](https://arena.core-aix.org/docs/deployment/docker/).
+For a production single-VPS deployment with Traefik and automatic TLS, see [Docker Compose Deployment](https://docs.arena.core-aix.org/deployment/docker/).
 
 ### Pre-built images (Docker Hub)
 
@@ -118,7 +118,7 @@ wired to pull from these repos — just set `IMAGE_TAG` in `deploy/.env`).
 
 ### Kubernetes
 
-For production deployments with Kubernetes and Helm, see [Kubernetes Deployment](https://arena.core-aix.org/docs/deployment/kubernetes/).
+For production deployments with Kubernetes and Helm, see [Kubernetes Deployment](https://docs.arena.core-aix.org/deployment/kubernetes/).
 
 ## Contributing
 
@@ -126,7 +126,7 @@ Contributions are welcome — bug fixes, new games, docs improvements, and featu
 [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md) for the contribution guidelines, which cover
 platform contributions (code style, PR process) and game contributions (adding a new game theory
 scenario) separately. For more detail on either local dev track below, see the
-[Contributing docs](https://arena.core-aix.org/docs/contributing/).
+[Contributing docs](https://docs.arena.core-aix.org/contributing/).
 
 ### Local Development
 
@@ -166,7 +166,7 @@ uv sync && (cd frontend && npm install)
 ./scripts/dev-tunnel.sh start       # forward backend/MCP/docs/Postgres/Redis to the host
 ```
 
-See [Minikube Dev Setup](https://arena.core-aix.org/docs/contributing/minikube/) for the full port
+See [Minikube Dev Setup](https://docs.arena.core-aix.org/contributing/minikube/) for the full port
 table, day-to-day commands, and teardown steps.
 
 ### Run Tests
