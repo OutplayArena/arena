@@ -32,12 +32,26 @@ jobs:
           python-version: "3.12"
 
       - name: Install build tooling
-        run: python -m pip install --upgrade pip build
+        run: python -m pip install --upgrade pip build hatchling hatch-vcs
+
+      - name: Pin a collision-free dev version
+        # hatch-vcs derives the version purely from commit-distance since
+        # the last tag (local_scheme = "no-local-version" in pyproject.toml,
+        # chosen because TestPyPI/PyPI reject uploads carrying a local
+        # version segment like "+g1a2b3c4"). That means any two branches or
+        # concurrent runs at the same distance-from-tag compute an
+        # identical version and collide on TestPyPI's immutable file names
+        # ("400 File already exists"). This only affects this *test*
+        # workflow — real releases go through pypi.yml, which is keyed off
+        # an actual git tag and never sets this override — so it's safe to
+        # replace the dev-count with this run's globally-unique run_id,
+        # guaranteeing every push/PR build gets its own version.
+        run: |
+          BASE=$(python -m hatchling version)
+          CORE=$(python -c "import re,sys; print(re.sub(r'\.dev\d+$', '', sys.argv[1]))" "$BASE")
+          echo "SETUPTOOLS_SCM_PRETEND_VERSION=${CORE}.dev${{ github.run_id }}" >> "$GITHUB_ENV"
 
       - name: Build sdist + wheel
-        # The version is derived from the nearest v*.*.* git tag via
-        # hatch-vcs. PR builds get a dev-version suffix like
-        # ``0.1.1.dev5+g1a2b3c4`` so each commit is uniquely identifiable.
         run: python -m build
 
       - name: Verify built artefacts
@@ -47,6 +61,15 @@ jobs:
           python -m twine check dist/*
 
       - name: Publish to TestPyPI
+        # PRs from a fork never receive repo/environment secrets or an
+        # OIDC token (GitHub withholds both from fork-triggered
+        # `pull_request` runs as a security measure, even with
+        # `id-token: write` set), so this step would otherwise fail every
+        # time on an external contributor's PR ("Trusted publishing
+        # exchange failure"). Skip it there instead of failing — the build
+        # + twine-check steps above already validate the package for
+        # everyone; only the actual upload needs same-repo trust.
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           # The build step produced artefacts in `agent-sdk/dist/`. The
@@ -57,3 +80,8 @@ jobs:
           packages-dir: agent-sdk/dist
           repository-url: https://test.pypi.org/legacy/
           password: ${{ secrets.PYPI_TESTPYPI_TOKEN }}
+
+      - name: Note skipped publish (fork PR)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          echo "::notice::Skipping TestPyPI publish — this PR is from a fork (${{ github.event.pull_request.head.repo.full_name }}), which GitHub never grants secrets or OIDC tokens for pull_request-triggered runs. The build + twine-check steps above already validated the package."
