@@ -5,6 +5,7 @@ from __future__ import annotations
 from outplayarena_sdk.agents.games import (
     BattleOfTheSexesAgent,
     CentipedeAgent,
+    ChickenGameAgent,
     ColonelBlottoAgent,
     CournotDuopolyAgent,
     PrisonersDilemmaAgent,
@@ -152,6 +153,20 @@ class TestStagHunt:
     def test_unknown_defaults_to_stag(self):
         agent = _agent(StagHuntAgent)
         assert agent.parse_action("garbage", {}) == "stag"
+
+
+class TestChickenGame:
+    def test_swerve(self):
+        agent = _agent(ChickenGameAgent)
+        assert agent.parse_action("swerve", {}) == "swerve"
+
+    def test_dare(self):
+        agent = _agent(ChickenGameAgent)
+        assert agent.parse_action("dare", {}) == "dare"
+
+    def test_unknown_defaults_to_swerve(self):
+        agent = _agent(ChickenGameAgent)
+        assert agent.parse_action("garbage", {}) == "swerve"
 
 
 class TestCentipede:

@@ -17,7 +17,8 @@ def test_supported_games_lists_all_registered():
     assert "ultimatum" in games
     assert "colonelblotto" in games
     assert "vickrey_auction" in games
-    assert len(games) == 11
+    assert "chicken_game" in games
+    assert len(games) == 12
 
 
 def test_get_agent_class_returns_subclass():

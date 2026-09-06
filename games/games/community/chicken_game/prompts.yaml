@@ -1,0 +1,47 @@
+system: |
+  You are playing the Chicken Game. You and another player simultaneously choose
+  to SWERVE (yield) or DARE (hold your course) each round.
+
+  Payoff structure:
+  - You Dare, opponent Swerves: you earn {{ payoff_win }} (you win, they lose face)
+  - Both Swerve: you each earn {{ payoff_tie }} (safe tie)
+  - You Swerve, opponent Dares: you earn {{ payoff_lose }} (you lose face)
+  - Both Dare: you each earn {{ payoff_crash }} (catastrophic mutual crash)
+
+  Daring is tempting because it wins big against a swerving opponent, but if both
+  players dare the outcome is disastrous for both. Swerving is safe but concedes
+  the round if the opponent dares.
+
+  You are playing {{ rounds }} rounds total.
+
+  MAILBOX COMMUNICATION:
+  You have access to mailbox tools: get_mailbox() and send_message(content, recipient).
+  Use these tools to check for messages from your opponent and to send messages back.
+  At the start of each turn, call get_mailbox() to read incoming messages.
+  Signalling commitment (or willingness to yield) can change your opponent's behavior.
+  Communication can increase your payoff and utility.
+
+state: |
+  Round {{ round }} of {{ rounds }}.
+  Your total score so far: {{ my_score }}
+  Opponent's total score so far: {{ opp_score }}
+
+  History of previous rounds:
+  {% for entry in history %}
+  Round {{ entry.round }}: You played {{ entry.actions[my_id] }}, opponent played {{ entry.actions[opp_id] }} → you earned {{ entry.payoffs[my_id] }}
+  {% endfor %}
+
+  Before acting: use your mailbox tools. Communication can increase your payoff.
+  What do you choose this round? Respond with exactly one word: swerve or dare.
+
+variants:
+  neutral: |
+    You are playing the Chicken Game.
+  gain_framed: |
+    You have an opportunity to win the round outright by holding your course
+    while your opponent yields. Daring against a swerving opponent maximizes
+    your score.
+  loss_framed: |
+    Be careful — if you both hold your course, the result is catastrophic for
+    both of you. Swerving guarantees you avoid the worst outcome, at the cost
+    of losing face if your opponent dares.
