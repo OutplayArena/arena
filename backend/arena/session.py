@@ -221,8 +221,42 @@ class GameSession:
         agent_names = {role: (agents.get(role) or role) for role in role_ids}
 
         moves = []
+        # Cumulative total_scores from the previous hand, for games (Texas
+        # Hold'em) that record a running total rather than a per-round delta.
+        prev_total_scores: dict[str, float] = {role: 0.0 for role in role_ids}
         for entry in history:
-            round_num = entry.get("round", 0)
+            round_num = entry.get("round", entry.get("hand", 0))
+
+            if "street_actions" in entry:
+                # Multi-street-per-round games (Texas Hold'em) don't record a
+                # single actions/scores dict per round: they record a list of
+                # per-street actions and a *cumulative* total_scores (#24).
+                # Derive one representative action per player (their last
+                # recorded action this hand) and a payoff equal to this hand's
+                # total_scores delta.
+                last_action: dict[str, Any] = {}
+                for act in entry.get("street_actions", []):
+                    p = act.get("player")
+                    if p is not None:
+                        last_action[p] = act.get("action")
+                total_scores = entry.get("total_scores") or {}
+                for role in role_ids:
+                    action = last_action.get(role)
+                    if action is None:
+                        continue
+                    cur_total = float(total_scores.get(role, prev_total_scores[role]))
+                    moves.append(Move(
+                        agent_id=agent_names[role],
+                        round_number=round_num,
+                        action=action,
+                        payoff=cur_total - prev_total_scores[role],
+                    ))
+                prev_total_scores = {
+                    role: float(total_scores.get(role, prev_total_scores[role]))
+                    for role in role_ids
+                }
+                continue
+
             actions = entry.get("allocations") or entry.get("actions", {})
             scores = entry.get("payoffs") or entry.get("scores", {})
 

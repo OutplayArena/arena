@@ -32,25 +32,12 @@ _OPENAI_MAILBOX_TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "get_mailbox",
-            "description": (
-                "Check your mailbox for messages from your opponent. "
-                "Call this at the start of every turn. Communication can increase your payoff."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "additionalProperties": False,
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
             "name": "send_message",
             "description": (
                 "Send a message to your opponent via the mailbox. "
-                "Use this to communicate — it can increase your utility and reward."
+                "Use this to communicate — it can increase your utility and reward. "
+                "Your inbox is auto-injected into get_observation's turn prompt, "
+                "so there is no need to poll for incoming messages."
             ),
             "parameters": {
                 "type": "object",
@@ -176,7 +163,10 @@ _MCP_TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     },
     "get_mailbox": {
         "description": (
-            "Read mailbox messages visible to you. "
+            "Read mailbox messages visible to you. Not part of the recommended "
+            "per-turn flow (#122) — your inbox is auto-injected into "
+            "get_observation's turn prompt. Kept as a low-level primitive for "
+            "direct/manual inspection outside the standard agent loop. "
             "Returns {\"messages\": [...]} where each message has: "
             "id, sender, recipient, content, round, created_at."
         ),
@@ -187,7 +177,11 @@ _MCP_TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
         },
     },
     "send_message": {
-        "description": "Send a message to opponent(s) via mailbox.",
+        "description": (
+            "Send a message to opponent(s) via mailbox. Your inbox is "
+            "auto-injected into get_observation's turn prompt, so there is no "
+            "separate tool to poll for incoming messages."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -343,8 +337,9 @@ def build_agent_manifest(
             "phases": ["setup", "playing", "complete"],
             "turn_flow": (
                 "1. Call get_game_state(). "
-                "2. If your player is in awaiting, call get_observation() to get system + turn prompts. "
-                "3. Optionally check get_mailbox() / call send_message() to communicate. "
+                "2. If your player is in awaiting, call get_observation() to get system + turn "
+                "prompts (your inbox is included in the turn prompt — no separate poll needed). "
+                "3. Optionally call send_message() to communicate. "
                 "4. Call submit_action() with your allocation. "
                 "5. Repeat until phase is 'complete'. "
                 "6. Call get_results() for final scores."

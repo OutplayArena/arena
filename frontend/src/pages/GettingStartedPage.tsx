@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 
 const GAMES = [
   { slug: "prisonersdilemma", name: "Prisoner's Dilemma" },
@@ -58,6 +59,8 @@ function Step({ number, title, children, docsHref, docsLabel }: StepProps) {
 }
 
 export function GettingStartedPage() {
+  const { user } = useAuth();
+
   return (
     <div className="flex-1 flex flex-col">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
@@ -128,9 +131,17 @@ export function GettingStartedPage() {
             <span className="text-xl mt-0.5">🔑</span>
             <div>
               <p className="text-sm text-ink mb-1">
-                <Link to="/login" className="text-accent font-medium hover:underline">
-                  Create a free account
-                </Link>{" "}
+                {user ? (
+                  <Link to="/settings" className="text-accent font-medium hover:underline">
+                    Go to Settings
+                  </Link>
+                ) : (
+                  <>
+                    <Link to="/login" className="text-accent font-medium hover:underline">
+                      Create a free account
+                    </Link>{" "}
+                  </>
+                )}
                 and navigate to <span className="font-mono text-xs bg-surface-container px-1.5 py-0.5 rounded">Settings → API Keys</span> to generate your platform key.
               </p>
               <p className="text-sm text-muted">
@@ -196,15 +207,16 @@ export function GettingStartedPage() {
             Ready to benchmark your agents?
           </h2>
           <p className="text-muted mb-8 max-w-sm mx-auto text-sm">
-            Create a free account to get your API key and start running
-            experiments.
+            {user
+              ? "Head to your dashboard to manage agents, create experiments, and view results."
+              : "Create a free account to get your API key and start running experiments."}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
-              to="/login"
+              to={user ? "/dashboard" : "/login"}
               className="inline-flex items-center justify-center h-10 px-6 rounded-[var(--radius-button)] bg-accent text-white font-semibold text-sm transition-all duration-150 hover:opacity-90 hover:-translate-y-px active:translate-y-0"
             >
-              Create Account
+              {user ? "Go to Dashboard" : "Create Account"}
             </Link>
             <Link
               to="/docs/getting-started/"

@@ -6,12 +6,11 @@ system: >
   with the best five-card poker hand at showdown wins the pot.
   Each player starts with 100 chips; ante is 1 per hand; bet size is 2.
 
-  MAILBOX COMMUNICATION:
-  You have access to mailbox tools: get_mailbox() and send_message(content, recipient).
-  Use these tools to check for messages from your opponent and to send messages back.
-  At the start of each turn, call get_mailbox() to read incoming messages.
-  Consider whether sending a message could benefit your strategy.
-  Communication can increase your payoff and utility.
+  COMMUNICATION:
+  Your inbox (messages from your opponent) is included in the turn prompt below —
+  no need to poll for it. Use send_message(content, recipient) if you want to
+  reply or signal; it can increase your payoff and utility, but costs part of
+  your per-turn tool budget.
 
 turn: >
   Round {{ round }} of {{ round_total }} — Hand {{ hand_number }}.
@@ -24,7 +23,7 @@ turn: >
   To call: {{ chips[player_id] - chips[opp_id] if chips[player_id] > chips[opp_id] else 0 }}.
 
   Actions this street: {{ street_actions }}.
-  Before acting: use your mailbox tools. Communication can increase your payoff.
+  {% if inbox %}Inbox: {{ inbox }}{% endif %}
   Respond with exactly one word: fold, check, call, or raise.
 
 action_format:

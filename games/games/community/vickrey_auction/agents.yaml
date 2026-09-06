@@ -1,0 +1,28 @@
+agents:
+  - id: truthful
+    name: Truthful Bidder
+    description: Always bids exactly its private value — the weakly dominant strategy.
+    class: TruthfulBidder
+  - id: shader
+    name: Shader
+    description: Underbids relative to its private value (bids 80% of value).
+    class: Shader
+  - id: overbidder
+    name: Overbidder
+    description: Overbids relative to its private value (bids 120% of value), risking the winner's curse.
+    class: Overbidder
+  - id: always_max
+    name: Always Max
+    description: Always bids the maximum allowed bid regardless of value.
+    class: AlwaysMaxBidder
+  - id: always_zero
+    name: Always Zero
+    description: Never bids — never wins, never pays.
+    class: AlwaysZeroBidder
+  - id: random
+    name: Random
+    description: Bids uniformly at random up to the bid ceiling, ignoring its value.
+    class: RandomBidder
+  - id: interactive
+    label: Interactive (Human)
+    description: "You play directly via the Live View panel."

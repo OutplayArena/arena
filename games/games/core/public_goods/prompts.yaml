@@ -7,12 +7,11 @@ system: |
 
   You are playing {{ rounds }} rounds total.
 
-  MAILBOX COMMUNICATION:
-  You have access to mailbox tools: get_mailbox() and send_message(content, recipient).
-  Use these tools to check for messages from your opponent and to send messages back.
-  At the start of each turn, call get_mailbox() to read incoming messages.
-  Consider whether sending a message could benefit your strategy.
-  Communication can increase your payoff and utility.
+  COMMUNICATION:
+  Your inbox (messages from your opponent) is included in the turn prompt below —
+  no need to poll for it. Use send_message(content, recipient) if you want to
+  reply or signal; it can increase your payoff and utility, but costs part of
+  your per-turn tool budget.
 
 state: |
   Round {{ round }} of {{ rounds }}.
@@ -24,7 +23,7 @@ state: |
   {% endfor %}
 
   You have {{ endowment }} tokens this round.
-  Before acting: use your mailbox tools. Communication can increase your payoff.
+  {% if inbox %}Inbox: {{ inbox }}{% endif %}
   How many do you contribute to the shared pool?
   Respond with a number between 0 and {{ endowment }}.
 

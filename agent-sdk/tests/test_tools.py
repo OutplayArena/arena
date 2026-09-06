@@ -4,7 +4,6 @@ from __future__ import annotations
 from outplayarena_sdk.tools import (
     build_backend_tools,
     get_game_state_tool,
-    get_mailbox_tool,
     get_observation_tool,
     send_message_tool,
     submit_action_tool,
@@ -26,10 +25,6 @@ class TestToolSchemas:
         assert tool["function"]["name"] == "get_game_state"
         assert tool["function"]["parameters"]["properties"] == {}
 
-    def test_get_mailbox(self):
-        tool = get_mailbox_tool()
-        assert tool["function"]["name"] == "get_mailbox"
-
     def test_send_message(self):
         tool = send_message_tool()
         assert tool["function"]["name"] == "send_message"
@@ -43,13 +38,12 @@ class TestToolSchemas:
         assert "list of N integers summing to TOTAL" in tool["function"]["description"]
         assert "allocation" in tool["function"]["parameters"]["required"]
 
-    def test_build_backend_tools_returns_five(self):
+    def test_build_backend_tools_returns_four(self):
         tools = build_backend_tools("anything")
         names = [t["function"]["name"] for t in tools]
         assert names == [
             "get_observation",
             "get_game_state",
-            "get_mailbox",
             "send_message",
             "submit_action",
         ]

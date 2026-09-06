@@ -14,12 +14,12 @@ name: Release
 # live in that env, not as repo-wide secrets, so they're never in scope
 # for any other workflow.
 #
-# On a tag push (not workflow_dispatch), the `deploy` job also rolls
-# arena.core-aix.org's production Swarm stack to the new images over SSH
-# (see deploy/scripts/swarm-deploy.sh) — zero-downtime via Swarm's
-# healthcheck-gated rolling update. SSH secrets (DEPLOY_HOST, DEPLOY_USER,
-# DEPLOY_SSH_KEY) live in the separate `vps-prod-deploy` environment,
-# same tag-only branch policy as `docker-hub-ci`.
+# There used to be a `deploy` job here that rolled arena.core-aix.org's
+# production Swarm stack over SSH after every tag push. That VPS has been
+# decommissioned, so the job was removed — this workflow now only builds
+# images and cuts the GitHub release. The `vps-prod-deploy` environment and
+# its DEPLOY_HOST/DEPLOY_USER/DEPLOY_SSH_KEY secrets are unused and can be
+# deleted from the repo settings.
 
 on:
   push:
@@ -149,31 +149,3 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') }}
-
-  deploy:
-    name: Deploy to production
-    needs: build
-    runs-on: ubuntu-latest
-    # Only an actual tag push rolls production — never workflow_dispatch
-    # (manual/ad-hoc rebuilds, e.g. re-publishing a tag or testing
-    # publish_latest, shouldn't silently push to prod).
-    if: startsWith(github.ref, 'refs/tags/v')
-    environment: vps-prod-deploy
-    concurrency:
-      group: production-deploy
-      cancel-in-progress: false
-    steps:
-      - name: Roll arena.core-aix.org to ${{ github.ref_name }}
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script_stop: true
-          # Invoke via `bash`, not a direct path, so this never depends on
-          # the executable bit surviving a git checkout (core.fileMode is
-          # disabled in local dev clones for WSL reasons — see
-          # deploy/scripts/ commit history — so it's not safe to assume +x
-          # round-trips cleanly into every checkout this could ever run
-          # against).
-          script: bash /opt/arena/deploy/scripts/swarm-deploy.sh ${{ github.ref_name }}

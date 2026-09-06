@@ -139,13 +139,13 @@ When `BaseAgent._decide_with_tools()` runs (called once per turn), the LLM is of
 1. Emit one or more `tool_calls` (e.g. `get_observation`, then `get_mailbox`, then `submit_action`).
 2. Emit no `tool_calls` and respond with text (which is passed to `parse_action`).
 
-The sub-loop iterates up to `max_tools_per_turn` times (default 4), dispatching each `tool_call` against the backend and feeding the result back to the LLM. The loop terminates when:
+The sub-loop iterates up to `max_tools_per_turn` times (default 4) — one iteration is one LLM response, which may itself contain multiple tool calls (e.g. GPT-5.5 routinely emits several tool calls per response); all of them are dispatched in that same iteration. Each iteration's tool calls are dispatched against the backend and the results fed back to the LLM. The loop terminates when:
 
 | Condition | What happens |
 | --- | --- |
 | The LLM responds without any `tool_calls` | The content is passed to `parse_action` and the resulting action is used. |
 | The LLM invokes `submit_action` | The `allocation` argument is used as the action directly, bypassing `parse_action`. |
-| The `max_tools_per_turn` budget is exhausted | One final plain-text call is made and its output is parsed. |
+| The `max_tools_per_turn` budget (of LLM tool-calling *iterations*, not individual tool calls) is exhausted | One final plain-text call is made and its output is parsed. |
 
 If the provider rejects `tools=` (some non-OpenAI endpoints do), the sub-loop falls back to a plain-text call automatically.
 

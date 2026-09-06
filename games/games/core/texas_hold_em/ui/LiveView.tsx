@@ -26,6 +26,22 @@ const STREET: Record<string, string> = {
   river: "River",
 };
 
+// Supports up to 6 players (#41). A/B use the shared agent-a/agent-b theme
+// vars; C-F get fixed hex colors (matching public_goods' seat palette) since
+// there's no equivalent theme var for seats beyond the original two.
+const SEAT_COLORS: Record<string, string> = {
+  A: "var(--color-agent-a)",
+  B: "var(--color-agent-b)",
+  C: "#8b5cf6",
+  D: "#f59e0b",
+  E: "#f43f5e",
+  F: "#0ea5e9",
+};
+
+function seatColor(pid: string): string {
+  return SEAT_COLORS[pid] ?? "var(--color-line)";
+}
+
 function parseCard(card: string): { rank: string; suit: SuitKey } | null {
   if (!card || card === "??") return null;
   const suit = card.slice(-1).toLowerCase();
@@ -134,15 +150,6 @@ function Chair(p: { cx: number; cy: number; label: string }) {
   );
 }
 
-function EmptySeat(p: { cx: number; cy: number }) {
-  return (
-    <g>
-      <circle cx={p.cx} cy={p.cy} r={10} fill="none" stroke="var(--color-line)" strokeWidth={1} />
-      <circle cx={p.cx} cy={p.cy} r={7} fill="var(--color-surface-container)" opacity={0.3} />
-    </g>
-  );
-}
-
 /* ---------- community cards ---------- */
 
 function CommunityCards(p: { cards: string[]; cx: number; cy: number }) {
@@ -239,13 +246,21 @@ export default function TexasHoldEmLiveView(_props: LiveViewProps) {
   const data = raw ?? replayData ?? {};
 
   const holeCardsObj = obj(data.hole_cards);
-  const holeA = arr(holeCardsObj.A).filter((c): c is string => typeof c === "string");
-  const holeB = arr(holeCardsObj.B).filter((c): c is string => typeof c === "string");
-  const community = arr(data.community_cards).filter((c): c is string => typeof c === "string");
   const chipsLive = obj(data.chips);
   const chipsAfter = obj(data.chips_after);
-  const chipsA = num(chipsLive.A) || num(chipsAfter.A) || 100;
-  const chipsB = num(chipsLive.B) || num(chipsAfter.B) || 100;
+  const playerIds = arr(data.player_ids).filter((p): p is string => typeof p === "string").length
+    ? (arr(data.player_ids) as string[])
+    : Object.keys(holeCardsObj).length
+      ? Object.keys(holeCardsObj)
+      : ["A", "B"];
+  const foldedSet = new Set(arr(data.folded).filter((p): p is string => typeof p === "string"));
+  const holeByPlayer: Record<string, string[]> = {};
+  const chipsByPlayer: Record<string, number> = {};
+  for (const pid of playerIds) {
+    holeByPlayer[pid] = arr(holeCardsObj[pid]).filter((c): c is string => typeof c === "string");
+    chipsByPlayer[pid] = num(chipsLive[pid]) || num(chipsAfter[pid]) || 100;
+  }
+  const community = arr(data.community_cards).filter((c): c is string => typeof c === "string");
   const pot = num(data.pot);
   const street = str(data.street);
   const currentPlayer = str(data.current_player);
@@ -260,15 +275,8 @@ export default function TexasHoldEmLiveView(_props: LiveViewProps) {
   if (!hasMatch) {
     return (
       <div className="flex flex-col h-full bg-surface-soft">
-        <div className="shrink-0 flex items-center justify-between gap-4 px-5 py-3 border-b border-line bg-surface/80 backdrop-blur-sm">
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-full bg-agent-a/15 border border-agent-a/40 flex items-center justify-center text-[11px] font-black text-agent-a">A</span>
-            <span className="text-xs font-extrabold text-muted uppercase tracking-wider">Player A</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-extrabold text-muted uppercase tracking-wider">Player B</span>
-            <span className="w-8 h-8 rounded-full bg-agent-b/15 border border-agent-b/40 flex items-center justify-center text-[11px] font-black text-agent-b">B</span>
-          </div>
+        <div className="shrink-0 flex items-center justify-center gap-4 px-5 py-3 border-b border-line bg-surface/80 backdrop-blur-sm">
+          <span className="text-xs font-extrabold text-muted uppercase tracking-wider">Texas Hold&apos;em</span>
         </div>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center px-6">
@@ -319,22 +327,24 @@ export default function TexasHoldEmLiveView(_props: LiveViewProps) {
     y: TCY - SRY * Math.sin(t),
   });
 
-  const seats = [
-    { ...seatAngle(Math.PI), label: "", active: false, player: "" },
-    { ...seatAngle(3 * Math.PI / 4), label: match.agent_a, active: true, player: "A" },
-    { ...seatAngle(Math.PI / 2), label: "", active: false, player: "" },
-    { ...seatAngle(Math.PI / 4), label: match.agent_b, active: true, player: "B" },
-    { ...seatAngle(0), label: "", active: false, player: "" },
-  ];
+  // Seats are spread across the lower arc (0 < angle < PI), matching the
+  // original two-seat layout (3PI/4, PI/4) exactly for the heads-up case and
+  // generalizing evenly for 3-6 players (#41).
+  const n = playerIds.length;
+  const angles = n === 2
+    ? [3 * Math.PI / 4, Math.PI / 4]
+    : Array.from({ length: n }, (_, i) => Math.PI - (Math.PI * (i + 1)) / (n + 1));
 
-  const seatA = seats[1];
-  const seatB = seats[3];
+  const seats = playerIds.map((pid, i) => ({
+    ...seatAngle(angles[i]),
+    label: match.agents?.[pid] ?? pid,
+    player: pid,
+  }));
+  const seatByPlayer: Record<string, { x: number; y: number }> = {};
+  for (const s of seats) seatByPlayer[s.player] = s;
 
   const dealerX = TCX;
   const dealerY = TCY + 78;
-
-  const holeY = TCY - 45;
-  const chipColor = { A: "var(--color-agent-a)", B: "var(--color-agent-b)" };
 
   return (
     <div className="flex flex-col h-full bg-surface-soft">
@@ -385,7 +395,7 @@ export default function TexasHoldEmLiveView(_props: LiveViewProps) {
           )}
           {isActive && currentPlayer && (
             <span className="text-[8px] text-muted truncate">
-              {currentPlayer === "A" ? match.agent_a : match.agent_b}&apos;s turn
+              {match.agents?.[currentPlayer] ?? currentPlayer}&apos;s turn
             </span>
           )}
           {matchComplete && (
@@ -416,13 +426,9 @@ export default function TexasHoldEmLiveView(_props: LiveViewProps) {
           <ellipse cx={TCX} cy={TCY} rx={IRX - 4} ry={IRY - 4} fill="#229954" />
 
           {/* chairs */}
-          {seats.map((s) =>
-            s.active ? (
-              <Chair key={s.player} cx={s.x} cy={s.y} label={s.label} />
-            ) : (
-              <EmptySeat key={`e${s.x}`} cx={s.x} cy={s.y} />
-            ),
-          )}
+          {seats.map((s) => (
+            <Chair key={s.player} cx={s.x} cy={s.y} label={s.label} />
+          ))}
 
           {/* dealer */}
           <g>
@@ -441,35 +447,33 @@ export default function TexasHoldEmLiveView(_props: LiveViewProps) {
             </text>
           </g>
 
-          {/* player A hole cards + chips */}
-          {holeA.length > 0 && (
-            <g>
-              {holeA.map((card, i) => (
-                <CardView key={`a${i}`} card={card} cx={seatA.x + (i - 0.5) * 22} cy={holeY} />
-              ))}
-              <ChipStack amt={chipsA} cx={seatA.x + 34} cy={holeY} colorVar={chipColor.A} />
-              {isActive && currentPlayer === "A" && (
-                <circle cx={seatA.x} cy={holeY - 16} r={2.5} fill="var(--color-agent-a)">
-                  <animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite" />
-                </circle>
-              )}
-            </g>
-          )}
-
-          {/* player B hole cards + chips */}
-          {holeB.length > 0 && (
-            <g>
-              {holeB.map((card, i) => (
-                <CardView key={`b${i}`} card={card} cx={seatB.x + (i - 0.5) * 22} cy={holeY} />
-              ))}
-              <ChipStack amt={chipsB} cx={seatB.x - 34} cy={holeY} colorVar={chipColor.B} />
-              {isActive && currentPlayer === "B" && (
-                <circle cx={seatB.x} cy={holeY - 16} r={2.5} fill="var(--color-agent-b)">
-                  <animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite" />
-                </circle>
-              )}
-            </g>
-          )}
+          {/* per-player hole cards + chips, positioned along the line from
+              table center to each seat so it generalizes to 2-6 players */}
+          {playerIds.map((pid) => {
+            const seat = seatByPlayer[pid];
+            const hole = holeByPlayer[pid] ?? [];
+            if (!seat || hole.length === 0) return null;
+            const dx = seat.x - TCX;
+            const dy = seat.y - TCY;
+            const cardsCx = TCX + dx * 0.55;
+            const cardsCy = TCY + dy * 0.55;
+            const chipCx = TCX + dx * 0.8;
+            const chipCy = TCY + dy * 0.8;
+            const color = seatColor(pid);
+            return (
+              <g key={pid} opacity={foldedSet.has(pid) ? 0.4 : 1}>
+                {hole.map((card, i) => (
+                  <CardView key={`${pid}${i}`} card={card} cx={cardsCx + (i - 0.5) * 22} cy={cardsCy} />
+                ))}
+                <ChipStack amt={chipsByPlayer[pid] ?? 0} cx={chipCx} cy={chipCy} colorVar={color} />
+                {isActive && currentPlayer === pid && (
+                  <circle cx={seat.x} cy={cardsCy - 16} r={2.5} fill={color}>
+                    <animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite" />
+                  </circle>
+                )}
+              </g>
+            );
+          })}
 
           {/* community cards */}
           <CommunityCards cards={community} cx={TCX} cy={TCY} />
@@ -506,8 +510,8 @@ export default function TexasHoldEmLiveView(_props: LiveViewProps) {
                   <span className="flex-1 h-px bg-line/40" />
                 </div>,
                 ...acts.map((a, i) => {
-                  const pLabel = a.player === "A" ? match.agent_a : match.agent_b;
-                  const pColor = a.player === "A" ? "var(--color-agent-a)" : "var(--color-agent-b)";
+                  const pLabel = match.agents?.[a.player] ?? a.player;
+                  const pColor = seatColor(a.player);
                   const actionLabel = a.action === "fold" ? "folded" : a.action;
                   return (
                     <div key={`a-${s}-${i}`} className="flex items-center gap-1 pl-1.5">
@@ -529,15 +533,16 @@ export default function TexasHoldEmLiveView(_props: LiveViewProps) {
             const potAmt = num(data.pot || data.final_hand_pot);
             const potStr = potAmt ? `$${potAmt}` : "";
             const isTie = winner === "Tie" || winner === "";
-            const wLabel = isTie ? "Draw" : (winner === "A" ? match.agent_a : match.agent_b);
-            const wColor = isTie ? "var(--color-gold)" : (winner === "A" ? "var(--color-agent-a)" : "var(--color-agent-b)");
+            const wLabel = isTie ? "Draw" : (match.agents?.[winner] ?? winner);
+            const wColor = isTie ? "var(--color-gold)" : seatColor(winner);
             let detail = "";
-            if (result.outcome === "fold") {
-              const loser = str(result.winner) === "A" ? match.agent_b : match.agent_a;
-              detail = `${loser} folded`;
+            if (result.outcome === "fold" || result.outcome === "forfeit") {
+              const folder = playerIds.find((p) => p !== winner && foldedSet.has(p));
+              const folderLabel = folder ? (match.agents?.[folder] ?? folder) : "opponent";
+              detail = `${folderLabel} folded`;
             } else if (result.outcome === "showdown") {
-              const handR = result.hand as Record<string, unknown> | undefined;
-              const handName = handR ? str(handR.hand).replace(/_/g, " ") : "";
+              const hands = obj(result.hands) as Record<string, Record<string, unknown>>;
+              const handName = winner && hands[winner] ? str(hands[winner].hand).replace(/_/g, " ") : "";
               if (handName) detail = handName;
               if (isTie) detail = "Tie";
             }
@@ -560,8 +565,8 @@ export default function TexasHoldEmLiveView(_props: LiveViewProps) {
               const res = obj(rawH.result) as Record<string, unknown> | null;
               const w = str(res?.winner ?? "");
               const isTie = w === "Tie" || w === "";
-              const color = isTie ? "var(--color-gold)" : (w === "A" ? "var(--color-agent-a)" : "var(--color-agent-b)");
-              const label = isTie ? "=" : (w === "A" ? match.agent_a : match.agent_b);
+              const color = isTie ? "var(--color-gold)" : seatColor(w);
+              const label = isTie ? "=" : (match.agents?.[w] ?? w);
               const isActive = i === (viewIdx ?? state.activeRoundIndex);
               return (
                 <button

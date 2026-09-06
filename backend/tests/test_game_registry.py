@@ -109,7 +109,9 @@ def test_build_agent_manifest_colonelblotto():
     assert "submit_action" in tool_names
     assert "get_game_skill" in tool_names
     assert "get_agent_manifest" in tool_names
-    assert len(manifest["openai_tools"]) == 3
+    # submit_action + send_message (get_mailbox dropped from the recommended
+    # per-turn set (#122): inbox is auto-injected into get_observation).
+    assert len(manifest["openai_tools"]) == 2
     assert "action_format" in manifest
     assert "game_lifecycle" in manifest
     assert "skill" in manifest
@@ -122,7 +124,7 @@ def test_build_agent_manifest_pd():
     assert manifest["game"] == "prisonersdilemma"
     assert manifest["game_metadata"]["name"] == "Prisoner's Dilemma"
     assert manifest["skill"]["sections"]["strategy_notes"] != ""
-    assert len(manifest["openai_tools"]) == 3
+    assert len(manifest["openai_tools"]) == 2
 
 
 def test_registry_builds_blotto_config_and_game_from_catalog():
@@ -350,6 +352,32 @@ def test_render_observation_with_unknown_variant_falls_back_to_neutral():
         "colonelblotto", state, config, "A", "unknown_variant"
     )
     assert result["variant"] == "unknown_variant"
+
+
+def test_build_observation_context_includes_exploitability_warning_when_predictable():
+    """A Blotto opponent that has been highly predictable for 3+ rounds surfaces
+    an exploitability_warning in the observation context (issue #135)."""
+    registry = GameRegistry()
+    state = {
+        "total_scores": {"A": 0, "B": 0},
+        "history": [
+            {"allocations": {"A": [10, 0, 0], "B": [3, 3, 4]}},
+            {"allocations": {"A": [0, 10, 0], "B": [3, 3, 4]}},
+            {"allocations": {"A": [0, 0, 10], "B": [3, 3, 4]}},
+        ],
+    }
+    ctx = registry._build_observation_context("colonelblotto", state, {}, "A")
+    assert "B" in ctx["exploitability_warning"]
+
+
+def test_build_observation_context_omits_exploitability_warning_when_absent():
+    registry = GameRegistry()
+    state = {
+        "total_scores": {"A": 0, "B": 0},
+        "history": [{"allocations": {"A": [10, 0, 0], "B": [3, 3, 4]}}],
+    }
+    ctx = registry._build_observation_context("colonelblotto", state, {}, "A")
+    assert "exploitability_warning" not in ctx
 
 
 def test_build_observation_context_includes_pot_fields():

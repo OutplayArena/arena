@@ -67,6 +67,34 @@ def test_compute_fold_count():
     assert result["fold_count"]["B"] >= 1
 
 
+def test_equity_metrics_absent_when_equity_not_computed():
+    history, scores = _run_game([[("A", "fold")]])
+    result = TexasHoldEmMetrics().compute(history, scores)
+    assert "conservativeness_index" not in result
+    assert "equity_realization" not in result
+
+
+def test_equity_metrics_present_and_sane_when_equity_computed():
+    cfg = config_from_dict({
+        "game": "texas_hold_em", "rounds": 1, "seed": 1, "compute_hand_equity": True,
+    })
+    game = TexasHoldEmGame.from_config(cfg)
+    state = game.initial_state()
+    state = game.apply_action(state, "A", "fold")
+    result = TexasHoldEmMetrics().compute(state.history, state.total_scores)
+
+    # A folded this (its only) hand -> conservativeness_index is defined as
+    # the preflop equity of that folded hand.
+    equity = state.history[0]["preflop_equity"]
+    assert result["conservativeness_index"]["A"] == pytest.approx(equity["A"])
+    # B never folded -> undefined (None), not 0.
+    assert result["conservativeness_index"]["B"] is None
+    # B won the whole pot (A folded) with 0 preflop investment beyond equity:
+    # equity_realization = actual_share(1.0) - preflop_equity.
+    assert result["equity_realization"]["B"] == pytest.approx(1.0 - equity["B"])
+    assert result["equity_realization"]["A"] == pytest.approx(0.0 - equity["A"])
+
+
 def test_compute_showdown_count():
     history, scores = _run_game([
         [("A", "check"), ("B", "check"),

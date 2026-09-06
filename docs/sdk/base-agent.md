@@ -57,7 +57,7 @@ BaseAgent(
 | `jwt_secret` | Secret used to validate the session key. Defaults to the `JWT_SECRET` env var, then `dev-secret-change-me`. |
 | `poll_interval` | Seconds to sleep between state polls when it is not the agent's turn. |
 | `max_steps` | Hard cap on the number of poll iterations. |
-| `max_tools_per_turn` | Maximum OpenAI function-calling tool invocations per turn. |
+| `max_tools_per_turn` | Maximum LLM tool-calling *iterations* (responses) per turn — one response containing multiple tool calls still counts once. |
 | `use_mcp` | If `False`, force REST even when `mcp_url` is provided. |
 | `verbose` | Print debug information to stdout. |
 | `seed` | Override the seed resolved from the backend's config. |
@@ -127,7 +127,7 @@ The sub-loop terminates when:
 
 1. The LLM responds without any `tool_calls` &rarr; the text is passed to `parse_action`.
 2. The LLM invokes `submit_action` &rarr; the `allocation` argument is used as the action and `parse_action` is bypassed.
-3. The per-turn budget (`max_tools_per_turn`, default 4) is exhausted &rarr; one final plain-text call is made and its output is parsed.
+3. The per-turn budget of LLM tool-calling iterations (`max_tools_per_turn`, default 4 — a response with multiple tool calls still counts as one iteration) is exhausted &rarr; one final plain-text call is made and its output is parsed.
 
 If the provider rejects `tools=` (some non-OpenAI endpoints do), the sub-loop falls back to a plain-text call automatically.
 

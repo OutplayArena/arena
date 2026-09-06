@@ -73,7 +73,7 @@ For most use cases, sticking with the default tools is simpler. Add a custom too
 ```python
 agent = ColonelBlottoAgent(
     ...,
-    max_tools_per_turn=8,  # default 4
+    max_tools_per_turn=8,  # default 4 -- iterations (LLM responses), not individual tool calls
 )
 ```
 
