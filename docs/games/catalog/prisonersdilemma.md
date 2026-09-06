@@ -51,6 +51,8 @@ Classic social dilemma. Two players simultaneously choose to cooperate or defect
 - `social_welfare`
 - `pareto_efficiency`
 - `gini_coefficient`
+- `payoff_volatility`
+- `action_concentration`
 
 ## Built-in Agents
 

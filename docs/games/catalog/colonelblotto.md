@@ -33,6 +33,15 @@ Resource allocation game. Two players allocate fixed resources across battlefiel
 - `cumulative_regret`
 - `nash_gap`
 - `gini_coefficient`
+- `payoff_volatility`
+- `action_concentration`
+- `avg_hhi`
+- `strategy_diversity`
+- `pattern_exploitability`
+- `convergence_rate`
+- `underdog_performance`
+- `blotto_fronts_won`
+- `blotto_targeting_overlap`
 
 ## Built-in Agents
 

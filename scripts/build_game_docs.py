@@ -257,37 +257,44 @@ def generate_metrics_page(games_data: list[tuple[Path, dict]]) -> str:
 def main():
     """Main entry point."""
     repo_root = Path(__file__).parent.parent
-    games_root = repo_root / "games" / "games" / "core"
+    games_games_root = repo_root / "games" / "games"
     docs_dir = repo_root / "docs" / "games"
-    
-    if not games_root.exists():
-        print(f"Error: Games directory not found: {games_root}")
+
+    if not games_games_root.exists():
+        print(f"Error: Games directory not found: {games_games_root}")
         sys.exit(1)
-    
+
     # Create output directories
     catalog_dir = docs_dir / "catalog"
     catalog_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Load all games
+
+    # Load all games. Mirrors GameRegistry._iter_game_metadata()'s namespace
+    # scan (backend/arena/game_registry.py) so community-namespace games
+    # (e.g. chicken_game, vickrey_auction) get catalog pages too, not just
+    # the original core/ set.
     games_data = []
-    for game_dir in sorted(games_root.iterdir()):
-        if not game_dir.is_dir() or game_dir.name.startswith("_"):
+    for namespace in ("core", "community"):
+        namespace_dir = games_games_root / namespace
+        if not namespace_dir.exists():
             continue
-        
-        game_yaml = load_yaml(game_dir / "game.yaml")
-        if not game_yaml:
-            print(f"Warning: No game.yaml in {game_dir}")
-            continue
-        
-        games_data.append((game_dir, game_yaml))
-        
-        # Generate game page
-        page_content = generate_game_page(game_dir, game_yaml)
-        output_path = catalog_dir / f"{game_dir.name}.md"
-        with open(output_path, "w") as f:
-            f.write(page_content)
-        print(f"Generated: {output_path}")
-    
+        for game_dir in sorted(namespace_dir.iterdir()):
+            if not game_dir.is_dir() or game_dir.name.startswith("_"):
+                continue
+
+            game_yaml = load_yaml(game_dir / "game.yaml")
+            if not game_yaml:
+                print(f"Warning: No game.yaml in {game_dir}")
+                continue
+
+            games_data.append((game_dir, game_yaml))
+
+            # Generate game page
+            page_content = generate_game_page(game_dir, game_yaml)
+            output_path = catalog_dir / f"{game_dir.name}.md"
+            with open(output_path, "w") as f:
+                f.write(page_content)
+            print(f"Generated: {output_path}")
+
     # Generate overview page
     overview_content = generate_overview_page(games_data)
     with open(docs_dir / "overview.md", "w") as f:
