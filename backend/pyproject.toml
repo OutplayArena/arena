@@ -2,7 +2,6 @@
 name = "arena"
 version = "0.4.0"
 description = "OutplayArena: An open benchmarking platform for game theoretic analysis of LLM-powered agents."
-readme = "../README.md"
 requires-python = ">=3.12"
 authors = [
     { name = "Ryan Zhang", email = "ryan.zhang@yale.edu" },
@@ -17,7 +16,7 @@ dependencies = [
     "uvicorn[standard]>=0.30.0",
     "transformers>=4.45.0",
     "litellm>=1.50.0",
-    "mcp<2.0",
+    "mcp>=1.0.0,<2",
     "sqlalchemy[asyncio]>=2.0",
     "asyncpg>=0.29",
     "psycopg2-binary>=2.9",
