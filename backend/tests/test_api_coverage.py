@@ -583,6 +583,27 @@ class TestSessionEndpoints:
         assert response.status_code == 409
         assert "complete" in response.json()["detail"]
 
+    def test_send_mailbox_after_session_failed_returns_409(self, client):
+        """Regression test for #149: mailbox sends must be blocked once the
+        session row is administratively failed, not just when the game's
+        own state phase reaches 'complete'."""
+        c, _, _, _ = client
+        created = c.post("/experiment", json=_valid_payload(rounds=10)).json()
+        session_id = created["session_id"]
+        token_a = created["player_tokens"]["A"]
+        c.post(
+            f"/session/{session_id}/fail",
+            headers={"Authorization": f"Bearer {token_a}"},
+            json={"reason": "test"},
+        )
+        response = c.post(
+            f"/session/{session_id}/mailbox/send",
+            headers={"Authorization": f"Bearer {token_a}"},
+            json={"content": "after fail", "recipient": "all"},
+        )
+        assert response.status_code == 409
+        assert "failed" in response.json()["detail"]
+
     def test_get_mailbox_messages_unfiltered(self, client):
         c, _, _, _ = client
         created = c.post("/experiment", json=_valid_payload()).json()
