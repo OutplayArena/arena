@@ -1287,6 +1287,8 @@ async def send_mailbox_message(
     state_dict = _serialize_state(session.state)
     if state_dict.get("phase") == "complete":
         raise HTTPException(status_code=409, detail="game is already complete")
+    if session.status in ("failed", "complete", "completed"):
+        raise HTTPException(status_code=409, detail=f"session is {session.status}, not active")
 
     msg = session.add_message(sender=player, content=request.content.strip(), recipient=request.recipient)
 
