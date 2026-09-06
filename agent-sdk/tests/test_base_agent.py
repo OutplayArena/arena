@@ -636,6 +636,106 @@ class TestToolCallingSubLoop:
             assert agent._openai.chat.completions.create.call_count == 2
 
     @pytest.mark.asyncio
+    async def test_injects_remaining_budget_reminder_between_iterations(self):
+        """#127: each non-final iteration appends a message telling the model
+        how many tool-calling iterations remain, so it doesn't keep polling
+        blindly toward budget_exhaustion."""
+        agent = _PassthroughAgent(
+            player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
+            arena_url="http://x", llm_config=_make_llm_config(),
+            max_tools_per_turn=3,
+        )
+
+        def _obs_call():
+            tc = MagicMock()
+            tc.id = "c"
+            tc.function.name = "get_observation"
+            tc.function.arguments = "{}"
+            return tc
+
+        agent._openai = MagicMock()
+        agent._openai.chat.completions.create = MagicMock(side_effect=[
+            _mock_response(tool_calls=[_obs_call()]),
+            _mock_response(tool_calls=[_obs_call()]),
+            _mock_response(content="[2, 2]"),
+        ])
+
+        with patch.object(
+            agent, "_dispatch_tool_call",
+            new=AsyncMock(return_value={"system": "s", "turn": "t"}),
+        ):
+            await agent._decide_with_tools(
+                observation={"system": "s", "turn": "t"},
+                state={"phase": "playing", "awaiting": ["A"]},
+            )
+
+        # Second call's messages should carry a reminder appended after the
+        # first iteration's tool exchange (budget went 3 -> 2, still > 0).
+        second_call_messages = agent._openai.chat.completions.create.call_args_list[1].kwargs["messages"]
+        assert any(
+            m["role"] == "user" and "2 tool-calling iteration(s) left" in m["content"]
+            for m in second_call_messages
+        )
+
+    @pytest.mark.asyncio
+    async def test_forces_submit_action_on_final_iteration(self):
+        """#127: the last allowed tool-calling iteration should force
+        tool_choice=submit_action so the turn ends via a real submission."""
+        agent = _PassthroughAgent(
+            player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
+            arena_url="http://x", llm_config=_make_llm_config(),
+            max_tools_per_turn=1,
+        )
+        submit_call = MagicMock()
+        submit_call.id = "c1"
+        submit_call.function.name = "submit_action"
+        submit_call.function.arguments = '{"allocation": [5, 5]}'
+
+        agent._openai = MagicMock()
+        agent._openai.chat.completions.create = MagicMock(
+            return_value=_mock_response(tool_calls=[submit_call])
+        )
+
+        action, _text = await agent._decide_with_tools(
+            observation={"system": "s", "turn": "t"},
+            state={"phase": "playing", "awaiting": ["A"]},
+        )
+
+        # Passthrough agent's parse_action returns raw text, so the
+        # allocation comes back as its JSON-dumped string form.
+        assert action == "[5, 5]"
+        kwargs = agent._openai.chat.completions.create.call_args.kwargs
+        assert kwargs["tool_choice"] == {
+            "type": "function",
+            "function": {"name": "submit_action"},
+        }
+
+    @pytest.mark.asyncio
+    async def test_force_submit_falls_back_when_tool_choice_rejected(self):
+        """If the backend errors on a tool_choice-constrained call, retry once
+        without it rather than losing tool-calling entirely."""
+        agent = _PassthroughAgent(
+            player="A", player_token=_make_session_token(),
+            session_id="test-session-1",
+            arena_url="http://x", llm_config=_make_llm_config(),
+            max_tools_per_turn=1,
+        )
+        agent._openai = MagicMock()
+        agent._openai.chat.completions.create = MagicMock(side_effect=[
+            TypeError("tool_choice not supported"),
+            _mock_response(content="[1, 1]"),
+        ])
+
+        action, _text = await agent._decide_with_tools(
+            observation={"system": "s", "turn": "t"},
+            state={"phase": "playing", "awaiting": ["A"]},
+        )
+        assert action == "[1, 1]"
+        assert agent._openai.chat.completions.create.call_count == 2
+
+    @pytest.mark.asyncio
     async def test_falls_back_when_provider_rejects_tools(self):
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
@@ -998,7 +1098,9 @@ class TestDispatchToolCall:
         assert result == state
 
     @pytest.mark.asyncio
-    async def test_dispatch_get_mailbox(self):
+    async def test_dispatch_get_mailbox_is_no_longer_a_callable_tool(self):
+        """get_mailbox was removed from the LLM-callable tool set (#122): the
+        inbox is now auto-injected into the observation instead."""
         agent = _PassthroughAgent(
             player="A", player_token=_make_session_token(),
             session_id="test-session-1",
@@ -1007,7 +1109,6 @@ class TestDispatchToolCall:
         transport = MagicMock()
         transport.wait_for_ready = AsyncMock(return_value={"status": "ready", "queue_position": 0})
         transport.mcp = None
-        transport.get_mailbox = AsyncMock(return_value=[{"id": "1"}])
         agent._transport = transport
 
         tc = MagicMock()
@@ -1015,7 +1116,7 @@ class TestDispatchToolCall:
         tc.function.arguments = "{}"
 
         result = await agent._dispatch_tool_call(tc)
-        assert result == [{"id": "1"}]
+        assert result == {"error": "unknown tool: get_mailbox"}
 
     @pytest.mark.asyncio
     async def test_dispatch_send_message(self):

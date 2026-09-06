@@ -152,6 +152,12 @@ class GameRegistry:
         opp_id = opp_ids[0] if opp_ids else None
         total_scores = state.get("total_scores", {})
 
+        messages = state.get("messages") or []
+        inbox = [
+            m for m in messages
+            if m.get("recipient") in ("all", player_id) or m.get("sender") == player_id
+        ]
+
         ctx.update({
             "player_id": player_id,
             "my_id": player_id,
@@ -164,6 +170,10 @@ class GameRegistry:
             "score_b": total_scores.get("B", 0),
             "total_scores": total_scores,
             "players": len(all_players),
+            # Auto-injected inbox (#122): the observation carries the player's
+            # visible mailbox messages directly, so agents no longer need to
+            # spend a tool call polling get_mailbox every turn.
+            "inbox": inbox,
         })
 
         if "round_total" in state:

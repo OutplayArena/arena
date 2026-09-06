@@ -452,6 +452,15 @@ class BaseAgent:
              ``allocation`` argument as the action and skip parsing.
           3. The per-turn tool budget is exhausted &mdash; we do one
              final plain-text call and parse whatever comes back.
+
+        Two lifecycle-health measures (#127) run inside the loop: each
+        iteration after the first tells the model how many tool-calling
+        iterations remain, and the *last* allowed iteration forces
+        ``tool_choice=submit_action`` so the turn ends via a real action
+        submission rather than budget exhaustion whenever the backend
+        honors ``tool_choice`` (some OpenAI-compatible backends don't;
+        :meth:`_call_llm_with_tools` falls back to an unconstrained call
+        if the forced call itself errors).
         """
         self._ensure_openai()
         tools = build_backend_tools(self.action_format_hint())
@@ -471,9 +480,10 @@ class BaseAgent:
         budget = max(1, self.max_tools_per_turn)
         last_text = ""
         while budget > 0:
+            force_submit = budget == 1
             try:
                 response = await asyncio.to_thread(
-                    self._call_llm_with_tools, messages, tools
+                    self._call_llm_with_tools, messages, tools, force_submit
                 )
             except Exception as exc:
                 if self.verbose:
@@ -522,6 +532,16 @@ class BaseAgent:
                 })
             budget -= 1
             last_text = content
+            if budget > 0:
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        f"[{budget} tool-calling iteration(s) left this turn. "
+                        "get_observation/get_game_state won't change unless you "
+                        "act, so don't re-poll them without new information to "
+                        "wait for. Call submit_action before the budget runs out.]"
+                    ),
+                })
 
         # Budget exhausted: one final plain-text call.
         try:
@@ -543,8 +563,6 @@ class BaseAgent:
             )
         if name == "get_game_state":
             return await self._transport.get_state()
-        if name == "get_mailbox":
-            return await self._transport.get_mailbox()
         if name == "send_message":
             return await self._transport.send_message(
                 content=str(args.get("content", "")),
@@ -556,7 +574,9 @@ class BaseAgent:
             return await self._transport.submit_action(args.get("allocation", args))
         return {"error": f"unknown tool: {name}"}
 
-    def _call_llm_with_tools(self, messages: list[dict], tools: list[dict]) -> Any:
+    def _call_llm_with_tools(
+        self, messages: list[dict], tools: list[dict], force_submit: bool = False
+    ) -> Any:
         assert self._openai is not None
         kwargs: dict[str, Any] = {
             "model": self.llm_config.model,
@@ -567,6 +587,19 @@ class BaseAgent:
         }
         if self.llm_config.extra_body:
             kwargs["extra_body"] = self.llm_config.extra_body
+        if force_submit:
+            # #127: force the last allowed tool-calling iteration to end the
+            # turn via a real submit_action rather than budget exhaustion.
+            # Not every OpenAI-compatible backend honors tool_choice the same
+            # way, so if the constrained call itself errors, retry once
+            # without it rather than losing tool-calling entirely.
+            try:
+                return self._openai.chat.completions.create(
+                    tool_choice={"type": "function", "function": {"name": "submit_action"}},
+                    **kwargs,
+                )
+            except Exception:
+                pass
         return self._openai.chat.completions.create(**kwargs)
 
     def _call_llm_plain(self, messages: list[dict]) -> Any:
