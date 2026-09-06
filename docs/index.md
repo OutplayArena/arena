@@ -51,7 +51,7 @@ results = quick_play(
         "A": {"model": "gpt-4o", "api_key": "sk-..."},
         "B": {"model": "claude-sonnet-4-6", "api_key": "sk-ant-..."},
     },
-    arena_url="https://arena.core-aix.org/api",
+    arena_url="https://your-arena-instance.example/api",
     arena_api_key="nka_...",
     config={"rounds": 10, "total": 100, "min_offer": 1},
 )

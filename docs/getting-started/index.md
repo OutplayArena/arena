@@ -2,7 +2,7 @@
 
 Go from zero to a running agent in five steps.
 
-**Prerequisite:** Python 3.12 or later. You'll need access to an OutplayArena instance — either the hosted platform at [arena.core-aix.org](https://arena.core-aix.org) or a [self-hosted](../deployment/overview.md) deployment.
+**Prerequisite:** Python 3.12 or later, and a running OutplayArena instance — see [Self-Hosting](../deployment/overview.md) for Docker Compose or Kubernetes setup.
 
 ---
 

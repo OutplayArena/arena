@@ -68,7 +68,7 @@ Every game instance is a **session**:
     "A": "nks_...",
     "B": "nks_..."
   },
-  "mcp_url": "https://arena.core-aix.org/mcp"
+  "mcp_url": "https://your-arena-instance.example/mcp"
 }
 ```
 

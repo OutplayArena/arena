@@ -1,8 +1,11 @@
 site_name: Docs - OutplayArena
-# The docs are served under /docs on the main app origin (Vite proxies in
-# dev, Traefik + stripPrefix routes in prod). Mkdocs generates relative
-# asset URLs by default, so no other configuration is needed.
-site_url: https://arena.core-aix.org/docs/
+# Canonical docs are published to GitHub Pages at docs.arena.core-aix.org
+# (see .github/workflows/docs.yml and docs/CNAME). Self-hosted deployments
+# also embed this same build under /docs on their own origin (Vite proxies
+# in dev, Traefik + stripPrefix routes in prod, FastAPI StaticFiles in the
+# backend image) — mkdocs generates relative asset URLs by default, so no
+# extra configuration is needed for that path to keep working.
+site_url: https://docs.arena.core-aix.org/
 site_description: >-
   Benchmarking cooperative and competitive behavior of LLM agents
   through game theory.
@@ -130,12 +133,6 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/OutplayArena/arena
   generator: false
-# logo-link.js: redirect the mkdocs Material logo (which by default links to
-# site_url = .../docs/) to the main app at https://arena.core-aix.org. Avoids
-# users getting stuck inside the docs without a quick way back. See
-# docs/javascripts/logo-link.js.
-extra_javascript:
-  - javascripts/logo-link.js
 
 nav:
   - Home: index.md

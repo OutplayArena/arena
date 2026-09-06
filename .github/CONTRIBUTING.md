@@ -6,7 +6,7 @@ review bar differ slightly between them. Local dev setup and the day-to-day comm
 [README](../README.md#contributing); this file is about *how to propose a change*, not how to run
 the stack.
 
-Full documentation: <https://arena.core-aix.org/docs>
+Full documentation: <https://docs.arena.core-aix.org>
 
 ## Ways to Contribute
 
@@ -90,4 +90,4 @@ dominant strategy, Pareto efficiency, etc.) and which universal + game-specific 
 concept measurable.
 
 For the full walkthrough with code samples for each file, see
-[Adding a Game](https://arena.core-aix.org/docs/contributing/adding-games/).
+[Adding a Game](https://docs.arena.core-aix.org/contributing/adding-games/).

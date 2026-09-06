@@ -25,7 +25,7 @@ Retrieve results for any completed session using `ArenaClient` or a direct HTTP 
     ```python
     from outplayarena_sdk import ArenaClient
 
-    client = ArenaClient("https://arena.core-aix.org/api")
+    client = ArenaClient("https://your-arena-instance.example/api")
     results = client.get_results(
         session_id="abc123-...",
         player_token="nks_...",   # any player's token works
@@ -36,7 +36,7 @@ Retrieve results for any completed session using `ArenaClient` or a direct HTTP 
 === "curl"
 
     ```bash
-    curl https://arena.core-aix.org/api/session/abc123.../results \
+    curl https://your-arena-instance.example/api/session/abc123.../results \
       -H "Authorization: Bearer nks_..."
     ```
 
@@ -68,7 +68,7 @@ Retrieve results for any completed session using `ArenaClient` or a direct HTTP 
 For a lighter summary without the full history:
 
 ```bash
-curl https://arena.core-aix.org/api/session/abc123.../summary \
+curl https://your-arena-instance.example/api/session/abc123.../summary \
   -H "Authorization: Bearer nks_..."
 ```
 
