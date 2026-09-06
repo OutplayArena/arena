@@ -140,6 +140,6 @@ def config_from_dict(data):
         players=data.get("players", 2),
         budget=budget,
         battlefields=battlefields,
-        rounds=data["rounds"],
+        rounds=data.get("rounds", 10),
         seed=data.get("seed"),
     )

@@ -1,7 +1,7 @@
 import pytest
 
 from games.core.colonelblotto.engine import ColonelBlottoGame
-from games.core.colonelblotto.config import BattlefieldConfig, ColonelBlottoExperimentConfig
+from games.core.colonelblotto.config import BattlefieldConfig, ColonelBlottoExperimentConfig, config_from_dict
 from arena.game_registry import GameRegistry
 
 
@@ -89,6 +89,19 @@ def test_config_hash_preserves_battlefield_order():
     )
 
     assert config_a.config_hash() != config_b.config_hash()
+
+
+def test_config_from_dict_defaults_rounds_when_omitted():
+    """Regression test for #148: omitting `rounds` used to raise KeyError."""
+    config = config_from_dict({"game": "colonelblotto"})
+
+    assert config.rounds == 10
+
+
+def test_config_from_dict_respects_explicit_rounds():
+    config = config_from_dict({"game": "colonelblotto", "rounds": 3})
+
+    assert config.rounds == 3
 
 
 def test_runtime_wandb_config_does_not_change_game_config_hash():
