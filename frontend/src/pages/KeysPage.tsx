@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { listKeys, createKey, deleteKey, disableKey, enableKey } from "../api";
 import { copyToClipboard } from "../components/utils";
-import { LoadingSpinner } from "../components/LoadingSpinner";
 import type { ApiKeyRow, ApiKeyCreatedResponse } from "../types";
 
 const inputClass =
@@ -172,7 +171,7 @@ export function KeysPage() {
       <div>
         <h2 className="text-sm font-extrabold text-ink mb-3">Keys</h2>
         {loading ? (
-          <LoadingSpinner />
+          <p className="text-sm text-muted">Loading...</p>
         ) : keys.length === 0 ? (
           <p className="text-sm text-muted">No API keys generated yet.</p>
         ) : (

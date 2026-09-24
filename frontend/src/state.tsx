@@ -2,7 +2,6 @@ import {
   createContext,
   useCallback,
   useEffect,
-  useMemo,
   useReducer,
   useRef,
 } from "react";
@@ -221,25 +220,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const value = useMemo(() => ({
-    state,
-    dispatch,
-    setMatch,
-    showRound,
-    nextRound,
-    prevRound,
-    togglePlay,
-    stopPlay,
-    clearMatch,
-    setStatus,
-    setSessionMeta,
-    currentRound,
-    startGame,
-    endGame,
-  }), [state, dispatch, setMatch, showRound, nextRound, prevRound, togglePlay, stopPlay, clearMatch, setStatus, setSessionMeta, currentRound, startGame, endGame]);
-
   return (
-    <AppContext.Provider value={value}>
-      {children}</AppContext.Provider>
+    <AppContext.Provider
+      value={{
+        state,
+        dispatch,
+        setMatch,
+        showRound,
+        nextRound,
+        prevRound,
+        togglePlay,
+        stopPlay,
+        clearMatch,
+        setStatus,
+        setSessionMeta,
+        currentRound,
+        startGame,
+        endGame,
+      }}
+    >
+      {children}
+    </AppContext.Provider>
   );
 }

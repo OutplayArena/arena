@@ -9,7 +9,7 @@ export function SiteConfigProvider({ children }: { children: React.ReactNode }) 
     docs_url: "",
     privacy_notice_url: "",
     about_text: "",
-    footer: { copyright: "", tagline: "" },
+    footer: { copyright: "", privacy_notice: "" },
   });
 
   useEffect(() => {

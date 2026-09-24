@@ -7,7 +7,6 @@ export interface AuthState {
   loading: boolean;
   hasProviders: boolean;
   providers: ProvidersResponse;
-  sessionExpired: boolean;
   login: () => void;
   logout: () => void;
 }

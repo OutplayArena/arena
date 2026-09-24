@@ -1,6 +1,4 @@
-import { memo } from "react";
-
-export const BlobBackground = memo(function BlobBackground() {
+export function BlobBackground() {
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none" aria-hidden="true">
       <div className="blob blob-1 absolute top-[-10%] left-[-5%] w-[600px] h-[600px] rounded-full opacity-40 animate-blob-drift-1" />
@@ -10,4 +8,4 @@ export const BlobBackground = memo(function BlobBackground() {
       <div className="blob blob-5 absolute top-[40%] left-[10%] w-[400px] h-[400px] rounded-full opacity-25 animate-blob-drift-5" />
     </div>
   );
-});
+}

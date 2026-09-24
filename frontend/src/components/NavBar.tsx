@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useTheme } from "../hooks/useTheme";
 import { useAuth } from "../hooks/useAuth";
@@ -10,7 +10,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
     ? "bg-accent-soft text-accent"
     : "text-muted hover:text-ink hover:bg-ink/[0.06]");
 
-export const NavBar = memo(function NavBar() {
+export function NavBar() {
   const { theme, toggle } = useTheme();
   const { user, hasProviders, logout } = useAuth();
   const { github_url } = useSiteConfig();
@@ -46,9 +46,15 @@ export const NavBar = memo(function NavBar() {
         </NavLink>
 
         {(user || !hasProviders) && (
-          <NavLink to="/dashboard" className={linkClass}>
-            Dashboard
-          </NavLink>
+          <>
+            <NavLink to="/dashboard" className={linkClass}>
+              Dashboard
+            </NavLink>
+
+            <NavLink to="/keys" className={linkClass}>
+              API Keys
+            </NavLink>
+          </>
         )}
 
         {github_url && (
@@ -91,68 +97,41 @@ export const NavBar = memo(function NavBar() {
           </NavLink>
         )}
 
-        {(user || !hasProviders) && (
+        {user && (
           <div className="relative ml-1" ref={menuRef}>
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
               className="w-9 h-9 flex items-center justify-center rounded-chip text-muted hover:text-ink hover:bg-ink/[0.06] transition-colors duration-200"
-              title={user ? `Signed in as ${user.name}` : "Local user"}
-              aria-expanded={menuOpen}
-              aria-haspopup="menu"
+              title={`Signed in as ${user.name}`}
             >
-              {user ? (
-                user.avatar_url ? (
-                  <img
-                    src={user.avatar_url}
-                    alt={user.name}
-                    className="w-6 h-6 rounded-full"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <span className="text-xs font-extrabold text-accent w-6 h-6 rounded-full bg-accent/10 flex items-center justify-center">
-                    {user.name.charAt(0).toUpperCase()}
-                  </span>
-                )
+              {user.avatar_url ? (
+                <img
+                  src={user.avatar_url}
+                  alt={user.name}
+                  className="w-6 h-6 rounded-full"
+                  referrerPolicy="no-referrer"
+                />
               ) : (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
+                <span className="text-xs font-extrabold text-accent w-6 h-6 rounded-full bg-accent/10 flex items-center justify-center">
+                  {user.name.charAt(0).toUpperCase()}
+                </span>
               )}
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-56 rounded-card border border-line/40 bg-surface shadow-elevation-4 z-50 py-1.5" role="menu">
+              <div className="absolute right-0 top-full mt-1.5 w-56 rounded-card border border-line/40 bg-surface shadow-elevation-4 z-50 py-1.5">
                 <div className="px-4 py-2">
-                  <p className="text-sm font-semibold text-ink truncate">
-                    {user ? user.name : "Local"}
-                  </p>
-                  {user && (
-                    <p className="text-xs text-muted truncate">{user.email}</p>
-                  )}
+                  <p className="text-sm font-semibold text-ink truncate">{user.name}</p>
+                  <p className="text-xs text-muted truncate">{user.email}</p>
                 </div>
                 <div className="border-t border-line/40 my-1" />
-                <NavLink
-                  to="/keys"
-                  onClick={() => setMenuOpen(false)}
-                  className="block w-full text-left px-4 py-2 text-sm text-ink hover:bg-surface-container transition-colors no-underline"
-                  role="menuitem"
+                <button
+                  type="button"
+                  onClick={() => { setMenuOpen(false); logout(); }}
+                  className="w-full text-left px-4 py-2 text-sm text-ink hover:bg-surface-container transition-colors"
                 >
-                  API Keys
-                </NavLink>
-                {user && (
-                  <>
-                    <div className="border-t border-line/40 my-1" />
-                    <button
-                      type="button"
-                      onClick={() => { setMenuOpen(false); logout(); }}
-                      className="w-full text-left px-4 py-2 text-sm text-ink hover:bg-surface-container transition-colors"
-                      role="menuitem"
-                    >
-                      Log out
-                    </button>
-                  </>
-                )}
+                  Log out
+                </button>
               </div>
             )}
           </div>
@@ -160,4 +139,4 @@ export const NavBar = memo(function NavBar() {
       </div>
     </nav>
   );
-});
+}

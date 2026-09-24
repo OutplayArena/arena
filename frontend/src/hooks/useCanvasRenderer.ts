@@ -474,7 +474,6 @@ export function useCanvasRenderer(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
   activeMatch: Match | null,
   activeRoundIndex: number,
-  onRenderError?: (err: Error) => void,
 ): AnimatedScores {
   const particlesRef = useRef<Particle[]>([]);
   const revealStartRef = useRef(0);
@@ -520,11 +519,6 @@ export function useCanvasRenderer(
 
   const renderRef = useRef<(t: number) => void>(() => {});
 
-  const onRenderErrorRef = useRef(onRenderError);
-  useEffect(() => {
-    onRenderErrorRef.current = onRenderError;
-  }, [onRenderError]);
-
   useLayoutEffect(() => {
     renderRef.current = (t: number) => {
     const canvas = canvasRef.current;
@@ -533,12 +527,6 @@ export function useCanvasRenderer(
     if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) {
-      requestAnimationFrame((nextT: number) => renderRef.current(nextT));
-      return;
-    }
-
-    try {
     const width = rect.width;
     const height = rect.height;
 
@@ -583,12 +571,6 @@ export function useCanvasRenderer(
     drawParticles(ctx, particlesRef.current);
 
     requestAnimationFrame((nextT: number) => renderRef.current(nextT));
-    } catch (err) {
-      console.error("Canvas render error:", err);
-      if (onRenderErrorRef.current) {
-        onRenderErrorRef.current(err instanceof Error ? err : new Error(String(err)));
-      }
-    }
   };
   });
 

@@ -1,20 +1,19 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { LoadingSpinner } from "./LoadingSpinner";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, hasProviders, sessionExpired } = useAuth();
+  const { user, loading, hasProviders } = useAuth();
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <LoadingSpinner />
+      <div className="flex items-center justify-center h-[calc(100dvh-56px)] text-muted text-sm">
+        Loading...
       </div>
     );
   }
 
   if (!hasProviders) return <>{children}</>;
 
-  if (!user) return <Navigate to="/login" replace state={{ sessionExpired }} />;
+  if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
