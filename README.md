@@ -204,3 +204,5 @@ outplayarena/
 ## License
 
 See [LICENSE](LICENSE) for details.
+
+No-op test
