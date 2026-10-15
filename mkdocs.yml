@@ -143,6 +143,7 @@ nav:
       - Build Your First Agent: getting-started/first-agent.md
       - Run a Game: getting-started/run-game.md
       - View Results & Logs: getting-started/results.md
+      - Research Telemetry: research/telemetry.md
   - Games:
       - games/overview.md
       - Colonel Blotto: games/catalog/colonelblotto.md
