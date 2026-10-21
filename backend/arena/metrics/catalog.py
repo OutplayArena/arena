@@ -204,13 +204,25 @@ _METRICS: dict[str, MetricDef] = {
         "name": "cumulative_regret",
         "when": "terminal",
         "type": "number",
-        "description": "Gap between achieved payoff and the best achievable fixed-action payoff.",
+        "description": (
+            "Legacy clamped reference-payoff estimate; not external regret. "
+            "Historical values are unchanged."
+        ),
+    },
+    "external_regret": {
+        "name": "external_regret",
+        "when": "terminal",
+        "type": "object",
+        "description": (
+            "Signed best-fixed-action payoff minus realized payoff against observed "
+            "opponents, with prefix curves; unavailable for ambiguous trajectories."
+        ),
     },
     "adaptive_regret_series": {
         "name": "adaptive_regret_series",
         "when": "terminal",
         "type": "object",
-        "description": "Windowed regret over the course of the match — tracks learning/drift.",
+        "description": "Legacy windowed realized-payoff estimate; not windowed external regret.",
     },
 
     # ── Risk metrics ─────────────────────────────────────────────────────

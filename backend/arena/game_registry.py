@@ -269,6 +269,8 @@ class GameRegistry:
         Imports the game's metrics.py submodule and returns the first class
         that inherits from GameMetricsExtension.
         """
+        from inspect import isabstract
+
         from arena.metrics.extension import GameMetricsExtension
         try:
             game_dir = self._game_dir(game_type)
@@ -285,6 +287,7 @@ class GameRegistry:
                 isinstance(obj, type)
                 and issubclass(obj, GameMetricsExtension)
                 and obj is not GameMetricsExtension
+                and not isabstract(obj)
             ):
                 return obj()
         return None

@@ -3,7 +3,8 @@ from __future__ import annotations
 import numpy as np
 
 from arena.game_components.game_metrics import GameMetrics
-from arena.metrics.extension import GameMetricsExtension
+from arena.metrics.external_regret import FiniteActionGame
+from arena.metrics.matrix_regret import MatrixRegretExtension
 
 MOVES = ("rock", "paper", "scissors")
 
@@ -37,9 +38,18 @@ def _pattern_exploitability(actions: list[str]) -> float:
     return 0.0 if np.isnan(corr) else corr
 
 
-class RPSMetrics(GameMetrics, GameMetricsExtension):
+class RPSMetrics(GameMetrics, MatrixRegretExtension):
 
     # ── GameMetrics (legacy, used by compute_results) ────────────────────────
+
+    def regret_game(self, config: dict) -> FiniteActionGame:
+        """Use the engine's deterministic payoff function and configured values."""
+        from games.core.rock_paper_scissors.config import VALID_MOVES, config_from_dict
+        from games.core.rock_paper_scissors.engine import RPSGame
+
+        game = RPSGame.from_config(config_from_dict(config))
+        actions = VALID_MOVES
+        return FiniteActionGame(actions, actions, game.payoff)
 
     def compute(self, history: list[dict], total_scores: dict) -> dict:
         n = len(history)
@@ -54,6 +64,7 @@ class RPSMetrics(GameMetrics, GameMetricsExtension):
                 if act:
                     all_actions[player].append(act)
         return {
+            "external_regret": self.history_external_regret(history, "rock_paper_scissors"),
             "total_payoff":     dict(total_scores),
             "average_payoff":   {p: (total_scores[p] / n if n else 0.0) for p in total_scores},
             "round_win_counts": win_counts,

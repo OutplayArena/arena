@@ -24,7 +24,7 @@ class RPSState:
 class RPSGame(InteractiveGameEngine):
     def __init__(self, num_rounds: int = 10):
         self.num_rounds = num_rounds
-        self.metrics_engine = RPSMetrics()
+        self.metrics_engine = RPSMetrics({"rounds": num_rounds})
 
     @classmethod
     def from_config(cls, config) -> "RPSGame":
@@ -102,14 +102,16 @@ class RPSGame(InteractiveGameEngine):
             state = self._resolve_round(state)
         return state
 
+    def payoff(self, action: str, opponent_action: str) -> float:
+        """Return the deterministic stage payoff from the acting player's view."""
+        if action == opponent_action:
+            return 0.0
+        return 1.0 if BEATS[action] == opponent_action else -1.0
+
     def _resolve_round(self, state: RPSState) -> RPSState:
         a, b = state.pending_actions["A"], state.pending_actions["B"]
-        if a == b:
-            score_a, score_b, winner = 0.0, 0.0, "Tie"
-        elif BEATS[a] == b:
-            score_a, score_b, winner = 1.0, -1.0, "A"
-        else:
-            score_a, score_b, winner = -1.0, 1.0, "B"
+        score_a, score_b = self.payoff(a, b), self.payoff(b, a)
+        winner = "Tie" if a == b else ("A" if BEATS[a] == b else "B")
 
         state.total_scores["A"] = round(state.total_scores["A"] + score_a, 2)
         state.total_scores["B"] = round(state.total_scores["B"] + score_b, 2)
