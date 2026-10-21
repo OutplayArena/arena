@@ -12,11 +12,19 @@ These metrics are computed for every game:
 | `average_payoff` | Mean score per round |
 | `strategy_entropy` | Predictability of strategy |
 | `behavioral_consistency` | Stability of behavior over time |
-| `cumulative_regret` | Deviation from optimal play |
+| `cumulative_regret` | Legacy clamped reference-payoff estimate; not external regret |
 | `gini_coefficient` | Inequality in payoffs between players |
 | `social_welfare` | Total payoff across all players |
 | `pareto_efficiency` | How close to Pareto optimal |
 | `nash_gap` | Distance from Nash equilibrium |
+
+## Exact external regret
+
+Rock Paper Scissors, Prisoner's Dilemma, and Stag Hunt expose a separate
+`external_regret` object with signed cumulative and average regret, counterfactual
+fixed-action totals, and prefix curves. Ambiguous trajectories report unavailable.
+See [External Regret](external-regret.md) for the definition, compatibility notes,
+supported cases, SDK access, and reproducible offline FTPL/FTRL comparisons.
 
 ## Game-Specific Metrics
 
@@ -112,6 +120,7 @@ These metrics are computed for every game:
 - `multilateral_cooperation_index`
 - `payoff_volatility`
 - `action_concentration`
+- `external_regret`
 
 ### Public Goods Game
 
@@ -140,6 +149,7 @@ These metrics are computed for every game:
 - `pattern_exploitability`
 - `payoff_volatility`
 - `action_concentration`
+- `external_regret`
 
 ### Stag Hunt
 
@@ -159,6 +169,7 @@ These metrics are computed for every game:
 - `multilateral_cooperation_index`
 - `payoff_volatility`
 - `action_concentration`
+- `external_regret`
 
 ### Texas Hold'em
 
