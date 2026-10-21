@@ -30,10 +30,12 @@ class BehavioralMetrics:
 
     @staticmethod
     def regret(realized_payoffs: list[float], best_fixed_payoff: float) -> float:
+        """Legacy clamped reference-payoff estimate, not external regret."""
         return max(0.0, best_fixed_payoff * len(realized_payoffs) - sum(realized_payoffs))
 
     @staticmethod
     def adaptive_regret(realized_payoffs: list[float], window: int = 10) -> list[float]:
+        """Legacy windowed realized-payoff estimate, not adaptive external regret."""
         regrets = []
         for i in range(0, len(realized_payoffs), window):
             w = realized_payoffs[i:i+window]

@@ -1,0 +1,54 @@
+{
+  "actions": [
+    "paper",
+    "scissors",
+    "rock"
+  ],
+  "opponent_actions": [
+    "rock",
+    "paper",
+    "scissors"
+  ],
+  "external_regret": {
+    "status": "available",
+    "cumulative": -3.0,
+    "average": -1.0,
+    "normalized_average": -0.5,
+    "best_fixed_action": "rock",
+    "best_fixed_total_payoff": 0.0,
+    "fixed_action_total_payoffs": {
+      "rock": 0.0,
+      "paper": 0.0,
+      "scissors": 0.0
+    },
+    "actual_total_payoff": 3.0,
+    "num_rounds": 3,
+    "payoff_range": {
+      "min": -1.0,
+      "max": 1.0
+    },
+    "series": [
+      {
+        "round": 1,
+        "cumulative": 0.0,
+        "average": 0.0,
+        "normalized_average": 0.0,
+        "best_fixed_action": "paper"
+      },
+      {
+        "round": 2,
+        "cumulative": -1.0,
+        "average": -0.5,
+        "normalized_average": -0.25,
+        "best_fixed_action": "paper"
+      },
+      {
+        "round": 3,
+        "cumulative": -3.0,
+        "average": -1.0,
+        "normalized_average": -0.5,
+        "best_fixed_action": "rock"
+      }
+    ]
+  }
+}

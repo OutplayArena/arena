@@ -29,7 +29,10 @@ def _round_metrics(obj: Any, decimals: int = 4) -> Any:
     if isinstance(obj, float):
         return round(obj, decimals)
     if isinstance(obj, dict):
-        return {k: _round_metrics(v, decimals) for k, v in obj.items()}
+        return {
+            k: v if k == "external_regret" else _round_metrics(v, decimals)
+            for k, v in obj.items()
+        }
     if isinstance(obj, list):
         return [_round_metrics(v, decimals) for v in obj]
     return obj
@@ -219,6 +222,14 @@ class GameSession:
         # Falls back to the role ID when agents_json is absent or incomplete.
         agents = self.agents or {}
         agent_names = {role: (agents.get(role) or role) for role in role_ids}
+
+        if game_type in {"rock_paper_scissors", "prisonersdilemma", "stag_hunt"}:
+            from arena.metrics.matrix_regret import matrix_history_match
+
+            return matrix_history_match(
+                history, game_type, config_dict, match_id=self.session_id,
+                agent_names=agent_names, completed=state_dict.get("phase") == "complete",
+            )
 
         moves = []
         # Cumulative total_scores from the previous hand, for games (Texas

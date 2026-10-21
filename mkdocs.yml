@@ -158,6 +158,7 @@ nav:
       - Chicken Game: games/catalog/chicken_game.md
       - Vickrey Auction: games/catalog/vickrey_auction.md
       - Metrics Reference: games/metrics.md
+      - External Regret: games/external-regret.md
   - MCP:
       - mcp/overview.md
       - Connect Your Agent: mcp/connect-agent.md

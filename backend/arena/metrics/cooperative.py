@@ -19,6 +19,7 @@ class CooperativeMetrics:
 
     @staticmethod
     def _to_binary(actions: list[Any]) -> list[int]:
+        """Encode observed choices, skipping missing actions and forfeit markers."""
         _STR_MAP = {
             "cooperate": 1, "cooperated": 1, "defect": 0, "defected": 0,
             "stag": 1, "hare": 0,
@@ -27,6 +28,7 @@ class CooperativeMetrics:
         return [
             _STR_MAP[a] if isinstance(a, str) else (1 if int(a) > 0 else 0)
             for a in actions
+            if (isinstance(a, str) and a in _STR_MAP) or isinstance(a, (int, float))
         ]
 
     # ── unconditional ────────────────────────────────────────────────────────
@@ -51,8 +53,8 @@ class CooperativeMetrics:
             if len(own_actions) < 2 or len(opp_acts) < 2:
                 results[opp_id] = {"after_cooperate": 0.0, "after_defect": 0.0}
                 continue
-            after_c = [own_actions[i] for i in range(1, len(own_actions)) if opp_acts[i-1] == 1]
-            after_d = [own_actions[i] for i in range(1, len(own_actions)) if opp_acts[i-1] == 0]
+            after_c = [own_actions[i] for i in range(1, min(len(own_actions), len(opp_acts) + 1)) if opp_acts[i-1] == 1]
+            after_d = [own_actions[i] for i in range(1, min(len(own_actions), len(opp_acts) + 1)) if opp_acts[i-1] == 0]
             results[opp_id] = {
                 "after_cooperate": float(np.mean(after_c)) if after_c else 0.0,
                 "after_defect":    float(np.mean(after_d)) if after_d else 0.0,

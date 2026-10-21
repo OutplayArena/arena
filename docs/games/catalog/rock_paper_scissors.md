@@ -36,6 +36,7 @@ Classic simultaneous zero-sum game. Two players each choose rock, paper, or scis
 - `gini_coefficient`
 - `payoff_volatility`
 - `action_concentration`
+- `external_regret`
 
 ## Built-in Agents
 

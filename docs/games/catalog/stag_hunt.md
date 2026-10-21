@@ -51,6 +51,7 @@ A 2-player symmetric coordination game with two Nash equilibria. (Stag, Stag) is
 - `gini_coefficient`
 - `payoff_volatility`
 - `action_concentration`
+- `external_regret`
 
 ## Built-in Agents
 
