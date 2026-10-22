@@ -68,10 +68,10 @@ export function resultToMatch(result: GameResult, config: RunConfig): Match {
       const totals = (round.total_scores || {}) as Record<string, number>;
       const totalA = totals.A ?? prevTotalA;
       const totalB = totals.B ?? prevTotalB;
-      // A dedicated per-round scores dict (Blotto, RPS, ...) is a per-round
+      // A dedicated per-round payoffs dict is a per-round
       // delta already; a cumulative total_scores (Hold'em) needs diffing
       // against the previous round to get this round's own delta.
-      const scores = (round.payoffs || round.scores) as Record<string, number> | undefined;
+      const scores = (round.payoffs || round.scores || round.round_payoffs) as Record<string, number> | undefined;
       const scoreA = scores ? (scores.A ?? 0) : totalA - prevTotalA;
       const scoreB = scores ? (scores.B ?? 0) : totalB - prevTotalB;
       prevTotalA = totalA;

@@ -209,7 +209,7 @@ async def play_game():
             r = h.get("round", "?")
             a_alloc = h.get("allocations", {}).get("A", [])
             b_alloc = h.get("allocations", {}).get("B", [])
-            h_scores = h.get("scores", {})
+            h_scores = h.get("payoffs", h.get("scores", {}))
             h_winner = h.get("winner", "?")
             print(f"  R{r}: A={a_alloc} B={b_alloc} -> {h_winner} (A={h_scores.get('A', 0):.1f} B={h_scores.get('B', 0):.1f})")
 

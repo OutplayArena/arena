@@ -18,7 +18,7 @@ state: |
   Turn-specific prompt template (rendered each round)
 
 action_format:
-  type: "string"  # or "json", "json_array"
+  type: "string"  # or "number", "json", "json_array"
   example: "cooperate"
   enum: ["cooperate", "defect"]  # For discrete choices
 
@@ -31,6 +31,12 @@ variants:
     Loss-focused framing variant
 ```
 
+Use literal `|` blocks to preserve line breaks and the `state` key for the
+per-turn template. Ultimatum uses `proposer_state` and `responder_state` for
+its two phases. The renderer no longer accepts the legacy `turn` template key;
+rendered observations still return `system` and `turn` strings for agents.
+Some games also retain an `llm_agent` template used by their legacy local agents.
+
 ## Template Variables
 
 Templates can use these variables:
@@ -40,10 +46,11 @@ Templates can use these variables:
 | `{{ game_name }}` | Human-readable game name | "Prisoner's Dilemma" |
 | `{{ player_id }}` | Current player identifier | "A" |
 | `{{ my_id }}` | Alias for player_id | "A" |
+| `{{ opp_id }}` | Opponent's player identifier in two-player games | "B" |
 | `{{ round }}` | Current round number | 3 |
 | `{{ rounds }}` | Total number of rounds | 10 |
-| `{{ history }}` | Formatted action history | "Round 1: A=cooperate, B=defect" |
-| `{{ scores }}` | Current scores | {"A": 3, "B": 5} |
+| `{{ history }}` | List of resolved-round dictionaries; render with a loop | See below |
+| `{{ total_scores }}` | Cumulative scores by player | {"A": 3, "B": 5} |
 | Config parameters | Game-specific config values | `{{ payoff_T }}`, `{{ total }}` |
 
 ## Example: Prisoner's Dilemma
@@ -66,9 +73,11 @@ state: |
   Round {{ round }} of {{ rounds }}.
   
   History:
-  {{ history }}
+  {% for entry in history %}
+  Round {{ entry.round }}: You played {{ entry.actions[my_id] }}, opponent played {{ entry.actions[opp_id] }} → you earned {{ entry.payoffs[my_id] }}
+  {% endfor %}
   
-  Current scores: You={{ scores[my_id] }}, Opponent={{ scores[opponent_id] }}
+  Current scores: You={{ total_scores[my_id] }}, Opponent={{ total_scores[opp_id] }}
   
   What is your choice? Respond with "cooperate" or "defect".
 
@@ -76,6 +85,18 @@ action_format:
   type: "string"
   enum: ["cooperate", "defect"]
 ```
+
+## Round History
+
+Resolved round outcomes use `payoffs: {player_id: value}`. Actions remain
+game-specific (`actions`, `allocations`, or `contributions`); `total_scores`
+contains cumulative scores when recorded. Blotto and Rock-Paper-Scissors
+previously used `scores`, and Public Goods used `round_payoffs`. Saved histories
+using those keys are adapted when rendering observations and remain readable by
+the result views and round logger. New rounds emit only `payoffs`.
+
+Render one short line per round rather than interpolating the raw history list.
+This keeps redundant dictionary fields and cumulative totals out of the prompt.
 
 ## Prompt Variants
 

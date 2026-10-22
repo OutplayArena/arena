@@ -349,7 +349,7 @@ def build_agent_manifest(
         "config_schema": game_config_schema,
         "example_config": game_example_config,
         "system_prompt_template": prompts.get("system", ""),
-        "state_prompt_template": prompts.get("state", prompts.get("turn", "")),
+        "state_prompt_template": prompts.get("state", ""),
         "metric_names": list(_get_metric_names(registry, game_name)),
         "skill": skill_data,
     }

@@ -356,7 +356,7 @@ def outplayarena_game_prompt(game: str) -> list[dict]:
     intro = "\n".join(intro_parts)
 
     system_prompt = prompts.get("system", "")
-    turn_template = prompts.get("state", prompts.get("turn", ""))
+    turn_template = prompts.get("state", "")
 
     content = intro
     if system_prompt:

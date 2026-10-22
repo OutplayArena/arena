@@ -38,6 +38,13 @@ responder_state: |
   Do you accept or reject this offer?
   Respond with exactly one word: accept or reject.
 
+action_format:
+  type: json
+  example: '{"offer": 50}'
+  description: >-
+    As proposer, submit {"offer": number} with an offer between 0 and the
+    configured total. As responder, submit {"accept": true} or {"accept": false}.
+
 variants:
   neutral: |
     You are playing the Ultimatum Game.

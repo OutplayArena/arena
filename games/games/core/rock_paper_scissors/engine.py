@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from arena.interactive_game_engine import InteractiveGameEngine
+
 from games.core.rock_paper_scissors.metrics import RPSMetrics
 
 BEATS = {"rock": "scissors", "paper": "rock", "scissors": "paper"}
@@ -27,7 +28,7 @@ class RPSGame(InteractiveGameEngine):
         self.metrics_engine = RPSMetrics()
 
     @classmethod
-    def from_config(cls, config) -> "RPSGame":
+    def from_config(cls, config) -> RPSGame:
         return cls(num_rounds=config.rounds)
 
     def human_action_schema(self, config: Any) -> dict:
@@ -117,7 +118,7 @@ class RPSGame(InteractiveGameEngine):
         state.history.append({
             "round":        state.round_number,
             "actions":      {"A": a, "B": b},
-            "scores":       {"A": score_a, "B": score_b},
+            "payoffs":      {"A": score_a, "B": score_b},
             "winner":       winner,
             "total_scores": dict(state.total_scores),
         })
@@ -183,7 +184,7 @@ class RPSGame(InteractiveGameEngine):
         state.history.append({
             "round":        state.round_number,
             "actions":      {player: "forfeit", opponent: None},
-            "scores":       {player: 0.0, opponent: 1.0},
+            "payoffs":      {player: 0.0, opponent: 1.0},
             "winner":       opponent,
             "forfeit":      True,
             "forfeit_by":   player,

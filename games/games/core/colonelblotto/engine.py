@@ -2,9 +2,9 @@ from copy import deepcopy
 from dataclasses import dataclass
 
 from arena.interactive_game_engine import InteractiveGameEngine
-from .metrics import ColonelBlottoMetrics
 
 from .agent import Agent
+from .metrics import ColonelBlottoMetrics
 
 
 @dataclass
@@ -129,7 +129,7 @@ class ColonelBlottoGame(InteractiveGameEngine):
                 "A": result["action_a"],
                 "B": result["action_b"],
             },
-            "scores": {
+            "payoffs": {
                 "A": result["score_a"],
                 "B": result["score_b"],
             },
@@ -212,7 +212,7 @@ class ColonelBlottoGame(InteractiveGameEngine):
                 player: [0] * fields,
                 opponent: None,  # no allocation submitted; opponent wins by default
             },
-            "scores": {player: 0.0, opponent: float(fields)},
+            "payoffs": {player: 0.0, opponent: float(fields)},
             "winner": opponent,
             "total_scores": dict(next_state.total_scores),
             "forfeit": True,

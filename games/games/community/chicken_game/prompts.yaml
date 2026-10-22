@@ -34,6 +34,11 @@ state: |
   Before acting: use your mailbox tools. Communication can increase your payoff.
   What do you choose this round? Respond with exactly one word: swerve or dare.
 
+action_format:
+  type: string
+  example: "swerve"
+  enum: [swerve, dare]
+
 variants:
   neutral: |
     You are playing the Chicken Game.

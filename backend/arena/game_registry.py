@@ -1,5 +1,5 @@
-from pathlib import Path
 import importlib
+from pathlib import Path
 
 import yaml
 from jinja2 import Template
@@ -152,6 +152,18 @@ class GameRegistry:
         opp_id = opp_ids[0] if opp_ids else None
         total_scores = state.get("total_scores", {})
 
+        # Saved sessions may predate the canonical per-round payoff key. Adapt
+        # only the rendering context so old histories remain readable unchanged.
+        ctx["history"] = [
+            {
+                **entry,
+                "payoffs": entry.get(
+                    "payoffs", entry.get("scores", entry.get("round_payoffs", {}))
+                ),
+            }
+            for entry in ctx.get("history", [])
+        ]
+
         messages = state.get("messages") or []
         inbox = [
             m for m in messages
@@ -212,7 +224,7 @@ class GameRegistry:
             if phase == "awaiting_proposal":
                 return prompts.get("proposer_state", prompts.get("state", ""))
             return prompts.get("responder_state", prompts.get("state", ""))
-        return prompts.get("state", prompts.get("turn", ""))
+        return prompts.get("state", "")
 
     def get_game_scenarios(self, name: str) -> list[dict]:
         game_dir = self._game_dir(name)
