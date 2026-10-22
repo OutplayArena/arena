@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from typing import Any
 
 import httpx
@@ -113,6 +114,77 @@ class ArenaClient:
             timeout=self.timeout,
         )
         return self._json_or_raise(response)
+
+    def get_telemetry(self, *, api_key: str) -> dict:
+        """Get a terminal session's private research report.
+
+        Args:
+            api_key: The session owner's platform API key or user access token.
+                Player session keys do not grant access to research traces.
+
+        Returns:
+            Versioned report with coverage, player observations, patterns and provenance.
+
+        Raises:
+            ValueError: If the session ID or owner credential is missing.
+            httpx.HTTPStatusError: If access is denied or the session is still active.
+        """
+        session_id = self._require_session_id()
+        if not api_key.strip():
+            raise ValueError("an owner API key is required for research telemetry")
+        response = self.http_client.get(
+            f"{self.base_url}/session/{session_id}/telemetry",
+            headers={"Authorization": f"Bearer {api_key}"},
+            timeout=self.timeout,
+        )
+        return self._json_or_raise(response)
+
+    def iter_telemetry_events(
+        self,
+        *,
+        api_key: str,
+        event_type: str | None = None,
+        page_size: int = 200,
+    ) -> Iterator[dict[str, Any]]:
+        """Iterate a terminal session's private event trail using bounded pages.
+
+        Args:
+            api_key: The session owner's platform API key or user access token.
+            event_type: Optional event type, for example action.rejected.
+            page_size: Number of events per request, between 1 and 500.
+
+        Yields:
+            Versioned event records in increasing event ID order.
+
+        Raises:
+            ValueError: If the session ID, owner credential or page size is invalid.
+            RuntimeError: If the server returns a cursor that does not advance.
+            httpx.HTTPStatusError: If the request fails.
+        """
+        session_id = self._require_session_id()
+        if not api_key.strip():
+            raise ValueError("an owner API key is required for research telemetry")
+        if not 1 <= page_size <= 500:
+            raise ValueError("page_size must be between 1 and 500")
+        after_id = 0
+        while True:
+            params: dict[str, Any] = {"after_id": after_id, "limit": page_size}
+            if event_type:
+                params["event_type"] = event_type
+            response = self.http_client.get(
+                f"{self.base_url}/session/{session_id}/telemetry/events",
+                params=params,
+                headers={"Authorization": f"Bearer {api_key}"},
+                timeout=self.timeout,
+            )
+            page = self._json_or_raise(response)
+            yield from page["events"]
+            next_id = page.get("next_after_id")
+            if next_id is None:
+                return
+            if not isinstance(next_id, int) or next_id <= after_id:
+                raise RuntimeError("telemetry event cursor did not advance")
+            after_id = next_id
 
     def get_state(self) -> dict:
         """Get the current game state.

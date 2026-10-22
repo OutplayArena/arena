@@ -244,7 +244,14 @@ class FakeDb:
 
         return _Result(None)
 
+    async def flush(self):
+        pass
+
     def add(self, obj):
+        if getattr(obj, "__tablename__", None) == "telemetry_events":
+            self._telemetry_events = getattr(self, "_telemetry_events", [])
+            self._telemetry_events.append(obj)
+            return
         self.added.append(obj)
         # Use duck typing to handle both fake and real SQLAlchemy model
         # instances (Match, MatchParticipant, SessionModel).

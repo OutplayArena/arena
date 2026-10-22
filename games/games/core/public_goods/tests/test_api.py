@@ -8,6 +8,8 @@ os.environ["GOOGLE_CLIENT_SECRET"] = ""
 os.environ["ENABLE_AGENT_REST_API"] = "true"
 
 import pytest
+
+from arena.models.telemetry_event import TelemetryEvent
 from fastapi.testclient import TestClient
 
 from arena.main import app, config_from_request, get_broker
@@ -69,7 +71,12 @@ class FakeDb:
         return FakeResult(None)
 
     def add(self, obj):
+        if isinstance(obj, TelemetryEvent):
+            return
         self._store[str(obj.id)] = obj
+
+    async def flush(self):
+        pass
 
     async def commit(self):
         pass

@@ -462,8 +462,13 @@ def config_from_request(request: dict[str, Any]):
     return GAME_REGISTRY.config_from_request(game_payload)
 
 
-async def get_session(session_id: str, db: AsyncSession) -> GameSession:
-    result = await db.execute(select(SessionModel).where(SessionModel.id == session_id))
+async def get_session(
+    session_id: str, db: AsyncSession, *, for_update: bool = False
+) -> GameSession:
+    stmt = select(SessionModel).where(SessionModel.id == session_id)
+    if for_update:
+        stmt = stmt.with_for_update()
+    result = await db.execute(stmt)
     row = result.scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="session not found")
@@ -522,7 +527,7 @@ def action_error(exc: ValueError) -> HTTPException:
     message = str(exc)
     if "invalid player token" in message or "invalid session key" in message:
         return HTTPException(status_code=401, detail=message)
-    if "already submitted" in message or "already complete" in message:
+    if any(marker in message for marker in ("already submitted", "already complete", "already failed")):
         return HTTPException(status_code=409, detail=message)
     return HTTPException(status_code=400, detail=message)
 
@@ -1071,7 +1076,7 @@ async def submit_action(
     _: None = require_agent_api(),
 ):
     """Submit an action (allocation or forfeit) for a player in a session."""
-    session = await get_session(session_id, db)
+    session = await get_session(session_id, db, for_update=True)
     if session.status == "queued":
         raise HTTPException(
             status_code=409,
@@ -1082,18 +1087,13 @@ async def submit_action(
     try:
         session.submit_action_with_token(token, request.allocation, forfeit=request.forfeit)
     except ValueError as exc:
+        await session.flush_telemetry(db)
+        await db.commit()
         raise action_error(exc) from exc
     except Exception as exc:
-        session.mark_failed(str(exc))
+        session.mark_failed(exc)
+        await session.save_state(db)
         state_dict = _serialize_state(session.state)
-        await broker.enqueue("state:persist", {
-            "session_id": session_id,
-            "state": state_dict,
-            "status": session.status,
-            "error_message": session.error_message,
-            "locked": session.locked,
-            "player_tokens": session.player_tokens,
-        })
         player = session.player_for_token(token)
         round_number = state_dict.get("round_number", 0)
         agent_id = (session.agents or {}).get(player)
@@ -1113,6 +1113,7 @@ async def submit_action(
     row.status = session.status
     row.locked = session.locked
     row.player_tokens_json = session.player_tokens
+    await session.flush_telemetry(db)
     await db.commit()
 
     # Stateless W&B logging: when the game completes, open a run, log all
@@ -1188,7 +1189,7 @@ async def submit_human_action(
     authorization: str | None = Header(default=None),
 ):
     """Submit a human player action with automatic formatting."""
-    session = await get_session(session_id, db)
+    session = await get_session(session_id, db, for_update=True)
     token = bearer_token(authorization)
 
     from arena.interactive_game_engine import InteractiveGameEngine
@@ -1202,23 +1203,36 @@ async def submit_human_action(
         if token_player != player:
             raise HTTPException(status_code=403, detail="token does not match player")
 
+        if session.status in {"completed", "failed", "queued"}:
+            # Validate the capability before observing a rejected submission,
+            # and never run a formatter against an immutable terminal session.
+            if session.status != "queued":
+                session.record_rejection(player, ValueError("session is terminal"),
+                                         forfeit=request.forfeit)
+                await session.flush_telemetry(db)
+                await db.commit()
+            raise HTTPException(status_code=409, detail=f"session is {session.status}")
+
         if request.forfeit:
-            if hasattr(game, "forfeit_round"):
-                session.state = game.forfeit_round(session.state, player)
-            else:
-                raise HTTPException(status_code=400, detail="game does not support forfeit")
+            session.submit_action_with_token(token, None, forfeit=True)
         else:
-            formatted_action = game.format_human_action(request.action, session.config)
-            game.validate_human_action(session.state, player, formatted_action, session.config)
+            try:
+                formatted_action = game.format_human_action(request.action, session.config)
+                game.validate_human_action(session.state, player, formatted_action, session.config)
+            except ValueError as exc:
+                session.record_rejection(player, exc)
+                raise
             session.submit_action(player, formatted_action)
 
         session._update_status_from_state()
     except HTTPException:
         raise
     except ValueError as exc:
+        await session.flush_telemetry(db)
+        await db.commit()
         raise action_error(exc) from exc
     except Exception as exc:
-        session.mark_failed(str(exc))
+        session.mark_failed(exc)
         await session.save_state(db)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -1405,7 +1419,7 @@ async def fail_session(
     _: None = require_agent_api(),
 ):
     """Mark a session as failed with an error message."""
-    session = await get_session(session_id, db)
+    session = await get_session(session_id, db, for_update=True)
     # Require a valid session key for this session — prevents unauthenticated
     # callers from disrupting sessions when ENABLE_AGENT_REST_API=true.
     token = bearer_token(authorization)
@@ -1413,16 +1427,13 @@ async def fail_session(
         session.player_for_token(token)
     except ValueError as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
-    session.mark_failed(request.get("error", "unknown error"))
-    state_dict = _serialize_state(session.state)
-    await broker.enqueue("state:persist", {
-        "session_id": session_id,
-        "state": state_dict,
-        "status": session.status,
-        "error_message": session.error_message,
-        "locked": session.locked,
-        "player_tokens": session.player_tokens,
-    })
+    if session.status == "completed":
+        raise HTTPException(status_code=409, detail="completed sessions cannot be failed")
+    if session.status == "failed":
+        return {"session_id": session_id, "status": session.status,
+                "error_message": session.error_message}
+    session.mark_failed(str(request.get("error", "unknown error")))
+    await session.save_state(db)
 
     return {"session_id": session_id, "status": session.status, "error_message": session.error_message}
 
@@ -2980,6 +2991,11 @@ def _register_spa_fallback(app: FastAPI, static_root: Path, api_prefix: str) -> 
             if index_file.is_file():
                 return FileResponse(index_file)
         return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+
+from arena.telemetry.api import router as telemetry_router
+
+app.include_router(telemetry_router, prefix=API_PREFIX)
 
 
 if STATIC_ROOT.is_dir():

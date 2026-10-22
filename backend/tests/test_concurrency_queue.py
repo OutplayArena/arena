@@ -154,7 +154,14 @@ class FakeDb:
 
         return _FakeResult(None)
 
+    async def flush(self):
+        pass
+
     def add(self, obj):
+        if getattr(obj, "__tablename__", None) == "telemetry_events":
+            self._telemetry_events = getattr(self, "_telemetry_events", [])
+            self._telemetry_events.append(obj)
+            return
         self.added.append(obj)
 
     async def commit(self):
@@ -445,7 +452,14 @@ class TestCreateExperimentQueuesAtCapacity:
                         return _Result(row)
                 return _Result(None)
 
+            async def flush(self):
+                pass
+
             def add(self, obj):
+                if getattr(obj, "__tablename__", None) == "telemetry_events":
+                    self._telemetry_events = getattr(self, "_telemetry_events", [])
+                    self._telemetry_events.append(obj)
+                    return
                 self._store[str(obj.id)] = obj
 
             async def commit(self):
@@ -710,7 +724,7 @@ class TestQueuedActionRejected:
         class _FakeSession:
             status = "queued"
 
-        async def _fake_get_session(session_id, db):
+        async def _fake_get_session(session_id, db, *, for_update=False):
             return _FakeSession()
 
         monkeypatch.setattr("arena.main.get_session", _fake_get_session)

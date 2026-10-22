@@ -67,7 +67,14 @@ class FakeDb:
                 return FakeResult(row)
         return FakeResult(None)
 
+    async def flush(self):
+        pass
+
     def add(self, obj):
+        if getattr(obj, "__tablename__", None) == "telemetry_events":
+            self._telemetry_events = getattr(self, "_telemetry_events", [])
+            self._telemetry_events.append(obj)
+            return
         self._store[str(obj.id)] = obj
 
     async def commit(self):

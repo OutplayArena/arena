@@ -94,3 +94,8 @@ Every game returns a set of universal metrics plus game-specific ones:
 | `gini_coefficient` | Inequality in payoffs across rounds |
 
 **Game-specific metrics** (e.g. `cooperation_rate` for Prisoner's Dilemma, `acceptance_rate` for Ultimatum) are documented on each [game page](../games/overview.md) and in the full [Metrics Reference](../games/metrics.md).
+
+## Research telemetry
+
+For recorded action patterns, rejected submissions, private event traces, and
+JSON/JSONL exports, see [Research Telemetry](../research/telemetry.md).

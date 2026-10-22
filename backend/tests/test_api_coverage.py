@@ -245,7 +245,14 @@ class FakeDb:
             return True
         return str(row_user) == str(target_user)
 
+    async def flush(self):
+        pass
+
     def add(self, obj):
+        if getattr(obj, "__tablename__", None) == "telemetry_events":
+            self._telemetry_events = getattr(self, "_telemetry_events", [])
+            self._telemetry_events.append(obj)
+            return
         self._store[str(obj.id)] = obj
 
     async def commit(self):
@@ -744,7 +751,7 @@ class TestSessionEndpoints:
             assert response.status_code == 200
 
     def test_fail_session(self, client):
-        c, _, broker, _ = client
+        c, db, _, _ = client
         created = c.post("/experiment", json=_valid_payload()).json()
         token = created["player_tokens"]["A"]
         response = c.post(
@@ -754,9 +761,8 @@ class TestSessionEndpoints:
         )
         assert response.status_code == 200
         assert response.json()["status"] == "failed"
-        assert any(
-            q == "state:persist" for q, _ in broker.enqueued
-        )
+        assert db._store[created["session_id"]].status == "failed"
+        assert db._telemetry_events[-1].event_type == "session.failed"
 
     def test_get_results(self, client):
         c, _, _, _ = client

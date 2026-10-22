@@ -11,6 +11,7 @@ import pytest
 from arena.auth.dependencies import _ensure_local_user, require_user
 from arena.db import get_db
 from arena.main import app, config_from_request, get_broker
+from arena.models.telemetry_event import TelemetryEvent
 from fastapi.testclient import TestClient
 
 
@@ -68,7 +69,12 @@ class FakeDb:
         return FakeResult(None)
 
     def add(self, obj):
+        if isinstance(obj, TelemetryEvent):
+            return
         self._store[str(obj.id)] = obj
+
+    async def flush(self):
+        pass
 
     async def commit(self):
         pass
