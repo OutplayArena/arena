@@ -79,6 +79,34 @@ The figure's left panels show cumulative regret; the right panels divide each
 prefix by its own round count. The shaded ranges describe only these three
 repetitions and provide no proof of convergence or asymptotic guarantees.
 
+## Local LLM pilot
+
+A separate pilot ran Qwen2.5 1.5B locally through Ollama 0.17.0 against a switching
+opponent sequence in all three supported games. Each game used 10 rounds and seed
+7 for its trace and classical policies. All 30 model responses were valid, and all
+15 model/baseline trials completed. Model sampling used temperature 0.7 without an
+explicit inference seed.
+
+![Local Qwen2.5 1.5B regret comparison](../examples/regret_benchmark/local-qwen-pilot.png)
+
+The left column shows cumulative regret; the right shows average regret. Final
+average external regret was:
+
+| Game | Qwen2.5 1.5B | FTPL | FTRL |
+|---|---:|---:|---:|
+| Rock Paper Scissors | 0.70 | 0.20 | 0.20 |
+| Prisoner's Dilemma | 0.20 | 0.60 | 0.80 |
+| Stag Hunt | 0.00 | -0.20 | 0.20 |
+
+Compare values within each game because payoff scales differ. This single-run,
+short-horizon pilot validates the real SDK/model pathway and does not establish
+convergence or a general model ranking. Payoffs and all 300 prefix values across
+both player perspectives were independently checked against explicit matrices.
+
+Committed sources include the [model metadata and action histories](../examples/regret_benchmark/local-qwen-pilot.yaml),
+[final results](../examples/regret_benchmark/local-qwen-pilot-finals.csv), and
+[complete curves](../examples/regret_benchmark/local-qwen-pilot-curves.csv).
+
 ## Configure actual LLM runs
 
 Copy [model.yaml](../examples/regret_benchmark/model.yaml) and replace the model
@@ -111,7 +139,8 @@ including failed requests and invalid responses. SDK HTTP retries are disabled;
 `max_attempts` controls the explicitly logged per-round retries. `timeout` bounds
 each request. The request cap is not a currency or total-token budget; prompt
 length grows with the complete visible history. `max_tokens` limits each model
-response. No model study has been run or paid for as part of the free examples.
+response. The free baseline example makes no model requests; the separate pilot
+above uses local inference without paid provider access.
 
 Existing SDK agents perform each decision through `BaseAgent.decide_once`.
 This is a plain-text decision protocol with tools and communication disabled,

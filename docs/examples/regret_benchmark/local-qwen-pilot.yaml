@@ -1,0 +1,212 @@
+source_commit: 4e74151c4dd4b512387a858f9c21fff578dd15c0
+provider: local_ollama
+model: qwen2.5:1.5b
+model_digest: 65ec06548149b04c096a120e4a6da9d4017ea809c91734ea5631e89f96ddc57b
+ollama_version:
+  version: 0.17.0
+model_details:
+  parent_model: ''
+  format: gguf
+  family: qwen2
+  families:
+  - qwen2
+  parameter_size: 1.5B
+  quantization_level: Q4_K_M
+started_utc: '2026-10-22T05:02:19.895997+00:00'
+finished_utc: '2026-10-22T05:09:14.384402+00:00'
+local_model_calls_used: 30
+independent_verification:
+  completed_trials: 15
+  player_perspectives: 30
+  prefix_checks: 300
+  passed: true
+  method: Separate explicit payoff matrices and brute-force recomputation at every
+    prefix; no calls to the regret calculator.
+rounds_per_game: 10
+seed: 7
+opponent_trace: switching
+temperature: 0.7
+max_tokens: 128
+max_attempts: 1
+inference_seed: null
+note: The seed controls opponent traces and classical policies; model sampling was
+  not seeded. One local-model run per game; no confidence intervals.
+games:
+  rock_paper_scissors:
+    resolved_game_config:
+      game: rock_paper_scissors
+      variant: classic
+      players: 2
+      rounds: 10
+      seed: 7
+    actions:
+    - paper
+    - scissors
+    - scissors
+    - scissors
+    - scissors
+    - scissors
+    - scissors
+    - scissors
+    - scissors
+    - rock
+    opponent_actions:
+    - rock
+    - rock
+    - rock
+    - rock
+    - rock
+    - scissors
+    - scissors
+    - scissors
+    - scissors
+    - scissors
+    raw_responses:
+    - paper
+    - scissors
+    - scissors
+    - scissors
+    - scissors
+    - scissors
+    - scissors
+    - scissors
+    - scissors
+    - rock
+    regret:
+      status: available
+      cumulative: 7.0
+      average: 0.7
+      normalized_average: 0.35
+      best_fixed_action: rock
+      best_fixed_total_payoff: 5.0
+      fixed_action_total_payoffs:
+        rock: 5.0
+        paper: 0.0
+        scissors: -5.0
+      actual_total_payoff: -2.0
+      num_rounds: 10
+      payoff_range:
+        min: -1.0
+        max: 1.0
+  prisonersdilemma:
+    resolved_game_config:
+      game: prisonersdilemma
+      variant: classic
+      players: 2
+      rounds: 10
+      payoff_T: 5.0
+      payoff_R: 3.0
+      payoff_P: 1.0
+      payoff_S: 0.0
+      noise: 0.0
+      seed: 7
+      scenario: prison
+      system_prompt: ''
+    actions:
+    - defect
+    - defect
+    - defect
+    - defect
+    - defect
+    - defect
+    - cooperate
+    - defect
+    - cooperate
+    - defect
+    opponent_actions:
+    - cooperate
+    - cooperate
+    - cooperate
+    - cooperate
+    - cooperate
+    - defect
+    - defect
+    - defect
+    - defect
+    - defect
+    raw_responses:
+    - defect
+    - defect
+    - defect
+    - defect
+    - defect
+    - defect
+    - cooperate
+    - defect
+    - cooperate
+    - defect
+    regret:
+      status: available
+      cumulative: 2.0
+      average: 0.2
+      normalized_average: 0.04
+      best_fixed_action: defect
+      best_fixed_total_payoff: 30.0
+      fixed_action_total_payoffs:
+        cooperate: 15.0
+        defect: 30.0
+      actual_total_payoff: 28.0
+      num_rounds: 10
+      payoff_range:
+        min: 0.0
+        max: 5.0
+  stag_hunt:
+    resolved_game_config:
+      game: stag_hunt
+      variant: classic
+      players: 2
+      rounds: 10
+      payoff_stag_stag: 4.0
+      payoff_hare_hare: 2.0
+      payoff_stag_hare: 0.0
+      noise: 0.0
+      seed: 7
+      system_prompt: ''
+    actions:
+    - stag
+    - stag
+    - stag
+    - stag
+    - stag
+    - stag
+    - stag
+    - stag
+    - stag
+    - stag
+    opponent_actions:
+    - stag
+    - stag
+    - stag
+    - stag
+    - stag
+    - hare
+    - hare
+    - hare
+    - hare
+    - hare
+    raw_responses:
+    - stag
+    - stag
+    - stag
+    - stag
+    - stag
+    - stag
+    - stag
+    - stag
+    - stag
+    - stag
+    regret:
+      status: available
+      cumulative: 0.0
+      average: 0.0
+      normalized_average: 0.0
+      best_fixed_action: stag
+      best_fixed_total_payoff: 20.0
+      fixed_action_total_payoffs:
+        stag: 20.0
+        hare: 20.0
+      actual_total_payoff: 20.0
+      num_rounds: 10
+      payoff_range:
+        min: 0.0
+        max: 4.0
