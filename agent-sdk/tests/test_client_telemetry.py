@@ -85,3 +85,10 @@ def test_telemetry_requires_owner_credential():
     with pytest.raises(ValueError, match="owner"):
         arena.get_telemetry(api_key=" ")
     transport.get.assert_not_called()
+
+
+def test_event_iteration_requires_owner_credential():
+    arena, transport = client()
+    with pytest.raises(ValueError, match="owner"):
+        list(arena.iter_telemetry_events(api_key=" "))
+    transport.get.assert_not_called()
