@@ -7,7 +7,7 @@ import type { AgentDetailResponse, RatingHistoryResponse } from "../types";
 const METRIC_LABELS: Record<string, string> = {
   avg_payoff: "Avg Payoff",
   nash_gap: "Nash Gap",
-  cumulative_regret: "Regret",
+  cumulative_regret: "Legacy regret",
   strategy_entropy: "Entropy",
   behavioral_consistency: "Consistency",
   cooperation_rate: "Cooperation",
