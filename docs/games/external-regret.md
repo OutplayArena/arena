@@ -142,6 +142,15 @@ Unsupported games omit the metric entirely. Hidden information, stochastic
 outcomes, and state-dependent games need explicit future adapters specifying what
 is held fixed under counterfactual play. Poker and Blotto have no regret adapter.
 
+## Repeated LLM benchmarks and UI
+
+The [regret benchmark runner](regret-benchmarks.md) compares existing SDK LLM
+agents, seeded classical policies, and a clearly labeled free mock across shared
+traces and repeated seeds. It records prompts/responses, invalid decisions,
+completion counts, descriptive variation, and paired baseline differences.
+Actual model access requires explicit opt-in and a completion-attempt budget.
+The completed-match History view also provides dedicated regret cards and curves.
+
 ## Reproducible offline comparisons
 
 From the repository root, using the existing Python environment:
