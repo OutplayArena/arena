@@ -8,7 +8,8 @@ from arena.interactive_game_engine import InteractiveGameEngine
 from games.core.prisonersdilemma.metrics import PDMetrics
 from games.core.prisonersdilemma.scenarios import get_scenario, ScenarioId
 
-VALID_ACTIONS = frozenset({"cooperate", "defect"})
+ACTION_ORDER = ("cooperate", "defect")
+VALID_ACTIONS = frozenset(ACTION_ORDER)
 _OUTCOMES: dict[tuple[str, str], str] = {
     ("cooperate", "cooperate"): "CC",
     ("cooperate", "defect"):    "CD",
@@ -47,7 +48,10 @@ class PDGame(InteractiveGameEngine):
         self.S = S
         self.noise = noise
         self._rng = random.Random(seed)
-        self.metrics_engine = PDMetrics()
+        self.metrics_engine = PDMetrics({
+            "rounds": num_rounds, "payoff_T": T, "payoff_R": R,
+            "payoff_P": P, "payoff_S": S, "noise": noise,
+        })
         self.scenario = get_scenario(scenario)
         self._system_prompt = system_prompt
 
@@ -141,6 +145,12 @@ class PDGame(InteractiveGameEngine):
             state = self._resolve_round(state)
         return state
 
+    def payoff(self, action: str, opponent_action: str) -> float:
+        """Return the configured stage payoff before any action noise."""
+        if action == "cooperate":
+            return self.R if opponent_action == "cooperate" else self.S
+        return self.T if opponent_action == "cooperate" else self.P
+
     def _resolve_round(self, state: PDState) -> PDState:
         a_intended = state.pending_actions["A"]
         b_intended = state.pending_actions["B"]
@@ -148,14 +158,7 @@ class PDGame(InteractiveGameEngine):
         b = self._maybe_flip(b_intended)
         outcome = _OUTCOMES[(a, b)]
 
-        if outcome == "CC":
-            payoff_a, payoff_b = self.R, self.R
-        elif outcome == "CD":
-            payoff_a, payoff_b = self.S, self.T
-        elif outcome == "DC":
-            payoff_a, payoff_b = self.T, self.S
-        else:
-            payoff_a, payoff_b = self.P, self.P
+        payoff_a, payoff_b = self.payoff(a, b), self.payoff(b, a)
 
         state.total_scores["A"] = round(state.total_scores["A"] + payoff_a, 2)
         state.total_scores["B"] = round(state.total_scores["B"] + payoff_b, 2)

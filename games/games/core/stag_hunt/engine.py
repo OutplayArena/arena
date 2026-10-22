@@ -7,7 +7,8 @@ from dataclasses import dataclass
 from arena.interactive_game_engine import InteractiveGameEngine
 from games.core.stag_hunt.metrics import StagHuntMetrics
 
-VALID_ACTIONS = frozenset({"stag", "hare"})
+ACTION_ORDER = ("stag", "hare")
+VALID_ACTIONS = frozenset(ACTION_ORDER)
 
 _OUTCOMES: dict[tuple[str, str], str] = {
     ("stag", "stag"): "SS",
@@ -44,7 +45,11 @@ class StagHuntGame(InteractiveGameEngine):
         self.payoff_stag_hare = payoff_stag_hare
         self.noise = noise
         self._rng = random.Random(seed)
-        self.metrics_engine = StagHuntMetrics()
+        self.metrics_engine = StagHuntMetrics({
+            "rounds": num_rounds, "payoff_stag_stag": payoff_stag_stag,
+            "payoff_hare_hare": payoff_hare_hare, "payoff_stag_hare": payoff_stag_hare,
+            "noise": noise,
+        })
         self._system_prompt = system_prompt
 
     @classmethod
@@ -134,6 +139,12 @@ class StagHuntGame(InteractiveGameEngine):
             state = self._resolve_round(state)
         return state
 
+    def payoff(self, action: str, opponent_action: str) -> float:
+        """Return the configured stage payoff before any action noise."""
+        if action == "hare":
+            return self.payoff_hare_hare
+        return self.payoff_stag_stag if opponent_action == "stag" else self.payoff_stag_hare
+
     def _resolve_round(self, state: StagHuntState) -> StagHuntState:
         a_intended = state.pending_actions["A"]
         b_intended = state.pending_actions["B"]
@@ -141,14 +152,7 @@ class StagHuntGame(InteractiveGameEngine):
         b = self._maybe_flip(b_intended)
         outcome = _OUTCOMES[(a, b)]
 
-        if outcome == "SS":
-            payoff_a = payoff_b = self.payoff_stag_stag
-        elif outcome == "SH":
-            payoff_a, payoff_b = self.payoff_stag_hare, self.payoff_hare_hare
-        elif outcome == "HS":
-            payoff_a, payoff_b = self.payoff_hare_hare, self.payoff_stag_hare
-        else:
-            payoff_a = payoff_b = self.payoff_hare_hare
+        payoff_a, payoff_b = self.payoff(a, b), self.payoff(b, a)
 
         state.total_scores["A"] = round(state.total_scores["A"] + payoff_a, 2)
         state.total_scores["B"] = round(state.total_scores["B"] + payoff_b, 2)

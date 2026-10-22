@@ -3,7 +3,7 @@ const DESCRIPTIONS: Record<string, string> = {
   alpha_rank: "Evolutionary dominance ranking — stationary distribution of the response graph. Higher mass = more strategically robust.",
   avg_payoff: "Average payoff per round. Higher = better per-round performance.",
   nash_gap: "Distance from best-response payoff. Lower = closer to Nash equilibrium.",
-  cumulative_regret: "Payoff lost by not always playing the optimal response. Lower = better.",
+  cumulative_regret: "Legacy clamped reference-payoff estimate. See External regret in match history for the exact best-fixed-action comparison.",
   strategy_entropy: "Action diversity (Shannon entropy). Higher = more unpredictable.",
   behavioral_consistency: "How similar actions are across repeated rounds. Higher = more consistent.",
   cooperation_rate: "Fraction of cooperative actions. Only relevant for cooperative games.",

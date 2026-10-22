@@ -1,0 +1,9 @@
+# Free protocol smoke test: mock_llm is a scripted policy, not a language model.
+game: rock_paper_scissors
+rounds: 50
+seeds: [7, 19, 31]
+traces: [constant, cyclic, switching, uniform]
+baselines: [ftpl, ftrl, uniform, last_response]
+include_mock_llm: true
+max_attempts: 1
+models: []

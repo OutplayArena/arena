@@ -22,6 +22,7 @@ class Match:
     agent_ids: list[str]
     moves: list[Move]
     config: dict = field(default_factory=dict)
+    metadata: dict = field(default_factory=dict)
 
     def moves_by_agent(self, agent_id: str) -> list[Move]:
         return sorted(

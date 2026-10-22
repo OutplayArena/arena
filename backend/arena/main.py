@@ -309,6 +309,7 @@ def _namespace_match(match: Any, username: str | None) -> Any:
             round_number=m.round_number,
             action=m.action,
             payoff=m.payoff,
+            metadata=dict(getattr(m, "metadata", {})),
         )
         for m in match.moves
     ]
@@ -318,6 +319,7 @@ def _namespace_match(match: Any, username: str | None) -> Any:
         agent_ids=namespaced_ids,
         moves=new_moves,
         config=match.config,
+        metadata=dict(getattr(match, "metadata", {})),
     )
 
 

@@ -53,6 +53,7 @@ Classic social dilemma. Two players simultaneously choose to cooperate or defect
 - `gini_coefficient`
 - `payoff_volatility`
 - `action_concentration`
+- `external_regret`
 
 ## Built-in Agents
 

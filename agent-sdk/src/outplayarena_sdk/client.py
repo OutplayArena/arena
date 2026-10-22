@@ -198,7 +198,8 @@ class ArenaClient:
             - status: "completed"
             - scores: Final scores by player
             - winner: Player ID of the winner (or "tie")
-            - metrics: Dictionary of computed metrics
+            - metrics: Computed metrics, including ``external_regret`` by player role.
+            - rich_metrics: Per-agent report, including ``external_regret`` when supported.
             - history: Full action history
         
         Raises:

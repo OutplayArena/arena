@@ -4,6 +4,7 @@ import { downloadJSON } from "./badges";
 import { getGameMetrics, getMailboxMessages } from "../api";
 import type { RichMetrics, MetricDescriptor, MailboxMessage } from "../types";
 import { GameTimeline } from "./GameTimeline";
+import { ExternalRegretPanel } from "./ExternalRegretPanel";
 
 interface AutoHistoryViewProps {
   hasMatch: boolean;
@@ -87,7 +88,7 @@ function MetricValue({ value }: { value: unknown }) {
   return <span className="text-xs text-ink font-mono mt-0.5 block">{formatValue(value)}</span>;
 }
 
-function RichMetricsPanel({ rich, catalog }: { rich: RichMetrics; catalog: Record<string, MetricDescriptor> }) {
+function RichMetricsPanel({ rich, catalog, hideExternalRegret = false }: { rich: RichMetrics; catalog: Record<string, MetricDescriptor>; hideExternalRegret?: boolean }) {
   const agents = rich.agents ? Object.keys(rich.agents) : [];
 
   return (
@@ -116,7 +117,7 @@ function RichMetricsPanel({ rich, catalog }: { rich: RichMetrics; catalog: Recor
             </h4>
             <div className="grid grid-cols-2 gap-2">
               {Object.entries(agent).map(([key, value]) => {
-                if (key === "adaptive_regret_series") return null;
+                if (key === "adaptive_regret_series" || (key === "external_regret" && hideExternalRegret)) return null;
                 return (
                   <div key={key} className="rounded-card bg-surface-container/30 border border-line/30 p-2">
                     <MetricLabel name={key} catalog={catalog} />
@@ -214,11 +215,13 @@ export function AutoHistoryView({ hasMatch, canvasCollapsed, onExpandCanvas, gam
               </button>
             </div>
 
-            {activeMatch.metrics && Object.keys(activeMatch.metrics).length > 0 && (
+            <ExternalRegretPanel byPlayer={activeMatch.metrics?.external_regret} />
+
+            {activeMatch.metrics && Object.keys(activeMatch.metrics).some(key => key !== "external_regret") && (
               <div className="mt-4">
                 <h3 className="text-[11px] font-extrabold text-muted uppercase mb-2">Metrics</h3>
                 <div className="grid grid-cols-2 gap-2">
-                  {Object.entries(activeMatch.metrics).map(([key, value]) => (
+                  {Object.entries(activeMatch.metrics).filter(([key]) => key !== "external_regret").map(([key, value]) => (
                     <div key={key} className="rounded-card bg-surface-container/30 border border-line/30 p-2">
                       <MetricLabel name={key} catalog={catalog} />
                       <MetricValue value={value} />
@@ -229,7 +232,7 @@ export function AutoHistoryView({ hasMatch, canvasCollapsed, onExpandCanvas, gam
             )}
 
             {activeMatch.rich_metrics && (
-              <RichMetricsPanel rich={activeMatch.rich_metrics} catalog={catalog} />
+              <RichMetricsPanel rich={activeMatch.rich_metrics} catalog={catalog} hideExternalRegret={isPlainObj(activeMatch.metrics?.external_regret)} />
             )}
           </>
         )}

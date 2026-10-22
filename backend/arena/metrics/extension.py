@@ -36,6 +36,12 @@ class GameMetricsExtension(ABC):
         """Game-specific keys to merge into report['agents'][agent_id]."""
         ...
 
+    def compute_external_regret(
+        self, match: Match, agent_id: str, config: dict
+    ) -> dict | None:
+        """Return exact regret when supported; None leaves the metric absent."""
+        return None
+
     def compute_pairwise(self, match: "Match", config: dict) -> dict:
         """Game-specific keys to merge into report['pairwise']. Override if needed."""
         return {}

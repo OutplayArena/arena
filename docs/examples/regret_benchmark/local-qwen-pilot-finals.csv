@@ -1,0 +1,16 @@
+game,candidate,candidate_kind,rounds,seed,trace,actual_total_payoff,best_fixed_action,best_fixed_total_payoff,cumulative_regret,average_regret,normalized_average_regret
+rock_paper_scissors,ftpl,baseline,10,7,switching,3.0,rock,5.0,2.0,0.2,0.1
+rock_paper_scissors,ftrl,baseline,10,7,switching,3.0,rock,5.0,2.0,0.2,0.1
+rock_paper_scissors,uniform,baseline,10,7,switching,2.0,rock,5.0,3.0,0.3,0.15
+rock_paper_scissors,last_response,baseline,10,7,switching,8.0,rock,5.0,-3.0,-0.3,-0.15
+rock_paper_scissors,qwen_2_5_1_5b,llm,10,7,switching,-2.0,rock,5.0,7.0,0.7,0.35
+prisonersdilemma,ftpl,baseline,10,7,switching,24.0,defect,30.0,6.0,0.6,0.12
+prisonersdilemma,ftrl,baseline,10,7,switching,22.0,defect,30.0,8.0,0.8,0.16
+prisonersdilemma,uniform,baseline,10,7,switching,20.0,defect,30.0,10.0,1.0,0.2
+prisonersdilemma,last_response,baseline,10,7,switching,30.0,defect,30.0,0.0,0.0,0.0
+prisonersdilemma,qwen_2_5_1_5b,llm,10,7,switching,28.0,defect,30.0,2.0,0.2,0.04
+stag_hunt,ftpl,baseline,10,7,switching,22.0,stag,20.0,-2.0,-0.2,-0.05
+stag_hunt,ftrl,baseline,10,7,switching,18.0,stag,20.0,2.0,0.2,0.05
+stag_hunt,uniform,baseline,10,7,switching,18.0,stag,20.0,2.0,0.2,0.05
+stag_hunt,last_response,baseline,10,7,switching,26.0,stag,20.0,-6.0,-0.6,-0.15
+stag_hunt,qwen_2_5_1_5b,llm,10,7,switching,20.0,stag,20.0,0.0,0.0,0.0

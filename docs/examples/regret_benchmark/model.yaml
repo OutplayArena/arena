@@ -1,0 +1,16 @@
+# Edit the model identifier and endpoint, then run --dry-run before opting in.
+game: rock_paper_scissors
+rounds: 20
+seeds: [7, 19, 31]
+traces: [constant, cyclic, switching, uniform]
+baselines: [ftpl, ftrl, uniform, last_response]
+include_mock_llm: false
+max_attempts: 1
+models:
+  - name: candidate_llm
+    model: your-provider-model-id
+    api_key_env: REGRET_MODEL_API_KEY
+    base_url: http://localhost:8001/v1
+    temperature: 0.7
+    max_tokens: 128
+    timeout: 60

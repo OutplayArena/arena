@@ -24,3 +24,4 @@ metrics:
   - gini_coefficient
   - payoff_volatility
   - action_concentration
+  - external_regret

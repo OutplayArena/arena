@@ -35,6 +35,7 @@ import asyncio
 import concurrent.futures
 import json
 import random
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from openai import OpenAI
@@ -80,6 +81,7 @@ class LLMConfig:
         fallback_model: str | None = None,
         max_retries: int = 2,
         reasoning_effort: str = "none",
+        timeout: float | None = None,
     ):
         self.model = model
         self.api_key = api_key
@@ -89,6 +91,7 @@ class LLMConfig:
         self.extra_body = extra_body
         self.fallback_model = fallback_model
         self.max_retries = max_retries
+        self.timeout = timeout
         self.reasoning_effort = reasoning_effort
 
 
@@ -265,6 +268,24 @@ class BaseAgent:
         raise NotImplementedError(
             f"{type(self).__name__} must override parse_action()"
         )
+
+    def decide_once(
+        self,
+        observation: dict,
+        state: dict,
+        choices: Sequence[str],
+        *,
+        completion: Callable[[list[dict]], Any] | None = None,
+    ) -> dict:
+        """Return an audited plain-text decision without connecting a session.
+
+        Strictly require one canonical action. Existing per-game parsers are
+        still exercised, but their defaults are never silently executed.
+        An injected completion supports free local experiments and tests.
+        """
+        from outplayarena_sdk.decisions import decide_once
+
+        return decide_once(self, observation, state, choices, completion)
 
     def action_format_hint(self) -> str:
         """Short description of the action shape for the LLM.
@@ -629,9 +650,13 @@ class BaseAgent:
 
     def _ensure_openai(self) -> None:
         if self._openai is None:
+            options: dict[str, Any] = {"max_retries": self.llm_config.max_retries}
+            if self.llm_config.timeout is not None:
+                options["timeout"] = self.llm_config.timeout
             self._openai = OpenAI(
                 base_url=self.llm_config.base_url,
                 api_key=self.llm_config.api_key,
+                **options,
             )
             self._reasoning = ReasoningModerator(
                 self.llm_config.model,

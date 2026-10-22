@@ -161,6 +161,9 @@ class MatchEvaluator:
             # Game-specific per-agent metrics (via extension)
             if extension is not None:
                 ar.update(extension.compute_agent(match, agent_id, config, report["joint"]))
+                regret = extension.compute_external_regret(match, agent_id, config)
+                if regret is not None:
+                    ar["external_regret"] = regret
 
             report["agents"][agent_id] = ar
 

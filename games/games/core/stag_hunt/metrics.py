@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from arena.game_components.game_metrics import GameMetrics
-from arena.metrics.extension import GameMetricsExtension
+from arena.metrics.external_regret import FiniteActionGame
+from arena.metrics.matrix_regret import MatrixRegretExtension
 
 
 def _outcome_counts(history: list[dict]) -> dict[str, int]:
@@ -13,7 +14,16 @@ def _outcome_counts(history: list[dict]) -> dict[str, int]:
     return counts
 
 
-class StagHuntMetrics(GameMetrics, GameMetricsExtension):
+class StagHuntMetrics(GameMetrics, MatrixRegretExtension):
+
+    def regret_game(self, config: dict) -> FiniteActionGame:
+        """Use the engine's deterministic payoff function and configured values."""
+        from games.core.stag_hunt.config import config_from_dict
+        from games.core.stag_hunt.engine import ACTION_ORDER, StagHuntGame
+
+        game = StagHuntGame.from_config(config_from_dict(config))
+        actions = ACTION_ORDER
+        return FiniteActionGame(actions, actions, game.payoff)
 
     def compute(self, history: list[dict], total_scores: dict) -> dict:
         n = len(history)
@@ -24,6 +34,7 @@ class StagHuntMetrics(GameMetrics, GameMetricsExtension):
                 if entry.get("actions", {}).get(player) == "stag":
                     stag_counts[player] += 1
         return {
+            "external_regret": self.history_external_regret(history, "stag_hunt"),
             "total_payoff":          dict(total_scores),
             "average_payoff":        {p: (total_scores[p] / n if n else 0.0) for p in total_scores},
             "stag_rate":             {p: (stag_counts[p] / n if n else 0.0) for p in ("A", "B")},

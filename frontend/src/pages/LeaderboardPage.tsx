@@ -16,7 +16,7 @@ const SORTABLE_COLUMNS = [
   { key: "alpha_rank", label: "α-Rank" },
   { key: "avg_payoff", label: "Avg Payoff" },
   { key: "nash_gap", label: "Nash Gap" },
-  { key: "cumulative_regret", label: "Regret" },
+  { key: "cumulative_regret", label: "Legacy regret" },
   { key: "strategy_entropy", label: "Entropy" },
   { key: "behavioral_consistency", label: "Consistency" },
   { key: "cooperation_rate", label: "Cooperation" },
