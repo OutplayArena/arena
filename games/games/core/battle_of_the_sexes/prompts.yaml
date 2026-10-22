@@ -28,6 +28,11 @@ state: |
   {% if inbox %}Inbox: {{ inbox }}{% endif %}
   What do you choose? Respond with exactly one word: {{ option_a }} or {{ option_b }}.
 
+action_format:
+  type: string
+  example: "opera"
+  description: Choose one of the two configured option labels shown in the state prompt.
+
 variants:
   neutral: |
     You are playing the Battle of the Sexes coordination game.

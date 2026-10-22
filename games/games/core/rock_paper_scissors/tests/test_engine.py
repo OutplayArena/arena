@@ -1,4 +1,5 @@
 import pytest
+
 from games.core.rock_paper_scissors.config import config_from_dict
 from games.core.rock_paper_scissors.engine import RPSGame
 
@@ -68,8 +69,8 @@ def test_round_outcomes(a, b, winner, score_a, score_b):
     state = game.apply_action(state, "A", a)
     state = game.apply_action(state, "B", b)
     assert state.history[0]["winner"] == winner
-    assert state.history[0]["scores"]["A"] == score_a
-    assert state.history[0]["scores"]["B"] == score_b
+    assert state.history[0]["payoffs"]["A"] == score_a
+    assert state.history[0]["payoffs"]["B"] == score_b
 
 
 # ── Multi-round ───────────────────────────────────────────────────────────────

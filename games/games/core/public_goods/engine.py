@@ -5,6 +5,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 
 from arena.interactive_game_engine import InteractiveGameEngine
+
 from games.core.public_goods.metrics import PublicGoodsMetrics
 
 
@@ -48,7 +49,7 @@ class PublicGoodsGame(InteractiveGameEngine):
         self._system_prompt = system_prompt
 
     @classmethod
-    def from_config(cls, config) -> "PublicGoodsGame":
+    def from_config(cls, config) -> PublicGoodsGame:
         return cls(
             num_players=config.players,
             num_rounds=config.rounds,
@@ -208,7 +209,7 @@ class PublicGoodsGame(InteractiveGameEngine):
             "pool":          sum(contribs.values()),
             "total_pool":    total_pool,
             "share":         share,
-            "round_payoffs": dict(round_payoffs),
+            "payoffs":       dict(round_payoffs),
         }
         state.history.append(entry)
         state.round_payoffs = round_payoffs

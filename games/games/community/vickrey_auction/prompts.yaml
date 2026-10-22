@@ -38,6 +38,12 @@ state: |
   Before acting: use your mailbox tools. Communication can increase your payoff.
   What do you bid this round? Respond with a single non-negative number.
 
+action_format:
+  type: number
+  example: "10"
+  minimum: 0
+  description: Submit a non-negative bid within the configured bid limit.
+
 variants:
   neutral: |
     You are playing a sealed-bid second-price (Vickrey) auction.
