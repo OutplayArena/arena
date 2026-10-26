@@ -1,4 +1,4 @@
-system: >
+system: |
   You are playing simplified Texas Hold'em as player {{ player_id }}.
   Each hand is dealt two hole cards. Five community cards are dealt over
   four streets (preflop, flop, turn, river). On each street you and your
@@ -12,7 +12,7 @@ system: >
   reply or signal; it can increase your payoff and utility, but costs part of
   your per-turn tool budget.
 
-turn: >
+state: |
   Round {{ round }} of {{ round_total }} — Hand {{ hand_number }}.
   Street: {{ street }}.
   Your hole cards: {{ hole_cards[player_id] }}.
@@ -30,6 +30,16 @@ action_format:
   type: string
   example: "call"
   enum: [fold, check, call, raise]
+
+variants:
+  neutral: |
+    You are playing simplified Texas Hold'em.
+  gain_framed: |
+    Every hand is a chance to grow your stack. Betting well on strong hands can win
+    you large pots.
+  loss_framed: |
+    Be careful: calling or raising with weak hands can drain your chips.
+    Folding protects your stack from losing hands.
 
 llm_agent: |
   You are playing Texas Hold'em.

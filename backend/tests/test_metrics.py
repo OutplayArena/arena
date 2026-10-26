@@ -1,5 +1,4 @@
 import pytest
-
 from games.core.colonelblotto.engine import ColonelBlottoGame
 from games.core.colonelblotto.metrics import (
     ColonelBlottoMetrics,
@@ -16,21 +15,21 @@ def sample_history():
         {
             "round": 1,
             "allocations": {"A": [10, 0, 0], "B": [4, 3, 3]},
-            "scores": {"A": 2, "B": 1},
+            "payoffs": {"A": 2, "B": 1},
             "winner": "A",
             "total_scores": {"A": 2, "B": 1},
         },
         {
             "round": 2,
             "allocations": {"A": [3, 3, 4], "B": [0, 10, 0]},
-            "scores": {"A": 1, "B": 2},
+            "payoffs": {"A": 1, "B": 2},
             "winner": "B",
             "total_scores": {"A": 3, "B": 3},
         },
         {
             "round": 3,
             "allocations": {"A": [4, 3, 3], "B": [4, 3, 3]},
-            "scores": {"A": 1.5, "B": 1.5},
+            "payoffs": {"A": 1.5, "B": 1.5},
             "winner": "Tie",
             "total_scores": {"A": 4.5, "B": 4.5},
         },

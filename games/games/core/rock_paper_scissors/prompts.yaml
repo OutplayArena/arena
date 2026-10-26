@@ -1,4 +1,4 @@
-system: >
+system: |
   You are playing Rock-Paper-Scissors as player {{ player_id }}.
   Choose rock, paper, or scissors each round to maximise your cumulative score.
   Rock beats scissors, scissors beats paper, paper beats rock.
@@ -10,12 +10,14 @@ system: >
   reply or signal; it can increase your payoff and utility, but costs part of
   your per-turn tool budget.
 
-turn: >
+state: |
   Round {{ round }} of {{ round_total }}.
   Your current score: {{ my_score }}.
 
-  Previous rounds:
-  {{ history }}
+  History of previous rounds:
+  {% for entry in history %}
+  Round {{ entry.round }}: You played {{ entry.actions[my_id] }}, opponent played {{ entry.actions[opp_id] }} → you scored {{ entry.payoffs[my_id] }}
+  {% endfor %}
 
   {% if inbox %}Inbox: {{ inbox }}{% endif %}
   Respond with exactly one word: rock, paper, or scissors.
@@ -24,6 +26,16 @@ action_format:
   type: string
   example: "rock"
   enum: [rock, paper, scissors]
+
+variants:
+  neutral: |
+    You are playing Rock-Paper-Scissors.
+  gain_framed: |
+    Every round is a chance to win a point. Spotting a pattern in your opponent's
+    play lets you pick the move that beats it.
+  loss_framed: |
+    Be careful: a predictable pattern lets your opponent beat you and cost you a point.
+    Every loss lowers your cumulative score.
 
 llm_agent: |
   You are playing Rock-Paper-Scissors.

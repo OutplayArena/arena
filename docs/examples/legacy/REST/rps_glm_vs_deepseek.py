@@ -54,7 +54,7 @@ def build_prompt(state, player_label):
         lines.append("Previous rounds:")
         for h in history[-3:]:
             actions = h.get("actions", {})
-            scores = h.get("scores", {})
+            scores = h.get("payoffs", h.get("scores", {}))
             winner = h.get("winner", "Tie")
             lines.append(
                 f"  Round {h.get('round', '?')}: {player_label} chose {actions.get(player_label, '?')}, "
@@ -191,7 +191,7 @@ async def run_match():
         if state_after.get("history"):
             last = state_after["history"][-1]
             actions = last.get("actions", {})
-            scores = last.get("scores", {})
+            scores = last.get("payoffs", last.get("scores", {}))
             print(f"  {PLAYER_A_MODEL}={actions.get('A', '?')}  {PLAYER_B_MODEL}={actions.get('B', '?')}")
             print(f"  Scores: A={scores.get('A', 0):.1f} B={scores.get('B', 0):.1f} -> {last.get('winner', '?')}")
         print()

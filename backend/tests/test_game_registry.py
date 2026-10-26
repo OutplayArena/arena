@@ -1,8 +1,7 @@
-from pathlib import Path
 import importlib.util
+from pathlib import Path
 
 import pytest
-
 from arena.game_registry import (
     CATALOG_ROOT,
     GameRegistry,
@@ -485,13 +484,13 @@ def test_pick_turn_template_non_ultimatum_uses_state():
     assert result == "the state"
 
 
-def test_pick_turn_template_non_ultimatum_falls_back_to_turn():
+def test_pick_turn_template_non_ultimatum_ignores_legacy_turn_key():
     registry = GameRegistry()
     prompts = {"turn": "the turn"}
     result = registry._pick_turn_template(
         "colonelblotto", {"phase": "play"}, prompts
     )
-    assert result == "the turn"
+    assert result == ""
 
 
 def test_get_game_scenarios_for_game_with_scenarios_module():

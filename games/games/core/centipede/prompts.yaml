@@ -27,6 +27,11 @@ state: |
   {% if inbox %}Inbox: {{ inbox }}{% endif %}
   Do you TAKE or PASS? Respond with exactly one word: take or pass.
 
+action_format:
+  type: string
+  example: "pass"
+  enum: [take, pass]
+
 variants:
   neutral: |
     You are playing the Centipede Game.

@@ -213,11 +213,12 @@ async def run_match():
             state_b = arena_b.get_state()
             if state_b.get("history"):
                 last = state_b["history"][-1]
+                payoffs = last.get("payoffs", last.get("scores", {}))
                 forfeit_flag = " FORFEIT" if error_a else ""
                 print(
                     f"Round {round_num:2d}: "
                     f"LLM={alloc_a if not error_a else 'FAILED'} Uniform={alloc_b} -> "
-                    f"A={last['scores']['A']:.1f} B={last['scores']['B']:.1f} winner={last['winner']}"
+                    f"A={payoffs['A']:.1f} B={payoffs['B']:.1f} winner={last['winner']}"
                     f"{forfeit_flag}"
                 )
             else:

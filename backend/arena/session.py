@@ -6,12 +6,17 @@ from typing import Any
 import logging
 import secrets
 import uuid
+from dataclasses import asdict, dataclass, is_dataclass
+from datetime import datetime, timezone
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from arena._version import ARENA_VERSION
+from arena.auth.session_key import derive_session_key, validate_session_key
 from arena.game_engine import GameEngine
 from arena.game_registry import GameRegistry
+from arena.metrics import MatchEvaluator, get_global_registry
 from arena.metrics.contracts import Match, Move
 from arena.models.session import SessionModel
 from arena.auth.session_key import derive_session_key, validate_session_key
@@ -406,7 +411,7 @@ class GameSession:
                 continue
 
             actions = entry.get("allocations") or entry.get("actions", {})
-            scores = entry.get("payoffs") or entry.get("scores", {})
+            scores = entry.get("payoffs") or entry.get("scores") or entry.get("round_payoffs", {})
 
             for role in role_ids:
                 action = actions.get(role)
@@ -470,7 +475,7 @@ class GameSession:
                 "round": step,
                 "winner": entry.get("winner"),
             }
-            scores = entry.get("scores", {})
+            scores = entry.get("payoffs") or entry.get("scores") or entry.get("round_payoffs", {})
             total_scores = entry.get("total_scores", {})
             for player in scores:
                 payload[f"scores/{player}"] = scores[player]

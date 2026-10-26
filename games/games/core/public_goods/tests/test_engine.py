@@ -1,6 +1,7 @@
 import pytest
+
 from games.core.public_goods.config import config_from_dict
-from games.core.public_goods.engine import PublicGoodsGame, PGGState
+from games.core.public_goods.engine import PGGState, PublicGoodsGame
 
 
 def make_game(**kw) -> PublicGoodsGame:
@@ -94,7 +95,7 @@ class TestRoundPayoffs:
         assert entry["total_pool"] == pytest.approx(80.0)     # multiplied
         assert entry["share"] == pytest.approx(20.0)
         for p in _ALL_PLAYERS:
-            assert entry["round_payoffs"][p] == pytest.approx(20.0)
+            assert entry["payoffs"][p] == pytest.approx(20.0)
 
     def test_all_free_ride(self):
         # All contribute 0: pool=0, share=0, payoff=endowment=10 each
@@ -104,7 +105,7 @@ class TestRoundPayoffs:
         assert entry["pool"] == pytest.approx(0.0)
         assert entry["share"] == pytest.approx(0.0)
         for p in _ALL_PLAYERS:
-            assert entry["round_payoffs"][p] == pytest.approx(10.0)  # kept all endowment
+            assert entry["payoffs"][p] == pytest.approx(10.0)  # kept all endowment
 
     def test_asymmetric_contributions(self):
         # A contributes 10, others 0: pool=10×2=20, share=5 each
@@ -113,8 +114,8 @@ class TestRoundPayoffs:
         s = play_round(game, game.initial_state(), {"A": 10.0, "B": 0.0, "C": 0.0, "D": 0.0})
         entry = s.history[0]
         assert entry["share"] == pytest.approx(5.0)
-        assert entry["round_payoffs"]["A"] == pytest.approx(5.0)
-        assert entry["round_payoffs"]["B"] == pytest.approx(15.0)
+        assert entry["payoffs"]["A"] == pytest.approx(5.0)
+        assert entry["payoffs"]["B"] == pytest.approx(15.0)
 
 
 # ─── Multi-round ──────────────────────────────────────────────────────────────

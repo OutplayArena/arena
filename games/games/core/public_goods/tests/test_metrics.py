@@ -1,6 +1,7 @@
 import pytest
-from games.core.public_goods.metrics import PublicGoodsMetrics
 from arena.metrics.contracts import Match, Move
+
+from games.core.public_goods.metrics import PublicGoodsMetrics
 
 
 def make_history(*rounds: dict[str, float],
@@ -22,7 +23,7 @@ def make_history(*rounds: dict[str, float],
             "pool":          pool,
             "total_pool":    total_pool,
             "share":         share,
-            "round_payoffs": round_payoffs,
+            "payoffs": round_payoffs,
             "total_scores":  dict(totals),
         })
     return history, totals

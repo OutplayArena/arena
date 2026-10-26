@@ -19,13 +19,21 @@ state: |
 
   History of previous rounds:
   {% for entry in history %}
-  Round {{ entry.round }}: Contributions: {{ entry.contributions }} | Pool: {{ entry.pool }} | Your payoff: {{ entry.round_payoffs[my_id] }}
+  Round {{ entry.round }}: Contributions: {{ entry.contributions }} | Pool: {{ entry.pool }} | Your payoff: {{ entry.payoffs[my_id] }}
   {% endfor %}
 
   You have {{ endowment }} tokens this round.
   {% if inbox %}Inbox: {{ inbox }}{% endif %}
   How many do you contribute to the shared pool?
   Respond with a number between 0 and {{ endowment }}.
+
+action_format:
+  type: json
+  example: "0"
+  description: >-
+    During contribution, submit a number between 0 and the configured endowment.
+    During punishment, submit a JSON object mapping other player IDs to
+    non-negative punishment amounts, for example {"B": 1}.
 
 variants:
   neutral: |
