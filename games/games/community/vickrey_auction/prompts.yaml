@@ -32,7 +32,7 @@ state: |
 
   History of previous rounds:
   {% for entry in history %}
-  Round {{ entry.round }}: your value was {{ entry.values[my_id] }}, you bid {{ entry.actions[my_id] }} → winner was {{ entry.winner }} at price {{ entry.price }} → you earned {{ entry.payoffs[my_id] }}
+  Round {{ entry.round }}: your value was {{ entry["values"][my_id] }}, you bid {{ entry.actions[my_id] }} → winner was {{ entry.winner }} at price {{ entry.price }} → you earned {{ entry.payoffs[my_id] }}
   {% endfor %}
 
   Before acting: use your mailbox tools. Communication can increase your payoff.

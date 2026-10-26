@@ -1,4 +1,4 @@
-"""Regression coverage for prompt and history contracts (#164–#166)."""
+"""Regression coverage for game prompts and per-round histories."""
 
 from copy import deepcopy
 
@@ -6,6 +6,38 @@ import pytest
 import yaml
 from arena.game_registry import CATALOG_ROOT, GameRegistry
 from arena.session import GameSession
+
+
+@pytest.mark.parametrize("player", ["A", "B", "C"])
+def test_vickrey_history_renders_each_players_recorded_private_values(player):
+    registry = GameRegistry()
+    config = registry.config_from_request(
+        {
+            "game": "vickrey_auction",
+            "players": 3,
+            "rounds": 3,
+            "seed": 42,
+        }
+    )
+    session = GameSession.create(config)
+    for values in ({"A": 0.0, "B": 42.5, "C": 90.0}, {"A": 80.0, "B": 0.0, "C": 18.75}):
+        session.state.private_values = values
+        for bidder, value in values.items():
+            session.submit_action(bidder, value)
+
+    observation = registry.render_observation(
+        "vickrey_auction",
+        session.public_state(),
+        config.to_dict(),
+        player,
+    )
+    for entry in session.state.history:
+        expected = (
+            f"Round {entry['round']}: your value was {entry['values'][player]}, "
+            f"you bid {entry['actions'][player]} → winner was {entry['winner']} "
+            f"at price {entry['price']} → you earned {entry['payoffs'][player]}"
+        )
+        assert expected in observation["turn"]
 
 
 @pytest.mark.parametrize(
