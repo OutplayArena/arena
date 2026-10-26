@@ -1,5 +1,4 @@
 import pytest
-
 from games.core.colonelblotto.agent import Agent, GreedyAgent, RandomAgent, UniformAgent
 from games.core.colonelblotto.engine import ColonelBlottoGame
 
@@ -161,7 +160,7 @@ def test_apply_second_action_resolves_round_and_advances():
         {
             "round": 1,
             "allocations": {"A": [9, 0, 0], "B": [0, 9, 0]},
-            "scores": {"A": 1.5, "B": 1.5},
+            "payoffs": {"A": 1.5, "B": 1.5},
             "winner": "Tie",
             "total_scores": {"A": 1.5, "B": 1.5},
         }
@@ -220,7 +219,7 @@ def test_compute_results_requires_terminal_state_and_reports_winner():
             {
                 "round": 1,
                 "allocations": {"A": [9, 0, 0], "B": [0, 5, 4]},
-                "scores": {"A": 1, "B": 2},
+                "payoffs": {"A": 1, "B": 2},
                 "winner": "B",
                 "total_scores": {"A": 1, "B": 2},
             }

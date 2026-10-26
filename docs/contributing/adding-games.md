@@ -114,16 +114,33 @@ system: |
   - Each round, you choose {{ action_description }}.
   - {{ payoff_description }}
 
-turn: |
-  Round {{ round }} of {{ total_rounds }}.
-  {{ history_summary }}
+state: |
+  Round {{ round }} of {{ round_total }}.
 
-  What is your action? {{ action_format_hint }}
+  History of previous rounds:
+  {% for entry in history %}
+  Round {{ entry.round }}: You played {{ entry.actions[my_id] }}, opponent played {{ entry.actions[opp_id] }}
+  {% endfor %}
 
-action_format_hint: "Reply with exactly one of: OPTION_A or OPTION_B."
+  What is your action? Reply with exactly one of: option_a or option_b.
+
+action_format:
+  type: string
+  example: "option_a"
+  enum: [option_a, option_b]
+
+variants:
+  neutral: |
+    You are playing My Game.
+  gain_framed: |
+    Describe the upside of cooperative or high-reward play here.
+  loss_framed: |
+    Describe the risk of being exploited or losing points here.
 ```
 
 Prompts use Jinja2 templates. Available variables depend on the game state and config.
+Use literal `|` blocks (not folded `>`) so line breaks are preserved, and name the per-turn
+template `state` — see [Prompt Templates](../games/prompts.md) for the full layout.
 
 ## Step 6: Write metrics.yaml and metrics.py
 

@@ -8,6 +8,11 @@ class ExampleState:
     round_number: int = 1
     phase: str = "awaiting_action"
     awaiting: list[str] = field(default_factory=lambda: ["A", "B"])
+    # One entry per resolved round. Standard keys:
+    #   "round":        round number
+    #   "actions":      {player_id: action}
+    #   "payoffs":      {player_id: payoff earned this round}
+    #   "total_scores": {player_id: cumulative score after this round}
     history: list[dict] = field(default_factory=list)
 
 

@@ -62,8 +62,10 @@ export interface GameStateRound {
   round: number;
   allocations?: Record<PlayerSide, number[]>;
   actions?: Record<PlayerSide, unknown>;
-  scores?: Record<PlayerSide, number>;
   payoffs?: Record<PlayerSide, number>;
+  /** Legacy history keys retained for saved matches. New rounds use payoffs. */
+  scores?: Record<PlayerSide, number>;
+  round_payoffs?: Record<PlayerSide, number>;
   total_scores?: Record<PlayerSide, number>;
   winner?: PlayerSide | "Tie";
   outcome?: string;

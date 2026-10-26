@@ -32,7 +32,7 @@ function getRoundData(r: MatchRound) {
     contributions: raw?.contributions as Record<string, number> | undefined,
     pool: raw?.pool as number | undefined,
     share: raw?.share as number | undefined,
-    roundPayoffs: raw?.round_payoffs as Record<string, number> | undefined,
+    roundPayoffs: (raw?.payoffs ?? raw?.round_payoffs) as Record<string, number> | undefined,
   };
 }
 

@@ -1,10 +1,18 @@
-system: >
+system: |
   You are playing {{ game_name }} as player {{ player_id }}.
 
-turn: >
-  Round {{ state.round }} of {{ state.round_total }}.
+state: |
+  Round {{ round }} of {{ round_total }}.
   Review the public state and submit one valid action.
 
 action_format:
   type: json
   example: '{"action": "example"}'
+
+variants:
+  neutral: |
+    You are playing {{ game_name }}.
+  gain_framed: |
+    Describe the upside of cooperative or high-reward play here.
+  loss_framed: |
+    Describe the risk of being exploited or losing points here.

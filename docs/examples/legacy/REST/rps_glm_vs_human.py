@@ -191,8 +191,9 @@ async def play_game():
             r = h.get("round", "?")
             a_action = h.get("actions", {}).get("A", "?")
             b_action = h.get("actions", {}).get("B", "?")
-            a_score = h.get("scores", {}).get("A", 0)
-            b_score = h.get("scores", {}).get("B", 0)
+            payoffs = h.get("payoffs", h.get("scores", {}))
+            a_score = payoffs.get("A", 0)
+            b_score = payoffs.get("B", 0)
             print(f"  R{r}: A={a_action} B={b_action} -> A={a_score} B={b_score}")
 
     os.makedirs(RESULTS_DIR, exist_ok=True)

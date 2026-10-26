@@ -27,6 +27,12 @@ state: |
   How many units do you produce this round? (0 to {{ max_quantity }})
   Respond with a number.
 
+action_format:
+  type: number
+  example: "10"
+  minimum: 0
+  description: Submit a quantity between 0 and the configured max_quantity.
+
 variants:
   neutral: |
     You are playing the Cournot Duopoly competition game.

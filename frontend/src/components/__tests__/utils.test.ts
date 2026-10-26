@@ -52,6 +52,24 @@ describe("resultToMatch", () => {
     session_id: "sess-1",
   };
 
+  it.each(["payoffs", "scores", "round_payoffs"] as const)(
+    "reads %s from current or saved history, preserving zero and negative outcomes",
+    (key) => {
+      const result: GameResult = {
+        config_hash: "history-keys",
+        total_scores: { A: 9, B: 8 },
+        winner: "A",
+        metrics: {},
+        history: [{ round: 2, [key]: { A: 0, B: -1 }, total_scores: { A: 9, B: 8 } }],
+      };
+      const match = resultToMatch(result, config);
+      expect(match.history[0].score_a).toBe(0);
+      expect(match.history[0].score_b).toBe(-1);
+      expect(match.history[0].total_score_a).toBe(9);
+      expect(match.history[0].total_score_b).toBe(8);
+    },
+  );
+
   it("converts a GameResult to Match with allocations", () => {
     const result: GameResult = {
       config_hash: "hash1",

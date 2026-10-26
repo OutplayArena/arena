@@ -194,11 +194,12 @@ async def run_match():
         state_after = player_a.get_state()
         if state_after.get("history"):
             last = state_after["history"][-1]
+            payoffs = last.get("payoffs", last.get("scores", {}))
             print(
                 f"  A({PLAYER_A_MODEL})={alloc_a}  B({PLAYER_B_MODEL})={alloc_b}"
             )
             print(
-                f"  Scores: A={last['scores']['A']:.1f} B={last['scores']['B']:.1f} -> {last['winner']}"
+                f"  Scores: A={payoffs['A']:.1f} B={payoffs['B']:.1f} -> {last['winner']}"
             )
         print()
 
