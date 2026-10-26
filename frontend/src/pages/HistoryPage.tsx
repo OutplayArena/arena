@@ -258,6 +258,15 @@ export function HistoryPage() {
           style={{ position: "fixed", top: menuAnchor.top, right: menuAnchor.right }}
           className="z-50 w-52 bg-surface border border-line rounded-[var(--radius-card)] shadow-lg overflow-hidden"
         >
+          {(menuSession.status === "completed" || menuSession.status === "failed") && (
+            <button
+              type="button"
+              onClick={() => { setOpenMenuId(null); navigate(`/telemetry/${encodeURIComponent(menuSession.id)}`); }}
+              className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-ink hover:bg-surface-soft transition-colors text-left"
+            >
+              Research telemetry
+            </button>
+          )}
           {menuSession.status === "completed" && (
             <button
               type="button"

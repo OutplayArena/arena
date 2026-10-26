@@ -1,4 +1,5 @@
 from arena.models.base import Base
+from arena.models.telemetry_event import TelemetryEvent
 from arena.models.user import User
 from arena.models.session import SessionModel
 from arena.models.api_key import ApiKey
@@ -9,4 +10,4 @@ from arena.models.wandb_credential import WandbCredential
 from arena.models.platform_setting import PlatformSetting
 from arena.models.match import Match, MatchParticipant
 
-__all__ = ["Base", "User", "SessionModel", "ApiKey", "MessageLog", "MailboxMessage", "ErrorLog", "WandbCredential", "PlatformSetting", "Match", "MatchParticipant"]
+__all__ = ["TelemetryEvent", "Base", "User", "SessionModel", "ApiKey", "MessageLog", "MailboxMessage", "ErrorLog", "WandbCredential", "PlatformSetting", "Match", "MatchParticipant"]
