@@ -133,7 +133,8 @@ scenario) separately. For more detail on either local dev track below, see the
 The fastest way to get a working dev environment is to run Postgres and Redis in Docker and the
 backend/frontend directly on your machine — no Kubernetes required.
 
-**Prerequisites:** Python 3.12+ with [`uv`](https://docs.astral.sh/uv/), Node.js 20+ with `npm`, and Docker.
+**Prerequisites:** Python 3.12+ with [`uv`](https://docs.astral.sh/uv/), Node.js 26 with `npm`, and Docker.
+If you use nvm, run `nvm use` to select the version in [`.nvmrc`](.nvmrc).
 
 ```bash
 uv sync                          # installs backend + agent-sdk + games

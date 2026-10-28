@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
@@ -57,6 +57,10 @@ function mockLeaderboardEndpoint(response: LeaderboardResponse | string, status 
 }
 
 describe("LeaderboardPage", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     server.resetHandlers();
   });
@@ -243,6 +247,10 @@ describe("LeaderboardPage", () => {
   });
 
   it("applies the date_from filter to the API request via the calendar popup", async () => {
+    // The picker can mount before the fixture's date bounds arrive. Keep its
+    // initial month inside that range regardless of the runtime's current date.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2025-02-01T12:00:00Z"));
     let lastUrl = "";
     server.use(
       http.get("/api/leaderboard", ({ request }) => {
